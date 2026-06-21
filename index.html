@@ -3,360 +3,169 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Dashboard</title>
+<title>MSB CRM — Asakabank Nukus</title>
 <style>
-*{
-  box-sizing:border-box;
-  margin:0;
-  padding:0;
-  font-family:Arial, sans-serif;
+:root{
+  --red:#E50031;
+  --dark-red:#B90028;
+  --bg:#F4F6F9;
+  --text:#1F2937;
+  --muted:#6B7280;
+  --line:#E5E7EB;
+  --white:#FFFFFF;
 }
-body{
-  background:#f4f6f9;
-  color:#222;
-}
-.app{
-  display:flex;
-  min-height:100vh;
-}
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;}
+body{background:var(--bg);color:var(--text);}
+.app{display:flex;min-height:100vh;}
 .sidebar{
-  width:260px;
-  background:#b00000;
-  color:white;
-  padding:24px;
+  width:270px;background:linear-gradient(180deg,var(--red),var(--dark-red));
+  color:white;padding:26px 18px;
 }
-.logo{
-  font-size:24px;
-  font-weight:bold;
-  margin-bottom:5px;
-}
-.branch{
-  font-size:14px;
-  opacity:.9;
-  margin-bottom:30px;
-}
+.logo{font-size:26px;font-weight:800;margin-bottom:4px;}
+.branch{font-size:14px;opacity:.9;margin-bottom:30px;}
 .menu a{
-  display:block;
-  color:white;
-  text-decoration:none;
-  padding:13px 12px;
-  border-radius:8px;
-  margin-bottom:8px;
+  display:block;color:white;text-decoration:none;padding:14px 14px;border-radius:12px;
+  margin-bottom:8px;font-weight:600;
 }
-.menu a:hover,
-.menu a.active{
-  background:rgba(255,255,255,.18);
-}
-.main{
-  flex:1;
-  padding:28px;
-}
+.menu a.active,.menu a:hover{background:rgba(255,255,255,.18);}
+.main{flex:1;padding:28px;}
 .topbar{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:25px;
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;
 }
-.topbar h1{
-  font-size:28px;
-}
-.user{
-  background:white;
-  padding:10px 16px;
-  border-radius:10px;
-  box-shadow:0 2px 8px rgba(0,0,0,.08);
+.topbar h1{font-size:30px;}
+.period{
+  background:white;padding:12px 18px;border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,.08);
 }
 .cards{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:18px;
-  margin-bottom:25px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px;
 }
 .card{
-  background:white;
-  padding:20px;
-  border-radius:14px;
-  box-shadow:0 2px 10px rgba(0,0,0,.08);
+  background:white;padding:22px;border-radius:18px;
+  box-shadow:0 6px 18px rgba(0,0,0,.08);border:1px solid #f0f0f0;
 }
-.card .title{
-  font-size:14px;
-  color:#777;
-  margin-bottom:10px;
-}
-.card .value{
-  font-size:26px;
-  font-weight:bold;
-}
-.card .note{
-  margin-top:8px;
-  font-size:13px;
-  color:#0a8a32;
-}
-.grid{
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:20px;
-}
+.card .title{color:var(--muted);font-size:14px;margin-bottom:12px;}
+.card .value{font-size:28px;font-weight:800;}
+.card .note{font-size:13px;color:#0A8A32;margin-top:8px;}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;}
 .section{
-  background:white;
-  padding:22px;
-  border-radius:14px;
-  box-shadow:0 2px 10px rgba(0,0,0,.08);
-  margin-bottom:20px;
+  background:white;padding:24px;border-radius:18px;
+  box-shadow:0 6px 18px rgba(0,0,0,.08);margin-bottom:20px;
 }
-.section h2{
-  font-size:20px;
-  margin-bottom:16px;
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-}
-th,td{
-  padding:12px;
-  border-bottom:1px solid #eee;
-  text-align:left;
-  font-size:14px;
-}
-th{
-  background:#f7f7f7;
-}
-.badge{
-  padding:5px 9px;
-  border-radius:20px;
-  font-size:12px;
-  color:white;
-}
-.green{background:#1a9b4b;}
-.yellow{background:#d89b00;}
-.red{background:#c00000;}
-.blue{background:#1769aa;}
+.section h2{font-size:21px;margin-bottom:18px;}
 .funnel-row{
-  display:flex;
-  justify-content:space-between;
-  padding:12px 0;
-  border-bottom:1px solid #eee;
+  display:grid;grid-template-columns:1fr 190px;gap:15px;
+  padding:14px 0;border-bottom:1px solid var(--line);
 }
-.progress{
-  height:8px;
-  background:#eee;
-  border-radius:10px;
-  margin-top:6px;
+.progress{height:9px;background:#F1F1F1;border-radius:999px;margin-top:8px;overflow:hidden;}
+.progress span{display:block;height:100%;background:var(--red);border-radius:999px;}
+table{width:100%;border-collapse:collapse;}
+th,td{padding:13px;border-bottom:1px solid var(--line);font-size:14px;text-align:left;}
+th{background:#F9FAFB;color:#374151;}
+.badge{padding:6px 10px;border-radius:999px;font-size:12px;color:white;font-weight:700;}
+.green{background:#16A34A}.blue{background:#2563EB}.yellow{background:#D97706}.red{background:#DC2626}
+.ai-box{
+  background:linear-gradient(135deg,#fff,#fff5f7);
+  border-left:5px solid var(--red);
 }
-.progress span{
-  display:block;
-  height:8px;
-  background:#b00000;
-  border-radius:10px;
-}
-.footer{
-  margin-top:25px;
-  color:#777;
-  font-size:13px;
-}
-@media(max-width:900px){
-  .app{flex-direction:column;}
-  .sidebar{width:100%;}
-  .cards{grid-template-columns:1fr 1fr;}
-  .grid{grid-template-columns:1fr;}
+.footer{margin-top:20px;color:var(--muted);font-size:13px;}
+@media(max-width:1000px){
+  .app{flex-direction:column}.sidebar{width:100%}
+  .cards{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}
 }
 </style>
 </head>
-
 <body>
 <div class="app">
 
-  <aside class="sidebar">
-    <div class="logo">MSB CRM</div>
-    <div class="branch">Асакабанк — Нукус БХМ</div>
+<aside class="sidebar">
+  <div class="logo">Asakabank</div>
+  <div class="branch">MSB CRM • Нукус БХМ</div>
+  <nav class="menu">
+    <a class="active" href="#">📊 Dashboard</a>
+    <a href="#">👥 Клиенты</a>
+    <a href="#">📌 Воронка продаж</a>
+    <a href="#">📈 Статистика</a>
+    <a href="#">🏆 Рейтинг менеджеров</a>
+    <a href="#">💰 Потенциальный портфель</a>
+    <a href="#">🤖 AI Анализ</a>
+    <a href="#">⚙️ Настройки</a>
+  </nav>
+</aside>
 
-    <nav class="menu">
-      <a href="#" class="active">📊 Dashboard</a>
-      <a href="#">👥 Клиенты</a>
-      <a href="#">📌 Воронка продаж</a>
-      <a href="#">🏆 Рейтинг менеджеров</a>
-      <a href="#">💰 Потенциальный портфель</a>
-      <a href="#">🤖 AI Анализ</a>
-      <a href="#">⚙️ Настройки</a>
-    </nav>
-  </aside>
+<main class="main">
 
-  <main class="main">
+<div class="topbar">
+  <div>
+    <h1>Dashboard МСБ</h1>
+    <p style="color:var(--muted);margin-top:6px;">Система управления продажами малого бизнеса</p>
+  </div>
+  <div class="period">📅 Июнь 2026 • 👔 Управляющий</div>
+</div>
 
-    <div class="topbar">
-      <h1>Dashboard МСБ</h1>
-      <div class="user">👔 Управляющий Нукус БХМ</div>
-    </div>
+<div class="cards">
+  <div class="card"><div class="title">👥 Всего клиентов</div><div class="value">157</div><div class="note">+18 за месяц</div></div>
+  <div class="card"><div class="title">💰 Сумма заявок</div><div class="value">42.8 млрд</div><div class="note">Портфель заявок</div></div>
+  <div class="card"><div class="title">💸 Сумма выдач</div><div class="value">18.3 млрд</div><div class="note">Конверсия 43%</div></div>
+  <div class="card"><div class="title">🔥 Потенциальный портфель</div><div class="value">24.7 млрд</div><div class="note">В работе</div></div>
+</div>
 
-    <div class="cards">
-      <div class="card">
-        <div class="title">👥 Всего клиентов</div>
-        <div class="value">157</div>
-        <div class="note">+18 за месяц</div>
-      </div>
+<div class="grid">
 
-      <div class="card">
-        <div class="title">💰 Сумма заявок</div>
-        <div class="value">42.8 млрд</div>
-        <div class="note">Портфель заявок</div>
-      </div>
+<div>
+  <div class="section">
+    <h2>📌 Воронка продаж МСБ</h2>
 
-      <div class="card">
-        <div class="title">💸 Сумма выдач</div>
-        <div class="value">18.3 млрд</div>
-        <div class="note">43% конверсия</div>
-      </div>
+    <div class="funnel-row"><div><b>Новый клиент</b><div class="progress"><span style="width:85%"></span></div></div><div>35 клиентов / 8.2 млрд</div></div>
+    <div class="funnel-row"><div><b>Переговоры</b><div class="progress"><span style="width:65%"></span></div></div><div>27 клиентов / 6.4 млрд</div></div>
+    <div class="funnel-row"><div><b>Документы собираются</b><div class="progress"><span style="width:48%"></span></div></div><div>18 клиентов / 4.9 млрд</div></div>
+    <div class="funnel-row"><div><b>Финанализ</b><div class="progress"><span style="width:36%"></span></div></div><div>12 клиентов / 3.1 млрд</div></div>
+    <div class="funnel-row"><div><b>Кредитный комитет</b><div class="progress"><span style="width:22%"></span></div></div><div>7 клиентов / 1.8 млрд</div></div>
+    <div class="funnel-row"><div><b>Выдано</b><div class="progress"><span style="width:18%"></span></div></div><div>5 клиентов / 18.3 млрд</div></div>
+  </div>
 
-      <div class="card">
-        <div class="title">🔥 Потенциальный портфель</div>
-        <div class="value">24.7 млрд</div>
-        <div class="note">В работе</div>
-      </div>
-    </div>
+  <div class="section">
+    <h2>👥 Последние клиенты</h2>
+    <table>
+      <tr><th>Клиент</th><th>Продукт</th><th>Сумма</th><th>Статус</th><th>Менеджер</th></tr>
+      <tr><td>OOO Nukus Textile</td><td>Biznes standart</td><td>1.2 млрд</td><td><span class="badge yellow">Финанализ</span></td><td>Allayarov Daniyar</td></tr>
+      <tr><td>Berdaq Agro</td><td>Oson</td><td>500 млн</td><td><span class="badge blue">Переговоры</span></td><td>Aziza</td></tr>
+      <tr><td>Qoraqalpoq Trade</td><td>Гарантия</td><td>800 млн</td><td><span class="badge green">Одобрено</span></td><td>Amir</td></tr>
+    </table>
+  </div>
+</div>
 
-    <div class="grid">
+<div>
+  <div class="section">
+    <h2>🏆 Рейтинг менеджеров</h2>
+    <table>
+      <tr><th>Место</th><th>Менеджер</th><th>Балл</th></tr>
+      <tr><td>🥇</td><td>Allayarov Daniyar</td><td>92</td></tr>
+      <tr><td>🥈</td><td>Mambetkarimov Allayar</td><td>86</td></tr>
+      <tr><td>🥉</td><td>Tleumuratov Amir</td><td>81</td></tr>
+    </table>
+  </div>
 
-      <div>
-        <div class="section">
-          <h2>📌 Воронка продаж МСБ</h2>
+  <div class="section">
+    <h2>⚠️ Узкие места</h2>
+    <p><b>Документы → Финанализ</b></p>
+    <p style="margin-top:10px;color:var(--muted);">18 клиентов находятся на этапе сбора документов. Требуется ускорить получение пакета документов.</p>
+  </div>
 
-          <div class="funnel-row">
-            <div>
-              <b>Новый клиент</b>
-              <div class="progress"><span style="width:85%"></span></div>
-            </div>
-            <div>35 клиентов / 8.2 млрд</div>
-          </div>
+  <div class="section ai-box">
+    <h2>🤖 AI Вывод</h2>
+    <p style="color:var(--muted);line-height:1.5;">
+      Потенциальный портфель высокий. Основной резерв роста — клиенты на этапах
+      "Документы" и "Финанализ". Рекомендуется усилить контроль менеджеров по этим этапам.
+    </p>
+  </div>
+</div>
 
-          <div class="funnel-row">
-            <div>
-              <b>Переговоры</b>
-              <div class="progress"><span style="width:65%"></span></div>
-            </div>
-            <div>27 клиентов / 6.4 млрд</div>
-          </div>
+</div>
 
-          <div class="funnel-row">
-            <div>
-              <b>Документы собираются</b>
-              <div class="progress"><span style="width:48%"></span></div>
-            </div>
-            <div>18 клиентов / 4.9 млрд</div>
-          </div>
+<div class="footer">MSB CRM Web MVP • Asakabank Nukus BXM • Version 1.1</div>
 
-          <div class="funnel-row">
-            <div>
-              <b>Финанализ</b>
-              <div class="progress"><span style="width:36%"></span></div>
-            </div>
-            <div>12 клиентов / 3.1 млрд</div>
-          </div>
-
-          <div class="funnel-row">
-            <div>
-              <b>Кредитный комитет</b>
-              <div class="progress"><span style="width:22%"></span></div>
-            </div>
-            <div>7 клиентов / 1.8 млрд</div>
-          </div>
-
-          <div class="funnel-row">
-            <div>
-              <b>Выдано</b>
-              <div class="progress"><span style="width:18%"></span></div>
-            </div>
-            <div>5 клиентов / 18.3 млрд</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>👥 Последние клиенты</h2>
-          <table>
-            <tr>
-              <th>Клиент</th>
-              <th>Продукт</th>
-              <th>Сумма</th>
-              <th>Статус</th>
-              <th>Менеджер</th>
-            </tr>
-            <tr>
-              <td>OOO Nukus Textile</td>
-              <td>Biznes standart</td>
-              <td>1.2 млрд</td>
-              <td><span class="badge yellow">Финанализ</span></td>
-              <td>Allayarov Daniyar</td>
-            </tr>
-            <tr>
-              <td>Berdaq Agro</td>
-              <td>Oson</td>
-              <td>500 млн</td>
-              <td><span class="badge blue">Переговоры</span></td>
-              <td>Aziza</td>
-            </tr>
-            <tr>
-              <td>Qoraqalpoq Trade</td>
-              <td>Гарантия</td>
-              <td>800 млн</td>
-              <td><span class="badge green">Одобрено</span></td>
-              <td>Amir</td>
-            </tr>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div class="section">
-          <h2>🏆 Рейтинг менеджеров</h2>
-          <table>
-            <tr>
-              <th>Место</th>
-              <th>Менеджер</th>
-              <th>Балл</th>
-            </tr>
-            <tr>
-              <td>🥇</td>
-              <td>Allayarov Daniyar</td>
-              <td>92</td>
-            </tr>
-            <tr>
-              <td>🥈</td>
-              <td>Mambetkarimov Allayar</td>
-              <td>86</td>
-            </tr>
-            <tr>
-              <td>🥉</td>
-              <td>Tleumuratov Amir</td>
-              <td>81</td>
-            </tr>
-          </table>
-        </div>
-
-        <div class="section">
-          <h2>⚠️ Узкие места</h2>
-          <p><b>Документы → Финанализ</b></p>
-          <p style="margin-top:10px;color:#666;">
-            18 клиентов находятся на этапе сбора документов.
-            Необходимо ускорить получение пакета документов.
-          </p>
-        </div>
-
-        <div class="section">
-          <h2>🤖 AI Вывод</h2>
-          <p style="color:#666;">
-            Потенциальный портфель высокий. Основной резерв роста —
-            клиенты на этапах "Документы" и "Финанализ".
-          </p>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="footer">
-      MSB CRM Web MVP • Асакабанк Нукус БХМ • Версия 1.0
-    </div>
-
-  </main>
-
+</main>
 </div>
 </body>
 </html>
