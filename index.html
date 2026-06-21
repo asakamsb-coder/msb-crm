@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Web 2.1</title>
+<title>MSB CRM Web 2.2</title>
 
 <style>
 :root{
@@ -78,6 +78,138 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .summary-card .big{font-size:22px;font-weight:800;}
 .client-table-wrap{overflow-x:auto;}
 .nowrap{white-space:nowrap;}
+
+.drawer-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(17,24,39,.35);
+  display:none;
+  z-index:50;
+}
+.drawer-overlay.active{
+  display:block;
+}
+.client-drawer{
+  position:fixed;
+  top:0;
+  right:-520px;
+  width:520px;
+  max-width:100%;
+  height:100vh;
+  background:#fff;
+  border-left:1px solid var(--line);
+  box-shadow:-12px 0 30px rgba(0,0,0,.16);
+  z-index:60;
+  transition:.25s ease;
+  display:flex;
+  flex-direction:column;
+}
+.client-drawer.active{
+  right:0;
+}
+.drawer-header{
+  padding:24px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:flex-start;
+}
+.drawer-title{
+  font-size:22px;
+  font-weight:800;
+  line-height:1.25;
+}
+.drawer-subtitle{
+  margin-top:7px;
+  color:var(--muted);
+  font-size:14px;
+}
+.close-btn{
+  border:none;
+  background:#F3F4F6;
+  color:#111827;
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  font-size:20px;
+  cursor:pointer;
+}
+.drawer-body{
+  padding:24px;
+  overflow:auto;
+}
+.info-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:18px;
+}
+.info-card{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px;
+  background:#fff;
+}
+.info-label{
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:7px;
+}
+.info-value{
+  font-size:15px;
+  font-weight:700;
+  word-break:break-word;
+}
+.full{
+  grid-column:1 / -1;
+}
+.drawer-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin:18px 0;
+}
+.action-btn{
+  display:block;
+  text-align:center;
+  text-decoration:none;
+  border-radius:12px;
+  padding:13px 14px;
+  font-weight:800;
+  border:1px solid var(--line);
+  color:#111827;
+  background:#fff;
+}
+.action-btn.primary{
+  background:var(--brand);
+  color:#fff;
+  border-color:var(--brand);
+}
+.comment-box{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:16px;
+  background:#F9FAFB;
+  color:#374151;
+  line-height:1.55;
+  font-size:14px;
+}
+.clickable-row{
+  cursor:pointer;
+}
+.clickable-row:hover{
+  background:#F9FAFB;
+}
+@media(max-width:700px){
+  .info-grid{
+    grid-template-columns:1fr;
+  }
+  .drawer-actions{
+    grid-template-columns:1fr;
+  }
+}
+
 @media(max-width:1100px){
   .sidebar{position:relative;width:100%;height:auto;}
   .main{margin-left:0;}
@@ -243,10 +375,87 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
-<div class="footer" id="updatedAt">MSB CRM Web 2.1 • Asakabank Nukus BXM</div>
+<div class="footer" id="updatedAt">MSB CRM Web 2.2 • Asakabank Nukus BXM</div>
 
 </main>
 </div>
+
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeClientCard()"></div>
+
+<aside class="client-drawer" id="clientDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="drawerClientName">Карточка клиента</div>
+      <div class="drawer-subtitle" id="drawerClientInn">ИНН: -</div>
+    </div>
+    <button class="close-btn" onclick="closeClientCard()">×</button>
+  </div>
+
+  <div class="drawer-body">
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-label">Телефон</div>
+        <div class="info-value" id="drawerPhone">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Статус</div>
+        <div class="info-value" id="drawerStatus">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Бизнес</div>
+        <div class="info-value" id="drawerBusiness">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Регион</div>
+        <div class="info-value" id="drawerRegion">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Продукт</div>
+        <div class="info-value" id="drawerProduct">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Сумма заявки</div>
+        <div class="info-value" id="drawerAmount">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Менеджер</div>
+        <div class="info-value" id="drawerManager">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Следующий контакт</div>
+        <div class="info-value" id="drawerNextContact">-</div>
+      </div>
+
+      <div class="info-card full">
+        <div class="info-label">Цель кредита</div>
+        <div class="info-value" id="drawerPurpose">-</div>
+      </div>
+    </div>
+
+    <div class="drawer-actions">
+      <a class="action-btn primary" id="callBtn" href="#">Позвонить</a>
+      <a class="action-btn" id="whatsappBtn" href="#" target="_blank">WhatsApp</a>
+    </div>
+
+    <div class="panel ai-box" style="margin-bottom:18px;">
+      <h2 style="font-size:18px;margin-bottom:10px;">Краткий анализ</h2>
+      <p id="drawerAiText">-</p>
+    </div>
+
+    <div>
+      <div class="info-label" style="margin-bottom:8px;">Комментарий</div>
+      <div class="comment-box" id="drawerComment">-</div>
+    </div>
+  </div>
+</aside>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
@@ -311,7 +520,7 @@ function renderStats(stats) {
   document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
   document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.1 • Обновлено: ' + (stats.updatedAt || '');
+  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.2 • Обновлено: ' + (stats.updatedAt || '');
 }
 
 function renderLatestClients(clients) {
@@ -319,7 +528,7 @@ function renderLatestClients(clients) {
   tbody.innerHTML = '';
   clients.slice(0, 5).forEach(c => {
     tbody.innerHTML += `
-      <tr>
+      <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
         <td>${safe(c.date)}</td>
         <td>${safe(c.name)}</td>
         <td>${safe(c.product)}</td>
@@ -341,7 +550,7 @@ function renderClients(clients) {
 
   clients.forEach(c => {
     tbody.innerHTML += `
-      <tr>
+      <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
         <td class="nowrap">${safe(c.date)}</td>
         <td>${safe(c.name)}</td>
         <td class="nowrap">${safe(c.phone)}</td>
@@ -490,6 +699,72 @@ function renderAI(stats) {
   document.getElementById('aiText').innerText = text;
   document.getElementById('aiFullText').innerText = text;
 }
+
+
+function openClientCard(c) {
+  document.getElementById('drawerClientName').innerText = safe(c.name);
+  document.getElementById('drawerClientInn').innerText = 'ИНН: ' + safe(c.inn);
+  document.getElementById('drawerPhone').innerText = safe(c.phone);
+  document.getElementById('drawerStatus').innerText = safe(c.status);
+  document.getElementById('drawerBusiness').innerText = safe(c.business || c.industry);
+  document.getElementById('drawerRegion').innerText = safe(c.region);
+  document.getElementById('drawerProduct').innerText = safe(c.product);
+  document.getElementById('drawerAmount').innerText = formatMoney(c.amount);
+  document.getElementById('drawerManager').innerText = safe(c.manager);
+  document.getElementById('drawerNextContact').innerText = safe(c.nextContact);
+  document.getElementById('drawerPurpose').innerText = safe(c.purpose);
+  document.getElementById('drawerComment').innerText = safe(c.comment);
+
+  const phone = normalizePhone(c.phone);
+  document.getElementById('callBtn').href = phone ? 'tel:+' + phone : '#';
+  document.getElementById('whatsappBtn').href = phone ? 'https://wa.me/' + phone : '#';
+
+  document.getElementById('drawerAiText').innerText = buildClientInsight(c);
+
+  document.getElementById('drawerOverlay').classList.add('active');
+  document.getElementById('clientDrawer').classList.add('active');
+}
+
+function closeClientCard() {
+  document.getElementById('drawerOverlay').classList.remove('active');
+  document.getElementById('clientDrawer').classList.remove('active');
+}
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\D/g, '');
+}
+
+function buildClientInsight(c) {
+  const amount = Number(c.amount) || 0;
+  const status = safe(c.status);
+  const product = safe(c.product);
+  let text = '';
+
+  if (status === 'Выдано') {
+    text += 'Клиент уже доведен до выдачи. Следующий шаг — кросс-продажи и удержание клиента.';
+  } else if (status === 'Одобрено') {
+    text += 'Клиент находится на сильном этапе. Нужно быстро довести сделку до выдачи.';
+  } else if (status === 'Финанализ' || status === 'Кредитный комитет') {
+    text += 'Клиент относится к горячим сделкам. Требуется контроль документов, обеспечения и сроков рассмотрения.';
+  } else if (status === 'Документы собираются') {
+    text += 'Главный риск — задержка пакета документов. Менеджеру нужно ускорить сбор документов.';
+  } else if (status === 'Отказ') {
+    text += 'Нужно зафиксировать причину отказа и определить возможность повторной работы.';
+  } else {
+    text += 'Клиент находится на раннем этапе. Нужно уточнить потребность, продукт и следующий контакт.';
+  }
+
+  if (amount >= 1000000000) {
+    text += ' Сумма заявки крупная, поэтому сделка требует повышенного контроля.';
+  }
+
+  if (product === '-' || product === '') {
+    text += ' Продукт не выбран — нужно уточнить подходящий продукт.';
+  }
+
+  return text;
+}
+
 
 function exportClientsCSV() {
   const rows = [['Дата','Клиент','Телефон','ИНН','Бизнес','Регион','Продукт','Сумма','Статус','Менеджер']];
