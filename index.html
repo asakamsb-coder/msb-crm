@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM</title>
+<title>MSB CRM Web 2.0</title>
 
 <style>
 :root{
   --brand:#E3062C;
-  --brand-dark:#B90424;
   --bg:#F6F7F9;
   --surface:#FFFFFF;
   --text:#111827;
@@ -17,6 +16,7 @@
   --green:#15803D;
   --orange:#B45309;
   --blue:#1D4ED8;
+  --red:#DC2626;
 }
 
 *{box-sizing:border-box;margin:0;padding:0;font-family:"Inter","Segoe UI",Arial,sans-serif;}
@@ -24,7 +24,7 @@ body{background:var(--bg);color:var(--text);}
 .app{display:flex;min-height:100vh;}
 
 .sidebar{
-  width:280px;background:var(--surface);border-right:1px solid var(--line);padding:28px 20px;
+  width:280px;background:white;border-right:1px solid var(--line);padding:28px 20px;
 }
 .brand{margin-bottom:34px;}
 .brand-title{font-size:26px;font-weight:800;color:var(--brand);}
@@ -42,16 +42,16 @@ body{background:var(--bg);color:var(--text);}
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;}
 .header h1{font-size:30px;font-weight:800;}
 .header p{color:var(--muted);margin-top:6px;font-size:14px;}
-.user-box{background:var(--surface);border:1px solid var(--line);padding:12px 16px;border-radius:14px;font-weight:600;}
+.user-box{background:white;border:1px solid var(--line);padding:12px 16px;border-radius:14px;font-weight:600;}
 
 .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px;}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;}
+.card{background:white;border:1px solid var(--line);border-radius:18px;padding:22px;}
 .card-label{color:var(--muted);font-size:14px;margin-bottom:12px;}
 .card-value{font-size:31px;font-weight:800;}
 .card-note{margin-top:10px;color:var(--green);font-size:13px;font-weight:600;}
 
 .layout{display:grid;grid-template-columns:2fr 1fr;gap:22px;}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:22px;}
+.panel{background:white;border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:22px;}
 .panel h2{font-size:20px;margin-bottom:18px;}
 
 .funnel-item{display:grid;grid-template-columns:1fr 180px;gap:20px;padding:14px 0;border-bottom:1px solid var(--line);}
@@ -68,6 +68,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
 .status-blue{background:#EAF1FF;color:var(--blue);}
 .status-orange{background:#FFF4E5;color:var(--orange);}
 .status-green{background:#EAF8EF;color:var(--green);}
+.status-red{background:#FEE2E2;color:var(--red);}
 
 .rank-row{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);}
 .rank-name{font-weight:700;}
@@ -75,6 +76,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
 .ai-box{background:#FFF7F8;border:1px solid #FFD9DF;}
 .ai-box p{color:#4B5563;line-height:1.6;font-size:14px;}
 .footer{margin-top:20px;color:var(--muted);font-size:13px;}
+.loading{color:var(--muted);font-size:14px;}
 
 @media(max-width:1000px){
   .app{flex-direction:column;}
@@ -97,11 +99,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
   <nav class="nav">
     <a class="active" href="#"><span class="icon"></span>Dashboard</a>
     <a href="#clients"><span class="icon"></span>Клиенты</a>
-    <a href="#"><span class="icon"></span>Продажи</a>
-    <a href="#"><span class="icon"></span>Статистика</a>
-    <a href="#"><span class="icon"></span>Менеджеры</a>
-    <a href="#"><span class="icon"></span>AI Центр</a>
-    <a href="#"><span class="icon"></span>Настройки</a>
+    <a href="#sales"><span class="icon"></span>Продажи</a>
+    <a href="#stats"><span class="icon"></span>Статистика</a>
+    <a href="#managers"><span class="icon"></span>Менеджеры</a>
+    <a href="#ai"><span class="icon"></span>AI Центр</a>
   </nav>
 </aside>
 
@@ -110,7 +111,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
   <div class="header">
     <div>
       <h1>MSB Dashboard</h1>
-      <p>Управление продажами малого бизнеса • Июнь 2026</p>
+      <p>Реальные данные из Telegram CRM и Google Sheets</p>
     </div>
     <div class="user-box">Управляющий Нукус БХМ</div>
   </div>
@@ -118,158 +119,293 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
   <section class="kpi">
     <div class="card">
       <div class="card-label">Клиенты</div>
-      <div class="card-value">157</div>
-      <div class="card-note">+18 за месяц</div>
+      <div class="card-value" id="totalClients">...</div>
+      <div class="card-note">Всего в CRM</div>
     </div>
 
     <div class="card">
       <div class="card-label">Сумма заявок</div>
-      <div class="card-value">42.8 млрд</div>
-      <div class="card-note">Портфель заявок</div>
+      <div class="card-value" id="totalAmount">...</div>
+      <div class="card-note">Общий портфель заявок</div>
     </div>
 
     <div class="card">
       <div class="card-label">Сумма выдач</div>
-      <div class="card-value">18.3 млрд</div>
-      <div class="card-note">Конверсия 43%</div>
+      <div class="card-value" id="issuedAmount">...</div>
+      <div class="card-note" id="conversion">Конверсия ...</div>
     </div>
 
     <div class="card">
       <div class="card-label">Потенциальный портфель</div>
-      <div class="card-value">24.7 млрд</div>
+      <div class="card-value" id="potentialAmount">...</div>
       <div class="card-note">В работе</div>
     </div>
   </section>
 
   <div class="layout">
     <div>
-      <div class="panel">
+      <div class="panel" id="sales">
         <h2>Воронка продаж МСБ</h2>
-
-        <div class="funnel-item">
-          <div><div class="funnel-title">Новый клиент</div><div class="funnel-meta">35 клиентов</div><div class="bar"><span style="width:85%"></span></div></div>
-          <div class="amount">8.2 млрд</div>
-        </div>
-
-        <div class="funnel-item">
-          <div><div class="funnel-title">Переговоры</div><div class="funnel-meta">27 клиентов</div><div class="bar"><span style="width:65%"></span></div></div>
-          <div class="amount">6.4 млрд</div>
-        </div>
-
-        <div class="funnel-item">
-          <div><div class="funnel-title">Документы собираются</div><div class="funnel-meta">18 клиентов</div><div class="bar"><span style="width:48%"></span></div></div>
-          <div class="amount">4.9 млрд</div>
-        </div>
-
-        <div class="funnel-item">
-          <div><div class="funnel-title">Финанализ</div><div class="funnel-meta">12 клиентов</div><div class="bar"><span style="width:36%"></span></div></div>
-          <div class="amount">3.1 млрд</div>
-        </div>
-
-        <div class="funnel-item">
-          <div><div class="funnel-title">Кредитный комитет</div><div class="funnel-meta">7 клиентов</div><div class="bar"><span style="width:22%"></span></div></div>
-          <div class="amount">1.8 млрд</div>
-        </div>
+        <div id="funnelBox" class="loading">Загрузка воронки...</div>
       </div>
 
       <div class="panel" id="clients">
         <h2>Клиенты</h2>
-
-        <table>
-          <tr>
-            <th>Дата</th>
-            <th>Клиент</th>
-            <th>Телефон</th>
-            <th>ИНН</th>
-            <th>Бизнес</th>
-            <th>Продукт</th>
-            <th>Сумма</th>
-            <th>Статус</th>
-            <th>Менеджер</th>
-          </tr>
-
-          <tr>
-            <td>21.06.2026</td>
-            <td>OOO Nukus Textile</td>
-            <td>998971790000</td>
-            <td>305123456</td>
-            <td>Производство</td>
-            <td>Biznes standart</td>
-            <td>1.2 млрд</td>
-            <td><span class="status status-orange">Финанализ</span></td>
-            <td>Allayarov Daniyar</td>
-          </tr>
-
-          <tr>
-            <td>21.06.2026</td>
-            <td>Berdaq Agro</td>
-            <td>998901112233</td>
-            <td>307863377</td>
-            <td>Сельское хозяйство</td>
-            <td>Oson</td>
-            <td>500 млн</td>
-            <td><span class="status status-blue">Переговоры</span></td>
-            <td>Mambetnazarova Aziza</td>
-          </tr>
-
-          <tr>
-            <td>21.06.2026</td>
-            <td>Qoraqalpoq Trade</td>
-            <td>998935551122</td>
-            <td>301114061</td>
-            <td>Торговля</td>
-            <td>Гарантия</td>
-            <td>800 млн</td>
-            <td><span class="status status-green">Одобрено</span></td>
-            <td>Tleumuratov Amir</td>
-          </tr>
-        </table>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Клиент</th>
+                <th>Телефон</th>
+                <th>ИНН</th>
+                <th>Бизнес</th>
+                <th>Продукт</th>
+                <th>Сумма</th>
+                <th>Статус</th>
+                <th>Менеджер</th>
+              </tr>
+            </thead>
+            <tbody id="clientsTable">
+              <tr><td colspan="9" class="loading">Загрузка клиентов...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <div>
-      <div class="panel">
+      <div class="panel" id="managers">
         <h2>Рейтинг менеджеров</h2>
-
-        <div class="rank-row">
-          <div class="rank-name">1. Allayarov Daniyar</div>
-          <div class="rank-score">92</div>
-        </div>
-
-        <div class="rank-row">
-          <div class="rank-name">2. Mambetkarimov Allayar</div>
-          <div class="rank-score">86</div>
-        </div>
-
-        <div class="rank-row">
-          <div class="rank-name">3. Tleumuratov Amir</div>
-          <div class="rank-score">81</div>
-        </div>
+        <div id="managersBox" class="loading">Загрузка рейтинга...</div>
       </div>
 
-      <div class="panel">
-        <h2>Узкое место</h2>
-        <p style="font-weight:700;">Документы → Финанализ</p>
-        <p style="margin-top:10px;color:var(--muted);line-height:1.6;">
-          18 клиентов находятся на этапе сбора документов. Требуется ускорить получение пакета документов.
-        </p>
+      <div class="panel" id="stats">
+        <h2>Средние показатели</h2>
+        <p>Средний чек заявки: <b id="averageRequest">...</b></p>
+        <p style="margin-top:10px;">Средний чек выдачи: <b id="averageIssued">...</b></p>
+        <p style="margin-top:10px;">Кол-во выдач: <b id="issuedCount">...</b></p>
       </div>
 
-      <div class="panel ai-box">
+      <div class="panel ai-box" id="ai">
         <h2>AI вывод</h2>
-        <p>
-          Потенциальный портфель высокий. Основной резерв роста — клиенты на этапах
-          “Документы” и “Финанализ”. Рекомендуется усилить контроль менеджеров по этим этапам.
-        </p>
+        <p id="aiText">Загрузка управленческого вывода...</p>
       </div>
     </div>
   </div>
 
-  <div class="footer">
-    MSB CRM Web MVP • Asakabank Nukus BXM • Version 1.3
+  <div class="footer" id="updatedAt">
+    MSB CRM Web 2.0 • Asakabank Nukus BXM
   </div>
 
 </main>
 </div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
+
+async function loadCRM() {
+  try {
+    const [stats, clients, funnel, managers] = await Promise.all([
+      fetchJSON('stats'),
+      fetchJSON('clients'),
+      fetchJSON('funnel'),
+      fetchJSON('managers')
+    ]);
+
+    renderStats(stats);
+    renderClients(clients);
+    renderFunnel(funnel);
+    renderManagers(managers);
+    renderAI(stats);
+  } catch (error) {
+    document.getElementById('aiText').innerText =
+      'Ошибка загрузки данных. Проверьте API Apps Script и доступ к Web App.';
+    console.error(error);
+  }
+}
+
+async function fetchJSON(action) {
+  const response = await fetch(API_URL + '?action=' + action);
+  return await response.json();
+}
+
+function renderStats(stats) {
+  document.getElementById('totalClients').innerText = stats.totalClients || 0;
+  document.getElementById('totalAmount').innerText = formatMoney(stats.totalAmount);
+  document.getElementById('issuedAmount').innerText = formatMoney(stats.issuedAmount);
+  document.getElementById('potentialAmount').innerText = formatMoney(stats.potentialAmount);
+  document.getElementById('conversion').innerText = 'Конверсия ' + (stats.conversion || 0) + '%';
+  document.getElementById('averageRequest').innerText = formatMoney(stats.averageRequest);
+  document.getElementById('averageIssued').innerText = formatMoney(stats.averageIssued);
+  document.getElementById('issuedCount').innerText = stats.issuedCount || 0;
+  document.getElementById('updatedAt').innerText =
+    'MSB CRM Web 2.0 • Обновлено: ' + (stats.updatedAt || '');
+}
+
+function renderClients(clients) {
+  const tbody = document.getElementById('clientsTable');
+  tbody.innerHTML = '';
+
+  if (!clients || clients.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9">Клиентов пока нет</td></tr>';
+    return;
+  }
+
+  clients.forEach(c => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${safe(c.date)}</td>
+        <td>${safe(c.name)}</td>
+        <td>${safe(c.phone)}</td>
+        <td>${safe(c.inn)}</td>
+        <td>${safe(c.business)}</td>
+        <td>${safe(c.product)}</td>
+        <td>${formatMoney(c.amount)}</td>
+        <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
+        <td>${safe(c.manager)}</td>
+      </tr>
+    `;
+  });
+}
+
+function renderFunnel(funnel) {
+  const box = document.getElementById('funnelBox');
+  box.innerHTML = '';
+
+  const statuses = [
+    'Новый клиент',
+    'Переговоры',
+    'Документы собираются',
+    'Финанализ',
+    'Кредитный комитет',
+    'Одобрено',
+    'Выдано',
+    'Отказ',
+    'Отложено'
+  ];
+
+  let max = 1;
+  statuses.forEach(s => {
+    if (funnel[s] && funnel[s].count > max) max = funnel[s].count;
+  });
+
+  statuses.forEach(status => {
+    const item = funnel[status] || {count:0, amount:0};
+    const width = Math.max(3, Math.round((item.count / max) * 100));
+
+    box.innerHTML += `
+      <div class="funnel-item">
+        <div>
+          <div class="funnel-title">${status}</div>
+          <div class="funnel-meta">${item.count} клиентов</div>
+          <div class="bar"><span style="width:${width}%"></span></div>
+        </div>
+        <div class="amount">${formatMoney(item.amount)}</div>
+      </div>
+    `;
+  });
+}
+
+function renderManagers(managers) {
+  const box = document.getElementById('managersBox');
+  box.innerHTML = '';
+
+  if (!managers || managers.length === 0) {
+    box.innerHTML = 'Нет данных по менеджерам';
+    return;
+  }
+
+  managers
+    .sort((a,b) => (b.issuedAmount || 0) - (a.issuedAmount || 0))
+    .slice(0, 7)
+    .forEach((m, index) => {
+      const score = calculateScore(m);
+
+      box.innerHTML += `
+        <div class="rank-row">
+          <div>
+            <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px;">
+              Клиентов: ${m.totalClients || 0} • Выдано: ${formatMoney(m.issuedAmount)}
+            </div>
+          </div>
+          <div class="rank-score">${score}</div>
+        </div>
+      `;
+    });
+}
+
+function calculateScore(m) {
+  let score = 0;
+
+  score += Math.min((m.issuedCount || 0) * 5, 40);
+
+  if (m.issuedAmount >= 3000000000) score += 25;
+  else if (m.issuedAmount >= 2000000000) score += 20;
+  else if (m.issuedAmount >= 1000000000) score += 15;
+  else if (m.issuedAmount >= 500000000) score += 10;
+  else if (m.issuedAmount > 0) score += 5;
+
+  score += Math.min(m.totalClients || 0, 15);
+
+  if (m.conversion >= 80) score += 10;
+  else if (m.conversion >= 60) score += 8;
+  else if (m.conversion >= 40) score += 6;
+  else if (m.conversion >= 20) score += 4;
+  else if (m.totalClients > 0) score += 2;
+
+  return Math.min(score, 100);
+}
+
+function renderAI(stats) {
+  let text = '';
+
+  if (!stats || !stats.totalClients) {
+    text = 'Данных пока недостаточно для управленческого вывода.';
+  } else if (stats.conversion >= 40) {
+    text = 'Конверсия хорошая. Основная задача — удержать темп выдач и ускорить клиентов в статусах “Документы” и “Финанализ”.';
+  } else if (stats.conversion >= 20) {
+    text = 'Конверсия средняя. Нужно усилить контроль менеджеров по этапам воронки и повысить качество сопровождения клиентов.';
+  } else {
+    text = 'Конверсия низкая. Требуется разбор качества лидов, причин отказов и дисциплины менеджеров.';
+  }
+
+  if (stats.potentialAmount > stats.issuedAmount) {
+    text += ' Потенциальный портфель выше текущих выдач — есть резерв роста до конца месяца.';
+  }
+
+  document.getElementById('aiText').innerText = text;
+}
+
+function formatMoney(value) {
+  value = Number(value) || 0;
+
+  if (value >= 1000000000) {
+    return (value / 1000000000).toFixed(1).replace('.', ',') + ' млрд';
+  }
+
+  if (value >= 1000000) {
+    return (value / 1000000).toFixed(1).replace('.', ',') + ' млн';
+  }
+
+  return value.toLocaleString('ru-RU');
+}
+
+function statusClass(status) {
+  if (status === 'Выдано' || status === 'Одобрено') return 'status-green';
+  if (status === 'Финанализ' || status === 'Документы собираются') return 'status-orange';
+  if (status === 'Переговоры' || status === 'Новый клиент') return 'status-blue';
+  if (status === 'Отказ') return 'status-red';
+  return 'status-blue';
+}
+
+function safe(value) {
+  return value === null || value === undefined || value === '' ? '-' : value;
+}
+
+loadCRM();
+</script>
+
 </body>
 </html>
