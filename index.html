@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Web 2.0</title>
+<title>MSB CRM Web 2.1</title>
 
 <style>
 :root{
   --brand:#E3062C;
+  --brand-soft:#FFF1F3;
   --bg:#F6F7F9;
   --surface:#FFFFFF;
   --text:#111827;
@@ -18,71 +19,72 @@
   --blue:#1D4ED8;
   --red:#DC2626;
 }
-
 *{box-sizing:border-box;margin:0;padding:0;font-family:"Inter","Segoe UI",Arial,sans-serif;}
 body{background:var(--bg);color:var(--text);}
 .app{display:flex;min-height:100vh;}
-
-.sidebar{
-  width:280px;background:white;border-right:1px solid var(--line);padding:28px 20px;
-}
+.sidebar{width:280px;background:#fff;border-right:1px solid var(--line);padding:28px 20px;position:fixed;top:0;bottom:0;left:0;}
 .brand{margin-bottom:34px;}
 .brand-title{font-size:26px;font-weight:800;color:var(--brand);}
 .brand-subtitle{margin-top:6px;font-size:13px;color:var(--muted);}
-.nav a{
-  display:flex;align-items:center;gap:12px;text-decoration:none;color:#374151;
-  padding:13px 14px;border-radius:12px;font-size:15px;font-weight:600;margin-bottom:6px;
-}
-.nav a.active{background:#FFF1F3;color:var(--brand);}
+.nav a{display:flex;align-items:center;gap:12px;text-decoration:none;color:#374151;padding:13px 14px;border-radius:12px;font-size:15px;font-weight:600;margin-bottom:6px;cursor:pointer;}
+.nav a.active{background:var(--brand-soft);color:var(--brand);}
 .nav a:hover{background:#F3F4F6;}
 .icon{width:18px;height:18px;border-radius:5px;background:#E5E7EB;}
 .active .icon{background:var(--brand);}
-
-.main{flex:1;padding:30px;}
+.main{margin-left:280px;flex:1;padding:30px;}
 .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;}
 .header h1{font-size:30px;font-weight:800;}
 .header p{color:var(--muted);margin-top:6px;font-size:14px;}
-.user-box{background:white;border:1px solid var(--line);padding:12px 16px;border-radius:14px;font-weight:600;}
-
+.user-box{background:#fff;border:1px solid var(--line);padding:12px 16px;border-radius:14px;font-weight:600;}
 .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px;}
-.card{background:white;border:1px solid var(--line);border-radius:18px;padding:22px;}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;}
 .card-label{color:var(--muted);font-size:14px;margin-bottom:12px;}
 .card-value{font-size:31px;font-weight:800;}
 .card-note{margin-top:10px;color:var(--green);font-size:13px;font-weight:600;}
-
 .layout{display:grid;grid-template-columns:2fr 1fr;gap:22px;}
-.panel{background:white;border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:22px;}
+.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:22px;}
 .panel h2{font-size:20px;margin-bottom:18px;}
-
 .funnel-item{display:grid;grid-template-columns:1fr 180px;gap:20px;padding:14px 0;border-bottom:1px solid var(--line);}
 .funnel-title{font-weight:700;}
 .funnel-meta{color:var(--muted);font-size:13px;margin-top:4px;}
 .bar{height:8px;background:#EEF0F3;border-radius:999px;overflow:hidden;margin-top:9px;}
 .bar span{display:block;height:100%;background:var(--brand);border-radius:999px;}
 .amount{font-weight:700;text-align:right;}
-
 table{width:100%;border-collapse:collapse;}
-th{text-align:left;font-size:13px;color:var(--muted);font-weight:700;padding:12px;border-bottom:1px solid var(--line);}
-td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
-.status{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;}
+th{text-align:left;font-size:13px;color:var(--muted);font-weight:700;padding:12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top;}
+.status{padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;}
 .status-blue{background:#EAF1FF;color:var(--blue);}
 .status-orange{background:#FFF4E5;color:var(--orange);}
 .status-green{background:#EAF8EF;color:var(--green);}
 .status-red{background:#FEE2E2;color:var(--red);}
-
-.rank-row{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line);}
+.rank-row{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);}
 .rank-name{font-weight:700;}
 .rank-score{font-weight:800;color:var(--brand);}
 .ai-box{background:#FFF7F8;border:1px solid #FFD9DF;}
 .ai-box p{color:#4B5563;line-height:1.6;font-size:14px;}
 .footer{margin-top:20px;color:var(--muted);font-size:13px;}
 .loading{color:var(--muted);font-size:14px;}
-
-@media(max-width:1000px){
+.page{display:none;}
+.page.active{display:block;}
+.filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;margin-bottom:18px;}
+.input,.select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px;color:var(--text);}
+.btn{border:none;background:var(--brand);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.btn:hover{background:#B90424;}
+.btn-secondary{background:#111827;}
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.summary-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;}
+.summary-card .small{font-size:13px;color:var(--muted);margin-bottom:7px;}
+.summary-card .big{font-size:22px;font-weight:800;}
+.client-table-wrap{overflow-x:auto;}
+.nowrap{white-space:nowrap;}
+@media(max-width:1100px){
+  .sidebar{position:relative;width:100%;height:auto;}
+  .main{margin-left:0;}
   .app{flex-direction:column;}
-  .sidebar{width:100%;}
-  .kpi{grid-template-columns:1fr 1fr;}
+  .kpi,.summary-row{grid-template-columns:1fr 1fr;}
   .layout{grid-template-columns:1fr;}
+  .filters{grid-template-columns:1fr;}
 }
 </style>
 </head>
@@ -97,17 +99,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
   </div>
 
   <nav class="nav">
-    <a class="active" href="#"><span class="icon"></span>Dashboard</a>
-    <a href="#clients"><span class="icon"></span>Клиенты</a>
-    <a href="#sales"><span class="icon"></span>Продажи</a>
-    <a href="#stats"><span class="icon"></span>Статистика</a>
-    <a href="#managers"><span class="icon"></span>Менеджеры</a>
-    <a href="#ai"><span class="icon"></span>AI Центр</a>
+    <a class="active" onclick="showPage('dashboard', this)"><span class="icon"></span>Dashboard</a>
+    <a onclick="showPage('clientsPage', this)"><span class="icon"></span>Клиенты</a>
+    <a onclick="showPage('salesPage', this)"><span class="icon"></span>Продажи</a>
+    <a onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
+    <a onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
+    <a onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
   </nav>
 </aside>
 
 <main class="main">
 
+<section id="dashboard" class="page active">
   <div class="header">
     <div>
       <h1>MSB Dashboard</h1>
@@ -117,57 +120,28 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
   </div>
 
   <section class="kpi">
-    <div class="card">
-      <div class="card-label">Клиенты</div>
-      <div class="card-value" id="totalClients">...</div>
-      <div class="card-note">Всего в CRM</div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">Сумма заявок</div>
-      <div class="card-value" id="totalAmount">...</div>
-      <div class="card-note">Общий портфель заявок</div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">Сумма выдач</div>
-      <div class="card-value" id="issuedAmount">...</div>
-      <div class="card-note" id="conversion">Конверсия ...</div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">Потенциальный портфель</div>
-      <div class="card-value" id="potentialAmount">...</div>
-      <div class="card-note">В работе</div>
-    </div>
+    <div class="card"><div class="card-label">Клиенты</div><div class="card-value" id="totalClients">...</div><div class="card-note">Всего в CRM</div></div>
+    <div class="card"><div class="card-label">Сумма заявок</div><div class="card-value" id="totalAmount">...</div><div class="card-note">Общий портфель заявок</div></div>
+    <div class="card"><div class="card-label">Сумма выдач</div><div class="card-value" id="issuedAmount">...</div><div class="card-note" id="conversion">Конверсия ...</div></div>
+    <div class="card"><div class="card-label">Потенциальный портфель</div><div class="card-value" id="potentialAmount">...</div><div class="card-note">В работе</div></div>
   </section>
 
   <div class="layout">
     <div>
-      <div class="panel" id="sales">
+      <div class="panel">
         <h2>Воронка продаж МСБ</h2>
         <div id="funnelBox" class="loading">Загрузка воронки...</div>
       </div>
 
-      <div class="panel" id="clients">
-        <h2>Клиенты</h2>
-        <div style="overflow-x:auto;">
+      <div class="panel">
+        <h2>Последние клиенты</h2>
+        <div class="client-table-wrap">
           <table>
             <thead>
-              <tr>
-                <th>Дата</th>
-                <th>Клиент</th>
-                <th>Телефон</th>
-                <th>ИНН</th>
-                <th>Бизнес</th>
-                <th>Продукт</th>
-                <th>Сумма</th>
-                <th>Статус</th>
-                <th>Менеджер</th>
-              </tr>
+              <tr><th>Дата</th><th>Клиент</th><th>Продукт</th><th>Сумма</th><th>Статус</th><th>Менеджер</th></tr>
             </thead>
-            <tbody id="clientsTable">
-              <tr><td colspan="9" class="loading">Загрузка клиентов...</td></tr>
+            <tbody id="latestClientsTable">
+              <tr><td colspan="6" class="loading">Загрузка клиентов...</td></tr>
             </tbody>
           </table>
         </div>
@@ -175,34 +149,112 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;}
     </div>
 
     <div>
-      <div class="panel" id="managers">
+      <div class="panel">
         <h2>Рейтинг менеджеров</h2>
         <div id="managersBox" class="loading">Загрузка рейтинга...</div>
       </div>
 
-      <div class="panel" id="stats">
+      <div class="panel">
         <h2>Средние показатели</h2>
         <p>Средний чек заявки: <b id="averageRequest">...</b></p>
         <p style="margin-top:10px;">Средний чек выдачи: <b id="averageIssued">...</b></p>
-        <p style="margin-top:10px;">Кол-во выдач: <b id="issuedCount">...</b></p>
+        <p style="margin-top:10px;">Количество выдач: <b id="issuedCount">...</b></p>
       </div>
 
-      <div class="panel ai-box" id="ai">
-        <h2>AI вывод</h2>
+      <div class="panel ai-box">
+        <h2>Управленческий вывод</h2>
         <p id="aiText">Загрузка управленческого вывода...</p>
       </div>
     </div>
   </div>
+</section>
 
-  <div class="footer" id="updatedAt">
-    MSB CRM Web 2.0 • Asakabank Nukus BXM
+<section id="clientsPage" class="page">
+  <div class="header">
+    <div>
+      <h1>Клиенты PRO</h1>
+      <p>Поиск, фильтрация и экспорт клиентской базы</p>
+    </div>
+    <div class="user-box" id="clientsCountBox">Клиентов: ...</div>
   </div>
+
+  <div class="summary-row">
+    <div class="summary-card"><div class="small">Клиентов в выборке</div><div class="big" id="filteredClientsCount">0</div></div>
+    <div class="summary-card"><div class="small">Сумма заявок</div><div class="big" id="filteredAmount">0</div></div>
+    <div class="summary-card"><div class="small">Выдано</div><div class="big" id="filteredIssued">0</div></div>
+    <div class="summary-card"><div class="small">Средний чек</div><div class="big" id="filteredAverage">0</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="filters">
+      <input id="searchInput" class="input" placeholder="Поиск по клиенту, ИНН, телефону, бизнесу">
+      <select id="managerFilter" class="select"><option value="">Все менеджеры</option></select>
+      <select id="statusFilter" class="select"><option value="">Все статусы</option></select>
+      <select id="productFilter" class="select"><option value="">Все продукты</option></select>
+      <button class="btn" onclick="exportClientsCSV()">Экспорт CSV</button>
+    </div>
+
+    <div class="client-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Дата</th>
+            <th>Клиент</th>
+            <th>Телефон</th>
+            <th>ИНН</th>
+            <th>Бизнес</th>
+            <th>Регион</th>
+            <th>Продукт</th>
+            <th>Сумма</th>
+            <th>Статус</th>
+            <th>Менеджер</th>
+          </tr>
+        </thead>
+        <tbody id="clientsTable">
+          <tr><td colspan="10" class="loading">Загрузка клиентов...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="salesPage" class="page">
+  <div class="header"><div><h1>Продажи</h1><p>Воронка продаж и потенциальный портфель</p></div></div>
+  <div class="panel"><h2>Воронка продаж</h2><div id="salesFunnelBox">Загрузка...</div></div>
+</section>
+
+<section id="statsPage" class="page">
+  <div class="header"><div><h1>Статистика</h1><p>Ключевые показатели филиала</p></div></div>
+  <section class="kpi">
+    <div class="card"><div class="card-label">Средний чек заявки</div><div class="card-value" id="statsAvgRequest">...</div></div>
+    <div class="card"><div class="card-label">Средний чек выдачи</div><div class="card-value" id="statsAvgIssued">...</div></div>
+    <div class="card"><div class="card-label">Конверсия</div><div class="card-value" id="statsConversion">...</div></div>
+    <div class="card"><div class="card-label">Выдачи</div><div class="card-value" id="statsIssuedCount">...</div></div>
+  </section>
+</section>
+
+<section id="managersPage" class="page">
+  <div class="header"><div><h1>Менеджеры</h1><p>KPI, выдачи и конверсия по менеджерам</p></div></div>
+  <div class="panel"><h2>Рейтинг менеджеров</h2><div id="managersFullBox">Загрузка...</div></div>
+</section>
+
+<section id="aiPage" class="page">
+  <div class="header"><div><h1>AI Центр</h1><p>Управленческие выводы по данным CRM</p></div></div>
+  <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
+</section>
+
+<div class="footer" id="updatedAt">MSB CRM Web 2.1 • Asakabank Nukus BXM</div>
 
 </main>
 </div>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
+
+let allClients = [];
+let allManagers = [];
+let allStats = null;
+let allFunnel = null;
 
 async function loadCRM() {
   try {
@@ -213,14 +265,23 @@ async function loadCRM() {
       fetchJSON('managers')
     ]);
 
+    allStats = stats;
+    allClients = clients || [];
+    allFunnel = funnel;
+    allManagers = managers || [];
+
     renderStats(stats);
-    renderClients(clients);
-    renderFunnel(funnel);
+    renderClients(allClients);
+    renderFunnel(funnel, 'funnelBox');
+    renderFunnel(funnel, 'salesFunnelBox');
     renderManagers(managers);
+    renderManagersFull(managers);
+    renderLatestClients(allClients);
     renderAI(stats);
+    buildFilters();
+    applyClientFilters();
   } catch (error) {
-    document.getElementById('aiText').innerText =
-      'Ошибка загрузки данных. Проверьте API Apps Script и доступ к Web App.';
+    document.getElementById('aiText').innerText = 'Ошибка загрузки данных. Проверьте API Apps Script.';
     console.error(error);
   }
 }
@@ -228,6 +289,13 @@ async function loadCRM() {
 async function fetchJSON(action) {
   const response = await fetch(API_URL + '?action=' + action);
   return await response.json();
+}
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
 }
 
 function renderStats(stats) {
@@ -239,8 +307,27 @@ function renderStats(stats) {
   document.getElementById('averageRequest').innerText = formatMoney(stats.averageRequest);
   document.getElementById('averageIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('issuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('updatedAt').innerText =
-    'MSB CRM Web 2.0 • Обновлено: ' + (stats.updatedAt || '');
+  document.getElementById('statsAvgRequest').innerText = formatMoney(stats.averageRequest);
+  document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
+  document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
+  document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
+  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.1 • Обновлено: ' + (stats.updatedAt || '');
+}
+
+function renderLatestClients(clients) {
+  const tbody = document.getElementById('latestClientsTable');
+  tbody.innerHTML = '';
+  clients.slice(0, 5).forEach(c => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${safe(c.date)}</td>
+        <td>${safe(c.name)}</td>
+        <td>${safe(c.product)}</td>
+        <td>${formatMoney(c.amount)}</td>
+        <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
+        <td>${safe(c.manager)}</td>
+      </tr>`;
+  });
 }
 
 function renderClients(clients) {
@@ -248,52 +335,88 @@ function renderClients(clients) {
   tbody.innerHTML = '';
 
   if (!clients || clients.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9">Клиентов пока нет</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10">Клиентов пока нет</td></tr>';
     return;
   }
 
   clients.forEach(c => {
     tbody.innerHTML += `
       <tr>
-        <td>${safe(c.date)}</td>
+        <td class="nowrap">${safe(c.date)}</td>
         <td>${safe(c.name)}</td>
-        <td>${safe(c.phone)}</td>
-        <td>${safe(c.inn)}</td>
-        <td>${safe(c.business)}</td>
+        <td class="nowrap">${safe(c.phone)}</td>
+        <td class="nowrap">${safe(c.inn)}</td>
+        <td>${safe(c.business || c.industry)}</td>
+        <td>${safe(c.region)}</td>
         <td>${safe(c.product)}</td>
-        <td>${formatMoney(c.amount)}</td>
+        <td class="nowrap">${formatMoney(c.amount)}</td>
         <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
         <td>${safe(c.manager)}</td>
-      </tr>
-    `;
+      </tr>`;
   });
 }
 
-function renderFunnel(funnel) {
-  const box = document.getElementById('funnelBox');
+function buildFilters() {
+  fillSelect('managerFilter', unique(allClients.map(c => c.manager)), 'Все менеджеры');
+  fillSelect('statusFilter', unique(allClients.map(c => c.status)), 'Все статусы');
+  fillSelect('productFilter', unique(allClients.map(c => c.product)), 'Все продукты');
+
+  ['searchInput','managerFilter','statusFilter','productFilter'].forEach(id => {
+    document.getElementById(id).addEventListener('input', applyClientFilters);
+    document.getElementById(id).addEventListener('change', applyClientFilters);
+  });
+}
+
+function fillSelect(id, values, first) {
+  const select = document.getElementById(id);
+  select.innerHTML = `<option value="">${first}</option>`;
+  values.filter(Boolean).forEach(v => {
+    select.innerHTML += `<option value="${v}">${v}</option>`;
+  });
+}
+
+function applyClientFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const manager = document.getElementById('managerFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const product = document.getElementById('productFilter').value;
+
+  let filtered = allClients.filter(c => {
+    const text = [c.name,c.inn,c.phone,c.business,c.industry,c.region,c.product,c.manager].join(' ').toLowerCase();
+    return (!q || text.includes(q)) &&
+           (!manager || c.manager === manager) &&
+           (!status || c.status === status) &&
+           (!product || c.product === product);
+  });
+
+  renderClients(filtered);
+  renderClientSummary(filtered);
+}
+
+function renderClientSummary(clients) {
+  const total = clients.length;
+  const amount = clients.reduce((s,c) => s + (Number(c.amount)||0), 0);
+  const issued = clients.filter(c => c.status === 'Выдано').reduce((s,c) => s + (Number(c.amount)||0), 0);
+  const avg = total ? amount / total : 0;
+
+  document.getElementById('clientsCountBox').innerText = 'Клиентов: ' + total;
+  document.getElementById('filteredClientsCount').innerText = total;
+  document.getElementById('filteredAmount').innerText = formatMoney(amount);
+  document.getElementById('filteredIssued').innerText = formatMoney(issued);
+  document.getElementById('filteredAverage').innerText = formatMoney(avg);
+}
+
+function renderFunnel(funnel, boxId) {
+  const box = document.getElementById(boxId);
   box.innerHTML = '';
 
-  const statuses = [
-    'Новый клиент',
-    'Переговоры',
-    'Документы собираются',
-    'Финанализ',
-    'Кредитный комитет',
-    'Одобрено',
-    'Выдано',
-    'Отказ',
-    'Отложено'
-  ];
-
+  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','Выдано','Отказ','Отложено'];
   let max = 1;
-  statuses.forEach(s => {
-    if (funnel[s] && funnel[s].count > max) max = funnel[s].count;
-  });
+  statuses.forEach(s => { if (funnel[s] && funnel[s].count > max) max = funnel[s].count; });
 
   statuses.forEach(status => {
     const item = funnel[status] || {count:0, amount:0};
     const width = Math.max(3, Math.round((item.count / max) * 100));
-
     box.innerHTML += `
       <div class="funnel-item">
         <div>
@@ -302,93 +425,93 @@ function renderFunnel(funnel) {
           <div class="bar"><span style="width:${width}%"></span></div>
         </div>
         <div class="amount">${formatMoney(item.amount)}</div>
-      </div>
-    `;
+      </div>`;
   });
 }
 
 function renderManagers(managers) {
   const box = document.getElementById('managersBox');
   box.innerHTML = '';
-
-  if (!managers || managers.length === 0) {
-    box.innerHTML = 'Нет данных по менеджерам';
-    return;
-  }
-
-  managers
-    .sort((a,b) => (b.issuedAmount || 0) - (a.issuedAmount || 0))
-    .slice(0, 7)
-    .forEach((m, index) => {
-      const score = calculateScore(m);
-
-      box.innerHTML += `
-        <div class="rank-row">
-          <div>
-            <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
-            <div style="font-size:13px;color:var(--muted);margin-top:4px;">
-              Клиентов: ${m.totalClients || 0} • Выдано: ${formatMoney(m.issuedAmount)}
-            </div>
-          </div>
-          <div class="rank-score">${score}</div>
+  managers.sort((a,b) => calculateScore(b) - calculateScore(a)).slice(0,7).forEach((m, index) => {
+    const score = calculateScore(m);
+    box.innerHTML += `
+      <div class="rank-row">
+        <div>
+          <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px;">Клиентов: ${m.totalClients || 0} • Выдано: ${formatMoney(m.issuedAmount)}</div>
         </div>
-      `;
-    });
+        <div class="rank-score">${score}</div>
+      </div>`;
+  });
+}
+
+function renderManagersFull(managers) {
+  const box = document.getElementById('managersFullBox');
+  box.innerHTML = '';
+  managers.sort((a,b) => calculateScore(b) - calculateScore(a)).forEach((m, index) => {
+    box.innerHTML += `
+      <div class="rank-row">
+        <div>
+          <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px;">
+            Клиентов: ${m.totalClients || 0} • Заявки: ${formatMoney(m.totalAmount)} • Выдано: ${formatMoney(m.issuedAmount)} • Конверсия: ${m.conversion || 0}%
+          </div>
+        </div>
+        <div class="rank-score">${calculateScore(m)}</div>
+      </div>`;
+  });
 }
 
 function calculateScore(m) {
   let score = 0;
-
   score += Math.min((m.issuedCount || 0) * 5, 40);
-
   if (m.issuedAmount >= 3000000000) score += 25;
   else if (m.issuedAmount >= 2000000000) score += 20;
   else if (m.issuedAmount >= 1000000000) score += 15;
   else if (m.issuedAmount >= 500000000) score += 10;
   else if (m.issuedAmount > 0) score += 5;
-
   score += Math.min(m.totalClients || 0, 15);
-
   if (m.conversion >= 80) score += 10;
   else if (m.conversion >= 60) score += 8;
   else if (m.conversion >= 40) score += 6;
   else if (m.conversion >= 20) score += 4;
   else if (m.totalClients > 0) score += 2;
-
   return Math.min(score, 100);
 }
 
 function renderAI(stats) {
   let text = '';
+  if (!stats || !stats.totalClients) text = 'Данных пока недостаточно для управленческого вывода.';
+  else if (stats.conversion >= 40) text = 'Конверсия хорошая. Основная задача — удержать темп выдач и ускорить клиентов в статусах “Документы” и “Финанализ”.';
+  else if (stats.conversion >= 20) text = 'Конверсия средняя. Нужно усилить контроль менеджеров по этапам воронки и повысить качество сопровождения клиентов.';
+  else text = 'Конверсия низкая. Требуется разбор качества лидов, причин отказов и дисциплины менеджеров.';
 
-  if (!stats || !stats.totalClients) {
-    text = 'Данных пока недостаточно для управленческого вывода.';
-  } else if (stats.conversion >= 40) {
-    text = 'Конверсия хорошая. Основная задача — удержать темп выдач и ускорить клиентов в статусах “Документы” и “Финанализ”.';
-  } else if (stats.conversion >= 20) {
-    text = 'Конверсия средняя. Нужно усилить контроль менеджеров по этапам воронки и повысить качество сопровождения клиентов.';
-  } else {
-    text = 'Конверсия низкая. Требуется разбор качества лидов, причин отказов и дисциплины менеджеров.';
-  }
-
-  if (stats.potentialAmount > stats.issuedAmount) {
-    text += ' Потенциальный портфель выше текущих выдач — есть резерв роста до конца месяца.';
-  }
-
+  if (stats.potentialAmount > stats.issuedAmount) text += ' Потенциальный портфель выше текущих выдач — есть резерв роста до конца месяца.';
   document.getElementById('aiText').innerText = text;
+  document.getElementById('aiFullText').innerText = text;
+}
+
+function exportClientsCSV() {
+  const rows = [['Дата','Клиент','Телефон','ИНН','Бизнес','Регион','Продукт','Сумма','Статус','Менеджер']];
+  const tableRows = document.querySelectorAll('#clientsTable tr');
+
+  tableRows.forEach(tr => {
+    const cells = Array.from(tr.querySelectorAll('td')).map(td => td.innerText.replace(/\n/g,' ').trim());
+    if (cells.length) rows.push(cells);
+  });
+
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'clients_export.csv';
+  link.click();
 }
 
 function formatMoney(value) {
   value = Number(value) || 0;
-
-  if (value >= 1000000000) {
-    return (value / 1000000000).toFixed(1).replace('.', ',') + ' млрд';
-  }
-
-  if (value >= 1000000) {
-    return (value / 1000000).toFixed(1).replace('.', ',') + ' млн';
-  }
-
+  if (value >= 1000000000) return (value / 1000000000).toFixed(1).replace('.', ',') + ' млрд';
+  if (value >= 1000000) return (value / 1000000).toFixed(1).replace('.', ',') + ' млн';
   return value.toLocaleString('ru-RU');
 }
 
@@ -400,12 +523,15 @@ function statusClass(status) {
   return 'status-blue';
 }
 
+function unique(arr) {
+  return [...new Set(arr.map(x => safe(x)).filter(x => x !== '-'))].sort();
+}
+
 function safe(value) {
   return value === null || value === undefined || value === '' ? '-' : value;
 }
 
 loadCRM();
 </script>
-
 </body>
 </html>
