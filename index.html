@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Web 2.4</title>
+<title>MSB CRM Web 2.5</title>
 
 <style>
 :root{
@@ -67,6 +67,24 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .loading{color:var(--muted);font-size:14px;}
 .page{display:none;}
 .page.active{display:block;}
+
+.period-controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:22px;
+}
+.period-controls .select,
+.period-controls .input{
+  max-width:190px;
+}
+.period-label{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:700;
+}
+
 .filters{display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:12px;margin-bottom:18px;}
 .input,.select{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px;color:var(--text);}
 .btn{border:none;background:var(--brand);color:#fff;padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
@@ -323,7 +341,25 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   .app{flex-direction:column;}
   .kpi,.summary-row{grid-template-columns:1fr 1fr;}
   .layout{grid-template-columns:1fr;}
-  .filters{grid-template-columns:1fr;}
+  
+.period-controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-bottom:22px;
+}
+.period-controls .select,
+.period-controls .input{
+  max-width:190px;
+}
+.period-label{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:700;
+}
+
+.filters{grid-template-columns:1fr;}
 }
 </style>
 </head>
@@ -382,6 +418,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <p>Реальные данные из Telegram CRM и Google Sheets</p>
     </div>
     <div class="top-actions"><div class="user-box" id="currentUserBox">Пользователь</div><button class="logout-btn" onclick="logout()">Выйти</button></div>
+  </div>
+
+  <div class="period-controls">
+    <span class="period-label">Период анализа</span>
+    <select id="periodMonth" class="select" onchange="applyPeriod()">
+      <option value="all">Все данные</option>
+    </select>
+    <input id="dateFrom" class="input" type="date" onchange="applyPeriod()">
+    <input id="dateTo" class="input" type="date" onchange="applyPeriod()">
+    <button class="btn btn-secondary" onclick="resetPeriod()">Сбросить</button>
   </div>
 
   <section class="kpi">
@@ -559,7 +605,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
-<div class="footer" id="updatedAt">MSB CRM Web 2.4 • Asakabank Nukus BXM</div>
+<div class="footer" id="updatedAt">MSB CRM Web 2.5 • Asakabank Nukus BXM</div>
 
 </main>
 </div>
@@ -768,6 +814,7 @@ let allClients = [];
 let allManagers = [];
 let allStats = null;
 let allFunnel = null;
+let periodClients = [];
 
 async function loadCRM() {
   try {
@@ -783,17 +830,8 @@ async function loadCRM() {
     allFunnel = funnel;
     allManagers = managers || [];
 
-    renderStats(stats);
-    renderClients(getVisibleClients());
-    renderFunnel(funnel, 'funnelBox');
-    renderFunnel(funnel, 'salesFunnelBox');
-    renderManagers(managers);
-    renderManagersFull(managers);
-    renderLatestClients(getVisibleClients());
-    renderAI(stats);
-    buildFilters();
-    applyClientFilters();
-    renderMyCabinet();
+    buildPeriodOptions();
+    applyPeriod();
   } catch (error) {
     document.getElementById('aiText').innerText = 'Ошибка загрузки данных. Проверьте API Apps Script.';
     console.error(error);
@@ -812,6 +850,150 @@ function showPage(id, el) {
   el.classList.add('active');
 }
 
+
+function buildPeriodOptions() {
+  const select = document.getElementById('periodMonth');
+  if (!select) return;
+
+  const months = unique(getVisibleClients().map(c => getClientMonth(c)).filter(Boolean)).reverse();
+
+  select.innerHTML = '<option value="all">Все данные</option>';
+  months.forEach(month => {
+    select.innerHTML += `<option value="${month}">${month}</option>`;
+  });
+
+  if (months.length > 0) select.value = months[0];
+}
+
+function applyPeriod() {
+  const month = document.getElementById('periodMonth') ? document.getElementById('periodMonth').value : 'all';
+  const from = document.getElementById('dateFrom') ? document.getElementById('dateFrom').value : '';
+  const to = document.getElementById('dateTo') ? document.getElementById('dateTo').value : '';
+
+  let clients = getVisibleClients();
+
+  if (month && month !== 'all') {
+    clients = clients.filter(c => getClientMonth(c) === month);
+  }
+
+  if (from) {
+    const fromDate = new Date(from + 'T00:00:00');
+    clients = clients.filter(c => parseClientDate(c.date || c.createdAt) >= fromDate);
+  }
+
+  if (to) {
+    const toDate = new Date(to + 'T23:59:59');
+    clients = clients.filter(c => parseClientDate(c.date || c.createdAt) <= toDate);
+  }
+
+  periodClients = clients;
+
+  const stats = calcStatsFromClients(periodClients);
+  const funnel = calcFunnelFromClients(periodClients);
+  const managers = calcManagersFromClients(periodClients);
+
+  renderStats(stats);
+  renderClients(periodClients);
+  renderFunnel(funnel, 'funnelBox');
+  renderFunnel(funnel, 'salesFunnelBox');
+  renderManagers(managers);
+  renderManagersFull(managers);
+  renderLatestClients(periodClients);
+  renderAI(stats);
+  buildFilters();
+  applyClientFilters();
+  renderMyCabinet();
+
+  const periodText = month && month !== 'all' ? month : 'Все данные';
+  const subtitle = document.querySelector('#dashboard .header p');
+  if (subtitle) subtitle.innerText = 'Период анализа: ' + periodText;
+}
+
+function resetPeriod() {
+  document.getElementById('periodMonth').value = 'all';
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
+  applyPeriod();
+}
+
+function getClientMonth(c) {
+  if (c.month && String(c.month).match(/^\d{4}-\d{2}$/)) return c.month;
+  const d = parseClientDate(c.date || c.createdAt);
+  if (!d || isNaN(d.getTime())) return '';
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function parseClientDate(value) {
+  if (!value) return new Date('1900-01-01');
+  const s = String(value).trim();
+  const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d;
+  return new Date('1900-01-01');
+}
+
+function calcStatsFromClients(clients) {
+  const totalClients = clients.length;
+  const totalAmount = clients.reduce((s,c) => s + (Number(c.amount)||0), 0);
+  const issued = clients.filter(c => c.status === 'Выдано');
+  const issuedCount = issued.length;
+  const issuedAmount = issued.reduce((s,c) => s + (Number(c.amount)||0), 0);
+  const potentialAmount = clients
+    .filter(c => ['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На рассмотрении'].includes(c.status))
+    .reduce((s,c) => s + (Number(c.amount)||0), 0);
+
+  return {
+    totalClients,
+    totalAmount,
+    issuedCount,
+    issuedAmount,
+    potentialAmount,
+    conversion: totalClients ? Math.round(issuedCount / totalClients * 100) : 0,
+    averageRequest: totalClients ? Math.round(totalAmount / totalClients) : 0,
+    averageIssued: issuedCount ? Math.round(issuedAmount / issuedCount) : 0,
+    updatedAt: new Date().toLocaleString('ru-RU')
+  };
+}
+
+function calcFunnelFromClients(clients) {
+  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','Выдано','Отказ','Отложено','На рассмотрении'];
+  const funnel = {};
+  statuses.forEach(s => funnel[s] = {count:0, amount:0});
+  clients.forEach(c => {
+    const status = c.status || 'Новый клиент';
+    if (!funnel[status]) funnel[status] = {count:0, amount:0};
+    funnel[status].count++;
+    funnel[status].amount += Number(c.amount) || 0;
+  });
+  return funnel;
+}
+
+function calcManagersFromClients(clients) {
+  const map = {};
+  clients.forEach(c => {
+    const manager = c.manager || 'Без менеджера';
+    if (!map[manager]) {
+      map[manager] = { manager, totalClients:0, totalAmount:0, issuedCount:0, issuedAmount:0, potentialAmount:0, conversion:0 };
+    }
+    const amount = Number(c.amount) || 0;
+    map[manager].totalClients++;
+    map[manager].totalAmount += amount;
+    if (c.status === 'Выдано') {
+      map[manager].issuedCount++;
+      map[manager].issuedAmount += amount;
+    }
+    if (['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На рассмотрении'].includes(c.status)) {
+      map[manager].potentialAmount += amount;
+    }
+  });
+  return Object.values(map).map(m => {
+    m.conversion = m.totalClients ? Math.round(m.issuedCount / m.totalClients * 100) : 0;
+    return m;
+  });
+}
+
+
 function renderStats(stats) {
   document.getElementById('totalClients').innerText = stats.totalClients || 0;
   document.getElementById('totalAmount').innerText = formatMoney(stats.totalAmount);
@@ -825,7 +1007,7 @@ function renderStats(stats) {
   document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
   document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.4 • Обновлено: ' + (stats.updatedAt || '');
+  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.5 • Обновлено: ' + (stats.updatedAt || '');
 }
 
 function renderLatestClients(clients) {
@@ -871,9 +1053,9 @@ function renderClients(clients) {
 }
 
 function buildFilters() {
-  fillSelect('managerFilter', unique(getVisibleClients().map(c => c.manager)), 'Все менеджеры');
-  fillSelect('statusFilter', unique(getVisibleClients().map(c => c.status)), 'Все статусы');
-  fillSelect('productFilter', unique(getVisibleClients().map(c => c.product)), 'Все продукты');
+  fillSelect('managerFilter', unique(periodClients.map(c => c.manager)), 'Все менеджеры');
+  fillSelect('statusFilter', unique(periodClients.map(c => c.status)), 'Все статусы');
+  fillSelect('productFilter', unique(periodClients.map(c => c.product)), 'Все продукты');
 
   ['searchInput','managerFilter','statusFilter','productFilter'].forEach(id => {
     document.getElementById(id).addEventListener('input', applyClientFilters);
@@ -895,7 +1077,7 @@ function applyClientFilters() {
   const status = document.getElementById('statusFilter').value;
   const product = document.getElementById('productFilter').value;
 
-  let filtered = getVisibleClients().filter(c => {
+  let filtered = periodClients.filter(c => {
     const text = [c.name,c.inn,c.phone,c.business,c.industry,c.region,c.product,c.manager].join(' ').toLowerCase();
     return (!q || text.includes(q)) &&
            (!manager || c.manager === manager) &&
@@ -1132,7 +1314,7 @@ function buildClientInsight(c) {
 
 
 function renderMyCabinet() {
-  const clients = getVisibleClients();
+  const clients = periodClients.length ? periodClients : getVisibleClients();
   const total = clients.length;
   const totalAmount = clients.reduce((s,c) => s + (Number(c.amount)||0), 0);
   const issuedClients = clients.filter(c => c.status === 'Выдано');
