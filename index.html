@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Web 2.3</title>
+<title>MSB CRM Web 2.4</title>
 
 <style>
 :root{
@@ -282,6 +282,32 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .clickable-row:hover{
   background:#F9FAFB;
 }
+
+.timeline{
+  border-left:2px solid var(--line);
+  padding-left:14px;
+  margin-top:10px;
+}
+.timeline-item{
+  position:relative;
+  padding:0 0 12px 0;
+  color:#374151;
+  font-size:14px;
+}
+.timeline-item::before{
+  content:"";
+  position:absolute;
+  left:-20px;
+  top:3px;
+  width:9px;
+  height:9px;
+  background:var(--brand);
+  border-radius:50%;
+}
+.sla-good{color:var(--green);font-weight:800;}
+.sla-warning{color:var(--orange);font-weight:800;}
+.sla-danger{color:var(--red);font-weight:800;}
+
 @media(max-width:700px){
   .info-grid{
     grid-template-columns:1fr;
@@ -533,7 +559,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
-<div class="footer" id="updatedAt">MSB CRM Web 2.3 • Asakabank Nukus BXM</div>
+<div class="footer" id="updatedAt">MSB CRM Web 2.4 • Asakabank Nukus BXM</div>
 
 </main>
 </div>
@@ -592,6 +618,31 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <div class="info-value" id="drawerNextContact">-</div>
       </div>
 
+      <div class="info-card">
+        <div class="info-label">Дата регистрации</div>
+        <div class="info-value" id="drawerCreatedAt">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Последнее изменение</div>
+        <div class="info-value" id="drawerUpdatedAt">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">Статус изменен</div>
+        <div class="info-value" id="drawerStatusChangedAt">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">В работе</div>
+        <div class="info-value" id="drawerServiceDays">-</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-label">В текущем статусе</div>
+        <div class="info-value" id="drawerStatusDays">-</div>
+      </div>
+
       <div class="info-card full">
         <div class="info-label">Цель кредита</div>
         <div class="info-value" id="drawerPurpose">-</div>
@@ -600,12 +651,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
     <div class="drawer-actions">
       <a class="action-btn primary" id="callBtn" href="#">Позвонить</a>
-      <a class="action-btn" id="whatsappBtn" href="#" target="_blank">WhatsApp</a>
+      <a class="action-btn" id="telegramBtn" href="#" target="_blank">Telegram</a>
     </div>
 
     <div class="panel ai-box" style="margin-bottom:18px;">
       <h2 style="font-size:18px;margin-bottom:10px;">Краткий анализ</h2>
       <p id="drawerAiText">-</p>
+    </div>
+
+    <div class="panel" style="margin-bottom:18px;">
+      <h2 style="font-size:18px;margin-bottom:10px;">История статусов</h2>
+      <div id="drawerStatusHistory" class="timeline">-</div>
     </div>
 
     <div>
@@ -769,7 +825,7 @@ function renderStats(stats) {
   document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
   document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.3 • Обновлено: ' + (stats.updatedAt || '');
+  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.4 • Обновлено: ' + (stats.updatedAt || '');
 }
 
 function renderLatestClients(clients) {
@@ -961,12 +1017,20 @@ function openClientCard(c) {
   document.getElementById('drawerAmount').innerText = formatMoney(c.amount);
   document.getElementById('drawerManager').innerText = safe(c.manager);
   document.getElementById('drawerNextContact').innerText = safe(c.nextContact);
+  document.getElementById('drawerCreatedAt').innerText = safe(c.createdAt || c.date);
+  document.getElementById('drawerUpdatedAt').innerText = safe(c.updatedAt);
+  document.getElementById('drawerStatusChangedAt').innerText = safe(c.statusChangedAt);
+  document.getElementById('drawerServiceDays').innerHTML = formatDaysBadge(c.serviceDays, 30);
+  document.getElementById('drawerStatusDays').innerHTML = formatDaysBadge(c.statusDays, 7);
   document.getElementById('drawerPurpose').innerText = safe(c.purpose);
   document.getElementById('drawerComment').innerText = safe(c.comment);
+  document.getElementById('drawerStatusHistory').innerHTML = buildStatusTimeline(c.statusHistory);
 
   const phone = normalizePhone(c.phone);
   document.getElementById('callBtn').href = phone ? 'tel:+' + phone : '#';
-  document.getElementById('whatsappBtn').href = phone ? 'https://wa.me/' + phone : '#';
+
+  const telegramValue = safe(c.telegram || c.phone);
+  document.getElementById('telegramBtn').href = buildTelegramLink(telegramValue, phone);
 
   document.getElementById('drawerAiText').innerText = buildClientInsight(c);
 
@@ -982,6 +1046,53 @@ function closeClientCard() {
 function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '');
 }
+
+
+function buildTelegramLink(value, phone) {
+  const raw = String(value || '').trim();
+
+  if (raw.startsWith('@')) {
+    return 'https://t.me/' + raw.replace('@', '');
+  }
+
+  if (raw.includes('t.me/')) {
+    return raw.startsWith('http') ? raw : 'https://' + raw;
+  }
+
+  // Если Telegram username не указан, открываем поиск по номеру через Telegram share как запасной вариант.
+  // Лучше позже добавить отдельную колонку Telegram в Google Sheets.
+  if (phone) {
+    return 'https://t.me/share/url?url=tel:+' + phone;
+  }
+
+  return '#';
+}
+
+function formatDaysBadge(days, warningLimit) {
+  days = Number(days) || 0;
+
+  let cls = 'sla-good';
+  if (days > warningLimit * 2) cls = 'sla-danger';
+  else if (days > warningLimit) cls = 'sla-warning';
+
+  return '<span class="' + cls + '">' + days + ' дней</span>';
+}
+
+function buildStatusTimeline(history) {
+  const text = String(history || '').trim();
+
+  if (!text) {
+    return '<div class="timeline-item">История статусов пока не заполнена</div>';
+  }
+
+  return text
+    .split(/\n|→/)
+    .map(x => x.trim())
+    .filter(Boolean)
+    .map(x => '<div class="timeline-item">' + safe(x) + '</div>')
+    .join('');
+}
+
 
 function buildClientInsight(c) {
   const amount = Number(c.amount) || 0;
@@ -1009,6 +1120,10 @@ function buildClientInsight(c) {
 
   if (product === '-' || product === '') {
     text += ' Продукт не выбран — нужно уточнить подходящий продукт.';
+  }
+
+  if ((Number(c.statusDays) || 0) > 7 && status !== 'Выдано' && status !== 'Отказ') {
+    text += ' Клиент долго находится в текущем статусе — требуется контроль управляющего.';
   }
 
   return text;
