@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Web 2.5</title>
+<title>MSB CRM Web 2.8</title>
 
 <style>
 :root{
@@ -67,6 +67,91 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .loading{color:var(--muted);font-size:14px;}
 .page{display:none;}
 .page.active{display:block;}
+
+
+
+.sla-stage-pill{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#F3F4F6;
+  color:#374151;
+  font-size:12px;
+  font-weight:800;
+}
+
+.region-rank-row{
+  padding:14px 0;
+  border-bottom:1px solid var(--line);
+}
+.region-rank-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-weight:800;
+}
+.region-rank-sub{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.manager-sla-row{
+  padding:14px 0;
+  border-bottom:1px solid var(--line);
+}
+.manager-sla-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-weight:800;
+}
+.manager-sla-sub{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.sla-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:18px;
+}
+.sla-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+}
+.sla-card .small{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:7px;
+}
+.sla-card .big{
+  font-size:24px;
+  font-weight:900;
+}
+.risk-badge{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+}
+.risk-normal{
+  background:#EAF8EF;
+  color:var(--green);
+}
+.risk-warning{
+  background:#FFF4E5;
+  color:var(--orange);
+}
+.risk-critical{
+  background:#FEE2E2;
+  color:var(--red);
+}
 
 .period-controls{
   display:flex;
@@ -342,6 +427,91 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   .kpi,.summary-row{grid-template-columns:1fr 1fr;}
   .layout{grid-template-columns:1fr;}
   
+
+
+.sla-stage-pill{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#F3F4F6;
+  color:#374151;
+  font-size:12px;
+  font-weight:800;
+}
+
+.region-rank-row{
+  padding:14px 0;
+  border-bottom:1px solid var(--line);
+}
+.region-rank-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-weight:800;
+}
+.region-rank-sub{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.manager-sla-row{
+  padding:14px 0;
+  border-bottom:1px solid var(--line);
+}
+.manager-sla-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-weight:800;
+}
+.manager-sla-sub{
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+
+.sla-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-bottom:18px;
+}
+.sla-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:16px;
+}
+.sla-card .small{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:7px;
+}
+.sla-card .big{
+  font-size:24px;
+  font-weight:900;
+}
+.risk-badge{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+}
+.risk-normal{
+  background:#EAF8EF;
+  color:var(--green);
+}
+.risk-warning{
+  background:#FFF4E5;
+  color:var(--orange);
+}
+.risk-critical{
+  background:#FEE2E2;
+  color:var(--red);
+}
+
 .period-controls{
   display:flex;
   gap:10px;
@@ -402,7 +572,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <a class="active" onclick="showPage('dashboard', this)"><span class="icon"></span>Dashboard</a>
     <a onclick="showPage('clientsPage', this)"><span class="icon"></span>Клиенты</a>
     <a onclick="showPage('salesPage', this)"><span class="icon"></span>Продажи</a>
+    <a data-admin="true" onclick="showPage('slaPage', this)"><span class="icon"></span>SLA контроль</a>
     <a onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
+    <a onclick="showPage('regionsPage', this)"><span class="icon"></span>Районы</a>
     <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>Мой кабинет</a>
     <a data-admin="true" onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
     <a onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
@@ -534,6 +706,100 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel"><h2>Воронка продаж</h2><div id="salesFunnelBox">Загрузка...</div></div>
 </section>
 
+
+
+<section id="slaPage" class="page">
+  <div class="header">
+    <div>
+      <h1>SLA контроль PRO</h1>
+      <p>Контроль зависших клиентов по дате изменения статуса</p>
+    </div>
+    <div class="user-box" id="slaCountBox">Зависших: 0</div>
+  </div>
+
+  <div class="sla-grid">
+    <div class="sla-card"><div class="small">Норма</div><div class="big" id="slaNormal">0</div></div>
+    <div class="sla-card"><div class="small">Внимание</div><div class="big" id="slaWarning">0</div></div>
+    <div class="sla-card"><div class="small">Критично</div><div class="big" id="slaCritical">0</div></div>
+    <div class="sla-card"><div class="small">Более 30 дней</div><div class="big" id="slaOver30">0</div></div>
+  </div>
+
+  <div class="sla-grid">
+    <div class="sla-card"><div class="small">Всего активных</div><div class="big" id="slaActive">0</div></div>
+    <div class="sla-card"><div class="small">Зависших сделок</div><div class="big" id="slaTotal">0</div></div>
+    <div class="sla-card"><div class="small">Сумма зависших</div><div class="big" id="slaAmount">0</div></div>
+    <div class="sla-card"><div class="small">Среднее время в статусе</div><div class="big" id="slaAvgDays">0</div></div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>SLA по этапам</h2>
+        <div class="client-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Этап</th>
+                <th>Норма</th>
+                <th>Клиентов</th>
+                <th>Среднее время</th>
+                <th>Зависших</th>
+                <th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody id="slaStagesTable">
+              <tr><td colspan="6" class="loading">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Зависшие клиенты</h2>
+        <div class="client-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>ИНН</th>
+                <th>Менеджер</th>
+                <th>Статус</th>
+                <th>Дата открытия</th>
+                <th>Дата статуса</th>
+                <th>В CRM</th>
+                <th>В статусе</th>
+                <th>Просрочка</th>
+                <th>Сумма</th>
+                <th>Риск</th>
+              </tr>
+            </thead>
+            <tbody id="slaTable">
+              <tr><td colspan="11" class="loading">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>SLA по менеджерам</h2>
+        <div id="slaManagersBox" class="loading">Загрузка...</div>
+      </div>
+
+      <div class="panel ai-box">
+        <h2>Управленческий вывод</h2>
+        <p id="slaAiText">-</p>
+      </div>
+
+      <div class="panel">
+        <h2>Нормативы SLA</h2>
+        <div id="slaLimitsBox"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="statsPage" class="page">
   <div class="header"><div><h1>Статистика</h1><p>Ключевые показатели филиала</p></div></div>
   <section class="kpi">
@@ -543,6 +809,63 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="card"><div class="card-label">Выдачи</div><div class="card-value" id="statsIssuedCount">...</div></div>
   </section>
 </section>
+
+
+<section id="regionsPage" class="page">
+  <div class="header">
+    <div>
+      <h1>География МСБ</h1>
+      <p>Анализ клиентов, заявок и потенциала по городам и районам</p>
+    </div>
+    <div class="user-box" id="regionsCountBox">Районов: 0</div>
+  </div>
+
+  <section class="kpi">
+    <div class="card"><div class="card-label">Всего районов</div><div class="card-value" id="regionTotal">0</div></div>
+    <div class="card"><div class="card-label">Лидер по клиентам</div><div class="card-value" id="regionLeaderClients">-</div></div>
+    <div class="card"><div class="card-label">Лидер по сумме</div><div class="card-value" id="regionLeaderAmount">-</div></div>
+    <div class="card"><div class="card-label">Средняя заявка</div><div class="card-value" id="regionAverage">0</div></div>
+  </section>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Районы и города</h2>
+        <div class="client-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Город/район</th>
+                <th>Клиенты</th>
+                <th>Сумма заявок</th>
+                <th>Выдано</th>
+                <th>Потенциал</th>
+                <th>Конверсия</th>
+                <th>Средний чек</th>
+              </tr>
+            </thead>
+            <tbody id="regionsTable">
+              <tr><td colspan="7" class="loading">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>ТОП районов</h2>
+        <div id="regionsTopBox" class="loading">Загрузка...</div>
+      </div>
+
+      <div class="panel ai-box">
+        <h2>AI вывод по районам</h2>
+        <p id="regionsAiText">-</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 
 <section id="managersPage" class="page">
   <div class="header"><div><h1>Менеджеры</h1><p>KPI, выдачи и конверсия по менеджерам</p></div></div>
@@ -605,7 +928,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
-<div class="footer" id="updatedAt">MSB CRM Web 2.5 • Asakabank Nukus BXM</div>
+<div class="footer" id="updatedAt">MSB CRM Web 2.8 • Asakabank Nukus BXM</div>
 
 </main>
 </div>
@@ -903,6 +1226,8 @@ function applyPeriod() {
   buildFilters();
   applyClientFilters();
   renderMyCabinet();
+  renderSLAControl(periodClients);
+  renderRegions(periodClients);
 
   const periodText = month && month !== 'all' ? month : 'Все данные';
   const subtitle = document.querySelector('#dashboard .header p');
@@ -994,6 +1319,429 @@ function calcManagersFromClients(clients) {
 }
 
 
+
+
+function getSlaLimit(status) {
+  const limits = {
+    'Новый клиент': 3,
+    'Переговоры': 5,
+    'Документы собираются': 7,
+    'Финанализ': 5,
+    'На рассмотрении': 5,
+    'Кредитный комитет': 3,
+    'Одобрено': 2
+  };
+
+  return limits[status] || 7;
+}
+
+function getActiveStatuses() {
+  return [
+    'Новый клиент',
+    'Переговоры',
+    'Документы собираются',
+    'Финанализ',
+    'На рассмотрении',
+    'Кредитный комитет',
+    'Одобрено'
+  ];
+}
+
+function getStatusDays(c) {
+  if (c.statusDays !== undefined && c.statusDays !== null && c.statusDays !== '') {
+    return Number(c.statusDays) || 0;
+  }
+
+  const statusDate = parseClientDate(c.statusChangedAt || c.date || c.createdAt);
+  const today = new Date();
+  return Math.max(0, Math.floor((startOfDayJS(today) - startOfDayJS(statusDate)) / 86400000));
+}
+
+function getServiceDays(c) {
+  if (c.serviceDays !== undefined && c.serviceDays !== null && c.serviceDays !== '') {
+    return Number(c.serviceDays) || 0;
+  }
+
+  const created = parseClientDate(c.createdAt || c.date);
+  const today = new Date();
+  return Math.max(0, Math.floor((startOfDayJS(today) - startOfDayJS(created)) / 86400000));
+}
+
+function startOfDayJS(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getSlaRisk(c) {
+  const status = c.status || '';
+  const days = getStatusDays(c);
+  const limit = getSlaLimit(status);
+  const overdue = Math.max(0, days - limit);
+
+  if (!getActiveStatuses().includes(status)) {
+    return { level: 'closed', text: 'Закрыт', limit, overdue };
+  }
+
+  if (days > 30) {
+    return { level: 'over30', text: 'Более 30 дней', limit, overdue };
+  }
+
+  if (days > limit * 2) {
+    return { level: 'critical', text: 'Критично', limit, overdue };
+  }
+
+  if (days > limit) {
+    return { level: 'warning', text: 'Внимание', limit, overdue };
+  }
+
+  return { level: 'normal', text: 'Норма', limit, overdue };
+}
+
+function riskBadgeClass(level) {
+  if (level === 'critical' || level === 'over30') return 'risk-critical';
+  if (level === 'warning') return 'risk-warning';
+  return 'risk-normal';
+}
+
+function renderSLAControl(clients) {
+  const active = clients.filter(c => getActiveStatuses().includes(c.status));
+  const enriched = active.map(c => ({
+    client: c,
+    risk: getSlaRisk(c),
+    statusDays: getStatusDays(c),
+    serviceDays: getServiceDays(c),
+    amount: Number(c.amount) || 0
+  }));
+
+  const stuck = enriched
+    .filter(x => x.risk.level !== 'normal')
+    .sort((a,b) => b.statusDays - a.statusDays);
+
+  const normal = enriched.filter(x => x.risk.level === 'normal').length;
+  const warning = enriched.filter(x => x.risk.level === 'warning').length;
+  const critical = enriched.filter(x => x.risk.level === 'critical').length;
+  const over30 = enriched.filter(x => x.risk.level === 'over30').length;
+  const stuckAmount = stuck.reduce((s,x) => s + x.amount, 0);
+  const avgDays = enriched.length ? Math.round(enriched.reduce((s,x) => s + x.statusDays, 0) / enriched.length) : 0;
+
+  setText('slaNormal', normal);
+  setText('slaWarning', warning);
+  setText('slaCritical', critical);
+  setText('slaOver30', over30);
+  setText('slaActive', active.length);
+  setText('slaTotal', stuck.length);
+  setText('slaAmount', formatMoney(stuckAmount));
+  setText('slaAvgDays', avgDays + ' дней');
+  setText('slaCountBox', 'Зависших: ' + stuck.length);
+
+  renderSlaStages(enriched);
+  renderSlaTable(stuck);
+  renderSlaManagers(enriched);
+  renderSlaLimits();
+  renderSlaAI(enriched, stuck, stuckAmount);
+}
+
+function renderSlaStages(enriched) {
+  const tbody = document.getElementById('slaStagesTable');
+  if (!tbody) return;
+
+  const statuses = getActiveStatuses();
+  tbody.innerHTML = '';
+
+  statuses.forEach(status => {
+    const rows = enriched.filter(x => x.client.status === status);
+    const limit = getSlaLimit(status);
+    const count = rows.length;
+    const avg = count ? Math.round(rows.reduce((s,x) => s + x.statusDays, 0) / count) : 0;
+    const stuck = rows.filter(x => x.risk.level !== 'normal').length;
+    const amount = rows.reduce((s,x) => s + x.amount, 0);
+
+    tbody.innerHTML += `
+      <tr>
+        <td><span class="sla-stage-pill">${status}</span></td>
+        <td>${limit} дней</td>
+        <td>${count}</td>
+        <td>${avg} дней</td>
+        <td>${stuck}</td>
+        <td>${formatMoney(amount)}</td>
+      </tr>`;
+  });
+}
+
+function renderSlaTable(stuck) {
+  const tbody = document.getElementById('slaTable');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (!stuck.length) {
+    tbody.innerHTML = '<tr><td colspan="11">Зависших клиентов по выбранному периоду нет</td></tr>';
+    return;
+  }
+
+  stuck.forEach(x => {
+    const c = x.client;
+    const riskClass = riskBadgeClass(x.risk.level);
+
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+        <td>${safe(c.name)}</td>
+        <td>${safe(c.inn)}</td>
+        <td>${safe(c.manager)}</td>
+        <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
+        <td>${safe(c.createdAt || c.date)}</td>
+        <td>${safe(c.statusChangedAt)}</td>
+        <td>${x.serviceDays} дней</td>
+        <td>${x.statusDays} дней</td>
+        <td>+${x.risk.overdue} дней</td>
+        <td>${formatMoney(c.amount)}</td>
+        <td><span class="risk-badge ${riskClass}">${x.risk.text}</span></td>
+      </tr>`;
+  });
+}
+
+function renderSlaManagers(enriched) {
+  const box = document.getElementById('slaManagersBox');
+  if (!box) return;
+
+  const map = {};
+  enriched.forEach(x => {
+    const manager = x.client.manager || 'Без менеджера';
+    if (!map[manager]) {
+      map[manager] = { manager, active: 0, stuck: 0, critical: 0, amount: 0, maxDays: 0 };
+    }
+
+    map[manager].active++;
+    map[manager].maxDays = Math.max(map[manager].maxDays, x.statusDays);
+
+    if (x.risk.level !== 'normal') {
+      map[manager].stuck++;
+      map[manager].amount += x.amount;
+    }
+
+    if (x.risk.level === 'critical' || x.risk.level === 'over30') {
+      map[manager].critical++;
+    }
+  });
+
+  const rows = Object.values(map).sort((a,b) => b.critical - a.critical || b.stuck - a.stuck || b.amount - a.amount);
+
+  box.innerHTML = '';
+  if (!rows.length) {
+    box.innerHTML = 'Нет активных клиентов';
+    return;
+  }
+
+  rows.forEach(r => {
+    box.innerHTML += `
+      <div class="manager-sla-row">
+        <div class="manager-sla-top">
+          <div>${safe(r.manager)}</div>
+          <div>${r.stuck}/${r.active}</div>
+        </div>
+        <div class="manager-sla-sub">
+          Критично: ${r.critical} • Макс. дней в статусе: ${r.maxDays} • Сумма зависших: ${formatMoney(r.amount)}
+        </div>
+      </div>`;
+  });
+}
+
+function renderSlaLimits() {
+  const box = document.getElementById('slaLimitsBox');
+  if (!box) return;
+
+  box.innerHTML = '';
+  getActiveStatuses().forEach(status => {
+    box.innerHTML += `
+      <div class="rank-row">
+        <div class="rank-name">${status}</div>
+        <div class="rank-score">${getSlaLimit(status)} дн.</div>
+      </div>`;
+  });
+}
+
+function renderSlaAI(enriched, stuck, amount) {
+  const box = document.getElementById('slaAiText');
+  if (!box) return;
+
+  if (!enriched.length) {
+    box.innerText = 'По выбранному периоду активных клиентов нет.';
+    return;
+  }
+
+  if (!stuck.length) {
+    box.innerText = 'По выбранному периоду нарушений SLA нет. Воронка обслуживается в пределах нормы.';
+    return;
+  }
+
+  const byStatus = {};
+  stuck.forEach(x => {
+    const status = x.client.status || 'Без статуса';
+    if (!byStatus[status]) byStatus[status] = { count: 0, amount: 0, maxDays: 0 };
+    byStatus[status].count++;
+    byStatus[status].amount += x.amount;
+    byStatus[status].maxDays = Math.max(byStatus[status].maxDays, x.statusDays);
+  });
+
+  const worstStatus = Object.entries(byStatus).sort((a,b) => b[1].count - a[1].count || b[1].amount - a[1].amount)[0];
+  const critical = stuck.filter(x => x.risk.level === 'critical' || x.risk.level === 'over30').length;
+
+  let text = 'Выявлено нарушений SLA: ' + stuck.length + '. ';
+  text += 'Критичных: ' + critical + '. ';
+  text += 'Сумма зависших сделок: ' + formatMoney(amount) + '. ';
+
+  if (worstStatus) {
+    text += 'Основное узкое место: "' + worstStatus[0] + '" — ' + worstStatus[1].count + ' клиентов, максимум ' + worstStatus[1].maxDays + ' дней в статусе. ';
+  }
+
+  text += 'Рекомендация: провести разбор по менеджерам с наибольшим количеством зависших клиентов и обновить следующий шаг по каждой сделке.';
+
+  box.innerText = text;
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.innerText = value;
+}
+
+
+function calcRegionsFromClients(clients) {
+  const map = {};
+
+  clients.forEach(c => {
+    const region = safe(c.region) === '-' ? 'Не указан' : safe(c.region);
+
+    if (!map[region]) {
+      map[region] = {
+        region,
+        clients: 0,
+        totalAmount: 0,
+        issuedAmount: 0,
+        issuedCount: 0,
+        potentialAmount: 0,
+        averageAmount: 0,
+        conversion: 0
+      };
+    }
+
+    const amount = Number(c.amount) || 0;
+    map[region].clients++;
+    map[region].totalAmount += amount;
+
+    if (c.status === 'Выдано') {
+      map[region].issuedAmount += amount;
+      map[region].issuedCount++;
+    }
+
+    if (['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На рассмотрении'].includes(c.status)) {
+      map[region].potentialAmount += amount;
+    }
+  });
+
+  return Object.values(map).map(r => {
+    r.averageAmount = r.clients ? Math.round(r.totalAmount / r.clients) : 0;
+    r.conversion = r.clients ? Math.round(r.issuedCount / r.clients * 100) : 0;
+    return r;
+  }).sort((a,b) => b.totalAmount - a.totalAmount);
+}
+
+function renderRegions(clients) {
+  const regions = calcRegionsFromClients(clients);
+  const tbody = document.getElementById('regionsTable');
+  if (!tbody) return;
+
+  const totalRegions = regions.length;
+  const leaderClients = regions.slice().sort((a,b) => b.clients - a.clients)[0];
+  const leaderAmount = regions.slice().sort((a,b) => b.totalAmount - a.totalAmount)[0];
+  const totalAmount = regions.reduce((s,r) => s + r.totalAmount, 0);
+  const totalClients = regions.reduce((s,r) => s + r.clients, 0);
+  const avg = totalClients ? totalAmount / totalClients : 0;
+
+  setText('regionTotal', totalRegions);
+  setText('regionsCountBox', 'Районов: ' + totalRegions);
+  setText('regionLeaderClients', leaderClients ? leaderClients.region : '-');
+  setText('regionLeaderAmount', leaderAmount ? leaderAmount.region : '-');
+  setText('regionAverage', formatMoney(avg));
+
+  tbody.innerHTML = '';
+
+  if (!regions.length) {
+    tbody.innerHTML = '<tr><td colspan="7">Данных по районам нет</td></tr>';
+  } else {
+    regions.forEach(r => {
+      tbody.innerHTML += `
+        <tr>
+          <td><b>${safe(r.region)}</b></td>
+          <td>${r.clients}</td>
+          <td>${formatMoney(r.totalAmount)}</td>
+          <td>${formatMoney(r.issuedAmount)}</td>
+          <td>${formatMoney(r.potentialAmount)}</td>
+          <td>${r.conversion}%</td>
+          <td>${formatMoney(r.averageAmount)}</td>
+        </tr>`;
+    });
+  }
+
+  renderRegionsTop(regions);
+  renderRegionsAI(regions);
+}
+
+function renderRegionsTop(regions) {
+  const box = document.getElementById('regionsTopBox');
+  if (!box) return;
+
+  box.innerHTML = '';
+
+  if (!regions.length) {
+    box.innerHTML = 'Данных нет';
+    return;
+  }
+
+  regions.slice(0, 7).forEach((r, index) => {
+    box.innerHTML += `
+      <div class="region-rank-row">
+        <div class="region-rank-top">
+          <div>${index + 1}. ${safe(r.region)}</div>
+          <div>${formatMoney(r.totalAmount)}</div>
+        </div>
+        <div class="region-rank-sub">
+          Клиентов: ${r.clients} • Выдано: ${formatMoney(r.issuedAmount)} • Потенциал: ${formatMoney(r.potentialAmount)}
+        </div>
+      </div>`;
+  });
+}
+
+function renderRegionsAI(regions) {
+  const box = document.getElementById('regionsAiText');
+  if (!box) return;
+
+  if (!regions.length) {
+    box.innerText = 'Данных по районам пока нет.';
+    return;
+  }
+
+  const byClients = regions.slice().sort((a,b) => b.clients - a.clients)[0];
+  const byAmount = regions.slice().sort((a,b) => b.totalAmount - a.totalAmount)[0];
+  const byPotential = regions.slice().sort((a,b) => b.potentialAmount - a.potentialAmount)[0];
+  const lowActivity = regions.slice().filter(r => r.clients > 0).sort((a,b) => a.clients - b.clients)[0];
+
+  let text = '';
+  text += 'Наибольшая концентрация клиентов: ' + byClients.region + ' (' + byClients.clients + ' клиентов). ';
+  text += 'Лидер по сумме заявок: ' + byAmount.region + ' — ' + formatMoney(byAmount.totalAmount) + '. ';
+
+  if (byPotential && byPotential.potentialAmount > 0) {
+    text += 'Наибольший потенциальный портфель: ' + byPotential.region + ' — ' + formatMoney(byPotential.potentialAmount) + '. ';
+  }
+
+  if (lowActivity) {
+    text += 'Низкая активность наблюдается в районе: ' + lowActivity.region + '. ';
+  }
+
+  text += 'Рекомендация: усилить работу в районах с низким количеством клиентов и высоким потенциалом предпринимательства.';
+
+  box.innerText = text;
+}
+
+
 function renderStats(stats) {
   document.getElementById('totalClients').innerText = stats.totalClients || 0;
   document.getElementById('totalAmount').innerText = formatMoney(stats.totalAmount);
@@ -1007,7 +1755,7 @@ function renderStats(stats) {
   document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
   document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.5 • Обновлено: ' + (stats.updatedAt || '');
+  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.8 • Обновлено: ' + (stats.updatedAt || '');
 }
 
 function renderLatestClients(clients) {
@@ -1202,8 +1950,8 @@ function openClientCard(c) {
   document.getElementById('drawerCreatedAt').innerText = safe(c.createdAt || c.date);
   document.getElementById('drawerUpdatedAt').innerText = safe(c.updatedAt);
   document.getElementById('drawerStatusChangedAt').innerText = safe(c.statusChangedAt);
-  document.getElementById('drawerServiceDays').innerHTML = formatDaysBadge(c.serviceDays, 30);
-  document.getElementById('drawerStatusDays').innerHTML = formatDaysBadge(c.statusDays, 7);
+  document.getElementById('drawerServiceDays').innerHTML = formatDaysBadge(getServiceDays(c), 30);
+  document.getElementById('drawerStatusDays').innerHTML = formatDaysBadge(getStatusDays(c), getSlaLimit(c.status));
   document.getElementById('drawerPurpose').innerText = safe(c.purpose);
   document.getElementById('drawerComment').innerText = safe(c.comment);
   document.getElementById('drawerStatusHistory').innerHTML = buildStatusTimeline(c.statusHistory);
@@ -1304,7 +2052,7 @@ function buildClientInsight(c) {
     text += ' Продукт не выбран — нужно уточнить подходящий продукт.';
   }
 
-  if ((Number(c.statusDays) || 0) > 7 && status !== 'Выдано' && status !== 'Отказ') {
+  if (getStatusDays(c) > getSlaLimit(status) && status !== 'Выдано' && status !== 'Отказ') {
     text += ' Клиент долго находится в текущем статусе — требуется контроль управляющего.';
   }
 
