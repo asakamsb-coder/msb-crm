@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Web 2.2</title>
+<title>MSB CRM Web 2.3</title>
 
 <style>
 :root{
@@ -78,6 +78,87 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .summary-card .big{font-size:22px;font-weight:800;}
 .client-table-wrap{overflow-x:auto;}
 .nowrap{white-space:nowrap;}
+
+
+.login-screen{
+  position:fixed;
+  inset:0;
+  background:linear-gradient(135deg,#F6F7F9,#FFFFFF);
+  z-index:100;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.login-card{
+  width:420px;
+  max-width:100%;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:22px;
+  padding:30px;
+  box-shadow:0 24px 60px rgba(17,24,39,.12);
+}
+.login-logo{
+  font-size:30px;
+  font-weight:900;
+  color:var(--brand);
+  margin-bottom:8px;
+}
+.login-subtitle{
+  color:var(--muted);
+  font-size:14px;
+  margin-bottom:24px;
+}
+.login-card label{
+  display:block;
+  font-size:13px;
+  color:#374151;
+  font-weight:700;
+  margin-bottom:7px;
+}
+.login-card input{
+  width:100%;
+  padding:13px 14px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  margin-bottom:14px;
+  font-size:14px;
+}
+.login-error{
+  display:none;
+  background:#FEE2E2;
+  color:#991B1B;
+  padding:11px 12px;
+  border-radius:12px;
+  font-size:13px;
+  margin-bottom:14px;
+}
+.login-help{
+  margin-top:18px;
+  border-top:1px solid var(--line);
+  padding-top:16px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.6;
+}
+.top-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.logout-btn{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#374151;
+  padding:10px 13px;
+  border-radius:12px;
+  font-weight:700;
+  cursor:pointer;
+}
+.hidden-by-role{
+  display:none!important;
+}
 
 .drawer-overlay{
   position:fixed;
@@ -222,6 +303,31 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 </head>
 
 <body>
+
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Asakabank</div>
+    <div class="login-subtitle">MSB CRM • Вход в систему</div>
+
+    <div class="login-error" id="loginError">Неверный логин или пароль</div>
+
+    <label>Логин</label>
+    <input id="loginInput" placeholder="Например: director">
+
+    <label>Пароль</label>
+    <input id="passwordInput" type="password" placeholder="Введите пароль">
+
+    <button class="btn" style="width:100%;margin-top:4px;" onclick="login()">Войти</button>
+
+    <div class="login-help">
+      Тестовые доступы:<br>
+      Управляющий: <b>director</b> / <b>1234</b><br>
+      Менеджер: <b>allayarov</b> / <b>1234</b><br>
+      Менеджер: <b>amir</b> / <b>1234</b>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
 <aside class="sidebar">
@@ -235,7 +341,8 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <a onclick="showPage('clientsPage', this)"><span class="icon"></span>Клиенты</a>
     <a onclick="showPage('salesPage', this)"><span class="icon"></span>Продажи</a>
     <a onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
-    <a onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
+    <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>Мой кабинет</a>
+    <a data-admin="true" onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
     <a onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
   </nav>
 </aside>
@@ -248,7 +355,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <h1>MSB Dashboard</h1>
       <p>Реальные данные из Telegram CRM и Google Sheets</p>
     </div>
-    <div class="user-box">Управляющий Нукус БХМ</div>
+    <div class="top-actions"><div class="user-box" id="currentUserBox">Пользователь</div><button class="logout-btn" onclick="logout()">Выйти</button></div>
   </div>
 
   <section class="kpi">
@@ -370,12 +477,63 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel"><h2>Рейтинг менеджеров</h2><div id="managersFullBox">Загрузка...</div></div>
 </section>
 
+
+<section id="myCabinetPage" class="page">
+  <div class="header">
+    <div>
+      <h1>Мой кабинет</h1>
+      <p id="myCabinetSubtitle">Персональные показатели пользователя</p>
+    </div>
+    <div class="user-box" id="myCabinetRole">-</div>
+  </div>
+
+  <section class="kpi">
+    <div class="card"><div class="card-label">Мои клиенты</div><div class="card-value" id="myClientsCount">0</div></div>
+    <div class="card"><div class="card-label">Мои заявки</div><div class="card-value" id="myTotalAmount">0</div></div>
+    <div class="card"><div class="card-label">Мои выдачи</div><div class="card-value" id="myIssuedAmount">0</div></div>
+    <div class="card"><div class="card-label">Моя конверсия</div><div class="card-value" id="myConversion">0%</div></div>
+  </section>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Мои клиенты</h2>
+        <div class="client-table-wrap">
+          <table>
+            <thead>
+              <tr><th>Дата</th><th>Клиент</th><th>ИНН</th><th>Продукт</th><th>Сумма</th><th>Статус</th></tr>
+            </thead>
+            <tbody id="myClientsTable">
+              <tr><td colspan="6" class="loading">Загрузка...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Моя эффективность</h2>
+        <p>Количество выдач: <b id="myIssuedCount">0</b></p>
+        <p style="margin-top:10px;">Средний чек заявки: <b id="myAverageRequest">0</b></p>
+        <p style="margin-top:10px;">Потенциальный портфель: <b id="myPotentialAmount">0</b></p>
+      </div>
+
+      <div class="panel ai-box">
+        <h2>Рекомендация</h2>
+        <p id="myCabinetAi">-</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 <section id="aiPage" class="page">
   <div class="header"><div><h1>AI Центр</h1><p>Управленческие выводы по данным CRM</p></div></div>
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
-<div class="footer" id="updatedAt">MSB CRM Web 2.2 • Asakabank Nukus BXM</div>
+<div class="footer" id="updatedAt">MSB CRM Web 2.3 • Asakabank Nukus BXM</div>
 
 </main>
 </div>
@@ -460,6 +618,96 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
 
+
+const USERS = {
+  director: {
+    password: '1234',
+    role: 'director',
+    name: 'Управляющий Нукус БХМ',
+    manager: null
+  },
+  allayarov: {
+    password: '1234',
+    role: 'manager',
+    name: 'Allayarov Daniyar Fidelevich',
+    manager: 'Allayarov Daniyar Fidelevich'
+  },
+  amir: {
+    password: '1234',
+    role: 'manager',
+    name: 'Tleumuratov Amir Ali Jenisbay uli',
+    manager: 'Tleumuratov Amir Ali Jenisbay uli'
+  },
+  allayar: {
+    password: '1234',
+    role: 'manager',
+    name: 'Mambetkarimov Allayar Muratbaevich',
+    manager: 'Mambetkarimov Allayar Muratbaevich'
+  },
+  aziza: {
+    password: '1234',
+    role: 'manager',
+    name: 'Mambetnazarova Aziza Maksetovna',
+    manager: 'Mambetnazarova Aziza Maksetovna'
+  }
+};
+
+let currentUser = null;
+
+function login() {
+  const loginValue = document.getElementById('loginInput').value.trim().toLowerCase();
+  const passwordValue = document.getElementById('passwordInput').value.trim();
+  const user = USERS[loginValue];
+
+  if (!user || user.password !== passwordValue) {
+    document.getElementById('loginError').style.display = 'block';
+    return;
+  }
+
+  currentUser = user;
+  localStorage.setItem('msbUserLogin', loginValue);
+  document.getElementById('loginScreen').style.display = 'none';
+  applyRoleView();
+  loadCRM();
+}
+
+function tryAutoLogin() {
+  const saved = localStorage.getItem('msbUserLogin');
+  if (saved && USERS[saved]) {
+    currentUser = USERS[saved];
+    document.getElementById('loginScreen').style.display = 'none';
+    applyRoleView();
+    loadCRM();
+  }
+}
+
+function logout() {
+  localStorage.removeItem('msbUserLogin');
+  location.reload();
+}
+
+function applyRoleView() {
+  document.getElementById('currentUserBox').innerText = currentUser.name;
+  document.getElementById('myCabinetSubtitle').innerText = currentUser.name;
+  document.getElementById('myCabinetRole').innerText = currentUser.role === 'director' ? 'Управляющий' : 'Менеджер';
+
+  document.querySelectorAll('[data-admin="true"]').forEach(el => {
+    if (currentUser.role !== 'director') el.classList.add('hidden-by-role');
+    else el.classList.remove('hidden-by-role');
+  });
+}
+
+function getVisibleClients() {
+  if (!currentUser) return [];
+  if (currentUser.role === 'director') return allClients;
+  return allClients.filter(c => normalizeText(c.manager) === normalizeText(currentUser.manager));
+}
+
+function normalizeText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+
 let allClients = [];
 let allManagers = [];
 let allStats = null;
@@ -480,15 +728,16 @@ async function loadCRM() {
     allManagers = managers || [];
 
     renderStats(stats);
-    renderClients(allClients);
+    renderClients(getVisibleClients());
     renderFunnel(funnel, 'funnelBox');
     renderFunnel(funnel, 'salesFunnelBox');
     renderManagers(managers);
     renderManagersFull(managers);
-    renderLatestClients(allClients);
+    renderLatestClients(getVisibleClients());
     renderAI(stats);
     buildFilters();
     applyClientFilters();
+    renderMyCabinet();
   } catch (error) {
     document.getElementById('aiText').innerText = 'Ошибка загрузки данных. Проверьте API Apps Script.';
     console.error(error);
@@ -520,7 +769,7 @@ function renderStats(stats) {
   document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
   document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.2 • Обновлено: ' + (stats.updatedAt || '');
+  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.3 • Обновлено: ' + (stats.updatedAt || '');
 }
 
 function renderLatestClients(clients) {
@@ -566,9 +815,9 @@ function renderClients(clients) {
 }
 
 function buildFilters() {
-  fillSelect('managerFilter', unique(allClients.map(c => c.manager)), 'Все менеджеры');
-  fillSelect('statusFilter', unique(allClients.map(c => c.status)), 'Все статусы');
-  fillSelect('productFilter', unique(allClients.map(c => c.product)), 'Все продукты');
+  fillSelect('managerFilter', unique(getVisibleClients().map(c => c.manager)), 'Все менеджеры');
+  fillSelect('statusFilter', unique(getVisibleClients().map(c => c.status)), 'Все статусы');
+  fillSelect('productFilter', unique(getVisibleClients().map(c => c.product)), 'Все продукты');
 
   ['searchInput','managerFilter','statusFilter','productFilter'].forEach(id => {
     document.getElementById(id).addEventListener('input', applyClientFilters);
@@ -590,7 +839,7 @@ function applyClientFilters() {
   const status = document.getElementById('statusFilter').value;
   const product = document.getElementById('productFilter').value;
 
-  let filtered = allClients.filter(c => {
+  let filtered = getVisibleClients().filter(c => {
     const text = [c.name,c.inn,c.phone,c.business,c.industry,c.region,c.product,c.manager].join(' ').toLowerCase();
     return (!q || text.includes(q)) &&
            (!manager || c.manager === manager) &&
@@ -766,6 +1015,57 @@ function buildClientInsight(c) {
 }
 
 
+
+function renderMyCabinet() {
+  const clients = getVisibleClients();
+  const total = clients.length;
+  const totalAmount = clients.reduce((s,c) => s + (Number(c.amount)||0), 0);
+  const issuedClients = clients.filter(c => c.status === 'Выдано');
+  const issuedAmount = issuedClients.reduce((s,c) => s + (Number(c.amount)||0), 0);
+  const potential = clients
+    .filter(c => ['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено'].includes(c.status))
+    .reduce((s,c) => s + (Number(c.amount)||0), 0);
+
+  document.getElementById('myClientsCount').innerText = total;
+  document.getElementById('myTotalAmount').innerText = formatMoney(totalAmount);
+  document.getElementById('myIssuedAmount').innerText = formatMoney(issuedAmount);
+  document.getElementById('myConversion').innerText = total ? Math.round(issuedClients.length / total * 100) + '%' : '0%';
+  document.getElementById('myIssuedCount').innerText = issuedClients.length;
+  document.getElementById('myAverageRequest').innerText = formatMoney(total ? totalAmount / total : 0);
+  document.getElementById('myPotentialAmount').innerText = formatMoney(potential);
+
+  const tbody = document.getElementById('myClientsTable');
+  tbody.innerHTML = '';
+
+  if (!clients.length) {
+    tbody.innerHTML = '<tr><td colspan="6">Клиентов пока нет</td></tr>';
+  } else {
+    clients.slice(0, 20).forEach(c => {
+      tbody.innerHTML += `
+        <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+          <td>${safe(c.date)}</td>
+          <td>${safe(c.name)}</td>
+          <td>${safe(c.inn)}</td>
+          <td>${safe(c.product)}</td>
+          <td>${formatMoney(c.amount)}</td>
+          <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
+        </tr>`;
+    });
+  }
+
+  let insight = '';
+  if (currentUser.role === 'director') {
+    insight = 'Вы вошли как управляющий. Доступны все клиенты, воронка, статистика и рейтинг менеджеров.';
+  } else if (potential > issuedAmount) {
+    insight = 'Потенциальный портфель выше текущих выдач. Нужно усилить клиентов в активных этапах и довести их до выдачи.';
+  } else {
+    insight = 'Рекомендуется увеличить количество новых клиентов и перевести больше сделок в активные этапы.';
+  }
+
+  document.getElementById('myCabinetAi').innerText = insight;
+}
+
+
 function exportClientsCSV() {
   const rows = [['Дата','Клиент','Телефон','ИНН','Бизнес','Регион','Продукт','Сумма','Статус','Менеджер']];
   const tableRows = document.querySelectorAll('#clientsTable tr');
@@ -806,7 +1106,7 @@ function safe(value) {
   return value === null || value === undefined || value === '' ? '-' : value;
 }
 
-loadCRM();
+tryAutoLogin();
 </script>
 </body>
 </html>
