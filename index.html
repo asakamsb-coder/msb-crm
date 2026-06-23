@@ -1044,62 +1044,58 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
 
 
-const USERS = {
-  director: {
-    password: '1234',
-    role: 'director',
-    name: 'Управляющий Нукус БХМ',
-    manager: null
-  },
-  allayarov: {
-    password: '1234',
-    role: 'manager',
-    name: 'Allayarov Daniyar Fidelevich',
-    manager: 'Allayarov Daniyar Fidelevich'
-  },
-  amir: {
-    password: '1234',
-    role: 'manager',
-    name: 'Tleumuratov Amir Ali Jenisbay uli',
-    manager: 'Tleumuratov Amir Ali Jenisbay uli'
-  },
-  allayar: {
-    password: '1234',
-    role: 'manager',
-    name: 'Mambetkarimov Allayar Muratbaevich',
-    manager: 'Mambetkarimov Allayar Muratbaevich'
-  },
-  aziza: {
-    password: '1234',
-    role: 'manager',
-    name: 'Mambetnazarova Aziza Maksetovna',
-    manager: 'Mambetnazarova Aziza Maksetovna'
-  }
-};
-
 let currentUser = null;
 
-function login() {
-  const loginValue = document.getElementById('loginInput').value.trim().toLowerCase();
+async function login() {
+  const loginValue = document.getElementById('loginInput').value.trim();
   const passwordValue = document.getElementById('passwordInput').value.trim();
-  const user = USERS[loginValue];
+  const errorBox = document.getElementById('loginError');
 
-  if (!user || user.password !== passwordValue) {
-    document.getElementById('loginError').style.display = 'block';
-    return;
+  errorBox.style.display = 'none';
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        webAction: 'login',
+        login: loginValue,
+        password: passwordValue,
+        browser: navigator.userAgent
+      })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      errorBox.innerText = result.message || 'Неверный логин или пароль';
+      errorBox.style.display = 'block';
+      return;
+    }
+
+    currentUser = result.user;
+
+    localStorage.setItem('msbSessionId', result.sessionId);
+    localStorage.setItem('msbUser', JSON.stringify(result.user));
+
+    document.getElementById('loginScreen').style.display = 'none';
+
+    applyRoleView();
+    loadCRM();
+
+  } catch (error) {
+    errorBox.innerText = 'Ошибка соединения с сервером';
+    errorBox.style.display = 'block';
+    console.error(error);
   }
-
-  currentUser = user;
-  localStorage.setItem('msbUserLogin', loginValue);
-  document.getElementById('loginScreen').style.display = 'none';
-  applyRoleView();
-  loadCRM();
 }
 
 function tryAutoLogin() {
-  const saved = localStorage.getItem('msbUserLogin');
-  if (saved && USERS[saved]) {
-    currentUser = USERS[saved];
+  const savedUser = localStorage.getItem('msbUser');
+  const savedSession = localStorage.getItem('msbSessionId');
+
+  if (savedUser && savedSession) {
+    currentUser = JSON.parse(savedUser);
     document.getElementById('loginScreen').style.display = 'none';
     applyRoleView();
     loadCRM();
@@ -1107,31 +1103,47 @@ function tryAutoLogin() {
 }
 
 function logout() {
-  localStorage.removeItem('msbUserLogin');
+  localStorage.removeItem('msbSessionId');
+  localStorage.removeItem('msbUser');
   location.reload();
 }
 
 function applyRoleView() {
-  document.getElementById('currentUserBox').innerText = currentUser.name;
-  document.getElementById('myCabinetSubtitle').innerText = currentUser.name;
-  document.getElementById('myCabinetRole').innerText = currentUser.role === 'director' ? 'Управляющий' : 'Менеджер';
+  document.getElementById('currentUserBox').innerText =
+    currentUser.fullName || currentUser.login || 'Пользователь';
+
+  document.getElementById('myCabinetSubtitle').innerText =
+    currentUser.fullName || currentUser.login || 'Пользователь';
+
+  document.getElementById('myCabinetRole').innerText =
+    currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR'
+      ? 'Управляющий'
+      : 'Менеджер';
 
   document.querySelectorAll('[data-admin="true"]').forEach(el => {
-    if (currentUser.role !== 'director') el.classList.add('hidden-by-role');
-    else el.classList.remove('hidden-by-role');
+    if (currentUser.role !== 'ADMIN' && currentUser.role !== 'DIRECTOR') {
+      el.classList.add('hidden-by-role');
+    } else {
+      el.classList.remove('hidden-by-role');
+    }
   });
 }
 
 function getVisibleClients() {
   if (!currentUser) return [];
-  if (currentUser.role === 'director') return allClients;
-  return allClients.filter(c => normalizeText(c.manager) === normalizeText(currentUser.manager));
+
+  if (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR') {
+    return allClients;
+  }
+
+  return allClients.filter(c =>
+    normalizeText(c.manager) === normalizeText(currentUser.fullName)
+  );
 }
 
 function normalizeText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
 }
-
 
 let allClients = [];
 let allManagers = [];
