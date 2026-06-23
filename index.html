@@ -882,6 +882,51 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="user-box" id="myCabinetRole">-</div>
   </div>
 
+<div class="panel">
+  <h2>Безопасность</h2>
+
+  <div style="max-width:450px;">
+
+    <label>Старый пароль</label>
+    <input
+      type="password"
+      id="oldPassword"
+      class="input"
+      placeholder="Введите старый пароль">
+
+    <label style="margin-top:10px;display:block;">
+      Новый пароль
+    </label>
+    <input
+      type="password"
+      id="newPassword"
+      class="input"
+      placeholder="Введите новый пароль">
+
+    <label style="margin-top:10px;display:block;">
+      Повторите новый пароль
+    </label>
+    <input
+      type="password"
+      id="confirmPassword"
+      class="input"
+      placeholder="Повторите пароль">
+
+    <button
+      class="btn"
+      style="margin-top:15px;"
+      onclick="changePassword()">
+      Сменить пароль
+    </button>
+
+    <div
+      id="passwordMessage"
+      style="margin-top:15px;font-weight:700;">
+    </div>
+
+  </div>
+</div>
+  
   <section class="kpi">
     <div class="card"><div class="card-label">Мои клиенты</div><div class="card-value" id="myClientsCount">0</div></div>
     <div class="card"><div class="card-label">Мои заявки</div><div class="card-value" id="myTotalAmount">0</div></div>
