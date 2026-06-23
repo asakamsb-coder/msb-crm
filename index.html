@@ -2208,6 +2208,53 @@ function safe(value) {
   return value === null || value === undefined || value === '' ? '-' : value;
 }
 
+async function changePassword() {
+  const oldPassword = document.getElementById('oldPassword').value.trim();
+  const newPassword = document.getElementById('newPassword').value.trim();
+  const confirmPassword = document.getElementById('confirmPassword').value.trim();
+  const msg = document.getElementById('passwordMessage');
+
+  msg.innerText = '';
+  msg.style.color = '#111827';
+
+  if (!oldPassword || !newPassword || !confirmPassword) {
+    msg.style.color = '#DC2626';
+    msg.innerText = 'Заполните все поля';
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    msg.style.color = '#DC2626';
+    msg.innerText = 'Новые пароли не совпадают';
+    return;
+  }
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      webAction: 'changePassword',
+      sessionId: localStorage.getItem('msbSessionId'),
+      oldPassword: oldPassword,
+      newPassword: newPassword
+    })
+  });
+
+  const result = await response.json();
+
+  if (result.success) {
+    msg.style.color = '#15803D';
+    msg.innerText = 'Пароль успешно изменён';
+
+    document.getElementById('oldPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+  } else {
+    msg.style.color = '#DC2626';
+    msg.innerText = result.message || 'Ошибка смены пароля';
+  }
+}
+  
 tryAutoLogin();
 </script>
 </body>
