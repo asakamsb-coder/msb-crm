@@ -767,9 +767,19 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1>Кредитный портфель</h1>
-      <p>Credit Intelligence Center v8: кликабельные KPI, списки FPD/High Risk/Просрочка и карточка кредита</p>
+      <p>Credit Intelligence Center v9: чистая логика FPD, Dashboard, FPD/NPL, Anti-Fraud и карточка кредита</p>
     </div>
-    <div class="user-box">AI Portfolio Control v8</div>
+    <div class="user-box">AI Portfolio Control v9</div>
+  </div>
+
+  <div class="portfolio-tabs">
+    <a class="portfolio-tab" href="#portfolioDashboardPanel">📊 Dashboard</a>
+    <a class="portfolio-tab" href="#portfolioImportPanel">📂 Импорт</a>
+    <a class="portfolio-tab" href="#portfolioFpdPanel">⚠️ FPD Control</a>
+    <a class="portfolio-tab" href="#portfolioNplPanel" onclick="showPortfolioList('npl')">📉 NPL Control</a>
+    <a class="portfolio-tab" href="#portfolioFraudPanel">🛡️ Anti-Fraud</a>
+    <a class="portfolio-tab" href="#portfolioManagersPanel">👥 Менеджеры</a>
+    <a class="portfolio-tab" href="#portfolioAiPanel">🤖 AI Executive</a>
   </div>
 
   <section class="kpi">
@@ -786,9 +796,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <div class="card portfolio-clickable" onclick="showFpdClients('all')">
-      <div class="card-label">FPD Risk</div>
+      <div class="card-label">FPD Fact</div>
       <div class="card-value" id="portfolioFpdRisk">0</div>
-      <div class="card-note">Риск первого платежа</div>
+      <div class="card-note">Факт ранней просрочки</div>
     </div>
 
     <div class="card portfolio-clickable" onclick="showPortfolioList('high')">
@@ -820,6 +830,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="summary-card portfolio-clickable" onclick="showFpdClients('legal')"><div class="small">FPD юр. лица</div><div class="big" id="legalFpdCount">0</div></div>
       <div class="summary-card"><div class="small">High Risk юр. лица</div><div class="big" id="legalHighRiskCount">0</div></div>
     </div>
+  </div>
+
+
+
+  <div class="panel" id="portfolioFpdRulePanel">
+    <h2>⚠️ Правило FPD в этой версии</h2>
+    <p style="color:var(--muted);line-height:1.7;">
+      FPD считается только по факту, без AI-угадывания: <b>кредит выдан в предыдущем месяце</b> и на текущую дату по нему есть <b>просрочка 1 день и более</b> или сумма просрочки больше 0.
+      Например: кредит выдан в мае 2026 года, в июне у клиента есть просрочка — это FPD. Если кредит выдан давно, это уже обычная текущая просрочка, а не FPD.
+    </p>
   </div>
 
   <div class="summary-row">
@@ -923,7 +943,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="panel" id="portfolioFpdPanel">
         <h2>⚠️ FPD Monitor</h2>
         <p style="color:var(--muted);line-height:1.6;margin-bottom:15px;">
-          FPD разделен по типу клиента: физические лица и юридические лица. Так легче понять, где выше риск первого платежа.
+          FPD считается по факту: кредит выдан в предыдущем месяце и уже имеет текущую просрочку. Разделение по физическим и юридическим лицам помогает понять, где качество новых выдач хуже.
         </p>
 
         <div class="summary-row">
@@ -933,7 +953,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           <div class="summary-card"><div class="small">Остаток юр. FPD</div><div class="big" id="fpdLegalBalance">0</div></div>
         </div>
 
-        <h3 style="font-size:16px;margin:18px 0 10px;">👤 Физические клиенты — высокий FPD Risk</h3>
+        <h3 style="font-size:16px;margin:18px 0 10px;">👤 Физические клиенты — высокий FPD Fact</h3>
         <div class="client-table-wrap">
           <table>
             <thead>
@@ -942,17 +962,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
                 <th>ИНН/ПИНФЛ</th>
                 <th>Дата выдачи</th>
                 <th>Остаток</th>
-                <th>FPD Risk</th>
+                <th>FPD Fact</th>
                 <th>Причина</th>
               </tr>
             </thead>
             <tbody id="portfolioFpdPhysicalTable">
-              <tr><td colspan="6" class="loading">После импорта появятся физические клиенты с высоким FPD Risk</td></tr>
+              <tr><td colspan="6" class="loading">После импорта появятся физические клиенты с высоким FPD Fact</td></tr>
             </tbody>
           </table>
         </div>
 
-        <h3 style="font-size:16px;margin:22px 0 10px;">🏢 Юридические клиенты — высокий FPD Risk</h3>
+        <h3 style="font-size:16px;margin:22px 0 10px;">🏢 Юридические клиенты — высокий FPD Fact</h3>
         <div class="client-table-wrap">
           <table>
             <thead>
@@ -961,12 +981,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
                 <th>ИНН</th>
                 <th>Дата выдачи</th>
                 <th>Остаток</th>
-                <th>FPD Risk</th>
+                <th>FPD Fact</th>
                 <th>Причина</th>
               </tr>
             </thead>
             <tbody id="portfolioFpdLegalTable">
-              <tr><td colspan="6" class="loading">После импорта появятся юридические клиенты с высоким FPD Risk</td></tr>
+              <tr><td colspan="6" class="loading">После импорта появятся юридические клиенты с высоким FPD Fact</td></tr>
             </tbody>
           </table>
         </div>
@@ -998,6 +1018,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <div>
+
+      <div class="panel" id="portfolioManagersPanel">
+        <h2>👥 Анализ менеджеров</h2>
+        <p style="color:var(--muted);line-height:1.6;">
+          Здесь будет рейтинг менеджеров по качеству портфеля: количество кредитов, остаток, FPD, просрочка, High Risk и концентрация подозрительных выдач.
+        </p>
+        <div id="portfolioManagersText" style="margin-top:12px;color:#374151;font-weight:700;line-height:1.6;">
+          После импорта CRM покажет менеджеров с повышенным уровнем FPD и просрочки.
+        </div>
+      </div>
+
       <div class="panel ai-box" id="portfolioAiPanel">
         <h2>🤖 AI Executive Report</h2>
         <p id="portfolioAiText">
@@ -1432,7 +1463,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">ИНН / ПИНФЛ</div><div class="portfolio-drawer-value" id="portfolioDrawerInn">-</div></div>
       <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">Остаток</div><div class="portfolio-drawer-value" id="portfolioDrawerBalance">-</div></div>
       <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">Просрочка</div><div class="portfolio-drawer-value" id="portfolioDrawerOverdue">-</div></div>
-      <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">FPD Risk</div><div class="portfolio-drawer-value" id="portfolioDrawerFpd">-</div></div>
+      <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">FPD Fact</div><div class="portfolio-drawer-value" id="portfolioDrawerFpd">-</div></div>
       <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">AI Risk</div><div class="portfolio-drawer-value" id="portfolioDrawerRisk">-</div></div>
       <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">Дата выдачи</div><div class="portfolio-drawer-value" id="portfolioDrawerIssue">-</div></div>
       <div class="portfolio-drawer-item"><div class="portfolio-drawer-label">Менеджер / МФО</div><div class="portfolio-drawer-value" id="portfolioDrawerManager">-</div></div>
@@ -2980,7 +3011,7 @@ function showPortfolioList(kind) {
 
   const noteMap = {
     all: 'Показаны кредиты выбранного сегмента. Нажмите на клиента, чтобы открыть карточку кредита.',
-    fpd: 'Показаны клиенты, у которых FPD Risk 60% и выше.',
+    fpd: 'Показаны клиенты, у которых FPD Fact 60% и выше.',
     high: 'Показаны кредиты с AI Risk 70% и выше.',
     overdue: 'Показаны кредиты, у которых есть дни просрочки или сумма просрочки.',
     npl: 'Показаны кредиты с просрочкой 90+ дней или AI Risk 85% и выше.'
@@ -3020,7 +3051,7 @@ function renderPortfolioKpiDetailTable(rows) {
         <td>${safe(loan.creditAccount || loan.contractId)}</td>
         <td>${formatMoney(loan.balance)}</td>
         <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueAmount)}</td>
-        <td><span class="risk-badge ${fpdClass}">${loan.fpdRisk}%</span></td>
+        <td><span class="risk-badge ${fpdClass}">${fpdBadgeText(loan)}</span></td>
         <td><span class="risk-badge ${riskClass}">${loan.aiRisk}%</span></td>
       </tr>`;
   });
@@ -3063,7 +3094,7 @@ function showFpdClients(segment) {
           <td>${safe(loan.creditAccount || loan.contractId)}</td>
           <td>${formatMoney(loan.balance)}</td>
           <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueAmount)}</td>
-          <td><span class="risk-badge ${fpdClass}">${loan.fpdRisk}%</span></td>
+          <td><span class="risk-badge ${fpdClass}">${fpdBadgeText(loan)}</span></td>
           <td><span class="risk-badge ${riskClass}">${loan.aiRisk}%</span></td>
         </tr>`;
     });
@@ -3087,7 +3118,7 @@ function openPortfolioLoanCard(index) {
   setText('portfolioDrawerInn', safe(loan.inn));
   setText('portfolioDrawerBalance', formatMoney(loan.balance));
   setText('portfolioDrawerOverdue', (loan.overdueDays || 0) + ' дней / ' + formatMoney(loan.overdueAmount));
-  setText('portfolioDrawerFpd', (loan.fpdRisk || 0) + '% — ' + getFpdReason(loan));
+  setText('portfolioDrawerFpd', fpdBadgeText(loan) + ' — ' + getFpdReason(loan));
   setText('portfolioDrawerRisk', (loan.aiRisk || 0) + '% — ' + safe(loan.riskText));
   setText('portfolioDrawerIssue', issue);
   setText('portfolioDrawerManager', safe(loan.manager));
@@ -3152,9 +3183,9 @@ function renderPortfolioModule(loans, files, historyLines, rawRows, duplicateRow
   ai += 'Высокий AI Risk: ' + highRisk + '. ';
   const fpdPhysical = loans.filter(x => (x.fpdRisk || 0) >= 60 && getBorrowerType(x) === 'physical').length;
   const fpdLegal = loans.filter(x => (x.fpdRisk || 0) >= 60 && getBorrowerType(x) === 'legal').length;
-  ai += 'FPD Risk: ' + fpdRisk + ' (физ. лица: ' + fpdPhysical + ', юр. лица: ' + fpdLegal + '). ';
+  ai += 'FPD Fact: ' + fpdRisk + ' (физ. лица: ' + fpdPhysical + ', юр. лица: ' + fpdLegal + '). ';
   ai += 'NPL Risk: ' + nplRisk + '. ';
-  ai += 'Рекомендация: сначала проверить топ-20 кредитов с максимальным AI Risk, затем кредиты с FPD Risk выше 60% и все кредиты с просрочкой более 30 дней.';
+  ai += 'Рекомендация: сначала проверить топ-20 кредитов с максимальным AI Risk, затем кредиты с FPD Fact выше 60% и все кредиты с просрочкой более 30 дней.';
   setText('portfolioAiText', ai);
 
   let inspector = '';
@@ -3195,17 +3226,15 @@ function getBorrowerType(loan) {
 }
 
 function getFpdReason(loan) {
-  const issue = loan.issueDate;
-  if (loan.overdueDays > 0) return 'Есть ранняя просрочка';
-
-  if (issue && !isNaN(issue.getTime())) {
-    const days = Math.floor((new Date() - issue) / 86400000);
-    if (days >= 0 && days <= 45) return 'Новая выдача: первые 45 дней';
-    if (days >= 0 && days <= 90) return 'Ранний период контроля: до 90 дней';
+  if ((loan.fpdRisk || 0) >= 60) {
+    return 'Выдача в предыдущем месяце + есть текущая просрочка';
   }
 
-  if (loan.aiRisk >= 70) return 'Высокий AI Risk';
-  return 'Ранний FPD-контроль';
+  if (loan.overdueDays > 0 || loan.overdueAmount > 0) {
+    return 'Есть просрочка, но кредит не относится к предыдущему месяцу выдачи';
+  }
+
+  return 'Нет текущей просрочки по правилу FPD';
 }
 
 function renderOneFpdSegment(tbodyId, rows, emptyText) {
@@ -3227,7 +3256,7 @@ function renderOneFpdSegment(tbodyId, rows, emptyText) {
         <td>${safe(loan.inn)}</td>
         <td>${issue}</td>
         <td>${formatMoney(loan.balance)}</td>
-        <td><span class="risk-badge ${cls}">${loan.fpdRisk}%</span></td>
+        <td><span class="risk-badge ${cls}">${fpdBadgeText(loan)}</span></td>
         <td>${safe(getFpdReason(loan))}</td>
       </tr>`;
   });
@@ -3247,8 +3276,8 @@ function renderPortfolioFpdTable(loans) {
   setText('fpdLegalCount', legal.length);
   setText('fpdLegalBalance', formatMoney(legal.reduce((s,x) => s + (x.balance || 0), 0)));
 
-  renderOneFpdSegment('portfolioFpdPhysicalTable', physical.concat(unknown.filter((_, i) => i < 5)), 'Физические клиенты с высоким FPD Risk не выявлены');
-  renderOneFpdSegment('portfolioFpdLegalTable', legal, 'Юридические клиенты с высоким FPD Risk не выявлены');
+  renderOneFpdSegment('portfolioFpdPhysicalTable', physical.concat(unknown.filter((_, i) => i < 5)), 'Физические клиенты с высоким FPD Fact не выявлены');
+  renderOneFpdSegment('portfolioFpdLegalTable', legal, 'Юридические клиенты с высоким FPD Fact не выявлены');
 }
 
 function renderPortfolioFraudAlerts(loans) {
@@ -3283,6 +3312,10 @@ function renderPortfolioFraudAlerts(loans) {
   }
 }
 
+
+function fpdBadgeText(loan) {
+  return (loan.fpdRisk || 0) >= 60 ? 'FPD' : 'Нет';
+}
 function renderPortfolioTable(loans) {
   const tbody = document.getElementById('portfolioTable');
   if (!tbody) return;
@@ -3304,7 +3337,7 @@ function renderPortfolioTable(loans) {
         <td>${safe(loan.inn || loan.creditAccount)}</td>
         <td>${formatMoney(loan.balance)}</td>
         <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueAmount)}</td>
-        <td><span class="risk-badge ${fpdClass}">${loan.fpdRisk}%</span></td>
+        <td><span class="risk-badge ${fpdClass}">${fpdBadgeText(loan)}</span></td>
         <td><span class="risk-badge ${riskClass}">${loan.aiRisk}%</span></td>
         <td>${safe(loan.manager)}</td>
       </tr>`;
@@ -3313,7 +3346,6 @@ function renderPortfolioTable(loans) {
 
 function calculatePortfolioRisk(loan) {
   let score = 10;
-  let fpd = 5;
   const today = new Date();
 
   if (loan.overdueDays > 0) score += 30;
@@ -3328,24 +3360,29 @@ function calculatePortfolioRisk(loan) {
   if (q.includes('сомнитель')) score += 55;
   if (q.includes('безнадеж')) score += 70;
 
-  if (loan.issueDate && !isNaN(loan.issueDate.getTime())) {
-    const daysFromIssue = Math.floor((today - loan.issueDate) / 86400000);
-    if (daysFromIssue >= 0 && daysFromIssue <= 45) fpd += 45;
-    if (daysFromIssue >= 0 && daysFromIssue <= 90) fpd += 20;
-    if (loan.overdueDays > 0 && daysFromIssue <= 120) fpd += 40;
-  }
-
-  if (loan.overdueDays > 0) fpd += 20;
-  if (q.includes('субстандарт') || q.includes('неудовлетвор') || q.includes('сомнитель') || q.includes('безнадеж')) fpd += 25;
+  // FPD v9 — это НЕ прогноз и НЕ AI.
+  // FPD = кредит выдан в предыдущем месяце + на текущую дату есть просрочка.
+  const isFpd = isPreviousMonthIssue(loan.issueDate, today) && ((loan.overdueDays || 0) > 0 || (loan.overdueAmount || 0) > 0);
+  const fpd = isFpd ? 100 : 0;
 
   score = Math.max(0, Math.min(100, Math.round(score)));
-  fpd = Math.max(0, Math.min(100, Math.round(fpd)));
 
   let text = 'Низкий риск';
   if (score >= 70) text = 'Высокий риск';
   else if (score >= 40) text = 'Средний риск';
 
   return { aiRisk: score, fpdRisk: fpd, text };
+}
+
+function isPreviousMonthIssue(issueDate, today) {
+  if (!issueDate || isNaN(issueDate.getTime())) return false;
+
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
+  const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  return issueDate.getFullYear() === prevMonthDate.getFullYear() &&
+         issueDate.getMonth() === prevMonthDate.getMonth();
 }
 
 function normalizeHeader(value) {
