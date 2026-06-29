@@ -2365,6 +2365,29 @@ async function changePassword() {
 }
   
 tryAutoLogin();
+  function importPortfolio() {
+  const fileInput = document.getElementById('portfolioFile');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert('Выберите Excel-файл портфеля');
+    return;
+  }
+
+  document.getElementById('portfolioUploadStatus').innerText =
+    'Файл загружен: ' + file.name;
+
+  document.getElementById('portfolioTotal').innerText = 'Проверка...';
+  document.getElementById('portfolioBalance').innerText = 'Проверка...';
+  document.getElementById('portfolioFpdRisk').innerText = 'Проверка...';
+  document.getElementById('portfolioHighRisk').innerText = 'Проверка...';
+
+  document.getElementById('portfolioAiText').innerText =
+    'Файл принят. Следующий этап: чтение Excel, расчет FPD, NPL и AI Risk Score.';
+
+  document.getElementById('portfolioHistory').innerText =
+    new Date().toLocaleString('ru-RU') + ' — загружен файл: ' + file.name;
+}
 </script>
 </body>
 </html>
