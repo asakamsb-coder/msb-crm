@@ -1194,6 +1194,8 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 </aside>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
 
@@ -2364,32 +2366,229 @@ async function changePassword() {
   }
 }
   
-tryAutoLogin();
-  function importPortfolio() {
-  const fileInput = document.getElementById('portfolioFile');
-  const file = fileInput.files[0];
+function portfolioNormalizeKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/\s+/g, '')
+    .replace(/[№#:\-_.]/g, '')
+    .trim();
+}
 
-  if (!file) {
-    alert('Выберите Excel-файл портфеля');
+function portfolioGetValue(row, possibleNames) {
+  const keys = Object.keys(row || {});
+  const normalizedMap = {};
+
+  keys.forEach(key => {
+    normalizedMap[portfolioNormalizeKey(key)] = row[key];
+  });
+
+  for (const name of possibleNames) {
+    const value = normalizedMap[portfolioNormalizeKey(name)];
+    if (value !== undefined && value !== null && String(value).trim() !== '') {
+      return value;
+    }
+  }
+
+  return '';
+}
+
+function portfolioNumber(value) {
+  if (value === null || value === undefined || value === '') return 0;
+
+  let text = String(value)
+    .replace(/\s/g, '')
+    .replace(/,/g, '.')
+    .replace(/[^0-9.\-]/g, '');
+
+  const num = Number(text);
+  return isNaN(num) ? 0 : num;
+}
+
+function portfolioSafe(value) {
+  return String(value === undefined || value === null || value === '' ? '-' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function portfolioReadFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        resolve(rows.map((row, index) => ({
+          ...row,
+          __fileName: file.name,
+          __rowNumber: index + 2
+        })));
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    reader.onerror = () => reject(reader.error);
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function portfolioMapRow(row) {
+  const contract = portfolioGetValue(row, [
+    'Договор', 'Номер договора', '№ договора', 'Кредитный договор', 'contract', 'loan id', 'id'
+  ]);
+
+  const client = portfolioGetValue(row, [
+    'Клиент', 'ФИО', 'Заемщик', 'Заёмщик', 'Наименование клиента', 'Название клиента', 'client', 'name'
+  ]);
+
+  const inn = portfolioGetValue(row, [
+    'ИНН', 'СТИР', 'INN', 'TIN'
+  ]);
+
+  const balance = portfolioNumber(portfolioGetValue(row, [
+    'Остаток', 'Остаток кредита', 'Остаток основного долга', 'Основной долг', 'Задолженность', 'balance', 'outstanding'
+  ]));
+
+  const overdueDays = portfolioNumber(portfolioGetValue(row, [
+    'Просрочка', 'Дней просрочки', 'Дни просрочки', 'DPD', 'overdue days'
+  ]));
+
+  const manager = portfolioGetValue(row, [
+    'Менеджер', 'Кредитный менеджер', 'Сотрудник', 'Ответственный', 'manager'
+  ]);
+
+  const fpdRaw = String(portfolioGetValue(row, [
+    'FPD', 'First Payment Default', 'Первый платеж', 'Риск FPD'
+  ]) || '').toLowerCase();
+
+  const fpd = fpdRaw.includes('да') || fpdRaw.includes('yes') || fpdRaw.includes('true') || overdueDays > 0
+    ? 'Да'
+    : 'Нет';
+
+  let riskScore = 0;
+  if (overdueDays > 0) riskScore += 35;
+  if (overdueDays >= 30) riskScore += 25;
+  if (overdueDays >= 60) riskScore += 20;
+  if (fpd === 'Да') riskScore += 20;
+  if (balance >= 1000000000) riskScore += 10;
+  riskScore = Math.min(100, riskScore);
+
+  let riskText = 'Низкий';
+  if (riskScore >= 80) riskText = 'Критичный';
+  else if (riskScore >= 60) riskText = 'Высокий';
+  else if (riskScore >= 30) riskText = 'Средний';
+
+  return {
+    contract: contract || '-',
+    client: client || '-',
+    inn: inn || '-',
+    balance,
+    overdueDays,
+    fpd,
+    riskScore,
+    riskText,
+    manager: manager || '-',
+    fileName: row.__fileName,
+    rowNumber: row.__rowNumber
+  };
+}
+
+function portfolioRiskBadge(riskText) {
+  if (riskText === 'Критичный' || riskText === 'Высокий') return 'risk-critical';
+  if (riskText === 'Средний') return 'risk-warning';
+  return 'risk-normal';
+}
+
+function renderPortfolioData(credits, files) {
+  const total = credits.length;
+  const balance = credits.reduce((sum, c) => sum + c.balance, 0);
+  const fpdCount = credits.filter(c => c.fpd === 'Да').length;
+  const highRisk = credits.filter(c => c.riskScore >= 60).length;
+
+  document.getElementById('portfolioTotal').innerText = total;
+  document.getElementById('portfolioBalance').innerText = formatMoney(balance);
+  document.getElementById('portfolioFpdRisk').innerText = fpdCount;
+  document.getElementById('portfolioHighRisk').innerText = highRisk;
+
+  const tbody = document.getElementById('portfolioTable');
+  tbody.innerHTML = '';
+
+  if (!credits.length) {
+    tbody.innerHTML = '<tr><td colspan="8">В файле не найдено строк для импорта</td></tr>';
     return;
   }
 
+  credits.slice(0, 100).forEach(c => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${portfolioSafe(c.contract)}</td>
+        <td>${portfolioSafe(c.client)}</td>
+        <td>${portfolioSafe(c.inn)}</td>
+        <td>${formatMoney(c.balance)}</td>
+        <td>${c.overdueDays} дней</td>
+        <td>${c.fpd}</td>
+        <td><span class="risk-badge ${portfolioRiskBadge(c.riskText)}">${c.riskText} ${c.riskScore}%</span></td>
+        <td>${portfolioSafe(c.manager)}</td>
+      </tr>`;
+  });
+
+  const fileNames = files.map(f => f.name).join(', ');
   document.getElementById('portfolioUploadStatus').innerText =
-    'Файл загружен: ' + file.name;
-
-  document.getElementById('portfolioTotal').innerText = 'Проверка...';
-  document.getElementById('portfolioBalance').innerText = 'Проверка...';
-  document.getElementById('portfolioFpdRisk').innerText = 'Проверка...';
-  document.getElementById('portfolioHighRisk').innerText = 'Проверка...';
-
-  document.getElementById('portfolioAiText').innerText =
-    'Файл принят. Следующий этап: чтение Excel, расчет FPD, NPL и AI Risk Score.';
+    'Успешно прочитано файлов: ' + files.length + '. Кредитов найдено: ' + total;
 
   document.getElementById('portfolioHistory').innerText =
-    new Date().toLocaleString('ru-RU') + ' — загружен файл: ' + file.name;
-}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    new Date().toLocaleString('ru-RU') + ' — импорт: ' + fileNames;
 
+  document.getElementById('portfolioAiText').innerText =
+    'AI предварительно выявил: ' + highRisk + ' кредитов с высоким риском, ' +
+    fpdCount + ' кредитов с признаком FPD. Следующий этап: расширенный анализ NPL, менеджеров и антифрод-связей.';
+
+  document.getElementById('portfolioFraudText').innerText =
+    'Антифрод MVP: проверены базовые признаки риска по просрочке, FPD и крупному остатку. Следующим этапом добавим поиск совпадений по телефону, ИНН, поручителям и менеджерам.';
+}
+
+async function importPortfolio() {
+  const fileInput = document.getElementById('portfolioFile');
+  const files = Array.from(fileInput.files || []);
+
+  if (!files.length) {
+    alert('Выберите один или несколько Excel-файлов портфеля');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    alert('Библиотека Excel еще не загрузилась. Обновите страницу и попробуйте снова.');
+    return;
+  }
+
+  document.getElementById('portfolioUploadStatus').innerText = 'Читаю Excel...';
+  document.getElementById('portfolioTotal').innerText = '...';
+  document.getElementById('portfolioBalance').innerText = '...';
+  document.getElementById('portfolioFpdRisk').innerText = '...';
+  document.getElementById('portfolioHighRisk').innerText = '...';
+
+  try {
+    const allRowsArrays = await Promise.all(files.map(file => portfolioReadFile(file)));
+    const allRows = allRowsArrays.flat();
+    const credits = allRows.map(portfolioMapRow);
+
+    renderPortfolioData(credits, files);
+  } catch (error) {
+    console.error(error);
+    document.getElementById('portfolioUploadStatus').innerText = 'Ошибка чтения Excel-файла';
+    alert('Не удалось прочитать Excel. Проверьте формат файла.');
+  }
+}
+
+tryAutoLogin();</script>
 </body>
 </html>
