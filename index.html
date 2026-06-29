@@ -1486,7 +1486,750 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 </aside>
 
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js">
+
+
+/* =====================================================
+   PORTFOLIO ENGINE v14 — точный расчет по файлу КП договоров
+   Эталон для файла кп_договора_2026-06-29:
+   Договоров: 14 169
+   NPL 90+: 529 договоров
+   Сумма NPL 90+ по "Всего задолженность": 241,6 млрд
+===================================================== */
+
+function importPortfolio() {
+  const fileInput = document.getElementById('portfolioFile');
+  const files = Array.from(fileInput.files || []);
+
+  if (!files.length) {
+    alert('Выберите Excel-файл портфеля');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    alert('Библиотека Excel не загрузилась. Проверьте интернет или обновите страницу.');
+    return;
+  }
+
+  setText('portfolioUploadStatus', 'Чтение файлов: ' + files.length + ' ...');
+  setText('portfolioTotal', '...');
+  setText('portfolioBalance', '...');
+  setText('portfolioFpdRisk', '...');
+  setText('portfolioHighRisk', '...');
+  setText('portfolioAiText', 'Portfolio Engine v14 читает Excel и считает фактические показатели...');
+
+  Promise.all(files.map(readPortfolioExcelFileV14))
+    .then(results => {
+      let allContracts = [];
+      const historyLines = [];
+
+      results.forEach(item => {
+        allContracts = allContracts.concat(item.rows);
+        historyLines.push('✅ ' + item.fileName + ' — найдено договоров: ' + item.rows.length);
+      });
+
+      const dedup = deduplicateContractsV14(allContracts);
+      portfolioLoans = dedup.uniqueContracts.map((loan, index) => ({ ...loan, _loanIndex: index, _portfolioIndex: index }));
+      portfolioClients = aggregatePortfolioClientsV14(portfolioLoans).map((client, index) => ({ ...client, _portfolioIndex: index }));
+
+      const engine = calculatePortfolioEngineV14(portfolioLoans, portfolioClients, allContracts.length, dedup.duplicateRows);
+
+      renderPortfolioEngineV14(engine, historyLines);
+      renderImportQualityV14(engine, dedup.duplicateGroups);
+      renderPortfolioSegmentSummaryV14(engine);
+      renderPortfolioTableV14(portfolioLoans.slice().sort((a,b) => (b.totalDebt || 0) - (a.totalDebt || 0)).slice(0, 200));
+      renderPortfolioFpdTableV14(portfolioClients);
+      renderPortfolioFraudAlertsV14(portfolioLoans);
+
+      setText('portfolioAiText', buildExecutiveSummaryV14(engine));
+      setText('portfolioExecutiveText', buildExecutiveSummaryV14(engine));
+    })
+    .catch(error => {
+      console.error(error);
+      setText('portfolioUploadStatus', 'Ошибка чтения файла');
+      setText('portfolioAiText', 'Не удалось прочитать Excel: ' + error.message);
+      alert('Ошибка чтения Excel: ' + error.message);
+    });
+}
+
+function readPortfolioExcelFileV14(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        let rows = [];
+
+        workbook.SheetNames.forEach(sheetName => {
+          const sheet = workbook.Sheets[sheetName];
+          const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          rows = rows.concat(parsePortfolioRowsV14(raw, file.name, sheetName));
+        });
+
+        resolve({ fileName: file.name, rows });
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = function() {
+      reject(new Error('Не удалось открыть файл: ' + file.name));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parsePortfolioRowsV14(rawRows, fileName, sheetName) {
+  if (!rawRows || !rawRows.length) return [];
+
+  const headerIndex = rawRows.findIndex(row => {
+    const headers = row.map(h => normalizeHeaderV14(h));
+    return headers.includes('наименованиеклиента') && headers.includes('номерсчета') && headers.includes('всегозадолженность');
+  });
+
+  if (headerIndex === -1) {
+    throw new Error('В файле "' + fileName + '" не найдена структура КП договоров: Наименование клиента / Номер счета / Всего задолженность');
+  }
+
+  const headers = rawRows[headerIndex].map(h => String(h || '').trim());
+  const rows = [];
+
+  for (let i = headerIndex + 1; i < rawRows.length; i++) {
+    const rawRow = rawRows[i];
+    if (!rawRow || rawRow.every(cell => cell === '' || cell === null || cell === undefined)) continue;
+
+    const obj = {};
+    headers.forEach((h, idx) => {
+      if (h) obj[h] = rawRow[idx];
+    });
+
+    const client = cleanTextV14(getByHeaderV14(obj, ['Наименование клиента', 'НаименКлиента']));
+    const account = cleanTextV14(getByHeaderV14(obj, ['Номер счета', 'Кредитный счет', 'КредитныйСчет']));
+    const contractId = cleanTextV14(getByHeaderV14(obj, ['ИД договора', 'ID договора', 'ID Договора', 'Loan_id', 'loan_id']));
+
+    if (!client || !account) continue;
+    if (isTotalRowV14(client, account)) continue;
+    if (!/^\d{15,30}$/.test(account.replace(/\.0$/, ''))) continue;
+
+    const subject = cleanTextV14(getByHeaderV14(obj, ['Субъект'])).toUpperCase();
+    const totalDebt = parseMoneyV14(getByHeaderV14(obj, ['Всего задолженность']));
+    const currentBalance = parseMoneyV14(getByHeaderV14(obj, ['Текущий остаток']));
+    const overdueBalance = parseMoneyV14(getByHeaderV14(obj, ['Просроченный остаток']));
+    const overdueDays = parseNumberV14(getByHeaderV14(obj, ['Дни просрочки']));
+    const issueDate = parseDateV14(getByHeaderV14(obj, ['Дата открытия']));
+    const closeDate = parseDateV14(getByHeaderV14(obj, ['Дата погашения']));
+    const nplCb = cleanTextV14(getByHeaderV14(obj, ['НПЛ для ЦБ']));
+
+    const quality = classifyProblemStatusV14({ issueDate, overdueDays, overdueBalance, nplCb });
+    const aiRisk = calculateAiRiskV14({ overdueDays, overdueBalance, totalDebt, nplCb, issueDate });
+
+    rows.push({
+      sourceFile: fileName,
+      sheetName,
+      contractId,
+      creditAccount: account.replace(/\.0$/, ''),
+      client,
+      inn: cleanTextV14(getByHeaderV14(obj, ['ИНН'])),
+      mfo: cleanTextV14(getByHeaderV14(obj, ['МФО'])),
+      bhm: cleanTextV14(getByHeaderV14(obj, ['БХМ'])),
+      currency: cleanTextV14(getByHeaderV14(obj, ['Валюта'])),
+      subject,
+      borrowerType: subject === 'P' ? 'physical' : subject === 'J' ? 'legal' : '',
+      segment: cleanTextV14(getByHeaderV14(obj, ['Сегмент'])),
+      loanAmount: parseMoneyV14(getByHeaderV14(obj, ['Сумма кредита'])),
+      loanAmountEq: parseMoneyV14(getByHeaderV14(obj, ['Сумма кредита (экв.)'])),
+      issueDate,
+      closeDate,
+      term: cleanTextV14(getByHeaderV14(obj, ['Срок'])),
+      rate: cleanTextV14(getByHeaderV14(obj, ['Процентная ставка'])),
+      overdueRate: cleanTextV14(getByHeaderV14(obj, ['Процент просрочка'])),
+      totalDebt,
+      balance: totalDebt,              // ВАЖНО: главный показатель портфеля берем из "Всего задолженность"
+      currentBalance,
+      overdueAmount: overdueBalance,
+      overdueBalance,
+      overdueDate: cleanTextV14(getByHeaderV14(obj, ['Дата просрочки'])),
+      overdueDays,
+      reserve: parseMoneyV14(getByHeaderV14(obj, ['Резерв'])),
+      nplFlag: nplCb,
+      qualityStatus: quality.code,
+      qualityLabel: quality.label,
+      fpdStatus: quality,
+      fpdRisk: quality.code === 'FPD' || quality.code === 'FPD_LOST' ? 100 : quality.code === 'EARLY_DEFAULT' ? 70 : 0,
+      aiRisk,
+      riskText: buildRiskTextV14({ overdueDays, overdueBalance, nplCb, aiRisk }),
+      manager: cleanTextV14(getByHeaderV14(obj, ['Кредитный инспектор', 'Председатель КБ', 'МФО', 'БХМ'])),
+      product: cleanTextV14(getByHeaderV14(obj, ['Продукт', 'Вид кредита'])),
+      purpose: cleanTextV14(getByHeaderV14(obj, ['Цель кредитования', 'Цель кредита'])),
+      raw: obj
+    });
+  }
+
+  return rows;
+}
+
+function deduplicateContractsV14(contracts) {
+  const map = new Map();
+  const groups = new Map();
+
+  contracts.forEach(c => {
+    const key = normalizeKeyV14(c.creditAccount || c.contractId);
+    if (!key) return;
+
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(c);
+
+    if (!map.has(key)) {
+      map.set(key, c);
+    } else {
+      // Если дубль пришел из другого файла, оставляем строку с большей задолженностью или большей просрочкой.
+      const old = map.get(key);
+      const oldScore = (old.totalDebt || 0) + (old.overdueDays || 0) * 1000000;
+      const newScore = (c.totalDebt || 0) + (c.overdueDays || 0) * 1000000;
+      if (newScore > oldScore) map.set(key, c);
+    }
+  });
+
+  const duplicateGroups = Array.from(groups.entries())
+    .filter(([_, arr]) => arr.length > 1)
+    .map(([key, arr]) => ({ key, count: arr.length, client: arr[0].client, account: arr[0].creditAccount }));
+
+  return {
+    uniqueContracts: Array.from(map.values()),
+    duplicateRows: contracts.length - map.size,
+    duplicateGroups
+  };
+}
+
+function aggregatePortfolioClientsV14(contracts) {
+  const map = new Map();
+
+  contracts.forEach(c => {
+    const key = normalizeKeyV14(c.inn) || normalizeTextKeyV14(c.client);
+    if (!key) return;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        _isClientGroup: true,
+        client: c.client,
+        inn: c.inn,
+        subject: c.subject,
+        borrowerType: c.borrowerType,
+        mfo: c.mfo,
+        bhm: c.bhm,
+        segment: c.segment,
+        manager: c.manager,
+        contracts: [],
+        contractIdsText: '',
+        contractsCount: 0,
+        totalDebt: 0,
+        balance: 0,
+        currentBalance: 0,
+        overdueAmount: 0,
+        overdueBalance: 0,
+        overdueDays: 0,
+        issueDate: c.issueDate,
+        aiRisk: 0,
+        fpdRisk: 0,
+        qualityStatus: 'NORMAL',
+        qualityLabel: 'Без просрочки',
+        riskText: ''
+      });
+    }
+
+    const g = map.get(key);
+    g.contracts.push(c);
+    g.contractsCount = g.contracts.length;
+    g.totalDebt += c.totalDebt || 0;
+    g.balance += c.totalDebt || 0;
+    g.currentBalance += c.currentBalance || 0;
+    g.overdueAmount += c.overdueAmount || 0;
+    g.overdueBalance += c.overdueBalance || 0;
+    g.overdueDays = Math.max(g.overdueDays || 0, c.overdueDays || 0);
+    g.aiRisk = Math.max(g.aiRisk || 0, c.aiRisk || 0);
+    g.fpdRisk = Math.max(g.fpdRisk || 0, c.fpdRisk || 0);
+    if (!g.issueDate || (c.issueDate && c.issueDate < g.issueDate)) g.issueDate = c.issueDate;
+  });
+
+  const result = Array.from(map.values()).map(g => {
+    g.contractIdsText = g.contracts.map(c => c.creditAccount || c.contractId).join(', ');
+    const worst = getWorstQualityV14(g.contracts);
+    g.qualityStatus = worst.code;
+    g.qualityLabel = worst.label;
+    g.fpdStatus = worst;
+    g.riskText = buildRiskTextV14({ overdueDays: g.overdueDays, overdueBalance: g.overdueBalance, nplCb: worst.code === 'NPL90' ? '1' : '', aiRisk: g.aiRisk });
+    return g;
+  });
+
+  return result;
+}
+
+function calculatePortfolioEngineV14(contracts, clients, rawRows, duplicateRows) {
+  const d1_29 = contracts.filter(c => c.overdueDays >= 1 && c.overdueDays <= 29);
+  const d30_89 = contracts.filter(c => c.overdueDays >= 30 && c.overdueDays <= 89);
+  const d90 = contracts.filter(c => c.overdueDays >= 90);
+  const overdue = contracts.filter(c => c.overdueDays > 0 || c.overdueAmount > 0);
+  const physical = contracts.filter(c => c.subject === 'P');
+  const legal = contracts.filter(c => c.subject === 'J');
+
+  return {
+    rawRows,
+    duplicateRows,
+    totalContracts: contracts.length,
+    totalClients: clients.length,
+    totalDebt: sumFieldV14(contracts, 'totalDebt'),
+    currentBalance: sumFieldV14(contracts, 'currentBalance'),
+    overdueBalance: sumFieldV14(contracts, 'overdueBalance'),
+    overdueCount: overdue.length,
+    d1_29Count: d1_29.length,
+    d1_29Debt: sumFieldV14(d1_29, 'totalDebt'),
+    expectedNplCount: d30_89.length,
+    expectedNplDebt: sumFieldV14(d30_89, 'totalDebt'),
+    npl90Count: d90.length,
+    npl90Debt: sumFieldV14(d90, 'totalDebt'),
+    physicalCount: physical.length,
+    physicalDebt: sumFieldV14(physical, 'totalDebt'),
+    physicalOverdueDebt: sumFieldV14(physical, 'overdueBalance'),
+    legalCount: legal.length,
+    legalDebt: sumFieldV14(legal, 'totalDebt'),
+    legalOverdueDebt: sumFieldV14(legal, 'overdueBalance'),
+    highRiskCount: contracts.filter(c => c.aiRisk >= 70).length,
+    highRiskDebt: sumFieldV14(contracts.filter(c => c.aiRisk >= 70), 'totalDebt'),
+    fpdClients: clients.filter(isFpdClientV14),
+    npl90Contracts: d90,
+    expectedNplContracts: d30_89
+  };
+}
+
+function renderPortfolioEngineV14(e, historyLines) {
+  setText('portfolioTotal', e.totalContracts);
+  setText('portfolioBalance', formatMoney(e.totalDebt));
+  setText('portfolioFpdRisk', e.fpdClients.length);
+  setText('portfolioHighRisk', e.highRiskCount);
+  setText('portfolioNpl90Count', e.npl90Count);
+  setText('portfolioNpl90Balance', formatMoney(e.npl90Debt));
+  setText('portfolioExpectedNplCount', e.expectedNplCount);
+  setText('portfolioExpectedNplBalance', formatMoney(e.expectedNplDebt));
+  setText('portfolioOverdueCount', e.overdueCount);
+  setText('portfolioCriticalBalance', formatMoney(e.highRiskDebt));
+  setText('portfolioNplRisk', e.npl90Count + e.expectedNplCount);
+
+  const avgRisk = e.totalContracts ? Math.round((e.highRiskCount / e.totalContracts) * 100) : 0;
+  setText('portfolioAvgRisk', avgRisk + '%');
+
+  setText('portfolioUploadStatus',
+    'Импорт завершен • договоров: ' + e.totalContracts +
+    ' • клиентов: ' + e.totalClients +
+    ' • NPL 90+: ' + e.npl90Count +
+    ' • сумма NPL 90+: ' + formatMoney(e.npl90Debt)
+  );
+
+  setText('portfolioHistory', historyLines.concat([
+    'ИТОГО: строк до очистки — ' + e.rawRows,
+    'Уникальных договоров — ' + e.totalContracts,
+    'Уникальных клиентов — ' + e.totalClients,
+    'Дублей удалено — ' + e.duplicateRows,
+    'NPL 90+ — ' + e.npl90Count + ' договоров / ' + formatMoney(e.npl90Debt),
+    'Ожидаемый NPL 30–89 — ' + e.expectedNplCount + ' договоров / ' + formatMoney(e.expectedNplDebt)
+  ]).join('\n'));
+}
+
+function renderImportQualityV14(e, duplicateGroups) {
+  setText('importRawRows', e.rawRows);
+  setText('importUniqueRows', e.totalContracts);
+  setText('importDuplicates', e.duplicateRows);
+  setText('importFilesCount', 'Файлов: ' + (document.getElementById('portfolioFile')?.files?.length || 0));
+
+  const tbody = document.getElementById('portfolioDuplicateTable');
+  if (!tbody) return;
+  if (!duplicateGroups || !duplicateGroups.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Дубли не найдены</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  duplicateGroups.slice(0, 100).forEach(g => {
+    tbody.innerHTML += `<tr><td>${safe(g.account)}</td><td>${safe(g.client)}</td><td>${g.count}</td><td>Удален дубль, оставлен один договор</td></tr>`;
+  });
+}
+
+function renderPortfolioSegmentSummaryV14(e) {
+  const box = document.getElementById('portfolioSegmentSummary');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="summary-card"><div class="small">👤 Физические лица</div><div class="big">${e.physicalCount}</div><div class="small">${formatMoney(e.physicalDebt)} • Просрочка ${formatMoney(e.physicalOverdueDebt)}</div></div>
+    <div class="summary-card"><div class="small">🏢 Юридические лица</div><div class="big">${e.legalCount}</div><div class="small">${formatMoney(e.legalDebt)} • Просрочка ${formatMoney(e.legalOverdueDebt)}</div></div>
+    <div class="summary-card"><div class="small">🔴 NPL 90+</div><div class="big">${e.npl90Count}</div><div class="small">${formatMoney(e.npl90Debt)}</div></div>
+    <div class="summary-card"><div class="small">🟠 Expected NPL 30–89</div><div class="big">${e.expectedNplCount}</div><div class="small">${formatMoney(e.expectedNplDebt)}</div></div>
+  `;
+}
+
+function renderPortfolioTableV14(rows) {
+  const tbody = document.getElementById('portfolioTable');
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Данных нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  rows.forEach(loan => {
+    const typeText = loan.subject === 'P' ? 'Физ.' : loan.subject === 'J' ? 'Юр.' : '-';
+    const riskClass = loan.aiRisk >= 70 ? 'risk-critical' : loan.aiRisk >= 40 ? 'risk-warning' : 'risk-normal';
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick="openPortfolioLoanCard(${loan._portfolioIndex})">
+        <td>${safe(loan.creditAccount || loan.contractId)}</td>
+        <td>${safe(loan.client)}</td>
+        <td>${safe(typeText)}</td>
+        <td>${formatMoney(loan.totalDebt)}</td>
+        <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueBalance)}</td>
+        <td>${safe(loan.qualityLabel)}</td>
+        <td><span class="risk-badge ${riskClass}">${loan.aiRisk}%</span></td>
+        <td>${safe(loan.mfo || loan.bhm || loan.manager)}</td>
+      </tr>`;
+  });
+}
+
+function renderPortfolioFpdTableV14(clients) {
+  const fpd = clients.filter(isFpdClientV14);
+  const physical = fpd.filter(c => c.subject === 'P');
+  const legal = fpd.filter(c => c.subject === 'J');
+
+  renderFpdRowsV14('portfolioFpdPhysicalTable', physical);
+  renderFpdRowsV14('portfolioFpdDetailTable', fpd);
+
+  const title = document.getElementById('fpdDetailTitle');
+  if (title) title.innerText = '📋 FPD / Early Default клиенты — всего: ' + fpd.length + ' • физ.: ' + physical.length + ' • юр.: ' + legal.length;
+}
+
+function renderFpdRowsV14(tbodyId, rows) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">FPD клиентов нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  rows.slice(0, 300).forEach(client => {
+    const typeText = client.subject === 'P' ? 'Физ.' : client.subject === 'J' ? 'Юр.' : '-';
+    const riskClass = client.aiRisk >= 70 ? 'risk-critical' : 'risk-warning';
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick="openPortfolioLoanCard(${client._portfolioIndex})">
+        <td>${typeText}</td>
+        <td>${safe(client.client)}</td>
+        <td>${safe(client.inn)}</td>
+        <td>${client.contractsCount} договор(ов)</td>
+        <td>${formatMoney(client.totalDebt)}</td>
+        <td>${client.overdueDays || 0} дн. / ${formatMoney(client.overdueBalance)}</td>
+        <td><span class="risk-badge ${riskClass}">${safe(client.qualityLabel)}</span></td>
+        <td><span class="risk-badge ${riskClass}">${client.aiRisk}%</span></td>
+      </tr>`;
+  });
+}
+
+function renderPortfolioFraudAlertsV14(contracts) {
+  const tbody = document.getElementById('portfolioFraudTable');
+  const text = document.getElementById('portfolioFraudText');
+  if (!tbody) return;
+
+  const byClient = groupByV14(contracts, c => normalizeTextKeyV14(c.client));
+  const multi = Object.values(byClient).filter(arr => arr.length >= 2).sort((a,b) => b.length - a.length);
+
+  if (text) text.innerText = 'Anti-Fraud v14: выявляет клиентов с несколькими договорами, повторяющиеся счета и концентрацию задолженности. Найдено клиентов с 2+ договорами: ' + multi.length + '.';
+
+  if (!multi.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Аномалии не найдены</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  multi.slice(0, 50).forEach(arr => {
+    const debt = sumFieldV14(arr, 'totalDebt');
+    tbody.innerHTML += `<tr><td>Несколько договоров</td><td>${safe(arr[0].client)}</td><td>${arr.length}</td><td>${formatMoney(debt)}</td></tr>`;
+  });
+}
+
+function getPortfolioListByKind(kind) {
+  if (kind === 'fpd') return portfolioClients.filter(isFpdClientV14);
+  if (kind === 'highRisk') return portfolioLoans.filter(c => c.aiRisk >= 70);
+  if (kind === 'overdue') return portfolioLoans.filter(c => c.overdueDays > 0 || c.overdueBalance > 0);
+  if (kind === 'npl90') return portfolioLoans.filter(c => c.overdueDays >= 90);
+  if (kind === 'expectedNpl') return portfolioLoans.filter(c => c.overdueDays >= 30 && c.overdueDays <= 89);
+  return portfolioLoans;
+}
+
+function showPortfolioKpiList(kind) {
+  const rows = getPortfolioListByKind(kind);
+  const titleMap = {
+    fpd: '📋 FPD / Early Default клиенты',
+    highRisk: '📋 High Risk договоры',
+    overdue: '📋 Договоры с текущей просрочкой',
+    npl90: '📋 NPL 90+ договоры',
+    expectedNpl: '📋 Ожидаемый NPL 30–89 договоры',
+    all: '📋 Все договоры'
+  };
+  const title = document.getElementById('portfolioListTitle');
+  const note = document.getElementById('portfolioListNote');
+  if (title) title.innerText = titleMap[kind || 'all'] || titleMap.all;
+  if (note) note.innerText = 'Найдено: ' + rows.length + '. Нажмите на строку, чтобы открыть карточку.';
+  renderPortfolioKpiDetailTableV14(rows);
+  const panel = document.getElementById('portfolioNplPanel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderPortfolioKpiDetailTableV14(rows) {
+  const tbody = document.getElementById('portfolioKpiDetailTable');
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Данных нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  rows.slice(0, 500).forEach(item => {
+    const isClient = item._isClientGroup;
+    const typeText = item.subject === 'P' ? 'Физ.' : item.subject === 'J' ? 'Юр.' : '-';
+    const riskClass = item.aiRisk >= 70 ? 'risk-critical' : item.aiRisk >= 40 ? 'risk-warning' : 'risk-normal';
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick="openPortfolioLoanCard(${item._portfolioIndex})">
+        <td>${typeText}</td>
+        <td>${safe(item.client)}</td>
+        <td>${safe(item.inn)}</td>
+        <td>${isClient ? (item.contractsCount + ' договор(ов)') : safe(item.creditAccount || item.contractId)}</td>
+        <td>${formatMoney(item.totalDebt || item.balance)}</td>
+        <td>${item.overdueDays || 0} дн. / ${formatMoney(item.overdueBalance || item.overdueAmount)}</td>
+        <td><span class="risk-badge ${riskClass}">${safe(item.qualityLabel || '-')}</span></td>
+        <td><span class="risk-badge ${riskClass}">${item.aiRisk || 0}%</span></td>
+      </tr>`;
+  });
+}
+
+function openPortfolioLoanCard(index) {
+  const source = portfolioClients.length ? portfolioClients : portfolioLoans;
+  let item = source[index];
+  if (!item) item = portfolioLoans[index];
+  if (!item) return;
+
+  const contracts = item.contracts || [item];
+  const typeText = item.subject === 'P' ? 'Физическое лицо' : item.subject === 'J' ? 'Юридическое лицо' : 'Не определено';
+  const issue = item.issueDate && !isNaN(item.issueDate.getTime()) ? item.issueDate.toLocaleDateString('ru-RU') : '-';
+
+  setText('portfolioDrawerClient', safe(item.client));
+  setText('portfolioDrawerSub', item._isClientGroup ? 'Карточка клиента: ' + contracts.length + ' договор(ов)' : 'Кредитный счет: ' + safe(item.creditAccount || item.contractId));
+  setText('portfolioDrawerType', typeText);
+  setText('portfolioDrawerInn', safe(item.inn));
+  setText('portfolioDrawerBalance', formatMoney(item.totalDebt || item.balance));
+  setText('portfolioDrawerOverdue', (item.overdueDays || 0) + ' дней / ' + formatMoney(item.overdueBalance || item.overdueAmount));
+  setText('portfolioDrawerFpd', safe(item.qualityLabel || '-'));
+  setText('portfolioDrawerRisk', (item.aiRisk || 0) + '% — ' + safe(item.riskText));
+  setText('portfolioDrawerIssue', issue);
+  setText('portfolioDrawerManager', safe(item.manager || item.mfo || item.bhm));
+  setText('portfolioDrawerContractsCount', contracts.length);
+  setText('portfolioDrawerName', safe(item.client));
+  setText('portfolioDrawerProduct', safe(item.product || item.purpose || '-'));
+
+  const contractsBox = document.getElementById('portfolioDrawerContracts');
+  if (contractsBox) {
+    contractsBox.innerHTML = '<div class="portfolio-contract-list">' + contracts.map((c, i) => {
+      const cIssue = c.issueDate && !isNaN(c.issueDate.getTime()) ? c.issueDate.toLocaleDateString('ru-RU') : '-';
+      return '<div class="portfolio-contract-row">' +
+        '<b>' + (i + 1) + ') ' + safe(c.creditAccount || c.contractId) + '</b><br>' +
+        'Дата открытия: ' + cIssue + ' • Всего задолженность: ' + formatMoney(c.totalDebt) + '<br>' +
+        'Текущий остаток: ' + formatMoney(c.currentBalance) + ' • Просроченный остаток: ' + formatMoney(c.overdueBalance) + '<br>' +
+        'Дни просрочки: ' + (c.overdueDays || 0) + ' • Статус: ' + safe(c.qualityLabel) +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  let ai = 'Расчет выполнен Portfolio Engine v14. '; 
+  if (contracts.length > 1) ai += 'У клиента несколько договоров: ' + contracts.length + '. Задолженность объединена по клиенту. ';
+  if ((item.overdueDays || 0) >= 90) ai += 'Клиент/договор входит в NPL 90+. ';
+  else if ((item.overdueDays || 0) >= 30) ai += 'Клиент/договор находится в Expected NPL 30–89. ';
+  if ((item.overdueBalance || item.overdueAmount || 0) > 0) ai += 'Есть просроченный остаток, требуется план погашения.';
+  setText('portfolioDrawerAi', ai);
+
+  const overlay = document.getElementById('portfolioDrawerOverlay');
+  const drawer = document.getElementById('portfolioLoanDrawer');
+  if (overlay) overlay.classList.add('active');
+  if (drawer) drawer.classList.add('active');
+}
+
+function exportFpdClientsCSV() {
+  if (!portfolioClients.length) {
+    alert('Сначала загрузите портфель');
+    return;
+  }
+
+  const rows = portfolioClients.filter(isFpdClientV14);
+  if (!rows.length) {
+    alert('FPD клиентов для экспорта нет');
+    return;
+  }
+
+  const header = ['Тип клиента','Статус','Клиент','ИНН','Кол-во договоров','Счета','Всего задолженность','Просроченный остаток','Макс. дни просрочки'];
+  const lines = [header].concat(rows.map(c => [
+    c.subject === 'P' ? 'Физическое лицо' : c.subject === 'J' ? 'Юридическое лицо' : 'Не определено',
+    c.qualityLabel || '',
+    c.client || '',
+    c.inn || '',
+    c.contractsCount || 1,
+    c.contractIdsText || '',
+    c.totalDebt || 0,
+    c.overdueBalance || 0,
+    c.overdueDays || 0
+  ]));
+
+  downloadCsvV14(lines, 'fpd_clients_' + new Date().toISOString().slice(0,10) + '.csv');
+}
+
+function isFpdClientV14(c) {
+  return ['FPD','FPD_LOST','EARLY_DEFAULT'].includes(c.qualityStatus);
+}
+
+function getWorstQualityV14(contracts) {
+  const rank = { NPL90: 5, FPD_LOST: 4, EARLY_DEFAULT: 3, FPD: 2, DELINQUENCY: 1, NORMAL: 0 };
+  return contracts.map(c => c.fpdStatus || { code:'NORMAL', label:'Без просрочки' })
+    .sort((a,b) => (rank[b.code] || 0) - (rank[a.code] || 0))[0] || { code:'NORMAL', label:'Без просрочки' };
+}
+
+function classifyProblemStatusV14({ issueDate, overdueDays, overdueBalance, nplCb }) {
+  const ageMonths = getAgeMonthsV14(issueDate, new Date());
+  const hasOverdue = (Number(overdueDays) || 0) > 0 || (Number(overdueBalance) || 0) > 0;
+
+  if ((Number(overdueDays) || 0) >= 90) return { code:'NPL90', label:'NPL 90+', reason:'Дни просрочки ≥ 90' };
+  if ((Number(overdueDays) || 0) >= 30) return { code:'EXPECTED_NPL', label:'Expected NPL 30–89', reason:'Дни просрочки 30–89' };
+  if (!hasOverdue) return { code:'NORMAL', label:'Без просрочки', reason:'Нет текущей просрочки' };
+  if (ageMonths <= 1) return { code:'FPD', label:'FPD', reason:'Просрочка в первый месяц после выдачи' };
+  if (ageMonths <= 3) return { code:'EARLY_DEFAULT', label:'Early Default', reason:'Просрочка в первые 90 дней' };
+  return { code:'DELINQUENCY', label:'Текущая просрочка', reason:'Просрочка после раннего периода' };
+}
+
+function calculateAiRiskV14({ overdueDays, overdueBalance, totalDebt, nplCb, issueDate }) {
+  let score = 5;
+  if (overdueDays >= 90) score += 85;
+  else if (overdueDays >= 60) score += 70;
+  else if (overdueDays >= 30) score += 55;
+  else if (overdueDays > 0) score += 30;
+  if (overdueBalance > 0 && totalDebt > 0 && overdueBalance / totalDebt > 0.2) score += 10;
+  if (String(nplCb || '').trim() === '1') score += 10;
+  const ageMonths = getAgeMonthsV14(issueDate, new Date());
+  if (ageMonths <= 3 && overdueDays > 0) score += 10;
+  return Math.min(100, Math.round(score));
+}
+
+function buildRiskTextV14({ overdueDays, overdueBalance, nplCb, aiRisk }) {
+  if (overdueDays >= 90) return 'NPL 90+: высокий риск, требуется отдельный контроль.';
+  if (overdueDays >= 30) return 'Expected NPL 30–89: высокий риск перехода в 90+.';
+  if (overdueDays > 0 || overdueBalance > 0) return 'Есть текущая просрочка, требуется контакт с клиентом.';
+  return 'Критичных признаков просрочки нет.';
+}
+
+function buildExecutiveSummaryV14(e) {
+  return 'Portfolio Engine v14: импортировано ' + e.totalContracts + ' договоров и ' + e.totalClients + ' уникальных клиентов. ' +
+    'Всего задолженность: ' + formatMoney(e.totalDebt) + '. ' +
+    'Текущий остаток: ' + formatMoney(e.currentBalance) + '. ' +
+    'Просроченный остаток: ' + formatMoney(e.overdueBalance) + '. ' +
+    'NPL 90+: ' + e.npl90Count + ' договоров на сумму ' + formatMoney(e.npl90Debt) + '. ' +
+    'Ожидаемый NPL 30–89: ' + e.expectedNplCount + ' договоров на сумму ' + formatMoney(e.expectedNplDebt) + '. ' +
+    'Контрольная цифра по файлу 29.06.2026: NPL 90+ должен быть 529 договоров / около 241,6 млрд.';
+}
+
+function getByHeaderV14(obj, names) {
+  const keys = Object.keys(obj || {});
+  for (const name of names) {
+    const target = normalizeHeaderV14(name);
+    const found = keys.find(k => normalizeHeaderV14(k) === target);
+    if (found !== undefined) return obj[found];
+  }
+  return '';
+}
+
+function normalizeHeaderV14(value) {
+  return String(value || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]/g,'');
+}
+
+function cleanTextV14(value) {
+  if (value instanceof Date) return value.toLocaleDateString('ru-RU');
+  return String(value === null || value === undefined ? '' : value).replace(/\s+/g, ' ').trim();
+}
+
+function parseMoneyV14(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return value;
+  let s = String(value).replace(/\s/g, '').replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+  return Number(s) || 0;
+}
+
+function parseNumberV14(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return value;
+  return Number(String(value).replace(/[^0-9.\-]/g, '')) || 0;
+}
+
+function parseDateV14(value) {
+  if (!value) return null;
+  if (value instanceof Date && !isNaN(value.getTime())) return value;
+  const s = String(value).trim();
+  const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getAgeMonthsV14(date, today) {
+  if (!date || isNaN(date.getTime())) return 999;
+  return (today.getFullYear() - date.getFullYear()) * 12 + (today.getMonth() - date.getMonth());
+}
+
+function isTotalRowV14(client, account) {
+  const c = String(client || '').toUpperCase().replace(/\s/g, '');
+  const a = String(account || '').toUpperCase().replace(/\s/g, '');
+  return c.includes('ИТОГО') || c.includes('ИТОГ') || a.includes('КОЛВО') || a.includes('КОЛ-ВО');
+}
+
+function normalizeKeyV14(value) {
+  return String(value || '').trim().replace(/\.0$/, '').replace(/[^0-9A-Za-zА-Яа-я]/g, '').toUpperCase();
+}
+
+function normalizeTextKeyV14(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
+function sumFieldV14(arr, field) {
+  return (arr || []).reduce((s, x) => s + (Number(x[field]) || 0), 0);
+}
+
+function groupByV14(arr, keyFn) {
+  const map = {};
+  (arr || []).forEach(item => {
+    const key = keyFn(item) || 'EMPTY';
+    if (!map[key]) map[key] = [];
+    map[key].push(item);
+  });
+  return map;
+}
+
+function downloadCsvV14(lines, fileName) {
+  const csv = lines.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+</script>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
@@ -3694,6 +4437,749 @@ function countDuplicates(values) {
   });
   return Object.entries(map).map(([value, count]) => ({ value, count })).sort((a,b) => b.count - a.count);
 }
+
+
+
+/* =====================================================
+   PORTFOLIO ENGINE v14 — точный расчет по файлу КП договоров
+   Эталон для файла кп_договора_2026-06-29:
+   Договоров: 14 169
+   NPL 90+: 529 договоров
+   Сумма NPL 90+ по "Всего задолженность": 241,6 млрд
+===================================================== */
+
+function importPortfolio() {
+  const fileInput = document.getElementById('portfolioFile');
+  const files = Array.from(fileInput.files || []);
+
+  if (!files.length) {
+    alert('Выберите Excel-файл портфеля');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    alert('Библиотека Excel не загрузилась. Проверьте интернет или обновите страницу.');
+    return;
+  }
+
+  setText('portfolioUploadStatus', 'Чтение файлов: ' + files.length + ' ...');
+  setText('portfolioTotal', '...');
+  setText('portfolioBalance', '...');
+  setText('portfolioFpdRisk', '...');
+  setText('portfolioHighRisk', '...');
+  setText('portfolioAiText', 'Portfolio Engine v14 читает Excel и считает фактические показатели...');
+
+  Promise.all(files.map(readPortfolioExcelFileV14))
+    .then(results => {
+      let allContracts = [];
+      const historyLines = [];
+
+      results.forEach(item => {
+        allContracts = allContracts.concat(item.rows);
+        historyLines.push('✅ ' + item.fileName + ' — найдено договоров: ' + item.rows.length);
+      });
+
+      const dedup = deduplicateContractsV14(allContracts);
+      portfolioLoans = dedup.uniqueContracts.map((loan, index) => ({ ...loan, _loanIndex: index, _portfolioIndex: index }));
+      portfolioClients = aggregatePortfolioClientsV14(portfolioLoans).map((client, index) => ({ ...client, _portfolioIndex: index }));
+
+      const engine = calculatePortfolioEngineV14(portfolioLoans, portfolioClients, allContracts.length, dedup.duplicateRows);
+
+      renderPortfolioEngineV14(engine, historyLines);
+      renderImportQualityV14(engine, dedup.duplicateGroups);
+      renderPortfolioSegmentSummaryV14(engine);
+      renderPortfolioTableV14(portfolioLoans.slice().sort((a,b) => (b.totalDebt || 0) - (a.totalDebt || 0)).slice(0, 200));
+      renderPortfolioFpdTableV14(portfolioClients);
+      renderPortfolioFraudAlertsV14(portfolioLoans);
+
+      setText('portfolioAiText', buildExecutiveSummaryV14(engine));
+      setText('portfolioExecutiveText', buildExecutiveSummaryV14(engine));
+    })
+    .catch(error => {
+      console.error(error);
+      setText('portfolioUploadStatus', 'Ошибка чтения файла');
+      setText('portfolioAiText', 'Не удалось прочитать Excel: ' + error.message);
+      alert('Ошибка чтения Excel: ' + error.message);
+    });
+}
+
+function readPortfolioExcelFileV14(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        let rows = [];
+
+        workbook.SheetNames.forEach(sheetName => {
+          const sheet = workbook.Sheets[sheetName];
+          const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          rows = rows.concat(parsePortfolioRowsV14(raw, file.name, sheetName));
+        });
+
+        resolve({ fileName: file.name, rows });
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = function() {
+      reject(new Error('Не удалось открыть файл: ' + file.name));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parsePortfolioRowsV14(rawRows, fileName, sheetName) {
+  if (!rawRows || !rawRows.length) return [];
+
+  const headerIndex = rawRows.findIndex(row => {
+    const headers = row.map(h => normalizeHeaderV14(h));
+    return headers.includes('наименованиеклиента') && headers.includes('номерсчета') && headers.includes('всегозадолженность');
+  });
+
+  if (headerIndex === -1) {
+    throw new Error('В файле "' + fileName + '" не найдена структура КП договоров: Наименование клиента / Номер счета / Всего задолженность');
+  }
+
+  const headers = rawRows[headerIndex].map(h => String(h || '').trim());
+  const rows = [];
+
+  for (let i = headerIndex + 1; i < rawRows.length; i++) {
+    const rawRow = rawRows[i];
+    if (!rawRow || rawRow.every(cell => cell === '' || cell === null || cell === undefined)) continue;
+
+    const obj = {};
+    headers.forEach((h, idx) => {
+      if (h) obj[h] = rawRow[idx];
+    });
+
+    const client = cleanTextV14(getByHeaderV14(obj, ['Наименование клиента', 'НаименКлиента']));
+    const account = cleanTextV14(getByHeaderV14(obj, ['Номер счета', 'Кредитный счет', 'КредитныйСчет']));
+    const contractId = cleanTextV14(getByHeaderV14(obj, ['ИД договора', 'ID договора', 'ID Договора', 'Loan_id', 'loan_id']));
+
+    if (!client || !account) continue;
+    if (isTotalRowV14(client, account)) continue;
+    if (!/^\d{15,30}$/.test(account.replace(/\.0$/, ''))) continue;
+
+    const subject = cleanTextV14(getByHeaderV14(obj, ['Субъект'])).toUpperCase();
+    const totalDebt = parseMoneyV14(getByHeaderV14(obj, ['Всего задолженность']));
+    const currentBalance = parseMoneyV14(getByHeaderV14(obj, ['Текущий остаток']));
+    const overdueBalance = parseMoneyV14(getByHeaderV14(obj, ['Просроченный остаток']));
+    const overdueDays = parseNumberV14(getByHeaderV14(obj, ['Дни просрочки']));
+    const issueDate = parseDateV14(getByHeaderV14(obj, ['Дата открытия']));
+    const closeDate = parseDateV14(getByHeaderV14(obj, ['Дата погашения']));
+    const nplCb = cleanTextV14(getByHeaderV14(obj, ['НПЛ для ЦБ']));
+
+    const quality = classifyProblemStatusV14({ issueDate, overdueDays, overdueBalance, nplCb });
+    const aiRisk = calculateAiRiskV14({ overdueDays, overdueBalance, totalDebt, nplCb, issueDate });
+
+    rows.push({
+      sourceFile: fileName,
+      sheetName,
+      contractId,
+      creditAccount: account.replace(/\.0$/, ''),
+      client,
+      inn: cleanTextV14(getByHeaderV14(obj, ['ИНН'])),
+      mfo: cleanTextV14(getByHeaderV14(obj, ['МФО'])),
+      bhm: cleanTextV14(getByHeaderV14(obj, ['БХМ'])),
+      currency: cleanTextV14(getByHeaderV14(obj, ['Валюта'])),
+      subject,
+      borrowerType: subject === 'P' ? 'physical' : subject === 'J' ? 'legal' : '',
+      segment: cleanTextV14(getByHeaderV14(obj, ['Сегмент'])),
+      loanAmount: parseMoneyV14(getByHeaderV14(obj, ['Сумма кредита'])),
+      loanAmountEq: parseMoneyV14(getByHeaderV14(obj, ['Сумма кредита (экв.)'])),
+      issueDate,
+      closeDate,
+      term: cleanTextV14(getByHeaderV14(obj, ['Срок'])),
+      rate: cleanTextV14(getByHeaderV14(obj, ['Процентная ставка'])),
+      overdueRate: cleanTextV14(getByHeaderV14(obj, ['Процент просрочка'])),
+      totalDebt,
+      balance: totalDebt,              // ВАЖНО: главный показатель портфеля берем из "Всего задолженность"
+      currentBalance,
+      overdueAmount: overdueBalance,
+      overdueBalance,
+      overdueDate: cleanTextV14(getByHeaderV14(obj, ['Дата просрочки'])),
+      overdueDays,
+      reserve: parseMoneyV14(getByHeaderV14(obj, ['Резерв'])),
+      nplFlag: nplCb,
+      qualityStatus: quality.code,
+      qualityLabel: quality.label,
+      fpdStatus: quality,
+      fpdRisk: quality.code === 'FPD' || quality.code === 'FPD_LOST' ? 100 : quality.code === 'EARLY_DEFAULT' ? 70 : 0,
+      aiRisk,
+      riskText: buildRiskTextV14({ overdueDays, overdueBalance, nplCb, aiRisk }),
+      manager: cleanTextV14(getByHeaderV14(obj, ['Кредитный инспектор', 'Председатель КБ', 'МФО', 'БХМ'])),
+      product: cleanTextV14(getByHeaderV14(obj, ['Продукт', 'Вид кредита'])),
+      purpose: cleanTextV14(getByHeaderV14(obj, ['Цель кредитования', 'Цель кредита'])),
+      raw: obj
+    });
+  }
+
+  return rows;
+}
+
+function deduplicateContractsV14(contracts) {
+  const map = new Map();
+  const groups = new Map();
+
+  contracts.forEach(c => {
+    const key = normalizeKeyV14(c.creditAccount || c.contractId);
+    if (!key) return;
+
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(c);
+
+    if (!map.has(key)) {
+      map.set(key, c);
+    } else {
+      // Если дубль пришел из другого файла, оставляем строку с большей задолженностью или большей просрочкой.
+      const old = map.get(key);
+      const oldScore = (old.totalDebt || 0) + (old.overdueDays || 0) * 1000000;
+      const newScore = (c.totalDebt || 0) + (c.overdueDays || 0) * 1000000;
+      if (newScore > oldScore) map.set(key, c);
+    }
+  });
+
+  const duplicateGroups = Array.from(groups.entries())
+    .filter(([_, arr]) => arr.length > 1)
+    .map(([key, arr]) => ({ key, count: arr.length, client: arr[0].client, account: arr[0].creditAccount }));
+
+  return {
+    uniqueContracts: Array.from(map.values()),
+    duplicateRows: contracts.length - map.size,
+    duplicateGroups
+  };
+}
+
+function aggregatePortfolioClientsV14(contracts) {
+  const map = new Map();
+
+  contracts.forEach(c => {
+    const key = normalizeKeyV14(c.inn) || normalizeTextKeyV14(c.client);
+    if (!key) return;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        _isClientGroup: true,
+        client: c.client,
+        inn: c.inn,
+        subject: c.subject,
+        borrowerType: c.borrowerType,
+        mfo: c.mfo,
+        bhm: c.bhm,
+        segment: c.segment,
+        manager: c.manager,
+        contracts: [],
+        contractIdsText: '',
+        contractsCount: 0,
+        totalDebt: 0,
+        balance: 0,
+        currentBalance: 0,
+        overdueAmount: 0,
+        overdueBalance: 0,
+        overdueDays: 0,
+        issueDate: c.issueDate,
+        aiRisk: 0,
+        fpdRisk: 0,
+        qualityStatus: 'NORMAL',
+        qualityLabel: 'Без просрочки',
+        riskText: ''
+      });
+    }
+
+    const g = map.get(key);
+    g.contracts.push(c);
+    g.contractsCount = g.contracts.length;
+    g.totalDebt += c.totalDebt || 0;
+    g.balance += c.totalDebt || 0;
+    g.currentBalance += c.currentBalance || 0;
+    g.overdueAmount += c.overdueAmount || 0;
+    g.overdueBalance += c.overdueBalance || 0;
+    g.overdueDays = Math.max(g.overdueDays || 0, c.overdueDays || 0);
+    g.aiRisk = Math.max(g.aiRisk || 0, c.aiRisk || 0);
+    g.fpdRisk = Math.max(g.fpdRisk || 0, c.fpdRisk || 0);
+    if (!g.issueDate || (c.issueDate && c.issueDate < g.issueDate)) g.issueDate = c.issueDate;
+  });
+
+  const result = Array.from(map.values()).map(g => {
+    g.contractIdsText = g.contracts.map(c => c.creditAccount || c.contractId).join(', ');
+    const worst = getWorstQualityV14(g.contracts);
+    g.qualityStatus = worst.code;
+    g.qualityLabel = worst.label;
+    g.fpdStatus = worst;
+    g.riskText = buildRiskTextV14({ overdueDays: g.overdueDays, overdueBalance: g.overdueBalance, nplCb: worst.code === 'NPL90' ? '1' : '', aiRisk: g.aiRisk });
+    return g;
+  });
+
+  return result;
+}
+
+function calculatePortfolioEngineV14(contracts, clients, rawRows, duplicateRows) {
+  const d1_29 = contracts.filter(c => c.overdueDays >= 1 && c.overdueDays <= 29);
+  const d30_89 = contracts.filter(c => c.overdueDays >= 30 && c.overdueDays <= 89);
+  const d90 = contracts.filter(c => c.overdueDays >= 90);
+  const overdue = contracts.filter(c => c.overdueDays > 0 || c.overdueAmount > 0);
+  const physical = contracts.filter(c => c.subject === 'P');
+  const legal = contracts.filter(c => c.subject === 'J');
+
+  return {
+    rawRows,
+    duplicateRows,
+    totalContracts: contracts.length,
+    totalClients: clients.length,
+    totalDebt: sumFieldV14(contracts, 'totalDebt'),
+    currentBalance: sumFieldV14(contracts, 'currentBalance'),
+    overdueBalance: sumFieldV14(contracts, 'overdueBalance'),
+    overdueCount: overdue.length,
+    d1_29Count: d1_29.length,
+    d1_29Debt: sumFieldV14(d1_29, 'totalDebt'),
+    expectedNplCount: d30_89.length,
+    expectedNplDebt: sumFieldV14(d30_89, 'totalDebt'),
+    npl90Count: d90.length,
+    npl90Debt: sumFieldV14(d90, 'totalDebt'),
+    physicalCount: physical.length,
+    physicalDebt: sumFieldV14(physical, 'totalDebt'),
+    physicalOverdueDebt: sumFieldV14(physical, 'overdueBalance'),
+    legalCount: legal.length,
+    legalDebt: sumFieldV14(legal, 'totalDebt'),
+    legalOverdueDebt: sumFieldV14(legal, 'overdueBalance'),
+    highRiskCount: contracts.filter(c => c.aiRisk >= 70).length,
+    highRiskDebt: sumFieldV14(contracts.filter(c => c.aiRisk >= 70), 'totalDebt'),
+    fpdClients: clients.filter(isFpdClientV14),
+    npl90Contracts: d90,
+    expectedNplContracts: d30_89
+  };
+}
+
+function renderPortfolioEngineV14(e, historyLines) {
+  setText('portfolioTotal', e.totalContracts);
+  setText('portfolioBalance', formatMoney(e.totalDebt));
+  setText('portfolioFpdRisk', e.fpdClients.length);
+  setText('portfolioHighRisk', e.highRiskCount);
+  setText('portfolioNpl90Count', e.npl90Count);
+  setText('portfolioNpl90Balance', formatMoney(e.npl90Debt));
+  setText('portfolioExpectedNplCount', e.expectedNplCount);
+  setText('portfolioExpectedNplBalance', formatMoney(e.expectedNplDebt));
+  setText('portfolioOverdueCount', e.overdueCount);
+  setText('portfolioCriticalBalance', formatMoney(e.highRiskDebt));
+  setText('portfolioNplRisk', e.npl90Count + e.expectedNplCount);
+
+  const avgRisk = e.totalContracts ? Math.round((e.highRiskCount / e.totalContracts) * 100) : 0;
+  setText('portfolioAvgRisk', avgRisk + '%');
+
+  setText('portfolioUploadStatus',
+    'Импорт завершен • договоров: ' + e.totalContracts +
+    ' • клиентов: ' + e.totalClients +
+    ' • NPL 90+: ' + e.npl90Count +
+    ' • сумма NPL 90+: ' + formatMoney(e.npl90Debt)
+  );
+
+  setText('portfolioHistory', historyLines.concat([
+    'ИТОГО: строк до очистки — ' + e.rawRows,
+    'Уникальных договоров — ' + e.totalContracts,
+    'Уникальных клиентов — ' + e.totalClients,
+    'Дублей удалено — ' + e.duplicateRows,
+    'NPL 90+ — ' + e.npl90Count + ' договоров / ' + formatMoney(e.npl90Debt),
+    'Ожидаемый NPL 30–89 — ' + e.expectedNplCount + ' договоров / ' + formatMoney(e.expectedNplDebt)
+  ]).join('\n'));
+}
+
+function renderImportQualityV14(e, duplicateGroups) {
+  setText('importRawRows', e.rawRows);
+  setText('importUniqueRows', e.totalContracts);
+  setText('importDuplicates', e.duplicateRows);
+  setText('importFilesCount', 'Файлов: ' + (document.getElementById('portfolioFile')?.files?.length || 0));
+
+  const tbody = document.getElementById('portfolioDuplicateTable');
+  if (!tbody) return;
+  if (!duplicateGroups || !duplicateGroups.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Дубли не найдены</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  duplicateGroups.slice(0, 100).forEach(g => {
+    tbody.innerHTML += `<tr><td>${safe(g.account)}</td><td>${safe(g.client)}</td><td>${g.count}</td><td>Удален дубль, оставлен один договор</td></tr>`;
+  });
+}
+
+function renderPortfolioSegmentSummaryV14(e) {
+  const box = document.getElementById('portfolioSegmentSummary');
+  if (!box) return;
+  box.innerHTML = `
+    <div class="summary-card"><div class="small">👤 Физические лица</div><div class="big">${e.physicalCount}</div><div class="small">${formatMoney(e.physicalDebt)} • Просрочка ${formatMoney(e.physicalOverdueDebt)}</div></div>
+    <div class="summary-card"><div class="small">🏢 Юридические лица</div><div class="big">${e.legalCount}</div><div class="small">${formatMoney(e.legalDebt)} • Просрочка ${formatMoney(e.legalOverdueDebt)}</div></div>
+    <div class="summary-card"><div class="small">🔴 NPL 90+</div><div class="big">${e.npl90Count}</div><div class="small">${formatMoney(e.npl90Debt)}</div></div>
+    <div class="summary-card"><div class="small">🟠 Expected NPL 30–89</div><div class="big">${e.expectedNplCount}</div><div class="small">${formatMoney(e.expectedNplDebt)}</div></div>
+  `;
+}
+
+function renderPortfolioTableV14(rows) {
+  const tbody = document.getElementById('portfolioTable');
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Данных нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  rows.forEach(loan => {
+    const typeText = loan.subject === 'P' ? 'Физ.' : loan.subject === 'J' ? 'Юр.' : '-';
+    const riskClass = loan.aiRisk >= 70 ? 'risk-critical' : loan.aiRisk >= 40 ? 'risk-warning' : 'risk-normal';
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick="openPortfolioLoanCard(${loan._portfolioIndex})">
+        <td>${safe(loan.creditAccount || loan.contractId)}</td>
+        <td>${safe(loan.client)}</td>
+        <td>${safe(typeText)}</td>
+        <td>${formatMoney(loan.totalDebt)}</td>
+        <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueBalance)}</td>
+        <td>${safe(loan.qualityLabel)}</td>
+        <td><span class="risk-badge ${riskClass}">${loan.aiRisk}%</span></td>
+        <td>${safe(loan.mfo || loan.bhm || loan.manager)}</td>
+      </tr>`;
+  });
+}
+
+function renderPortfolioFpdTableV14(clients) {
+  const fpd = clients.filter(isFpdClientV14);
+  const physical = fpd.filter(c => c.subject === 'P');
+  const legal = fpd.filter(c => c.subject === 'J');
+
+  renderFpdRowsV14('portfolioFpdPhysicalTable', physical);
+  renderFpdRowsV14('portfolioFpdDetailTable', fpd);
+
+  const title = document.getElementById('fpdDetailTitle');
+  if (title) title.innerText = '📋 FPD / Early Default клиенты — всего: ' + fpd.length + ' • физ.: ' + physical.length + ' • юр.: ' + legal.length;
+}
+
+function renderFpdRowsV14(tbodyId, rows) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">FPD клиентов нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  rows.slice(0, 300).forEach(client => {
+    const typeText = client.subject === 'P' ? 'Физ.' : client.subject === 'J' ? 'Юр.' : '-';
+    const riskClass = client.aiRisk >= 70 ? 'risk-critical' : 'risk-warning';
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick="openPortfolioLoanCard(${client._portfolioIndex})">
+        <td>${typeText}</td>
+        <td>${safe(client.client)}</td>
+        <td>${safe(client.inn)}</td>
+        <td>${client.contractsCount} договор(ов)</td>
+        <td>${formatMoney(client.totalDebt)}</td>
+        <td>${client.overdueDays || 0} дн. / ${formatMoney(client.overdueBalance)}</td>
+        <td><span class="risk-badge ${riskClass}">${safe(client.qualityLabel)}</span></td>
+        <td><span class="risk-badge ${riskClass}">${client.aiRisk}%</span></td>
+      </tr>`;
+  });
+}
+
+function renderPortfolioFraudAlertsV14(contracts) {
+  const tbody = document.getElementById('portfolioFraudTable');
+  const text = document.getElementById('portfolioFraudText');
+  if (!tbody) return;
+
+  const byClient = groupByV14(contracts, c => normalizeTextKeyV14(c.client));
+  const multi = Object.values(byClient).filter(arr => arr.length >= 2).sort((a,b) => b.length - a.length);
+
+  if (text) text.innerText = 'Anti-Fraud v14: выявляет клиентов с несколькими договорами, повторяющиеся счета и концентрацию задолженности. Найдено клиентов с 2+ договорами: ' + multi.length + '.';
+
+  if (!multi.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Аномалии не найдены</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  multi.slice(0, 50).forEach(arr => {
+    const debt = sumFieldV14(arr, 'totalDebt');
+    tbody.innerHTML += `<tr><td>Несколько договоров</td><td>${safe(arr[0].client)}</td><td>${arr.length}</td><td>${formatMoney(debt)}</td></tr>`;
+  });
+}
+
+function getPortfolioListByKind(kind) {
+  if (kind === 'fpd') return portfolioClients.filter(isFpdClientV14);
+  if (kind === 'highRisk') return portfolioLoans.filter(c => c.aiRisk >= 70);
+  if (kind === 'overdue') return portfolioLoans.filter(c => c.overdueDays > 0 || c.overdueBalance > 0);
+  if (kind === 'npl90') return portfolioLoans.filter(c => c.overdueDays >= 90);
+  if (kind === 'expectedNpl') return portfolioLoans.filter(c => c.overdueDays >= 30 && c.overdueDays <= 89);
+  return portfolioLoans;
+}
+
+function showPortfolioKpiList(kind) {
+  const rows = getPortfolioListByKind(kind);
+  const titleMap = {
+    fpd: '📋 FPD / Early Default клиенты',
+    highRisk: '📋 High Risk договоры',
+    overdue: '📋 Договоры с текущей просрочкой',
+    npl90: '📋 NPL 90+ договоры',
+    expectedNpl: '📋 Ожидаемый NPL 30–89 договоры',
+    all: '📋 Все договоры'
+  };
+  const title = document.getElementById('portfolioListTitle');
+  const note = document.getElementById('portfolioListNote');
+  if (title) title.innerText = titleMap[kind || 'all'] || titleMap.all;
+  if (note) note.innerText = 'Найдено: ' + rows.length + '. Нажмите на строку, чтобы открыть карточку.';
+  renderPortfolioKpiDetailTableV14(rows);
+  const panel = document.getElementById('portfolioNplPanel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderPortfolioKpiDetailTableV14(rows) {
+  const tbody = document.getElementById('portfolioKpiDetailTable');
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Данных нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  rows.slice(0, 500).forEach(item => {
+    const isClient = item._isClientGroup;
+    const typeText = item.subject === 'P' ? 'Физ.' : item.subject === 'J' ? 'Юр.' : '-';
+    const riskClass = item.aiRisk >= 70 ? 'risk-critical' : item.aiRisk >= 40 ? 'risk-warning' : 'risk-normal';
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick="openPortfolioLoanCard(${item._portfolioIndex})">
+        <td>${typeText}</td>
+        <td>${safe(item.client)}</td>
+        <td>${safe(item.inn)}</td>
+        <td>${isClient ? (item.contractsCount + ' договор(ов)') : safe(item.creditAccount || item.contractId)}</td>
+        <td>${formatMoney(item.totalDebt || item.balance)}</td>
+        <td>${item.overdueDays || 0} дн. / ${formatMoney(item.overdueBalance || item.overdueAmount)}</td>
+        <td><span class="risk-badge ${riskClass}">${safe(item.qualityLabel || '-')}</span></td>
+        <td><span class="risk-badge ${riskClass}">${item.aiRisk || 0}%</span></td>
+      </tr>`;
+  });
+}
+
+function openPortfolioLoanCard(index) {
+  const source = portfolioClients.length ? portfolioClients : portfolioLoans;
+  let item = source[index];
+  if (!item) item = portfolioLoans[index];
+  if (!item) return;
+
+  const contracts = item.contracts || [item];
+  const typeText = item.subject === 'P' ? 'Физическое лицо' : item.subject === 'J' ? 'Юридическое лицо' : 'Не определено';
+  const issue = item.issueDate && !isNaN(item.issueDate.getTime()) ? item.issueDate.toLocaleDateString('ru-RU') : '-';
+
+  setText('portfolioDrawerClient', safe(item.client));
+  setText('portfolioDrawerSub', item._isClientGroup ? 'Карточка клиента: ' + contracts.length + ' договор(ов)' : 'Кредитный счет: ' + safe(item.creditAccount || item.contractId));
+  setText('portfolioDrawerType', typeText);
+  setText('portfolioDrawerInn', safe(item.inn));
+  setText('portfolioDrawerBalance', formatMoney(item.totalDebt || item.balance));
+  setText('portfolioDrawerOverdue', (item.overdueDays || 0) + ' дней / ' + formatMoney(item.overdueBalance || item.overdueAmount));
+  setText('portfolioDrawerFpd', safe(item.qualityLabel || '-'));
+  setText('portfolioDrawerRisk', (item.aiRisk || 0) + '% — ' + safe(item.riskText));
+  setText('portfolioDrawerIssue', issue);
+  setText('portfolioDrawerManager', safe(item.manager || item.mfo || item.bhm));
+  setText('portfolioDrawerContractsCount', contracts.length);
+  setText('portfolioDrawerName', safe(item.client));
+  setText('portfolioDrawerProduct', safe(item.product || item.purpose || '-'));
+
+  const contractsBox = document.getElementById('portfolioDrawerContracts');
+  if (contractsBox) {
+    contractsBox.innerHTML = '<div class="portfolio-contract-list">' + contracts.map((c, i) => {
+      const cIssue = c.issueDate && !isNaN(c.issueDate.getTime()) ? c.issueDate.toLocaleDateString('ru-RU') : '-';
+      return '<div class="portfolio-contract-row">' +
+        '<b>' + (i + 1) + ') ' + safe(c.creditAccount || c.contractId) + '</b><br>' +
+        'Дата открытия: ' + cIssue + ' • Всего задолженность: ' + formatMoney(c.totalDebt) + '<br>' +
+        'Текущий остаток: ' + formatMoney(c.currentBalance) + ' • Просроченный остаток: ' + formatMoney(c.overdueBalance) + '<br>' +
+        'Дни просрочки: ' + (c.overdueDays || 0) + ' • Статус: ' + safe(c.qualityLabel) +
+      '</div>';
+    }).join('') + '</div>';
+  }
+
+  let ai = 'Расчет выполнен Portfolio Engine v14. '; 
+  if (contracts.length > 1) ai += 'У клиента несколько договоров: ' + contracts.length + '. Задолженность объединена по клиенту. ';
+  if ((item.overdueDays || 0) >= 90) ai += 'Клиент/договор входит в NPL 90+. ';
+  else if ((item.overdueDays || 0) >= 30) ai += 'Клиент/договор находится в Expected NPL 30–89. ';
+  if ((item.overdueBalance || item.overdueAmount || 0) > 0) ai += 'Есть просроченный остаток, требуется план погашения.';
+  setText('portfolioDrawerAi', ai);
+
+  const overlay = document.getElementById('portfolioDrawerOverlay');
+  const drawer = document.getElementById('portfolioLoanDrawer');
+  if (overlay) overlay.classList.add('active');
+  if (drawer) drawer.classList.add('active');
+}
+
+function exportFpdClientsCSV() {
+  if (!portfolioClients.length) {
+    alert('Сначала загрузите портфель');
+    return;
+  }
+
+  const rows = portfolioClients.filter(isFpdClientV14);
+  if (!rows.length) {
+    alert('FPD клиентов для экспорта нет');
+    return;
+  }
+
+  const header = ['Тип клиента','Статус','Клиент','ИНН','Кол-во договоров','Счета','Всего задолженность','Просроченный остаток','Макс. дни просрочки'];
+  const lines = [header].concat(rows.map(c => [
+    c.subject === 'P' ? 'Физическое лицо' : c.subject === 'J' ? 'Юридическое лицо' : 'Не определено',
+    c.qualityLabel || '',
+    c.client || '',
+    c.inn || '',
+    c.contractsCount || 1,
+    c.contractIdsText || '',
+    c.totalDebt || 0,
+    c.overdueBalance || 0,
+    c.overdueDays || 0
+  ]));
+
+  downloadCsvV14(lines, 'fpd_clients_' + new Date().toISOString().slice(0,10) + '.csv');
+}
+
+function isFpdClientV14(c) {
+  return ['FPD','FPD_LOST','EARLY_DEFAULT'].includes(c.qualityStatus);
+}
+
+function getWorstQualityV14(contracts) {
+  const rank = { NPL90: 5, FPD_LOST: 4, EARLY_DEFAULT: 3, FPD: 2, DELINQUENCY: 1, NORMAL: 0 };
+  return contracts.map(c => c.fpdStatus || { code:'NORMAL', label:'Без просрочки' })
+    .sort((a,b) => (rank[b.code] || 0) - (rank[a.code] || 0))[0] || { code:'NORMAL', label:'Без просрочки' };
+}
+
+function classifyProblemStatusV14({ issueDate, overdueDays, overdueBalance, nplCb }) {
+  const ageMonths = getAgeMonthsV14(issueDate, new Date());
+  const hasOverdue = (Number(overdueDays) || 0) > 0 || (Number(overdueBalance) || 0) > 0;
+
+  if ((Number(overdueDays) || 0) >= 90) return { code:'NPL90', label:'NPL 90+', reason:'Дни просрочки ≥ 90' };
+  if ((Number(overdueDays) || 0) >= 30) return { code:'EXPECTED_NPL', label:'Expected NPL 30–89', reason:'Дни просрочки 30–89' };
+  if (!hasOverdue) return { code:'NORMAL', label:'Без просрочки', reason:'Нет текущей просрочки' };
+  if (ageMonths <= 1) return { code:'FPD', label:'FPD', reason:'Просрочка в первый месяц после выдачи' };
+  if (ageMonths <= 3) return { code:'EARLY_DEFAULT', label:'Early Default', reason:'Просрочка в первые 90 дней' };
+  return { code:'DELINQUENCY', label:'Текущая просрочка', reason:'Просрочка после раннего периода' };
+}
+
+function calculateAiRiskV14({ overdueDays, overdueBalance, totalDebt, nplCb, issueDate }) {
+  let score = 5;
+  if (overdueDays >= 90) score += 85;
+  else if (overdueDays >= 60) score += 70;
+  else if (overdueDays >= 30) score += 55;
+  else if (overdueDays > 0) score += 30;
+  if (overdueBalance > 0 && totalDebt > 0 && overdueBalance / totalDebt > 0.2) score += 10;
+  if (String(nplCb || '').trim() === '1') score += 10;
+  const ageMonths = getAgeMonthsV14(issueDate, new Date());
+  if (ageMonths <= 3 && overdueDays > 0) score += 10;
+  return Math.min(100, Math.round(score));
+}
+
+function buildRiskTextV14({ overdueDays, overdueBalance, nplCb, aiRisk }) {
+  if (overdueDays >= 90) return 'NPL 90+: высокий риск, требуется отдельный контроль.';
+  if (overdueDays >= 30) return 'Expected NPL 30–89: высокий риск перехода в 90+.';
+  if (overdueDays > 0 || overdueBalance > 0) return 'Есть текущая просрочка, требуется контакт с клиентом.';
+  return 'Критичных признаков просрочки нет.';
+}
+
+function buildExecutiveSummaryV14(e) {
+  return 'Portfolio Engine v14: импортировано ' + e.totalContracts + ' договоров и ' + e.totalClients + ' уникальных клиентов. ' +
+    'Всего задолженность: ' + formatMoney(e.totalDebt) + '. ' +
+    'Текущий остаток: ' + formatMoney(e.currentBalance) + '. ' +
+    'Просроченный остаток: ' + formatMoney(e.overdueBalance) + '. ' +
+    'NPL 90+: ' + e.npl90Count + ' договоров на сумму ' + formatMoney(e.npl90Debt) + '. ' +
+    'Ожидаемый NPL 30–89: ' + e.expectedNplCount + ' договоров на сумму ' + formatMoney(e.expectedNplDebt) + '. ' +
+    'Контрольная цифра по файлу 29.06.2026: NPL 90+ должен быть 529 договоров / около 241,6 млрд.';
+}
+
+function getByHeaderV14(obj, names) {
+  const keys = Object.keys(obj || {});
+  for (const name of names) {
+    const target = normalizeHeaderV14(name);
+    const found = keys.find(k => normalizeHeaderV14(k) === target);
+    if (found !== undefined) return obj[found];
+  }
+  return '';
+}
+
+function normalizeHeaderV14(value) {
+  return String(value || '').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]/g,'');
+}
+
+function cleanTextV14(value) {
+  if (value instanceof Date) return value.toLocaleDateString('ru-RU');
+  return String(value === null || value === undefined ? '' : value).replace(/\s+/g, ' ').trim();
+}
+
+function parseMoneyV14(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return value;
+  let s = String(value).replace(/\s/g, '').replace(/,/g, '.').replace(/[^0-9.\-]/g, '');
+  return Number(s) || 0;
+}
+
+function parseNumberV14(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return value;
+  return Number(String(value).replace(/[^0-9.\-]/g, '')) || 0;
+}
+
+function parseDateV14(value) {
+  if (!value) return null;
+  if (value instanceof Date && !isNaN(value.getTime())) return value;
+  const s = String(value).trim();
+  const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function getAgeMonthsV14(date, today) {
+  if (!date || isNaN(date.getTime())) return 999;
+  return (today.getFullYear() - date.getFullYear()) * 12 + (today.getMonth() - date.getMonth());
+}
+
+function isTotalRowV14(client, account) {
+  const c = String(client || '').toUpperCase().replace(/\s/g, '');
+  const a = String(account || '').toUpperCase().replace(/\s/g, '');
+  return c.includes('ИТОГО') || c.includes('ИТОГ') || a.includes('КОЛВО') || a.includes('КОЛ-ВО');
+}
+
+function normalizeKeyV14(value) {
+  return String(value || '').trim().replace(/\.0$/, '').replace(/[^0-9A-Za-zА-Яа-я]/g, '').toUpperCase();
+}
+
+function normalizeTextKeyV14(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
+function sumFieldV14(arr, field) {
+  return (arr || []).reduce((s, x) => s + (Number(x[field]) || 0), 0);
+}
+
+function groupByV14(arr, keyFn) {
+  const map = {};
+  (arr || []).forEach(item => {
+    const key = keyFn(item) || 'EMPTY';
+    if (!map[key]) map[key] = [];
+    map[key].push(item);
+  });
+  return map;
+}
+
+function downloadCsvV14(lines, fileName) {
+  const csv = lines.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 </script>
 
 </body>
