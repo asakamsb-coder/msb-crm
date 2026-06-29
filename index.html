@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MSB CRM Web 2.8</title>
+<title>MSB CRM Web 2.10</title>
 
 <style>
 :root{
@@ -626,45 +626,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <button class="btn btn-secondary" onclick="resetPeriod()">Сбросить</button>
   </div>
 
-  <div class="portfolio-tabs">
-    <a class="portfolio-tab" href="#portfolioImportPanel">📂 Импорт</a>
-    <a class="portfolio-tab" href="#portfolioDashboardPanel">📊 Dashboard</a>
-    <a class="portfolio-tab" href="#portfolioFpdPanel">⚠️ FPD Monitor</a>
-    <a class="portfolio-tab" href="#portfolioNplPanel" onclick="showPortfolioList('npl')">📈 NPL Monitor</a>
-    <a class="portfolio-tab" href="#portfolioFraudPanel">🚨 Anti Fraud</a>
-    <a class="portfolio-tab" href="#portfolioAiPanel">🤖 AI Report</a>
-  </div>
-
-  <section class="kpi" id="portfolioDashboardPanel">
+  <section class="kpi">
     <div class="card"><div class="card-label">Клиенты</div><div class="card-value" id="totalClients">...</div><div class="card-note">Всего в CRM</div></div>
     <div class="card"><div class="card-label">Сумма заявок</div><div class="card-value" id="totalAmount">...</div><div class="card-note">Общий портфель заявок</div></div>
     <div class="card"><div class="card-label">Сумма выдач</div><div class="card-value" id="issuedAmount">...</div><div class="card-note" id="conversion">Конверсия ...</div></div>
     <div class="card"><div class="card-label">Потенциальный портфель</div><div class="card-value" id="potentialAmount">...</div><div class="card-note">В работе</div></div>
   </section>
 
-  <div class="panel" id="portfolioNplPanel">
-    <h2 id="portfolioListTitle">📋 Список по выбранному показателю</h2>
-    <p class="portfolio-list-note" id="portfolioListNote">Нажмите на KPI сверху: FPD, High Risk, Просрочка или NPL — здесь появятся именно эти клиенты. Нажмите на строку, чтобы открыть карточку кредита.</p>
-    <div class="client-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Тип</th>
-            <th>Клиент</th>
-            <th>ИНН/ПИНФЛ</th>
-            <th>Кредитный счет</th>
-            <th>Остаток</th>
-            <th>Просрочка</th>
-            <th>FPD</th>
-            <th>AI Risk</th>
-          </tr>
-        </thead>
-        <tbody id="portfolioKpiDetailTable">
-          <tr><td colspan="8" class="loading">Пока список не выбран</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
   <div class="layout">
     <div>
@@ -767,9 +735,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1>Кредитный портфель</h1>
-      <p>Credit Intelligence Center v9: чистая логика FPD, Dashboard, FPD/NPL, Anti-Fraud и карточка кредита</p>
+      <p>Credit Intelligence Center v10: CRM Dashboard отдельно, портфель отдельно</p>
     </div>
-    <div class="user-box">AI Portfolio Control v9</div>
+    <div class="user-box">AI Portfolio Control v10</div>
   </div>
 
   <div class="portfolio-tabs">
@@ -858,6 +826,30 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="summary-card portfolio-clickable" onclick="showPortfolioList('high')">
       <div class="small">Остаток High Risk</div>
       <div class="big" id="portfolioCriticalBalance">0</div>
+    </div>
+  </div>
+
+  <div class="panel" id="portfolioNplPanel">
+    <h2 id="portfolioListTitle">📋 Список по выбранному показателю</h2>
+    <p class="portfolio-list-note" id="portfolioListNote">Нажмите на KPI в модуле портфеля: FPD, High Risk, Просрочка или NPL — здесь появятся именно эти клиенты. Нажмите на строку, чтобы открыть карточку кредита.</p>
+    <div class="client-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Тип</th>
+            <th>Клиент</th>
+            <th>ИНН/ПИНФЛ</th>
+            <th>Кредитный счет</th>
+            <th>Остаток</th>
+            <th>Просрочка</th>
+            <th>FPD</th>
+            <th>AI Risk</th>
+          </tr>
+        </thead>
+        <tbody id="portfolioKpiDetailTable">
+          <tr><td colspan="8" class="loading">Пока список не выбран</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -1336,7 +1328,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
-<div class="footer" id="updatedAt">MSB CRM Web 2.8 • Asakabank Nukus BXM</div>
+<div class="footer" id="updatedAt">MSB CRM Web 2.10 • Asakabank Nukus BXM</div>
 
 </main>
 </div>
@@ -2206,7 +2198,7 @@ function renderStats(stats) {
   document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
   document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.8 • Обновлено: ' + (stats.updatedAt || '');
+  document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.10 • Обновлено: ' + (stats.updatedAt || '');
 }
 
 function renderLatestClients(clients) {
