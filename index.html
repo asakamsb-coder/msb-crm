@@ -2366,229 +2366,311 @@ async function changePassword() {
   }
 }
   
-function portfolioNormalizeKey(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/ё/g, 'е')
-    .replace(/\s+/g, '')
-    .replace(/[№#:\-_.]/g, '')
-    .trim();
-}
-
-function portfolioGetValue(row, possibleNames) {
-  const keys = Object.keys(row || {});
-  const normalizedMap = {};
-
-  keys.forEach(key => {
-    normalizedMap[portfolioNormalizeKey(key)] = row[key];
-  });
-
-  for (const name of possibleNames) {
-    const value = normalizedMap[portfolioNormalizeKey(name)];
-    if (value !== undefined && value !== null && String(value).trim() !== '') {
-      return value;
-    }
-  }
-
-  return '';
-}
-
-function portfolioNumber(value) {
-  if (value === null || value === undefined || value === '') return 0;
-
-  let text = String(value)
-    .replace(/\s/g, '')
-    .replace(/,/g, '.')
-    .replace(/[^0-9.\-]/g, '');
-
-  const num = Number(text);
-  return isNaN(num) ? 0 : num;
-}
-
-function portfolioSafe(value) {
-  return String(value === undefined || value === null || value === '' ? '-' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function portfolioReadFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = function(event) {
-      try {
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-
-        resolve(rows.map((row, index) => ({
-          ...row,
-          __fileName: file.name,
-          __rowNumber: index + 2
-        })));
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    reader.onerror = () => reject(reader.error);
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-function portfolioMapRow(row) {
-  const contract = portfolioGetValue(row, [
-    'Договор', 'Номер договора', '№ договора', 'Кредитный договор', 'contract', 'loan id', 'id'
-  ]);
-
-  const client = portfolioGetValue(row, [
-    'Клиент', 'ФИО', 'Заемщик', 'Заёмщик', 'Наименование клиента', 'Название клиента', 'client', 'name'
-  ]);
-
-  const inn = portfolioGetValue(row, [
-    'ИНН', 'СТИР', 'INN', 'TIN'
-  ]);
-
-  const balance = portfolioNumber(portfolioGetValue(row, [
-    'Остаток', 'Остаток кредита', 'Остаток основного долга', 'Основной долг', 'Задолженность', 'balance', 'outstanding'
-  ]));
-
-  const overdueDays = portfolioNumber(portfolioGetValue(row, [
-    'Просрочка', 'Дней просрочки', 'Дни просрочки', 'DPD', 'overdue days'
-  ]));
-
-  const manager = portfolioGetValue(row, [
-    'Менеджер', 'Кредитный менеджер', 'Сотрудник', 'Ответственный', 'manager'
-  ]);
-
-  const fpdRaw = String(portfolioGetValue(row, [
-    'FPD', 'First Payment Default', 'Первый платеж', 'Риск FPD'
-  ]) || '').toLowerCase();
-
-  const fpd = fpdRaw.includes('да') || fpdRaw.includes('yes') || fpdRaw.includes('true') || overdueDays > 0
-    ? 'Да'
-    : 'Нет';
-
-  let riskScore = 0;
-  if (overdueDays > 0) riskScore += 35;
-  if (overdueDays >= 30) riskScore += 25;
-  if (overdueDays >= 60) riskScore += 20;
-  if (fpd === 'Да') riskScore += 20;
-  if (balance >= 1000000000) riskScore += 10;
-  riskScore = Math.min(100, riskScore);
-
-  let riskText = 'Низкий';
-  if (riskScore >= 80) riskText = 'Критичный';
-  else if (riskScore >= 60) riskText = 'Высокий';
-  else if (riskScore >= 30) riskText = 'Средний';
-
-  return {
-    contract: contract || '-',
-    client: client || '-',
-    inn: inn || '-',
-    balance,
-    overdueDays,
-    fpd,
-    riskScore,
-    riskText,
-    manager: manager || '-',
-    fileName: row.__fileName,
-    rowNumber: row.__rowNumber
-  };
-}
-
-function portfolioRiskBadge(riskText) {
-  if (riskText === 'Критичный' || riskText === 'Высокий') return 'risk-critical';
-  if (riskText === 'Средний') return 'risk-warning';
-  return 'risk-normal';
-}
-
-function renderPortfolioData(credits, files) {
-  const total = credits.length;
-  const balance = credits.reduce((sum, c) => sum + c.balance, 0);
-  const fpdCount = credits.filter(c => c.fpd === 'Да').length;
-  const highRisk = credits.filter(c => c.riskScore >= 60).length;
-
-  document.getElementById('portfolioTotal').innerText = total;
-  document.getElementById('portfolioBalance').innerText = formatMoney(balance);
-  document.getElementById('portfolioFpdRisk').innerText = fpdCount;
-  document.getElementById('portfolioHighRisk').innerText = highRisk;
-
-  const tbody = document.getElementById('portfolioTable');
-  tbody.innerHTML = '';
-
-  if (!credits.length) {
-    tbody.innerHTML = '<tr><td colspan="8">В файле не найдено строк для импорта</td></tr>';
-    return;
-  }
-
-  credits.slice(0, 100).forEach(c => {
-    tbody.innerHTML += `
-      <tr>
-        <td>${portfolioSafe(c.contract)}</td>
-        <td>${portfolioSafe(c.client)}</td>
-        <td>${portfolioSafe(c.inn)}</td>
-        <td>${formatMoney(c.balance)}</td>
-        <td>${c.overdueDays} дней</td>
-        <td>${c.fpd}</td>
-        <td><span class="risk-badge ${portfolioRiskBadge(c.riskText)}">${c.riskText} ${c.riskScore}%</span></td>
-        <td>${portfolioSafe(c.manager)}</td>
-      </tr>`;
-  });
-
-  const fileNames = files.map(f => f.name).join(', ');
-  document.getElementById('portfolioUploadStatus').innerText =
-    'Успешно прочитано файлов: ' + files.length + '. Кредитов найдено: ' + total;
-
-  document.getElementById('portfolioHistory').innerText =
-    new Date().toLocaleString('ru-RU') + ' — импорт: ' + fileNames;
-
-  document.getElementById('portfolioAiText').innerText =
-    'AI предварительно выявил: ' + highRisk + ' кредитов с высоким риском, ' +
-    fpdCount + ' кредитов с признаком FPD. Следующий этап: расширенный анализ NPL, менеджеров и антифрод-связей.';
-
-  document.getElementById('portfolioFraudText').innerText =
-    'Антифрод MVP: проверены базовые признаки риска по просрочке, FPD и крупному остатку. Следующим этапом добавим поиск совпадений по телефону, ИНН, поручителям и менеджерам.';
-}
+tryAutoLogin();
 
 async function importPortfolio() {
   const fileInput = document.getElementById('portfolioFile');
   const files = Array.from(fileInput.files || []);
 
-  if (!files.length) {
+  if (files.length === 0) {
     alert('Выберите один или несколько Excel-файлов портфеля');
     return;
   }
 
   if (typeof XLSX === 'undefined') {
-    alert('Библиотека Excel еще не загрузилась. Обновите страницу и попробуйте снова.');
+    alert('Библиотека Excel не загрузилась. Проверьте интернет или обновите страницу.');
     return;
   }
 
-  document.getElementById('portfolioUploadStatus').innerText = 'Читаю Excel...';
-  document.getElementById('portfolioTotal').innerText = '...';
-  document.getElementById('portfolioBalance').innerText = '...';
-  document.getElementById('portfolioFpdRisk').innerText = '...';
-  document.getElementById('portfolioHighRisk').innerText = '...';
+  setText('portfolioUploadStatus', 'Чтение файлов: ' + files.length + ' ...');
+  setText('portfolioTotal', '...');
+  setText('portfolioBalance', '...');
+  setText('portfolioFpdRisk', '...');
+  setText('portfolioHighRisk', '...');
+  setText('portfolioAiText', 'CRM читает Excel и проверяет структуру портфеля...');
 
   try {
-    const allRowsArrays = await Promise.all(files.map(file => portfolioReadFile(file)));
-    const allRows = allRowsArrays.flat();
-    const credits = allRows.map(portfolioMapRow);
+    let allLoans = [];
+    let historyLines = [];
 
-    renderPortfolioData(credits, files);
+    for (const file of files) {
+      const rows = await readPortfolioExcelFile(file);
+      allLoans = allLoans.concat(rows);
+      historyLines.push('✅ ' + file.name + ' — найдено строк: ' + rows.length);
+    }
+
+    const uniqueLoans = deduplicatePortfolioLoans(allLoans);
+    renderPortfolioModule(uniqueLoans, files, historyLines);
+
   } catch (error) {
     console.error(error);
-    document.getElementById('portfolioUploadStatus').innerText = 'Ошибка чтения Excel-файла';
-    alert('Не удалось прочитать Excel. Проверьте формат файла.');
+    setText('portfolioUploadStatus', 'Ошибка чтения файла');
+    setText('portfolioAiText', 'Не удалось прочитать Excel. Проверьте, что файл не поврежден и содержит кредитный портфель.');
+    alert('Ошибка чтения Excel: ' + error.message);
   }
 }
 
-tryAutoLogin();</script>
+function readPortfolioExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        let result = [];
+
+        workbook.SheetNames.forEach(sheetName => {
+          const sheet = workbook.Sheets[sheetName];
+          const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          const parsed = parsePortfolioRows(rawRows, file.name, sheetName);
+          result = result.concat(parsed);
+        });
+
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = function() {
+      reject(new Error('Не удалось открыть файл: ' + file.name));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parsePortfolioRows(rawRows, fileName, sheetName) {
+  if (!rawRows || rawRows.length === 0) return [];
+
+  const headerIndex = rawRows.findIndex(row =>
+    row.some(cell => normalizeHeader(cell) === 'наименклиента') &&
+    row.some(cell => normalizeHeader(cell).includes('кредитныйсчет'))
+  );
+
+  if (headerIndex === -1) {
+    throw new Error('В файле "' + fileName + '" не найдены колонки портфеля');
+  }
+
+  const headers = rawRows[headerIndex].map(h => String(h || '').trim());
+  const rows = [];
+
+  for (let i = headerIndex + 1; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    if (!row || row.every(cell => cell === '' || cell === null || cell === undefined)) continue;
+
+    const obj = {};
+    headers.forEach((header, index) => {
+      if (header) obj[header] = row[index];
+    });
+
+    const client = getByHeaders(obj, ['НаименКлиента', 'Наименование клиента']);
+    const creditAccount = getByHeaders(obj, ['Кредитный счет', 'КредитныйСчет']);
+    const idDog = getByHeaders(obj, ['ID договора', 'ID Договора']);
+
+    if (!client && !creditAccount && !idDog) continue;
+
+    const balance = toNumber(getByHeaders(obj, ['ОстатокКредСчета', 'Остаток кредита', 'Остаток']));
+    const overdueAmount = toNumber(getByHeaders(obj, ['ОстатокПроср', 'Остаток просрочки']));
+    const overdueDays = toNumber(getByHeaders(obj, ['Проср(в днях)', 'Просрочка дней']));
+    const issueDate = parseAnyDate(getByHeaders(obj, ['ДатаФактВыдачи', 'Дата фактической выдачи', 'ДатаДоговора']));
+    const quality = String(getByHeaders(obj, ['КлассКачества', 'Класс качества', 'Необход.Классиф-я']) || '');
+
+    const risk = calculatePortfolioRisk({ balance, overdueAmount, overdueDays, issueDate, quality });
+
+    rows.push({
+      sourceFile: fileName,
+      sheetName,
+      contractId: String(idDog || creditAccount || '').trim(),
+      creditAccount: String(creditAccount || '').trim(),
+      client: String(client || '').trim(),
+      inn: String(getByHeaders(obj, ['ИНН', 'ИНН клиента']) || '').trim(),
+      balance,
+      overdueAmount,
+      overdueDays,
+      issueDate,
+      fpdRisk: risk.fpdRisk,
+      aiRisk: risk.aiRisk,
+      riskText: risk.text,
+      manager: String(getByHeaders(obj, ['Менеджер', 'Кредитный специалист']) || getByHeaders(obj, ['МФО']) || '').trim(),
+      quality,
+      product: String(getByHeaders(obj, ['ВидКредитования', 'Вид кредитования']) || '').trim(),
+      purpose: String(getByHeaders(obj, ['Цель кредита']) || '').trim(),
+      raw: obj
+    });
+  }
+
+  return rows;
+}
+
+function deduplicatePortfolioLoans(loans) {
+  const map = new Map();
+
+  loans.forEach(loan => {
+    const key = loan.contractId || loan.creditAccount || (loan.client + '_' + loan.balance);
+    if (!map.has(key)) {
+      map.set(key, loan);
+    } else {
+      const old = map.get(key);
+      if ((loan.balance || 0) >= (old.balance || 0)) map.set(key, loan);
+    }
+  });
+
+  return Array.from(map.values());
+}
+
+function renderPortfolioModule(loans, files, historyLines) {
+  const total = loans.length;
+  const balance = loans.reduce((s, x) => s + (x.balance || 0), 0);
+  const fpdRisk = loans.filter(x => x.fpdRisk >= 60).length;
+  const highRisk = loans.filter(x => x.aiRisk >= 70).length;
+  const overdueCount = loans.filter(x => (x.overdueDays || 0) > 0 || (x.overdueAmount || 0) > 0).length;
+
+  setText('portfolioTotal', total);
+  setText('portfolioBalance', formatMoney(balance));
+  setText('portfolioFpdRisk', fpdRisk);
+  setText('portfolioHighRisk', highRisk);
+  setText('portfolioUploadStatus', 'Загружено файлов: ' + files.length + ' • кредитов: ' + total);
+
+  const sorted = loans.slice().sort((a,b) => (b.aiRisk || 0) - (a.aiRisk || 0));
+  renderPortfolioTable(sorted.slice(0, 100));
+
+  setText('portfolioHistory', historyLines.join('\n'));
+
+  let ai = '';
+  ai += 'Импорт завершен. Найдено кредитов: ' + total + '. ';
+  ai += 'Общий остаток портфеля: ' + formatMoney(balance) + '. ';
+  ai += 'Кредитов с текущей просрочкой: ' + overdueCount + '. ';
+  ai += 'Высокий AI Risk: ' + highRisk + '. ';
+  ai += 'FPD Risk: ' + fpdRisk + '. ';
+  ai += 'Рекомендация: сначала проверить топ-20 кредитов с максимальным AI Risk и кредиты с просрочкой более 30 дней.';
+  setText('portfolioAiText', ai);
+
+  const duplicatesByClient = countDuplicates(loans.map(x => normalizeText(x.client)).filter(Boolean));
+  const duplicatesByAccount = countDuplicates(loans.map(x => normalizeText(x.creditAccount)).filter(Boolean));
+  const duplicateClients = duplicatesByClient.filter(x => x.count > 1).slice(0, 5);
+  const duplicateAccounts = duplicatesByAccount.filter(x => x.count > 1).slice(0, 5);
+
+  let fraud = 'Anti Fraud проверка завершена. ';
+  fraud += 'Повторяющихся кредитных счетов: ' + duplicateAccounts.length + '. ';
+  fraud += 'Клиентов с несколькими кредитами: ' + duplicateClients.length + '. ';
+  if (duplicateClients.length) {
+    fraud += 'Примеры повторов: ' + duplicateClients.map(x => x.value).join(', ') + '. ';
+  }
+  fraud += 'Следующий этап: добавить проверку одинаковых телефонов, залогов, поручителей и менеджеров, если эти колонки есть в файле.';
+  setText('portfolioFraudText', fraud);
+}
+
+function renderPortfolioTable(loans) {
+  const tbody = document.getElementById('portfolioTable');
+  if (!tbody) return;
+
+  if (!loans.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">В портфеле нет строк для отображения</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  loans.forEach(loan => {
+    const riskClass = loan.aiRisk >= 70 ? 'risk-critical' : loan.aiRisk >= 40 ? 'risk-warning' : 'risk-normal';
+    const fpdClass = loan.fpdRisk >= 60 ? 'risk-critical' : loan.fpdRisk >= 30 ? 'risk-warning' : 'risk-normal';
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${safe(loan.contractId || loan.creditAccount)}</td>
+        <td>${safe(loan.client)}</td>
+        <td>${safe(loan.inn || loan.creditAccount)}</td>
+        <td>${formatMoney(loan.balance)}</td>
+        <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueAmount)}</td>
+        <td><span class="risk-badge ${fpdClass}">${loan.fpdRisk}%</span></td>
+        <td><span class="risk-badge ${riskClass}">${loan.aiRisk}%</span></td>
+        <td>${safe(loan.manager)}</td>
+      </tr>`;
+  });
+}
+
+function calculatePortfolioRisk(loan) {
+  let score = 10;
+  let fpd = 5;
+  const today = new Date();
+
+  if (loan.overdueDays > 0) score += 30;
+  if (loan.overdueDays >= 30) score += 25;
+  if (loan.overdueDays >= 60) score += 20;
+  if (loan.overdueDays >= 90) score += 20;
+  if (loan.overdueAmount > 0) score += 20;
+
+  const q = String(loan.quality || '').toLowerCase();
+  if (q.includes('субстандарт')) score += 25;
+  if (q.includes('неудовлетвор')) score += 40;
+  if (q.includes('сомнитель')) score += 55;
+  if (q.includes('безнадеж')) score += 70;
+
+  if (loan.issueDate && !isNaN(loan.issueDate.getTime())) {
+    const daysFromIssue = Math.floor((today - loan.issueDate) / 86400000);
+    if (daysFromIssue >= 0 && daysFromIssue <= 45) fpd += 45;
+    if (daysFromIssue >= 0 && daysFromIssue <= 90) fpd += 20;
+    if (loan.overdueDays > 0 && daysFromIssue <= 120) fpd += 40;
+  }
+
+  if (loan.overdueDays > 0) fpd += 20;
+  if (q.includes('субстандарт') || q.includes('неудовлетвор') || q.includes('сомнитель') || q.includes('безнадеж')) fpd += 25;
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  fpd = Math.max(0, Math.min(100, Math.round(fpd)));
+
+  let text = 'Низкий риск';
+  if (score >= 70) text = 'Высокий риск';
+  else if (score >= 40) text = 'Средний риск';
+
+  return { aiRisk: score, fpdRisk: fpd, text };
+}
+
+function normalizeHeader(value) {
+  return String(value || '').replace(/\s+/g, '').trim().toLowerCase();
+}
+
+function getByHeaders(obj, names) {
+  const keys = Object.keys(obj || {});
+  for (const name of names) {
+    const found = keys.find(k => normalizeHeader(k) === normalizeHeader(name));
+    if (found) return obj[found];
+  }
+  return '';
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return value;
+  const cleaned = String(value).replace(/\s/g, '').replace(',', '.').replace(/[^\x00-\x7F\d.-]/g, '');
+  const n = Number(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+function parseAnyDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+
+  const s = String(value).trim();
+  const d1 = new Date(s);
+  if (!isNaN(d1.getTime())) return d1;
+
+  const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+
+  return null;
+}
+
+function countDuplicates(values) {
+  const map = {};
+  values.forEach(v => {
+    if (!v) return;
+    map[v] = (map[v] || 0) + 1;
+  });
+  return Object.entries(map).map(([value, count]) => ({ value, count })).sort((a,b) => b.count - a.count);
+}
+</script>
+
 </body>
 </html>
