@@ -2522,7 +2522,7 @@ function parsePortfolioRows(rawRows, fileName, sheetName) {
 
     const client = getByHeaders(obj, ['НаименКлиента', 'Наименование клиента']);
     const creditAccount = getByHeaders(obj, ['Кредитный счет', 'КредитныйСчет']);
-    const idDog = getByHeaders(obj, ['ID договора', 'ID Договора']);
+    const idDog = getByHeaders(obj, ['ID договора', 'ID Договора', 'Loan_id', 'Loan ID', 'loan_id']);
 
     if (!client && !creditAccount && !idDog) continue;
 
@@ -2559,16 +2559,52 @@ function parsePortfolioRows(rawRows, fileName, sheetName) {
   return rows;
 }
 
+function normalizePortfolioKey(value) {
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(/\.0$/, '')
+    .replace(/[^0-9A-Za-zА-Яа-я]/g, '')
+    .toUpperCase();
+}
+
+function getPortfolioDedupKey(loan) {
+  // Главное правило: один кредит = один кредитный счет.
+  // Поэтому сначала берем creditAccount. Это убирает дубли, когда один и тот же портфель
+  // загружен из 2-3 Excel-файлов, но в одном файле ID называется Loan_id, а в другом ID договора.
+  const creditKey = normalizePortfolioKey(loan.creditAccount);
+  if (creditKey) return 'ACC_' + creditKey;
+
+  const contractKey = normalizePortfolioKey(loan.contractId);
+  if (contractKey) return 'CONTRACT_' + contractKey;
+
+  const innKey = normalizePortfolioKey(loan.inn);
+  const clientKey = normalizePortfolioKey(loan.client);
+  const balanceKey = Math.round(Number(loan.balance) || 0);
+  return 'FALLBACK_' + innKey + '_' + clientKey + '_' + balanceKey;
+}
+
 function deduplicatePortfolioLoans(loans) {
   const map = new Map();
 
   loans.forEach(loan => {
-    const key = loan.contractId || loan.creditAccount || (loan.client + '_' + loan.balance);
+    const key = getPortfolioDedupKey(loan);
+
     if (!map.has(key)) {
       map.set(key, loan);
-    } else {
-      const old = map.get(key);
-      if ((loan.balance || 0) >= (old.balance || 0)) map.set(key, loan);
+      return;
+    }
+
+    const old = map.get(key);
+
+    // Если один и тот же кредит пришел из нескольких файлов, оставляем строку с более полной информацией.
+    const oldScore = Object.values(old.raw || {}).filter(v => v !== '' && v !== null && v !== undefined).length;
+    const newScore = Object.values(loan.raw || {}).filter(v => v !== '' && v !== null && v !== undefined).length;
+
+    if (newScore > oldScore) {
+      map.set(key, loan);
+    } else if (newScore === oldScore && (loan.balance || 0) >= (old.balance || 0)) {
+      map.set(key, loan);
     }
   });
 
@@ -2593,7 +2629,7 @@ function renderPortfolioModule(loans, files, historyLines) {
   setText('portfolioOverdueCount', overdueCount);
   setText('portfolioAvgRisk', avgRisk + '%');
   setText('portfolioCriticalBalance', formatMoney(criticalBalance));
-  setText('portfolioUploadStatus', 'Загружено файлов: ' + files.length + ' • кредитов после очистки дублей: ' + total);
+  setText('portfolioUploadStatus', 'Загружено файлов: ' + files.length + ' • строк до очистки: ' + loans.length + ' • уникальных кредитов: ' + total + ' • дублей удалено: ' + Math.max(0, loans.length - total));
 
   const sorted = loans.slice().sort((a,b) => (b.aiRisk || 0) - (a.aiRisk || 0));
   renderPortfolioTable(sorted.slice(0, 100));
