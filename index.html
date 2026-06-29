@@ -714,28 +714,104 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1>Кредитный портфель</h1>
-      <p>AI анализ кредитного портфеля банка</p>
+      <p>Импорт Excel, FPD, NPL, AI Risk Score и Anti Fraud контроль</p>
     </div>
+    <div class="user-box">AI Portfolio Control</div>
   </div>
 
-  <div class="panel">
-    <div class="panel">
+  <section class="kpi">
+    <div class="card">
+      <div class="card-label">Всего кредитов</div>
+      <div class="card-value" id="portfolioTotal">0</div>
+      <div class="card-note">Загружено в CRM</div>
+    </div>
 
-<h2>AI
+    <div class="card">
+      <div class="card-label">Остаток портфеля</div>
+      <div class="card-value" id="portfolioBalance">0</div>
+      <div class="card-note">Общий остаток</div>
+    </div>
 
-    <p style="margin-top:15px;">
-      Здесь будет:
-    </p>
+    <div class="card">
+      <div class="card-label">FPD Risk</div>
+      <div class="card-value" id="portfolioFpdRisk">0</div>
+      <div class="card-note">Риск первого платежа</div>
+    </div>
 
-    <ul style="margin-top:15px; line-height:2;">
-      <li>📂 Загрузка Excel</li>
-      <li>📊 Общий портфель</li>
-      <li>🤖 AI анализ</li>
-      <li>⚠️ FPD Risk</li>
-      <li>📈 NPL Risk</li>
-      <li>🚨 Anti Fraud</li>
-    </ul>
+    <div class="card">
+      <div class="card-label">High Risk</div>
+      <div class="card-value" id="portfolioHighRisk">0</div>
+      <div class="card-note">Критичные кредиты</div>
+    </div>
+  </section>
 
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Загрузка портфеля</h2>
+        <p style="color:var(--muted);margin-bottom:15px;">
+          Загрузите Excel-файл кредитного портфеля. После загрузки CRM подготовит данные для AI-анализа.
+        </p>
+
+        <input type="file" id="portfolioFile" accept=".xlsx,.xls,.csv" class="input">
+
+        <button class="btn" style="margin-top:12px;" onclick="importPortfolio()">
+          📂 Загрузить портфель
+        </button>
+
+        <div id="portfolioUploadStatus" style="margin-top:15px;color:var(--muted);font-weight:700;">
+          Файл пока не загружен
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Кредиты портфеля</h2>
+        <div class="client-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Договор</th>
+                <th>Клиент</th>
+                <th>ИНН</th>
+                <th>Остаток</th>
+                <th>Просрочка</th>
+                <th>FPD</th>
+                <th>AI Risk</th>
+                <th>Менеджер</th>
+              </tr>
+            </thead>
+            <tbody id="portfolioTable">
+              <tr>
+                <td colspan="8" class="loading">Загрузите Excel-файл портфеля</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel ai-box">
+        <h2>AI Анализ</h2>
+        <p id="portfolioAiText">
+          После загрузки портфеля AI определит риск FPD, NPL, проблемные кредиты и подозрительные совпадения.
+        </p>
+      </div>
+
+      <div class="panel">
+        <h2>Anti Fraud контроль</h2>
+        <div id="portfolioFraudText" style="color:var(--muted);line-height:1.6;">
+          Проверка совпадений по телефону, ИНН, поручителям, залогу, менеджеру и подозрительным схемам.
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>История загрузок</h2>
+        <div id="portfolioHistory" class="loading">
+          История пока пустая
+        </div>
+      </div>
+    </div>
   </div>
 
 </section>
