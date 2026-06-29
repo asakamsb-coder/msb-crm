@@ -735,9 +735,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1>Кредитный портфель</h1>
-      <p>Credit Intelligence Center v10: CRM Dashboard отдельно, портфель отдельно</p>
+      <p>Credit Intelligence Center v11: правильная логика FPD / SPD / Early Default</p>
     </div>
-    <div class="user-box">AI Portfolio Control v10</div>
+    <div class="user-box">AI Portfolio Control v11</div>
   </div>
 
   <div class="portfolio-tabs">
@@ -803,10 +803,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 
   <div class="panel" id="portfolioFpdRulePanel">
-    <h2>⚠️ Правило FPD в этой версии</h2>
+    <h2>⚠️ Логика качества новых кредитов</h2>
     <p style="color:var(--muted);line-height:1.7;">
-      FPD считается только по факту, без AI-угадывания: <b>кредит выдан в предыдущем месяце</b> и на текущую дату по нему есть <b>просрочка 1 день и более</b> или сумма просрочки больше 0.
-      Например: кредит выдан в мае 2026 года, в июне у клиента есть просрочка — это FPD. Если кредит выдан давно, это уже обычная текущая просрочка, а не FPD.
+      В этой версии FPD больше не считается как AI-процент. Это бизнес-правило. CRM делит проблемность на понятные типы:
+      <b>FPD</b> — просрочка на первом платеже / в первый расчетный месяц;
+      <b>FPD Lost</b> — клиент фактически не начал платить после выдачи;
+      <b>SPD / Early Default</b> — клиент сделал первые платежи, но стал проблемным в первые месяцы;
+      <b>Regular Delinquency</b> — обычная просрочка по более старому кредиту.
     </p>
   </div>
 
@@ -933,10 +936,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       </div>
 
       <div class="panel" id="portfolioFpdPanel">
-        <h2>⚠️ FPD Monitor</h2>
+        <h2>⚠️ FPD / Early Default Control</h2>
         <p style="color:var(--muted);line-height:1.6;margin-bottom:15px;">
-          FPD считается по факту: кредит выдан в предыдущем месяце и уже имеет текущую просрочку. Разделение по физическим и юридическим лицам помогает понять, где качество новых выдач хуже.
+          Здесь FPD не смешивается с NPL. Мы показываем жизненный цикл ранней проблемности: первый платеж, клиент не начал платить, проблема после 2–3 платежей и обычная текущая просрочка.
         </p>
+
+        <div class="summary-row">
+          <div class="summary-card portfolio-clickable" onclick="showPortfolioList('fpd')"><div class="small">FPD</div><div class="big" id="fpdFirstPayCount">0</div></div>
+          <div class="summary-card portfolio-clickable" onclick="showPortfolioList('fpdLost')"><div class="small">FPD Lost</div><div class="big" id="fpdLostCount">0</div></div>
+          <div class="summary-card portfolio-clickable" onclick="showPortfolioList('spd')"><div class="small">SPD / Early Default</div><div class="big" id="spdCount">0</div></div>
+          <div class="summary-card portfolio-clickable" onclick="showPortfolioList('regular')"><div class="small">Regular Delinquency</div><div class="big" id="regularDelinqCount">0</div></div>
+        </div>
 
         <div class="summary-row">
           <div class="summary-card portfolio-clickable" onclick="showFpdClients('physical')"><div class="small">FPD физ. лица</div><div class="big" id="fpdPhysicalCount">0</div></div>
@@ -945,47 +955,29 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           <div class="summary-card"><div class="small">Остаток юр. FPD</div><div class="big" id="fpdLegalBalance">0</div></div>
         </div>
 
-        <h3 style="font-size:16px;margin:18px 0 10px;">👤 Физические клиенты — высокий FPD Fact</h3>
+        <h3 style="font-size:16px;margin:18px 0 10px;">📋 Ранняя проблемность по типам</h3>
         <div class="client-table-wrap">
           <table>
             <thead>
               <tr>
+                <th>Тип</th>
                 <th>Клиент</th>
-                <th>ИНН/ПИНФЛ</th>
+                <th>Субъект</th>
                 <th>Дата выдачи</th>
                 <th>Остаток</th>
-                <th>FPD Fact</th>
+                <th>Просрочка</th>
                 <th>Причина</th>
               </tr>
             </thead>
             <tbody id="portfolioFpdPhysicalTable">
-              <tr><td colspan="6" class="loading">После импорта появятся физические клиенты с высоким FPD Fact</td></tr>
+              <tr><td colspan="7" class="loading">После импорта появятся кредиты с ранней проблемностью</td></tr>
             </tbody>
           </table>
         </div>
 
-        <h3 style="font-size:16px;margin:22px 0 10px;">🏢 Юридические клиенты — высокий FPD Fact</h3>
-        <div class="client-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Клиент</th>
-                <th>ИНН</th>
-                <th>Дата выдачи</th>
-                <th>Остаток</th>
-                <th>FPD Fact</th>
-                <th>Причина</th>
-              </tr>
-            </thead>
-            <tbody id="portfolioFpdLegalTable">
-              <tr><td colspan="6" class="loading">После импорта появятся юридические клиенты с высоким FPD Fact</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3 id="fpdDetailTitle" style="font-size:16px;margin:24px 0 10px;">📋 Детальный список FPD клиентов</h3>
+        <h3 id="fpdDetailTitle" style="font-size:16px;margin:24px 0 10px;">📋 Детальный список клиентов</h3>
         <p style="color:var(--muted);line-height:1.6;margin-bottom:10px;">
-          Нажмите на количество FPD сверху, чтобы увидеть именно этих клиентов. Нажмите на строку клиента — откроется карточка кредита.
+          Нажмите на KPI сверху: FPD, FPD Lost, SPD или Regular Delinquency. Нажмите на строку — откроется карточка кредита.
         </p>
         <div class="client-table-wrap">
           <table>
@@ -993,16 +985,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
               <tr>
                 <th>Тип</th>
                 <th>Клиент</th>
-                <th>ИНН/ПИНФЛ</th>
+                <th>Субъект</th>
                 <th>Кредитный счет</th>
                 <th>Остаток</th>
                 <th>Просрочка</th>
-                <th>FPD</th>
+                <th>Статус</th>
                 <th>AI Risk</th>
               </tr>
             </thead>
             <tbody id="portfolioFpdDetailTable">
-              <tr><td colspan="8" class="loading">Нажмите на показатель FPD, чтобы увидеть список клиентов</td></tr>
+              <tr><td colspan="8" class="loading">Нажмите на показатель, чтобы увидеть список клиентов</td></tr>
             </tbody>
           </table>
         </div>
@@ -2720,10 +2712,13 @@ function readPortfolioExcelFile(file) {
 function parsePortfolioRows(rawRows, fileName, sheetName) {
   if (!rawRows || rawRows.length === 0) return [];
 
-  const headerIndex = rawRows.findIndex(row =>
-    row.some(cell => normalizeHeader(cell) === 'наименклиента') &&
-    row.some(cell => normalizeHeader(cell).includes('кредитныйсчет'))
-  );
+  const headerIndex = rawRows.findIndex(row => {
+    const headers = row.map(cell => normalizeHeader(cell));
+    const hasClient = headers.some(h => h === 'наименклиента' || h === 'наименованиеклиента');
+    const hasAccount = headers.some(h => h.includes('кредитныйсчет') || h === 'номерсчета' || h.includes('номерсчета'));
+    const hasContract = headers.some(h => h === 'loan_id' || h === 'idдоговора' || h === 'иддоговора');
+    return hasClient && (hasAccount || hasContract);
+  });
 
   if (headerIndex === -1) {
     throw new Error('В файле "' + fileName + '" не найдены колонки портфеля');
@@ -2742,8 +2737,8 @@ function parsePortfolioRows(rawRows, fileName, sheetName) {
     });
 
     const client = getByHeaders(obj, ['НаименКлиента', 'Наименование клиента']);
-    const creditAccount = getByHeaders(obj, ['Кредитный счет', 'КредитныйСчет']);
-    const idDog = getByHeaders(obj, ['ID договора', 'ID Договора', 'Loan_id', 'Loan ID', 'loan_id', 'Код договора']);
+    const creditAccount = getByHeaders(obj, ['Кредитный счет', 'КредитныйСчет', 'Номер счета', 'НомерСчета']);
+    const idDog = getByHeaders(obj, ['ID договора', 'ID Договора', 'ИД договора', 'ИД Договора', 'Loan_id', 'Loan ID', 'loan_id', 'Код договора']);
 
     // ВАЖНО: в банковском Excel есть итоговые строки:
     // НаименКлиента = "И Т О Г О", Кредитный счет = "кол-во 14064".
@@ -2764,13 +2759,16 @@ function parsePortfolioRows(rawRows, fileName, sheetName) {
     if (isTotalRow) continue;
     if (!client || !isValidCreditAccount || !isValidContractId) continue;
 
-    const balance = toNumber(getByHeaders(obj, ['ОстатокКредСчета', 'Остаток кредита', 'Остаток']));
-    const overdueAmount = toNumber(getByHeaders(obj, ['ОстатокПроср', 'Остаток просрочки']));
-    const overdueDays = toNumber(getByHeaders(obj, ['Проср(в днях)', 'Просрочка дней']));
-    const issueDate = parseAnyDate(getByHeaders(obj, ['ДатаФактВыдачи', 'Дата фактической выдачи', 'ДатаДоговора']));
-    const quality = String(getByHeaders(obj, ['КлассКачества', 'Класс качества', 'Необход.Классиф-я']) || '');
+    const balance = toNumber(getByHeaders(obj, ['Текущий остаток', 'Всего задолженность', 'ОстатокКредСчета', 'Остаток кредита', 'Остаток']));
+    const overdueAmount = toNumber(getByHeaders(obj, ['Просроченный остаток', 'ОстатокПроср', 'Остаток просрочки']));
+    const overdueDays = toNumber(getByHeaders(obj, ['Дни просрочки', 'Проср(в днях)', 'Просрочка дней']));
+    const issueDate = parseAnyDate(getByHeaders(obj, ['Дата открытия', 'ДатаФактВыдачи', 'Дата фактической выдачи', 'ДатаДоговора']));
+    const quality = String(getByHeaders(obj, ['Класс кач-во ИАБС', 'КлассКачества', 'Класс качества', 'Необход.Классиф-я']) || '');
+    const subject = String(getByHeaders(obj, ['Субъект']) || '').trim().toUpperCase();
+    const nplFlag = String(getByHeaders(obj, ['НПЛ для ЦБ']) || '').trim();
 
-    const risk = calculatePortfolioRisk({ balance, overdueAmount, overdueDays, issueDate, quality });
+    const risk = calculatePortfolioRisk({ balance, overdueAmount, overdueDays, issueDate, quality, nplFlag });
+    const fpdStatus = classifyLoanQuality({ issueDate, overdueAmount, overdueDays, nplFlag });
 
     rows.push({
       sourceFile: fileName,
@@ -2783,12 +2781,17 @@ function parsePortfolioRows(rawRows, fileName, sheetName) {
       overdueAmount,
       overdueDays,
       issueDate,
+      subject,
+      borrowerType: subject === 'P' ? 'physical' : subject === 'J' ? 'legal' : '',
+      fpdStatus,
       fpdRisk: risk.fpdRisk,
       aiRisk: risk.aiRisk,
       riskText: risk.text,
-      manager: String(getByHeaders(obj, ['Менеджер', 'Кредитный специалист']) || getByHeaders(obj, ['МФО']) || '').trim(),
+      manager: String(getByHeaders(obj, ['Менеджер', 'Кредитный специалист']) || getByHeaders(obj, ['МФО', 'БХМ']) || '').trim(),
       quality,
-      product: String(getByHeaders(obj, ['ВидКредитования', 'Вид кредитования']) || '').trim(),
+      nplFlag,
+      segment: String(getByHeaders(obj, ['Сегмент']) || '').trim(),
+      product: String(getByHeaders(obj, ['ВидКредитования', 'Вид кредитования', 'Сегмент']) || '').trim(),
       purpose: String(getByHeaders(obj, ['Цель кредита']) || '').trim(),
       raw: obj
     });
@@ -2980,7 +2983,10 @@ function renderPortfolioSegmentSummary() {
 
 function getPortfolioListByKind(kind, segment) {
   const loans = getPortfolioSegmentLoans(segment || portfolioSegment || 'all');
-  if (kind === 'fpd') return loans.filter(x => (x.fpdRisk || 0) >= 60).sort((a,b) => (b.fpdRisk || 0) - (a.fpdRisk || 0));
+  if (kind === 'fpd') return loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'FPD').sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+  if (kind === 'fpdLost') return loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'FPD_LOST').sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+  if (kind === 'spd') return loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'SPD').sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+  if (kind === 'regular') return loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'REGULAR').sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
   if (kind === 'high') return loans.filter(x => (x.aiRisk || 0) >= 70).sort((a,b) => (b.aiRisk || 0) - (a.aiRisk || 0));
   if (kind === 'overdue') return loans.filter(x => (x.overdueDays || 0) > 0 || (x.overdueAmount || 0) > 0).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
   if (kind === 'npl') return loans.filter(x => (x.overdueDays || 0) >= 90 || (x.aiRisk || 0) >= 85).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0) || (b.aiRisk || 0) - (a.aiRisk || 0));
@@ -3194,39 +3200,27 @@ function renderPortfolioModule(loans, files, historyLines, rawRows, duplicateRow
 }
 
 function getBorrowerType(loan) {
+  const subject = String(loan.subject || '').trim().toUpperCase();
+  if (subject === 'P') return 'physical';
+  if (subject === 'J') return 'legal';
+
   const name = normalizeText(loan.client);
   const inn = String(loan.inn || '').replace(/\D/g, '');
-
-  const legalMarkers = [
-    'ooo', 'ооо', 'мчж', 'masuliyati cheklangan', 'mchj', 'xk', 'хк',
-    'фермер', 'fermer', 'farm', 'korxona', 'корхона', 'firma', 'фирма',
-    'тадбиркор', 'tadbirkor', 'ip ', 'якка', 'yakka', 'aksiyadorlik', 'ао', 'aj', 'аж'
-  ];
-
+  const legalMarkers = ['ooo','ооо','мчж','mchj','xk','хк','фермер','fermer','korxona','корхона','firma','фирма','aj','аж'];
   if (legalMarkers.some(marker => name.includes(marker))) return 'legal';
-
-  // В Узбекистане у физлица часто встречается ПИНФЛ 14 цифр.
-  // У юрлица ИНН обычно короче. Это не идеальное правило, но для MVP помогает разделить портфель.
   if (inn.length >= 14) return 'physical';
   if (inn.length > 0 && inn.length <= 10) return 'legal';
-
-  // Если в названии 2-3 слова без признаков организации — считаем физическим лицом.
-  const words = String(loan.client || '').trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2 && words.length <= 4) return 'physical';
-
   return 'unknown';
 }
 
 function getFpdReason(loan) {
-  if ((loan.fpdRisk || 0) >= 60) {
-    return 'Выдача в предыдущем месяце + есть текущая просрочка';
-  }
+  const st = loan.fpdStatus || classifyLoanQuality(loan);
+  return st.reason || 'Нет признаков ранней проблемности';
+}
 
-  if (loan.overdueDays > 0 || loan.overdueAmount > 0) {
-    return 'Есть просрочка, но кредит не относится к предыдущему месяцу выдачи';
-  }
-
-  return 'Нет текущей просрочки по правилу FPD';
+function portfolioStatusText(loan) {
+  const st = loan.fpdStatus || classifyLoanQuality(loan);
+  return st.label || 'Норма';
 }
 
 function renderOneFpdSegment(tbodyId, rows, emptyText) {
@@ -3234,43 +3228,52 @@ function renderOneFpdSegment(tbodyId, rows, emptyText) {
   if (!tbody) return;
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">' + emptyText + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">' + emptyText + '</td></tr>';
     return;
   }
 
   tbody.innerHTML = '';
-  rows.slice(0, 30).forEach(loan => {
+  rows.slice(0, 60).forEach(loan => {
     const issue = loan.issueDate && !isNaN(loan.issueDate.getTime()) ? loan.issueDate.toLocaleDateString('ru-RU') : '-';
-    const cls = loan.fpdRisk >= 80 ? 'risk-critical' : 'risk-warning';
+    const st = loan.fpdStatus || classifyLoanQuality(loan);
+    const cls = st.code === 'FPD_LOST' ? 'risk-critical' : (st.code === 'FPD' || st.code === 'SPD') ? 'risk-warning' : 'risk-normal';
     tbody.innerHTML += `
       <tr class="clickable-row" onclick="openPortfolioLoanCard(${loan._portfolioIndex})">
+        <td><span class="risk-badge ${cls}">${safe(st.label)}</span></td>
         <td>${safe(loan.client)}</td>
-        <td>${safe(loan.inn)}</td>
+        <td>${safe(loan.subject || borrowerTypeText(getBorrowerType(loan)))}</td>
         <td>${issue}</td>
         <td>${formatMoney(loan.balance)}</td>
-        <td><span class="risk-badge ${cls}">${fpdBadgeText(loan)}</span></td>
-        <td>${safe(getFpdReason(loan))}</td>
+        <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueAmount)}</td>
+        <td>${safe(st.reason)}</td>
       </tr>`;
   });
 }
 
 function renderPortfolioFpdTable(loans) {
-  const highFpd = loans
-    .filter(x => (x.fpdRisk || 0) >= 60)
-    .sort((a,b) => (b.fpdRisk || 0) - (a.fpdRisk || 0));
+  const fpd = loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'FPD');
+  const fpdLost = loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'FPD_LOST');
+  const spd = loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'SPD');
+  const regular = loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'REGULAR');
 
-  const physical = highFpd.filter(x => getBorrowerType(x) === 'physical');
-  const legal = highFpd.filter(x => getBorrowerType(x) === 'legal');
-  const unknown = highFpd.filter(x => getBorrowerType(x) === 'unknown');
+  setText('fpdFirstPayCount', fpd.length);
+  setText('fpdLostCount', fpdLost.length);
+  setText('spdCount', spd.length);
+  setText('regularDelinqCount', regular.length);
+
+  const fpdAll = fpd.concat(fpdLost);
+  const physical = fpdAll.filter(x => getBorrowerType(x) === 'physical');
+  const legal = fpdAll.filter(x => getBorrowerType(x) === 'legal');
 
   setText('fpdPhysicalCount', physical.length);
-  setText('fpdPhysicalBalance', formatMoney(physical.reduce((s,x) => s + (x.balance || 0), 0)));
+  setText('fpdPhysicalBalance', formatMoney(physical.reduce((sum,x) => sum + (x.balance || 0), 0)));
   setText('fpdLegalCount', legal.length);
-  setText('fpdLegalBalance', formatMoney(legal.reduce((s,x) => s + (x.balance || 0), 0)));
+  setText('fpdLegalBalance', formatMoney(legal.reduce((sum,x) => sum + (x.balance || 0), 0)));
 
-  renderOneFpdSegment('portfolioFpdPhysicalTable', physical.concat(unknown.filter((_, i) => i < 5)), 'Физические клиенты с высоким FPD Fact не выявлены');
-  renderOneFpdSegment('portfolioFpdLegalTable', legal, 'Юридические клиенты с высоким FPD Fact не выявлены');
+  const earlyProblem = fpdLost.concat(fpd).concat(spd).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+  renderOneFpdSegment('portfolioFpdPhysicalTable', earlyProblem, 'Ранняя проблемность не выявлена');
 }
+
 
 function renderPortfolioFraudAlerts(loans) {
   const textBox = document.getElementById('portfolioFraudText');
@@ -3305,8 +3308,14 @@ function renderPortfolioFraudAlerts(loans) {
 }
 
 
+function borrowerTypeText(type) {
+  if (type === 'physical') return 'Физ. лицо';
+  if (type === 'legal') return 'Юр. лицо';
+  return 'Не определено';
+}
+
 function fpdBadgeText(loan) {
-  return (loan.fpdRisk || 0) >= 60 ? 'FPD' : 'Нет';
+  return portfolioStatusText(loan);
 }
 function renderPortfolioTable(loans) {
   const tbody = document.getElementById('portfolioTable');
@@ -3338,7 +3347,6 @@ function renderPortfolioTable(loans) {
 
 function calculatePortfolioRisk(loan) {
   let score = 10;
-  const today = new Date();
 
   if (loan.overdueDays > 0) score += 30;
   if (loan.overdueDays >= 30) score += 25;
@@ -3352,10 +3360,15 @@ function calculatePortfolioRisk(loan) {
   if (q.includes('сомнитель')) score += 55;
   if (q.includes('безнадеж')) score += 70;
 
-  // FPD v9 — это НЕ прогноз и НЕ AI.
-  // FPD = кредит выдан в предыдущем месяце + на текущую дату есть просрочка.
-  const isFpd = isPreviousMonthIssue(loan.issueDate, today) && ((loan.overdueDays || 0) > 0 || (loan.overdueAmount || 0) > 0);
-  const fpd = isFpd ? 100 : 0;
+  const nplFlag = String(loan.nplFlag || '').trim();
+  if (nplFlag && nplFlag !== '0' && nplFlag !== '1') score += 20;
+  if (Number(nplFlag) >= 3) score += 35;
+
+  const st = classifyLoanQuality(loan);
+  const fpd = (st.code === 'FPD' || st.code === 'FPD_LOST') ? 100 : 0;
+  if (st.code === 'FPD_LOST') score += 40;
+  if (st.code === 'SPD') score += 25;
+  if (st.code === 'REGULAR') score += 15;
 
   score = Math.max(0, Math.min(100, Math.round(score)));
 
@@ -3364,6 +3377,45 @@ function calculatePortfolioRisk(loan) {
   else if (score >= 40) text = 'Средний риск';
 
   return { aiRisk: score, fpdRisk: fpd, text };
+}
+
+function classifyLoanQuality(loan) {
+  const today = new Date();
+  const issueDate = loan.issueDate;
+  const overdueDays = Number(loan.overdueDays) || 0;
+  const overdueAmount = Number(loan.overdueAmount) || 0;
+  const hasOverdue = overdueDays > 0 || overdueAmount > 0;
+
+  if (!issueDate || isNaN(issueDate.getTime())) {
+    return hasOverdue
+      ? { code: 'REGULAR', label: 'Текущая просрочка', reason: 'Есть просрочка, но дата выдачи не определена' }
+      : { code: 'NORMAL', label: 'Норма', reason: 'Просрочки нет' };
+  }
+
+  const ageDays = Math.max(0, Math.floor((startOfDayJS(today) - startOfDayJS(issueDate)) / 86400000));
+
+  if (!hasOverdue) {
+    if (ageDays <= 30) return { code: 'NEW', label: 'Новый кредит', reason: '0–30 дней после выдачи, просрочки нет' };
+    return { code: 'NORMAL', label: 'Норма', reason: 'Просрочки нет' };
+  }
+
+  // FPD Lost: клиент фактически не начал платить после выдачи.
+  // Без графика платежей это приближенное правило: просрочка почти равна возрасту кредита минус первый расчетный период.
+  if (ageDays > 90 && overdueDays >= Math.max(60, ageDays - 45)) {
+    return { code: 'FPD_LOST', label: 'FPD Lost', reason: 'Клиент не начал нормально платить после выдачи: просрочка длится почти с начала кредита' };
+  }
+
+  // FPD: проблема на первом платеже / в первый расчетный месяц.
+  if (ageDays <= 60 || isPreviousMonthIssue(issueDate, today)) {
+    return { code: 'FPD', label: 'FPD', reason: 'Кредит новый, и уже есть просрочка на первом платеже / в первый расчетный месяц' };
+  }
+
+  // SPD / Early Default: клиент платил первые месяцы, потом стал проблемным.
+  if (ageDays <= 180) {
+    return { code: 'SPD', label: 'SPD / Early Default', reason: 'Проблема появилась после первых платежей в первые месяцы жизни кредита' };
+  }
+
+  return { code: 'REGULAR', label: 'Regular Delinquency', reason: 'Кредит старше 6 месяцев: это обычная текущая просрочка, не FPD' };
 }
 
 function isPreviousMonthIssue(issueDate, today) {
@@ -3376,6 +3428,7 @@ function isPreviousMonthIssue(issueDate, today) {
   return issueDate.getFullYear() === prevMonthDate.getFullYear() &&
          issueDate.getMonth() === prevMonthDate.getMonth();
 }
+
 
 function normalizeHeader(value) {
   return String(value || '').replace(/\s+/g, '').trim().toLowerCase();
