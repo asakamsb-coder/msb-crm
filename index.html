@@ -714,9 +714,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1>Кредитный портфель</h1>
-      <p>Импорт Excel, FPD, NPL, AI Risk Score и Anti Fraud контроль</p>
+      <p>Credit Intelligence Center: импорт Excel, FPD, NPL, AI Risk Score и Anti Fraud</p>
     </div>
-    <div class="user-box">AI Portfolio Control</div>
+    <div class="user-box">AI Portfolio Control v2</div>
   </div>
 
   <section class="kpi">
@@ -745,18 +745,37 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
   </section>
 
+  <div class="summary-row">
+    <div class="summary-card">
+      <div class="small">NPL Risk</div>
+      <div class="big" id="portfolioNplRisk">0</div>
+    </div>
+    <div class="summary-card">
+      <div class="small">Текущая просрочка</div>
+      <div class="big" id="portfolioOverdueCount">0</div>
+    </div>
+    <div class="summary-card">
+      <div class="small">Средний AI Risk</div>
+      <div class="big" id="portfolioAvgRisk">0%</div>
+    </div>
+    <div class="summary-card">
+      <div class="small">Остаток High Risk</div>
+      <div class="big" id="portfolioCriticalBalance">0</div>
+    </div>
+  </div>
+
   <div class="layout">
     <div>
       <div class="panel">
-        <h2>Загрузка портфеля</h2>
-        <p style="color:var(--muted);margin-bottom:15px;">
-          Загрузите Excel-файл кредитного портфеля. После загрузки CRM подготовит данные для AI-анализа.
+        <h2>📂 Импорт портфеля</h2>
+        <p style="color:var(--muted);margin-bottom:15px;line-height:1.6;">
+          Можно выбрать один или несколько Excel-файлов. CRM объединит кредиты, уберет дубли и построит риск-анализ.
         </p>
 
         <input type="file" id="portfolioFile" accept=".xlsx,.xls,.csv" class="input" multiple>
 
         <button class="btn" style="margin-top:12px;" onclick="importPortfolio()">
-          📂 Загрузить портфель
+          📂 Загрузить и проанализировать
         </button>
 
         <div id="portfolioUploadStatus" style="margin-top:15px;color:var(--muted);font-weight:700;">
@@ -765,7 +784,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       </div>
 
       <div class="panel">
-        <h2>Кредиты портфеля</h2>
+        <h2>🚨 Топ рискованных кредитов</h2>
         <div class="client-table-wrap">
           <table>
             <thead>
@@ -777,7 +796,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
                 <th>Просрочка</th>
                 <th>FPD</th>
                 <th>AI Risk</th>
-                <th>Менеджер</th>
+                <th>Менеджер/МФО</th>
               </tr>
             </thead>
             <tbody id="portfolioTable">
@@ -788,26 +807,63 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           </table>
         </div>
       </div>
+
+      <div class="panel">
+        <h2>⚠️ FPD Monitor</h2>
+        <div class="client-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Клиент</th>
+                <th>Дата выдачи</th>
+                <th>Остаток</th>
+                <th>FPD Risk</th>
+                <th>Причина</th>
+              </tr>
+            </thead>
+            <tbody id="portfolioFpdTable">
+              <tr><td colspan="5" class="loading">После импорта появятся кредиты с высоким FPD Risk</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <div>
       <div class="panel ai-box">
-        <h2>AI Анализ</h2>
+        <h2>🤖 AI Executive Report</h2>
         <p id="portfolioAiText">
-          После загрузки портфеля AI определит риск FPD, NPL, проблемные кредиты и подозрительные совпадения.
+          После загрузки портфеля AI сформирует управленческий вывод по FPD, NPL, просрочке и концентрации риска.
         </p>
       </div>
 
       <div class="panel">
-        <h2>Anti Fraud контроль</h2>
-        <div id="portfolioFraudText" style="color:var(--muted);line-height:1.6;">
-          Проверка совпадений по телефону, ИНН, поручителям, залогу, менеджеру и подозрительным схемам.
+        <h2>🚨 Anti Fraud Alerts</h2>
+        <div id="portfolioFraudText" style="color:var(--muted);line-height:1.6;margin-bottom:14px;">
+          Проверка повторов по клиентам, ИНН, кредитным счетам и концентрации по МФО/менеджеру.
+        </div>
+        <div class="client-table-wrap">
+          <table>
+            <thead>
+              <tr><th>Тип</th><th>Значение</th><th>Кол-во</th></tr>
+            </thead>
+            <tbody id="portfolioFraudTable">
+              <tr><td colspan="3" class="loading">После импорта появятся сигналы</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>🧠 AI Инспектор</h2>
+        <div id="portfolioExecutiveText" style="color:#374151;line-height:1.7;">
+          AI Inspector оценит качество портфеля по шкале 0–100 и предложит действия для руководителя.
         </div>
       </div>
 
       <div class="panel">
         <h2>История загрузок</h2>
-        <div id="portfolioHistory" class="loading">
+        <div id="portfolioHistory" class="loading" style="white-space:pre-line;">
           История пока пустая
         </div>
       </div>
@@ -815,7 +871,6 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
 </section>
-
 
 <section id="slaPage" class="page">
   <div class="header">
@@ -2525,16 +2580,25 @@ function renderPortfolioModule(loans, files, historyLines) {
   const balance = loans.reduce((s, x) => s + (x.balance || 0), 0);
   const fpdRisk = loans.filter(x => x.fpdRisk >= 60).length;
   const highRisk = loans.filter(x => x.aiRisk >= 70).length;
+  const nplRisk = loans.filter(x => (x.overdueDays || 0) >= 90 || x.aiRisk >= 85).length;
   const overdueCount = loans.filter(x => (x.overdueDays || 0) > 0 || (x.overdueAmount || 0) > 0).length;
+  const criticalBalance = loans.filter(x => x.aiRisk >= 70).reduce((s,x) => s + (x.balance || 0), 0);
+  const avgRisk = total ? Math.round(loans.reduce((s,x) => s + (x.aiRisk || 0), 0) / total) : 0;
 
   setText('portfolioTotal', total);
   setText('portfolioBalance', formatMoney(balance));
   setText('portfolioFpdRisk', fpdRisk);
   setText('portfolioHighRisk', highRisk);
-  setText('portfolioUploadStatus', 'Загружено файлов: ' + files.length + ' • кредитов: ' + total);
+  setText('portfolioNplRisk', nplRisk);
+  setText('portfolioOverdueCount', overdueCount);
+  setText('portfolioAvgRisk', avgRisk + '%');
+  setText('portfolioCriticalBalance', formatMoney(criticalBalance));
+  setText('portfolioUploadStatus', 'Загружено файлов: ' + files.length + ' • кредитов после очистки дублей: ' + total);
 
   const sorted = loans.slice().sort((a,b) => (b.aiRisk || 0) - (a.aiRisk || 0));
   renderPortfolioTable(sorted.slice(0, 100));
+  renderPortfolioFpdTable(loans);
+  renderPortfolioFraudAlerts(loans);
 
   setText('portfolioHistory', historyLines.join('\n'));
 
@@ -2544,22 +2608,83 @@ function renderPortfolioModule(loans, files, historyLines) {
   ai += 'Кредитов с текущей просрочкой: ' + overdueCount + '. ';
   ai += 'Высокий AI Risk: ' + highRisk + '. ';
   ai += 'FPD Risk: ' + fpdRisk + '. ';
-  ai += 'Рекомендация: сначала проверить топ-20 кредитов с максимальным AI Risk и кредиты с просрочкой более 30 дней.';
+  ai += 'NPL Risk: ' + nplRisk + '. ';
+  ai += 'Рекомендация: сначала проверить топ-20 кредитов с максимальным AI Risk, затем кредиты с FPD Risk выше 60% и все кредиты с просрочкой более 30 дней.';
   setText('portfolioAiText', ai);
 
-  const duplicatesByClient = countDuplicates(loans.map(x => normalizeText(x.client)).filter(Boolean));
-  const duplicatesByAccount = countDuplicates(loans.map(x => normalizeText(x.creditAccount)).filter(Boolean));
-  const duplicateClients = duplicatesByClient.filter(x => x.count > 1).slice(0, 5);
-  const duplicateAccounts = duplicatesByAccount.filter(x => x.count > 1).slice(0, 5);
+  let inspector = '';
+  const portfolioHealth = Math.max(0, Math.min(100, Math.round(100 - avgRisk - (overdueCount / Math.max(total,1) * 20))));
+  inspector += '<b>Индекс качества портфеля:</b> ' + portfolioHealth + '/100.<br>';
+  inspector += '<b>Фокус контроля:</b> ';
+  if (nplRisk > 0) inspector += 'NPL и просрочка 90+; ';
+  if (fpdRisk > 0) inspector += 'ранний FPD; ';
+  if (highRisk > 0) inspector += 'High Risk кредиты; ';
+  if (!nplRisk && !fpdRisk && !highRisk) inspector += 'критичных сигналов мало; ';
+  inspector += '<br><b>Действие управляющего:</b> назначить ответственных по топ-риск кредитам, провести выборочную проверку досье и зафиксировать результат в CRM.';
+  const executiveBox = document.getElementById('portfolioExecutiveText');
+  if (executiveBox) executiveBox.innerHTML = inspector;
+}
 
-  let fraud = 'Anti Fraud проверка завершена. ';
-  fraud += 'Повторяющихся кредитных счетов: ' + duplicateAccounts.length + '. ';
-  fraud += 'Клиентов с несколькими кредитами: ' + duplicateClients.length + '. ';
-  if (duplicateClients.length) {
-    fraud += 'Примеры повторов: ' + duplicateClients.map(x => x.value).join(', ') + '. ';
+function renderPortfolioFpdTable(loans) {
+  const tbody = document.getElementById('portfolioFpdTable');
+  if (!tbody) return;
+
+  const rows = loans
+    .filter(x => (x.fpdRisk || 0) >= 60)
+    .sort((a,b) => (b.fpdRisk || 0) - (a.fpdRisk || 0))
+    .slice(0, 30);
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">Высокий FPD Risk не выявлен</td></tr>';
+    return;
   }
-  fraud += 'Следующий этап: добавить проверку одинаковых телефонов, залогов, поручителей и менеджеров, если эти колонки есть в файле.';
-  setText('portfolioFraudText', fraud);
+
+  tbody.innerHTML = '';
+  rows.forEach(loan => {
+    const issue = loan.issueDate && !isNaN(loan.issueDate.getTime()) ? loan.issueDate.toLocaleDateString('ru-RU') : '-';
+    const reason = loan.overdueDays > 0 ? 'Есть ранняя просрочка' : 'Новая выдача / ранний период контроля';
+    const cls = loan.fpdRisk >= 80 ? 'risk-critical' : 'risk-warning';
+    tbody.innerHTML += `
+      <tr>
+        <td>${safe(loan.client)}</td>
+        <td>${issue}</td>
+        <td>${formatMoney(loan.balance)}</td>
+        <td><span class="risk-badge ${cls}">${loan.fpdRisk}%</span></td>
+        <td>${reason}</td>
+      </tr>`;
+  });
+}
+
+function renderPortfolioFraudAlerts(loans) {
+  const textBox = document.getElementById('portfolioFraudText');
+  const tbody = document.getElementById('portfolioFraudTable');
+  if (!tbody) return;
+
+  const alerts = [];
+  const duplicateClients = countDuplicates(loans.map(x => normalizeText(x.client)).filter(Boolean)).filter(x => x.count > 1).slice(0, 5);
+  const duplicateInn = countDuplicates(loans.map(x => normalizeText(x.inn)).filter(Boolean)).filter(x => x.count > 1).slice(0, 5);
+  const duplicateAccounts = countDuplicates(loans.map(x => normalizeText(x.creditAccount)).filter(Boolean)).filter(x => x.count > 1).slice(0, 5);
+  const managerConcentration = countDuplicates(loans.map(x => normalizeText(x.manager)).filter(Boolean)).filter(x => x.count >= 20).slice(0, 5);
+
+  duplicateClients.forEach(x => alerts.push({type:'Повтор клиента', value:x.value, count:x.count}));
+  duplicateInn.forEach(x => alerts.push({type:'Повтор ИНН', value:x.value, count:x.count}));
+  duplicateAccounts.forEach(x => alerts.push({type:'Повтор кредитного счета', value:x.value, count:x.count}));
+  managerConcentration.forEach(x => alerts.push({type:'Концентрация МФО/менеджер', value:x.value, count:x.count}));
+
+  if (!alerts.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">Критичных повторов не выявлено</td></tr>';
+    if (textBox) textBox.innerText = 'Anti Fraud проверка завершена. Критичных повторов по базовым признакам не выявлено.';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  alerts.slice(0, 20).forEach(a => {
+    tbody.innerHTML += `<tr><td>${a.type}</td><td>${safe(a.value)}</td><td><b>${a.count}</b></td></tr>`;
+  });
+
+  if (textBox) {
+    textBox.innerText = 'Anti Fraud проверка завершена. Найдено сигналов: ' + alerts.length + '. Проверьте повторы и концентрации, особенно если они связаны с новыми выдачами или ранней просрочкой.';
+  }
 }
 
 function renderPortfolioTable(loans) {
