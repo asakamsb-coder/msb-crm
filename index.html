@@ -814,17 +814,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <div class="summary-row">
-    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('npl')">
-      <div class="small">NPL Risk</div>
-      <div class="big" id="portfolioNplRisk">0</div>
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('npl90')">
+      <div class="small">NPL 90+ итог</div>
+      <div class="big" id="portfolioNpl90Count">0</div>
+    </div>
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('expectedNpl')">
+      <div class="small">Ожидаемый NPL 30–89</div>
+      <div class="big" id="portfolioExpectedNplCount">0</div>
     </div>
     <div class="summary-card portfolio-clickable" onclick="showPortfolioList('overdue')">
       <div class="small">Текущая просрочка</div>
       <div class="big" id="portfolioOverdueCount">0</div>
-    </div>
-    <div class="summary-card">
-      <div class="small">Средний AI Risk</div>
-      <div class="big" id="portfolioAvgRisk">0%</div>
     </div>
     <div class="summary-card portfolio-clickable" onclick="showPortfolioList('high')">
       <div class="small">Остаток High Risk</div>
@@ -832,9 +832,28 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
   </div>
 
+  <div class="summary-row">
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('npl90')">
+      <div class="small">Остаток NPL 90+</div>
+      <div class="big" id="portfolioNpl90Balance">0</div>
+    </div>
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('expectedNpl')">
+      <div class="small">Остаток ожидаемый NPL</div>
+      <div class="big" id="portfolioExpectedNplBalance">0</div>
+    </div>
+    <div class="summary-card">
+      <div class="small">Средний AI Risk</div>
+      <div class="big" id="portfolioAvgRisk">0%</div>
+    </div>
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('npl')">
+      <div class="small">NPL + ожидаемый</div>
+      <div class="big" id="portfolioNplRisk">0</div>
+    </div>
+  </div>
+
   <div class="panel" id="portfolioNplPanel">
     <h2 id="portfolioListTitle">📋 Список по выбранному показателю</h2>
-    <p class="portfolio-list-note" id="portfolioListNote">Нажмите на KPI в модуле портфеля: FPD, High Risk, Просрочка или NPL — здесь появятся именно эти клиенты. Нажмите на строку, чтобы открыть карточку кредита.</p>
+    <p class="portfolio-list-note" id="portfolioListNote">Нажмите на KPI в модуле портфеля: FPD, High Risk, Просрочка, NPL 90+ или Ожидаемый NPL — здесь появятся именно эти клиенты. Нажмите на строку, чтобы открыть карточку кредита.</p>
     <div class="client-table-wrap">
       <table>
         <thead>
@@ -940,6 +959,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <p style="color:var(--muted);line-height:1.6;margin-bottom:15px;">
           Здесь FPD не смешивается с NPL. Мы показываем жизненный цикл ранней проблемности: первый платеж, клиент не начал платить, проблема после 2–3 платежей и обычная текущая просрочка.
         </p>
+
+        <button class="btn btn-secondary" style="margin-bottom:15px;" onclick="exportFpdClientsCSV()">
+          ⬇️ Экспорт FPD клиентов CSV
+        </button>
 
         <div class="summary-row">
           <div class="summary-card portfolio-clickable" onclick="showPortfolioList('fpd')"><div class="small">FPD</div><div class="big" id="fpdFirstPayCount">0</div></div>
@@ -2921,6 +2944,28 @@ function renderImportQuality(result, files, rawRows) {
 }
 
 
+
+function isOfficialNplLoan(loan) {
+  const flag = String(loan.nplFlag || '').trim().toLowerCase();
+  if (!flag || flag === '0' || flag === '-' || flag === 'нет' || flag === 'no' || flag === 'false') return false;
+  return true;
+}
+
+function isNpl90Loan(loan) {
+  return (Number(loan.overdueDays) || 0) >= 90 || isOfficialNplLoan(loan);
+}
+
+function isExpectedNplLoan(loan) {
+  const days = Number(loan.overdueDays) || 0;
+  return days >= 30 && days <= 89 && !isOfficialNplLoan(loan);
+}
+
+function getFpdLoans(segment) {
+  return getPortfolioSegmentLoans(segment || portfolioSegment || 'all')
+    .filter(x => x.fpdStatus && (x.fpdStatus.code === 'FPD' || x.fpdStatus.code === 'FPD_LOST'))
+    .sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+}
+
 function getPortfolioSegmentLoans(segment) {
   const selected = segment || portfolioSegment || 'all';
   if (selected === 'physical') return portfolioLoans.filter(x => getBorrowerType(x) === 'physical');
@@ -2947,9 +2992,13 @@ function setPortfolioSegment(segment) {
   const balance = loans.reduce((s, x) => s + (x.balance || 0), 0);
   const fpdRisk = loans.filter(x => x.fpdRisk >= 60).length;
   const highRisk = loans.filter(x => x.aiRisk >= 70).length;
-  const nplRisk = loans.filter(x => (x.overdueDays || 0) >= 90 || x.aiRisk >= 85).length;
+  const npl90 = loans.filter(isNpl90Loan);
+  const expectedNpl = loans.filter(isExpectedNplLoan);
+  const nplRisk = npl90.length + expectedNpl.length;
   const overdueCount = loans.filter(x => (x.overdueDays || 0) > 0 || (x.overdueAmount || 0) > 0).length;
   const criticalBalance = loans.filter(x => x.aiRisk >= 70).reduce((s,x) => s + (x.balance || 0), 0);
+  const npl90Balance = npl90.reduce((s,x) => s + (x.balance || 0), 0);
+  const expectedNplBalance = expectedNpl.reduce((s,x) => s + (x.balance || 0), 0);
   const avgRisk = total ? Math.round(loans.reduce((s,x) => s + (x.aiRisk || 0), 0) / total) : 0;
 
   setText('portfolioTotal', total);
@@ -2957,6 +3006,10 @@ function setPortfolioSegment(segment) {
   setText('portfolioFpdRisk', fpdRisk);
   setText('portfolioHighRisk', highRisk);
   setText('portfolioNplRisk', nplRisk);
+  setText('portfolioNpl90Count', npl90.length);
+  setText('portfolioExpectedNplCount', expectedNpl.length);
+  setText('portfolioNpl90Balance', formatMoney(npl90Balance));
+  setText('portfolioExpectedNplBalance', formatMoney(expectedNplBalance));
   setText('portfolioOverdueCount', overdueCount);
   setText('portfolioAvgRisk', avgRisk + '%');
   setText('portfolioCriticalBalance', formatMoney(criticalBalance));
@@ -2989,7 +3042,9 @@ function getPortfolioListByKind(kind, segment) {
   if (kind === 'regular') return loans.filter(x => x.fpdStatus && x.fpdStatus.code === 'REGULAR').sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
   if (kind === 'high') return loans.filter(x => (x.aiRisk || 0) >= 70).sort((a,b) => (b.aiRisk || 0) - (a.aiRisk || 0));
   if (kind === 'overdue') return loans.filter(x => (x.overdueDays || 0) > 0 || (x.overdueAmount || 0) > 0).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
-  if (kind === 'npl') return loans.filter(x => (x.overdueDays || 0) >= 90 || (x.aiRisk || 0) >= 85).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0) || (b.aiRisk || 0) - (a.aiRisk || 0));
+  if (kind === 'npl90') return loans.filter(isNpl90Loan).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+  if (kind === 'expectedNpl') return loans.filter(isExpectedNplLoan).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+  if (kind === 'npl') return loans.filter(x => isNpl90Loan(x) || isExpectedNplLoan(x)).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0) || (b.aiRisk || 0) - (a.aiRisk || 0));
   return loans.slice().sort((a,b) => (b.balance || 0) - (a.balance || 0));
 }
 
@@ -3004,15 +3059,19 @@ function showPortfolioList(kind) {
     fpd: '⚠️ Список FPD клиентов',
     high: '🚨 Список High Risk клиентов',
     overdue: '⏰ Список клиентов с текущей просрочкой',
-    npl: '📈 Список NPL Risk клиентов'
+    npl90: '📈 NPL 90+ итог',
+    expectedNpl: '⏳ Ожидаемый NPL 30–89 дней',
+    npl: '📈 NPL 90+ и ожидаемый NPL'
   };
 
   const noteMap = {
     all: 'Показаны кредиты выбранного сегмента. Нажмите на клиента, чтобы открыть карточку кредита.',
-    fpd: 'Показаны клиенты, у которых FPD Fact 60% и выше.',
+    fpd: 'Показаны клиенты с фактическим FPD по бизнес-правилу.',
     high: 'Показаны кредиты с AI Risk 70% и выше.',
     overdue: 'Показаны кредиты, у которых есть дни просрочки или сумма просрочки.',
-    npl: 'Показаны кредиты с просрочкой 90+ дней или AI Risk 85% и выше.'
+    npl90: 'Показаны кредиты с просрочкой 90+ дней или официальным признаком НПЛ для ЦБ.',
+    expectedNpl: 'Показаны кредиты с просрочкой от 30 до 89 дней. Это ожидаемый NPL: нужна срочная работа до перехода в 90+.',
+    npl: 'Показаны кредиты 90+ и кредиты 30–89 дней как ожидаемый NPL.'
   };
 
   const rows = getPortfolioListByKind(kind);
@@ -3055,6 +3114,58 @@ function renderPortfolioKpiDetailTable(rows) {
   });
 }
 
+
+function exportFpdClientsCSV() {
+  if (!portfolioLoans.length) {
+    alert('Сначала загрузите портфель');
+    return;
+  }
+
+  const rows = getFpdLoans('all');
+  if (!rows.length) {
+    alert('FPD клиентов для экспорта нет');
+    return;
+  }
+
+  const header = [
+    'Тип клиента','Тип FPD','Клиент','ИНН/ПИНФЛ','Кредитный счет','ID договора','Дата выдачи',
+    'Остаток','Просроченный остаток','Дни просрочки','Субъект','Сегмент','Продукт','Менеджер/МФО','Причина'
+  ];
+
+  const lines = [header].concat(rows.map(loan => {
+    const issue = loan.issueDate && !isNaN(loan.issueDate.getTime()) ? loan.issueDate.toLocaleDateString('ru-RU') : '';
+    const borrower = getBorrowerType(loan) === 'physical' ? 'Физическое лицо' : getBorrowerType(loan) === 'legal' ? 'Юридическое лицо' : 'Не определено';
+    return [
+      borrower,
+      loan.fpdStatus ? loan.fpdStatus.label : '',
+      loan.client || '',
+      loan.inn || '',
+      loan.creditAccount || '',
+      loan.contractId || '',
+      issue,
+      loan.balance || 0,
+      loan.overdueAmount || 0,
+      loan.overdueDays || 0,
+      loan.subject || '',
+      loan.segment || '',
+      loan.product || '',
+      loan.manager || '',
+      loan.fpdStatus ? loan.fpdStatus.reason : ''
+    ];
+  }));
+
+  const csv = lines.map(row => row.map(value => '"' + String(value).replace(/"/g, '""') + '"').join(';')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'fpd_clients_export_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function showFpdClients(segment) {
   if (!portfolioLoans.length) {
     alert('Сначала загрузите портфель');
@@ -3072,9 +3183,7 @@ function showFpdClients(segment) {
   if (title) title.innerText = titleMap[segment || 'all'] || titleMap.all;
   if (!tbody) return;
 
-  const rows = getPortfolioSegmentLoans(segment)
-    .filter(x => (x.fpdRisk || 0) >= 60)
-    .sort((a,b) => (b.fpdRisk || 0) - (a.fpdRisk || 0));
+  const rows = getFpdLoans(segment)
 
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="loading">FPD клиентов в выбранном сегменте нет</td></tr>';
@@ -3152,9 +3261,13 @@ function renderPortfolioModule(loans, files, historyLines, rawRows, duplicateRow
   const balance = loans.reduce((s, x) => s + (x.balance || 0), 0);
   const fpdRisk = loans.filter(x => x.fpdRisk >= 60).length;
   const highRisk = loans.filter(x => x.aiRisk >= 70).length;
-  const nplRisk = loans.filter(x => (x.overdueDays || 0) >= 90 || x.aiRisk >= 85).length;
+  const npl90 = loans.filter(isNpl90Loan);
+  const expectedNpl = loans.filter(isExpectedNplLoan);
+  const nplRisk = npl90.length + expectedNpl.length;
   const overdueCount = loans.filter(x => (x.overdueDays || 0) > 0 || (x.overdueAmount || 0) > 0).length;
   const criticalBalance = loans.filter(x => x.aiRisk >= 70).reduce((s,x) => s + (x.balance || 0), 0);
+  const npl90Balance = npl90.reduce((s,x) => s + (x.balance || 0), 0);
+  const expectedNplBalance = expectedNpl.reduce((s,x) => s + (x.balance || 0), 0);
   const avgRisk = total ? Math.round(loans.reduce((s,x) => s + (x.aiRisk || 0), 0) / total) : 0;
 
   setText('portfolioTotal', total);
@@ -3162,6 +3275,10 @@ function renderPortfolioModule(loans, files, historyLines, rawRows, duplicateRow
   setText('portfolioFpdRisk', fpdRisk);
   setText('portfolioHighRisk', highRisk);
   setText('portfolioNplRisk', nplRisk);
+  setText('portfolioNpl90Count', npl90.length);
+  setText('portfolioExpectedNplCount', expectedNpl.length);
+  setText('portfolioNpl90Balance', formatMoney(npl90Balance));
+  setText('portfolioExpectedNplBalance', formatMoney(expectedNplBalance));
   setText('portfolioOverdueCount', overdueCount);
   setText('portfolioAvgRisk', avgRisk + '%');
   setText('portfolioCriticalBalance', formatMoney(criticalBalance));
@@ -3182,7 +3299,7 @@ function renderPortfolioModule(loans, files, historyLines, rawRows, duplicateRow
   const fpdPhysical = loans.filter(x => (x.fpdRisk || 0) >= 60 && getBorrowerType(x) === 'physical').length;
   const fpdLegal = loans.filter(x => (x.fpdRisk || 0) >= 60 && getBorrowerType(x) === 'legal').length;
   ai += 'FPD Fact: ' + fpdRisk + ' (физ. лица: ' + fpdPhysical + ', юр. лица: ' + fpdLegal + '). ';
-  ai += 'NPL Risk: ' + nplRisk + '. ';
+  ai += 'NPL 90+ итог: ' + npl90.length + '. Ожидаемый NPL 30–89: ' + expectedNpl.length + '. ';
   ai += 'Рекомендация: сначала проверить топ-20 кредитов с максимальным AI Risk, затем кредиты с FPD Fact выше 60% и все кредиты с просрочкой более 30 дней.';
   setText('portfolioAiText', ai);
 
@@ -3190,10 +3307,11 @@ function renderPortfolioModule(loans, files, historyLines, rawRows, duplicateRow
   const portfolioHealth = Math.max(0, Math.min(100, Math.round(100 - avgRisk - (overdueCount / Math.max(total,1) * 20))));
   inspector += '<b>Индекс качества портфеля:</b> ' + portfolioHealth + '/100.<br>';
   inspector += '<b>Фокус контроля:</b> ';
-  if (nplRisk > 0) inspector += 'NPL и просрочка 90+; ';
+  if (npl90.length > 0) inspector += 'NPL 90+; ';
+  if (expectedNpl.length > 0) inspector += 'ожидаемый NPL 30–89; ';
   if (fpdRisk > 0) inspector += 'ранний FPD; ';
   if (highRisk > 0) inspector += 'High Risk кредиты; ';
-  if (!nplRisk && !fpdRisk && !highRisk) inspector += 'критичных сигналов мало; ';
+  if (!npl90.length && !expectedNpl.length && !fpdRisk && !highRisk) inspector += 'критичных сигналов мало; ';
   inspector += '<br><b>Действие управляющего:</b> назначить ответственных по топ-риск кредитам, провести выборочную проверку досье и зафиксировать результат в CRM.';
   const executiveBox = document.getElementById('portfolioExecutiveText');
   if (executiveBox) executiveBox.innerHTML = inspector;
