@@ -535,6 +535,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 .portfolio-clickable{cursor:pointer;transition:.18s ease;}
 .portfolio-clickable:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(17,24,39,.08);}
+.portfolio-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 22px;}
+.portfolio-tab{border:1px solid var(--line);background:#fff;color:#374151;padding:11px 14px;border-radius:12px;font-weight:800;text-decoration:none;}
+.portfolio-tab:hover{background:var(--brand-soft);color:var(--brand);}
+.portfolio-list-note{color:var(--muted);line-height:1.6;margin-bottom:12px;}
 .portfolio-segment-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
 .portfolio-segment-btn{border:1px solid var(--line);background:#fff;color:#374151;padding:11px 14px;border-radius:12px;font-weight:800;cursor:pointer;}
 .portfolio-segment-btn.active{background:var(--brand);color:#fff;border-color:var(--brand);}
@@ -622,12 +626,45 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <button class="btn btn-secondary" onclick="resetPeriod()">Сбросить</button>
   </div>
 
-  <section class="kpi">
+  <div class="portfolio-tabs">
+    <a class="portfolio-tab" href="#portfolioImportPanel">📂 Импорт</a>
+    <a class="portfolio-tab" href="#portfolioDashboardPanel">📊 Dashboard</a>
+    <a class="portfolio-tab" href="#portfolioFpdPanel">⚠️ FPD Monitor</a>
+    <a class="portfolio-tab" href="#portfolioNplPanel" onclick="showPortfolioList('npl')">📈 NPL Monitor</a>
+    <a class="portfolio-tab" href="#portfolioFraudPanel">🚨 Anti Fraud</a>
+    <a class="portfolio-tab" href="#portfolioAiPanel">🤖 AI Report</a>
+  </div>
+
+  <section class="kpi" id="portfolioDashboardPanel">
     <div class="card"><div class="card-label">Клиенты</div><div class="card-value" id="totalClients">...</div><div class="card-note">Всего в CRM</div></div>
     <div class="card"><div class="card-label">Сумма заявок</div><div class="card-value" id="totalAmount">...</div><div class="card-note">Общий портфель заявок</div></div>
     <div class="card"><div class="card-label">Сумма выдач</div><div class="card-value" id="issuedAmount">...</div><div class="card-note" id="conversion">Конверсия ...</div></div>
     <div class="card"><div class="card-label">Потенциальный портфель</div><div class="card-value" id="potentialAmount">...</div><div class="card-note">В работе</div></div>
   </section>
+
+  <div class="panel" id="portfolioNplPanel">
+    <h2 id="portfolioListTitle">📋 Список по выбранному показателю</h2>
+    <p class="portfolio-list-note" id="portfolioListNote">Нажмите на KPI сверху: FPD, High Risk, Просрочка или NPL — здесь появятся именно эти клиенты. Нажмите на строку, чтобы открыть карточку кредита.</p>
+    <div class="client-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Тип</th>
+            <th>Клиент</th>
+            <th>ИНН/ПИНФЛ</th>
+            <th>Кредитный счет</th>
+            <th>Остаток</th>
+            <th>Просрочка</th>
+            <th>FPD</th>
+            <th>AI Risk</th>
+          </tr>
+        </thead>
+        <tbody id="portfolioKpiDetailTable">
+          <tr><td colspan="8" class="loading">Пока список не выбран</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   <div class="layout">
     <div>
@@ -730,13 +767,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1>Кредитный портфель</h1>
-      <p>Credit Intelligence Center: импорт Excel, FPD, NPL, AI Risk Score и Anti Fraud</p>
+      <p>Credit Intelligence Center v8: кликабельные KPI, списки FPD/High Risk/Просрочка и карточка кредита</p>
     </div>
-    <div class="user-box">AI Portfolio Control v6</div>
+    <div class="user-box">AI Portfolio Control v8</div>
   </div>
 
   <section class="kpi">
-    <div class="card">
+    <div class="card portfolio-clickable" onclick="showPortfolioList('all')">
       <div class="card-label">Всего кредитов</div>
       <div class="card-value" id="portfolioTotal">0</div>
       <div class="card-note">Загружено в CRM</div>
@@ -754,7 +791,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="card-note">Риск первого платежа</div>
     </div>
 
-    <div class="card">
+    <div class="card portfolio-clickable" onclick="showPortfolioList('high')">
       <div class="card-label">High Risk</div>
       <div class="card-value" id="portfolioHighRisk">0</div>
       <div class="card-note">Критичные кредиты</div>
@@ -786,11 +823,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <div class="summary-row">
-    <div class="summary-card">
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('npl')">
       <div class="small">NPL Risk</div>
       <div class="big" id="portfolioNplRisk">0</div>
     </div>
-    <div class="summary-card">
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('overdue')">
       <div class="small">Текущая просрочка</div>
       <div class="big" id="portfolioOverdueCount">0</div>
     </div>
@@ -798,7 +835,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="small">Средний AI Risk</div>
       <div class="big" id="portfolioAvgRisk">0%</div>
     </div>
-    <div class="summary-card">
+    <div class="summary-card portfolio-clickable" onclick="showPortfolioList('high')">
       <div class="small">Остаток High Risk</div>
       <div class="big" id="portfolioCriticalBalance">0</div>
     </div>
@@ -806,7 +843,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
   <div class="layout">
     <div>
-      <div class="panel">
+      <div class="panel" id="portfolioImportPanel">
         <h2>📂 Импорт портфеля</h2>
         <p style="color:var(--muted);margin-bottom:15px;line-height:1.6;">
           Можно выбрать один или несколько Excel-файлов. CRM объединит кредиты, уберет дубли, покажет качество импорта и построит риск-анализ.
@@ -883,7 +920,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="portfolioFpdPanel">
         <h2>⚠️ FPD Monitor</h2>
         <p style="color:var(--muted);line-height:1.6;margin-bottom:15px;">
           FPD разделен по типу клиента: физические лица и юридические лица. Так легче понять, где выше риск первого платежа.
@@ -961,14 +998,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <div>
-      <div class="panel ai-box">
+      <div class="panel ai-box" id="portfolioAiPanel">
         <h2>🤖 AI Executive Report</h2>
         <p id="portfolioAiText">
           После загрузки портфеля AI сформирует управленческий вывод по FPD, NPL, просрочке и концентрации риска.
         </p>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="portfolioFraudPanel">
         <h2>🚨 Anti Fraud Alerts</h2>
         <div id="portfolioFraudText" style="color:var(--muted);line-height:1.6;margin-bottom:14px;">
           Проверка повторов по клиентам, ИНН, кредитным счетам и концентрации по МФО/менеджеру.
@@ -2683,9 +2720,26 @@ function parsePortfolioRows(rawRows, fileName, sheetName) {
 
     const client = getByHeaders(obj, ['НаименКлиента', 'Наименование клиента']);
     const creditAccount = getByHeaders(obj, ['Кредитный счет', 'КредитныйСчет']);
-    const idDog = getByHeaders(obj, ['ID договора', 'ID Договора', 'Loan_id', 'Loan ID', 'loan_id']);
+    const idDog = getByHeaders(obj, ['ID договора', 'ID Договора', 'Loan_id', 'Loan ID', 'loan_id', 'Код договора']);
 
-    if (!client && !creditAccount && !idDog) continue;
+    // ВАЖНО: в банковском Excel есть итоговые строки:
+    // НаименКлиента = "И Т О Г О", Кредитный счет = "кол-во 14064".
+    // Их нельзя считать кредитами, иначе портфель увеличивается почти в 2 раза.
+    const clientText = normalizePortfolioKey(client);
+    const creditText = normalizePortfolioKey(creditAccount);
+    const idText = normalizePortfolioKey(idDog);
+
+    const isTotalRow =
+      clientText.includes('ИТОГО') ||
+      creditText.includes('КОЛВО') ||
+      String(creditAccount || '').toLowerCase().includes('кол-во') ||
+      String(client || '').toLowerCase().includes('итого');
+
+    const isValidCreditAccount = /^\d{15,30}$/.test(creditText);
+    const isValidContractId = /^\d{4,20}$/.test(idText);
+
+    if (isTotalRow) continue;
+    if (!client || !isValidCreditAccount || !isValidContractId) continue;
 
     const balance = toNumber(getByHeaders(obj, ['ОстатокКредСчета', 'Остаток кредита', 'Остаток']));
     const overdueAmount = toNumber(getByHeaders(obj, ['ОстатокПроср', 'Остаток просрочки']));
@@ -2899,6 +2953,77 @@ function renderPortfolioSegmentSummary() {
   setText('legalLoanBalance', formatMoney(legal.reduce((s,x) => s + (x.balance || 0), 0)));
   setText('legalFpdCount', legal.filter(x => x.fpdRisk >= 60).length);
   setText('legalHighRiskCount', legal.filter(x => x.aiRisk >= 70).length);
+}
+
+function getPortfolioListByKind(kind, segment) {
+  const loans = getPortfolioSegmentLoans(segment || portfolioSegment || 'all');
+  if (kind === 'fpd') return loans.filter(x => (x.fpdRisk || 0) >= 60).sort((a,b) => (b.fpdRisk || 0) - (a.fpdRisk || 0));
+  if (kind === 'high') return loans.filter(x => (x.aiRisk || 0) >= 70).sort((a,b) => (b.aiRisk || 0) - (a.aiRisk || 0));
+  if (kind === 'overdue') return loans.filter(x => (x.overdueDays || 0) > 0 || (x.overdueAmount || 0) > 0).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0));
+  if (kind === 'npl') return loans.filter(x => (x.overdueDays || 0) >= 90 || (x.aiRisk || 0) >= 85).sort((a,b) => (b.overdueDays || 0) - (a.overdueDays || 0) || (b.aiRisk || 0) - (a.aiRisk || 0));
+  return loans.slice().sort((a,b) => (b.balance || 0) - (a.balance || 0));
+}
+
+function showPortfolioList(kind) {
+  if (!portfolioLoans.length) {
+    alert('Сначала загрузите портфель');
+    return;
+  }
+
+  const titleMap = {
+    all: '📋 Все кредиты выбранного сегмента',
+    fpd: '⚠️ Список FPD клиентов',
+    high: '🚨 Список High Risk клиентов',
+    overdue: '⏰ Список клиентов с текущей просрочкой',
+    npl: '📈 Список NPL Risk клиентов'
+  };
+
+  const noteMap = {
+    all: 'Показаны кредиты выбранного сегмента. Нажмите на клиента, чтобы открыть карточку кредита.',
+    fpd: 'Показаны клиенты, у которых FPD Risk 60% и выше.',
+    high: 'Показаны кредиты с AI Risk 70% и выше.',
+    overdue: 'Показаны кредиты, у которых есть дни просрочки или сумма просрочки.',
+    npl: 'Показаны кредиты с просрочкой 90+ дней или AI Risk 85% и выше.'
+  };
+
+  const rows = getPortfolioListByKind(kind);
+  const title = document.getElementById('portfolioListTitle');
+  const note = document.getElementById('portfolioListNote');
+  if (title) title.innerText = titleMap[kind || 'all'] || titleMap.all;
+  if (note) note.innerText = (noteMap[kind || 'all'] || noteMap.all) + ' Найдено: ' + rows.length + '.';
+
+  renderPortfolioKpiDetailTable(rows);
+
+  const panel = document.getElementById('portfolioNplPanel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderPortfolioKpiDetailTable(rows) {
+  const tbody = document.getElementById('portfolioKpiDetailTable');
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">По выбранному показателю клиентов нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = '';
+  rows.slice(0, 300).forEach(loan => {
+    const typeText = getBorrowerType(loan) === 'physical' ? 'Физ.' : getBorrowerType(loan) === 'legal' ? 'Юр.' : 'Не ясно';
+    const riskClass = loan.aiRisk >= 70 ? 'risk-critical' : loan.aiRisk >= 40 ? 'risk-warning' : 'risk-normal';
+    const fpdClass = loan.fpdRisk >= 60 ? 'risk-critical' : loan.fpdRisk >= 30 ? 'risk-warning' : 'risk-normal';
+    tbody.innerHTML += `
+      <tr class="clickable-row" onclick="openPortfolioLoanCard(${loan._portfolioIndex})">
+        <td>${typeText}</td>
+        <td>${safe(loan.client)}</td>
+        <td>${safe(loan.inn)}</td>
+        <td>${safe(loan.creditAccount || loan.contractId)}</td>
+        <td>${formatMoney(loan.balance)}</td>
+        <td>${loan.overdueDays || 0} дн. / ${formatMoney(loan.overdueAmount)}</td>
+        <td><span class="risk-badge ${fpdClass}">${loan.fpdRisk}%</span></td>
+        <td><span class="risk-badge ${riskClass}">${loan.aiRisk}%</span></td>
+      </tr>`;
+  });
 }
 
 function showFpdClients(segment) {
