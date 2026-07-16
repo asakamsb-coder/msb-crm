@@ -587,6 +587,64 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   .msb-sales-export .btn{width:100%;}
 }
 
+
+.dashboard-kpi-clickable{
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.dashboard-kpi-clickable:hover{
+  transform:translateY(-3px);
+  box-shadow:0 12px 28px rgba(17,24,39,.10);
+  border-color:#F5A3B2;
+}
+.dashboard-kpi-clickable:active{
+  transform:translateY(-1px);
+}
+.kpi-click-hint{
+  margin-top:8px;
+  color:var(--brand);
+  font-size:12px;
+  font-weight:800;
+}
+.client-selection-banner{
+  display:none;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  margin-bottom:16px;
+  border:1px solid #FFD2DA;
+  background:#FFF5F7;
+  border-radius:14px;
+}
+.client-selection-banner.active{
+  display:flex;
+}
+.client-selection-title{
+  font-weight:900;
+  color:#9F1239;
+}
+.client-selection-subtitle{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+}
+.client-selection-reset{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#374151;
+  padding:9px 12px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+@media(max-width:700px){
+  .client-selection-banner{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
+
 </style>
 </head>
 
@@ -673,10 +731,33 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <section class="kpi">
-    <div class="card"><div class="card-label">Клиенты периода</div><div class="card-value" id="totalClients">...</div><div class="card-note">Новые + переходящие</div></div>
-    <div class="card"><div class="card-label">Сумма заявок</div><div class="card-value" id="totalAmount">...</div><div class="card-note">Общий портфель заявок</div></div>
-    <div class="card"><div class="card-label">Сумма выдач</div><div class="card-value" id="issuedAmount">...</div><div class="card-note" id="conversion">Конверсия ...</div></div>
-    <div class="card"><div class="card-label">Потенциальный портфель</div><div class="card-value" id="potentialAmount">...</div><div class="card-note">В работе</div></div>
+    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('all')" title="Нажмите, чтобы увидеть всех клиентов периода">
+      <div class="card-label">Клиенты периода</div>
+      <div class="card-value" id="totalClients">...</div>
+      <div class="card-note">Новые + переходящие</div>
+      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
+    </div>
+
+    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('requests')" title="Нажмите, чтобы увидеть клиентов с заявками">
+      <div class="card-label">Сумма заявок</div>
+      <div class="card-value" id="totalAmount">...</div>
+      <div class="card-note">Общий портфель заявок</div>
+      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
+    </div>
+
+    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('issued')" title="Нажмите, чтобы увидеть выданных клиентов">
+      <div class="card-label">Сумма выдач</div>
+      <div class="card-value" id="issuedAmount">...</div>
+      <div class="card-note" id="conversion">Конверсия ...</div>
+      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
+    </div>
+
+    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('potential')" title="Нажмите, чтобы увидеть клиентов в работе">
+      <div class="card-label">Потенциальный портфель</div>
+      <div class="card-value" id="potentialAmount">...</div>
+      <div class="card-note">В работе</div>
+      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
+    </div>
   </section>
 
 
@@ -739,6 +820,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="msb-sales-export">
       <button class="btn" onclick="exportMsbSalesExcel()">⬇️ Скачать всё в Excel</button>
     </div>
+  </div>
+
+  <div class="client-selection-banner" id="clientSelectionBanner">
+    <div>
+      <div class="client-selection-title" id="clientSelectionTitle">Выбранный список клиентов</div>
+      <div class="client-selection-subtitle" id="clientSelectionSubtitle">-</div>
+    </div>
+    <button class="client-selection-reset" onclick="resetDashboardClientSelection()">Показать всех</button>
   </div>
 
   <div class="summary-row">
@@ -2404,6 +2493,7 @@ let allManagers = [];
 let allStats = null;
 let allFunnel = null;
 let periodClients = [];
+let dashboardClientSelection = 'all';
 let portfolioLoans = [];
 let portfolioClients = [];
 let portfolioSegment = 'all';
@@ -2593,6 +2683,9 @@ function buildPeriodOptions() {
 }
 
 function applyPeriod() {
+  dashboardClientSelection = 'all';
+  const selectionBanner = document.getElementById('clientSelectionBanner');
+  if (selectionBanner) selectionBanner.classList.remove('active');
   const month = document.getElementById('periodMonth')
     ? document.getElementById('periodMonth').value
     : 'all';
@@ -3378,19 +3471,149 @@ function fillSelect(id, values, first) {
   });
 }
 
+
+function getDashboardClientSelection(type) {
+  const source = periodClients.slice();
+  const potentialStatuses = [
+    'Новый клиент',
+    'Переговоры',
+    'Документы собираются',
+    'Финанализ',
+    'На рассмотрении',
+    'Кредитный комитет',
+    'Одобрено'
+  ];
+
+  if (type === 'issued') {
+    return source.filter(c => normalizeText(c.status) === 'выдано');
+  }
+
+  if (type === 'potential') {
+    return source.filter(c => potentialStatuses.includes(c.status));
+  }
+
+  if (type === 'requests') {
+    return source.filter(c => (Number(c.amount) || 0) > 0);
+  }
+
+  return source;
+}
+
+function getDashboardClientSelectionMeta(type, clients) {
+  const amount = clients.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+
+  if (type === 'issued') {
+    return {
+      title: 'Выданные клиенты',
+      subtitle: clients.length + ' клиент(ов) • сумма выдач: ' + formatMoney(amount)
+    };
+  }
+
+  if (type === 'potential') {
+    return {
+      title: 'Потенциальный портфель',
+      subtitle: clients.length + ' клиент(ов) в работе • сумма: ' + formatMoney(amount)
+    };
+  }
+
+  if (type === 'requests') {
+    return {
+      title: 'Клиенты с заявками',
+      subtitle: clients.length + ' клиент(ов) • сумма заявок: ' + formatMoney(amount)
+    };
+  }
+
+  return {
+    title: 'Все клиенты периода',
+    subtitle: clients.length + ' клиент(ов), включая новых и переходящих'
+  };
+}
+
+function openDashboardClients(type) {
+  dashboardClientSelection = type || 'all';
+
+  showMsbSalesTab('clientsPage');
+
+  const searchInput = document.getElementById('searchInput');
+  const managerFilter = document.getElementById('managerFilter');
+  const statusFilter = document.getElementById('statusFilter');
+  const productFilter = document.getElementById('productFilter');
+
+  if (searchInput) searchInput.value = '';
+  if (managerFilter) managerFilter.value = '';
+  if (statusFilter) statusFilter.value = '';
+  if (productFilter) productFilter.value = '';
+
+  renderDashboardClientSelection();
+
+  setTimeout(() => {
+    const page = document.getElementById('clientsPage');
+    if (page) page.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+function renderDashboardClientSelection() {
+  const clients = getDashboardClientSelection(dashboardClientSelection);
+  const meta = getDashboardClientSelectionMeta(dashboardClientSelection, clients);
+
+  const banner = document.getElementById('clientSelectionBanner');
+  const title = document.getElementById('clientSelectionTitle');
+  const subtitle = document.getElementById('clientSelectionSubtitle');
+
+  if (banner) banner.classList.add('active');
+  if (title) title.innerText = meta.title;
+  if (subtitle) subtitle.innerText = meta.subtitle;
+
+  renderClients(clients);
+  renderClientSummary(clients);
+}
+
+function resetDashboardClientSelection() {
+  dashboardClientSelection = 'all';
+
+  const banner = document.getElementById('clientSelectionBanner');
+  if (banner) banner.classList.remove('active');
+
+  const searchInput = document.getElementById('searchInput');
+  const managerFilter = document.getElementById('managerFilter');
+  const statusFilter = document.getElementById('statusFilter');
+  const productFilter = document.getElementById('productFilter');
+
+  if (searchInput) searchInput.value = '';
+  if (managerFilter) managerFilter.value = '';
+  if (statusFilter) statusFilter.value = '';
+  if (productFilter) productFilter.value = '';
+
+  renderClients(periodClients);
+  renderClientSummary(periodClients);
+}
+
 function applyClientFilters() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   const manager = document.getElementById('managerFilter').value;
   const status = document.getElementById('statusFilter').value;
   const product = document.getElementById('productFilter').value;
 
-  let filtered = periodClients.filter(c => {
+  let baseClients = getDashboardClientSelection(dashboardClientSelection);
+
+  let filtered = baseClients.filter(c => {
     const text = [c.name,c.inn,c.phone,c.business,c.industry,c.region,c.product,c.manager].join(' ').toLowerCase();
     return (!q || text.includes(q)) &&
            (!manager || c.manager === manager) &&
            (!status || c.status === status) &&
            (!product || c.product === product);
   });
+
+  if (dashboardClientSelection !== 'all') {
+    const meta = getDashboardClientSelectionMeta(dashboardClientSelection, filtered);
+    const banner = document.getElementById('clientSelectionBanner');
+    const title = document.getElementById('clientSelectionTitle');
+    const subtitle = document.getElementById('clientSelectionSubtitle');
+
+    if (banner) banner.classList.add('active');
+    if (title) title.innerText = meta.title;
+    if (subtitle) subtitle.innerText = meta.subtitle;
+  }
 
   renderClients(filtered);
   renderClientSummary(filtered);
