@@ -553,6 +553,40 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .portfolio-drawer-full{grid-column:1 / -1;}
 @media(max-width:700px){.portfolio-drawer-grid{grid-template-columns:1fr;}}
 
+
+.msb-sales-tabs{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:0 0 22px;
+}
+.msb-sales-tab{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#374151;
+  padding:11px 15px;
+  border-radius:12px;
+  font-weight:800;
+  cursor:pointer;
+}
+.msb-sales-tab:hover{
+  background:var(--brand-soft);
+  color:var(--brand);
+}
+.msb-sales-tab.active{
+  background:var(--brand);
+  color:#fff;
+  border-color:var(--brand);
+}
+.msb-sales-export{
+  margin-left:auto;
+}
+@media(max-width:700px){
+  .msb-sales-export{margin-left:0;width:100%;}
+  .msb-sales-export .btn{width:100%;}
+}
+
 </style>
 </head>
 
@@ -614,6 +648,15 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <p>Объединённый модуль: Dashboard • Клиенты • Продажи</p>
     </div>
     <div class="top-actions"><div class="user-box" id="currentUserBox">Пользователь</div><button class="logout-btn" onclick="logout()">Выйти</button></div>
+  </div>
+
+  <div class="msb-sales-tabs">
+    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 Dashboard</button>
+    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 Клиенты</button>
+    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 Продажи</button>
+    <div class="msb-sales-export">
+      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ Скачать всё в Excel</button>
+    </div>
   </div>
 
   <div class="period-controls">
@@ -686,6 +729,15 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="user-box" id="clientsCountBox">Клиентов: ...</div>
   </div>
 
+  <div class="msb-sales-tabs">
+    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 Dashboard</button>
+    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 Клиенты</button>
+    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 Продажи</button>
+    <div class="msb-sales-export">
+      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ Скачать всё в Excel</button>
+    </div>
+  </div>
+
   <div class="summary-row">
     <div class="summary-card"><div class="small">Клиентов в выборке</div><div class="big" id="filteredClientsCount">0</div></div>
     <div class="summary-card"><div class="small">Сумма заявок</div><div class="big" id="filteredAmount">0</div></div>
@@ -728,6 +780,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 <section id="salesPage" class="page">
   <div class="header"><div><h1>Продажи</h1><p>Воронка продаж и потенциальный портфель</p></div></div>
+
+  <div class="msb-sales-tabs">
+    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 Dashboard</button>
+    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 Клиенты</button>
+    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 Продажи</button>
+    <div class="msb-sales-export">
+      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ Скачать всё в Excel</button>
+    </div>
+  </div>
+
   <div class="panel"><h2>Воронка продаж</h2><div id="salesFunnelBox">Загрузка...</div></div>
 </section>
 <section id="portfolioPage" class="page">
@@ -2383,17 +2445,123 @@ function showPage(id, el) {
 }
 
 function showMsbSales(el) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-
-  ['dashboard', 'clientsPage', 'salesPage'].forEach(id => {
-    const page = document.getElementById(id);
-    if (page) page.classList.add('active');
-  });
-
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
   if (el) el.classList.add('active');
+  showMsbSalesTab('dashboard');
+}
+
+function showMsbSalesTab(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+  const page = document.getElementById(pageId);
+  if (page) page.classList.add('active');
+
+  document.querySelectorAll('.msb-sales-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.msbTab === pageId);
+  });
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function exportMsbSalesExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('Библиотека Excel не загрузилась. Обновите страницу и попробуйте снова.');
+    return;
+  }
+
+  const clients = (periodClients && periodClients.length)
+    ? periodClients
+    : (typeof getVisibleClients === 'function' ? getVisibleClients() : allClients || []);
+
+  if (!clients.length) {
+    alert('Нет данных для выгрузки');
+    return;
+  }
+
+  const stats = typeof calcStatsFromClients === 'function'
+    ? calcStatsFromClients(clients)
+    : {};
+
+  const funnel = typeof calcFunnelFromClients === 'function'
+    ? calcFunnelFromClients(clients)
+    : [];
+
+  const dashboardRows = [
+    ['Показатель', 'Значение'],
+    ['Период', document.getElementById('periodMonth')?.value || 'Все данные'],
+    ['Количество клиентов', clients.length],
+    ['Сумма заявок', stats.totalAmount || 0],
+    ['Сумма выдач', stats.issuedAmount || 0],
+    ['Потенциальный портфель', stats.potentialAmount || 0],
+    ['Количество выдач', stats.issuedCount || 0],
+    ['Конверсия, %', stats.conversion || 0],
+    ['Средний чек заявки', stats.averageRequest || 0],
+    ['Средний чек выдачи', stats.averageIssued || 0]
+  ];
+
+  const clientRows = [[
+    'Дата','Клиент','Телефон','ИНН','Бизнес','Отрасль','Регион',
+    'Продукт','Сумма','Цель кредита','Статус','Менеджер',
+    'Следующий контакт','Комментарий','Дата создания','Дата изменения'
+  ]];
+
+  clients.forEach(c => {
+    clientRows.push([
+      c.date || '',
+      c.name || '',
+      c.phone || '',
+      c.inn || '',
+      c.business || '',
+      c.industry || '',
+      c.city || c.region || '',
+      c.product || '',
+      Number(c.amount) || 0,
+      c.purpose || '',
+      c.status || '',
+      c.manager || '',
+      c.nextContact || '',
+      c.comment || '',
+      c.createdAt || '',
+      c.updatedAt || ''
+    ]);
+  });
+
+  const salesRows = [['Этап продаж','Количество клиентов','Сумма']];
+  if (Array.isArray(funnel)) {
+    funnel.forEach(item => {
+      salesRows.push([
+        item.status || item.name || item.title || '',
+        item.count || 0,
+        item.amount || 0
+      ]);
+    });
+  } else if (funnel && typeof funnel === 'object') {
+    Object.keys(funnel).forEach(key => {
+      const item = funnel[key];
+      if (item && typeof item === 'object') {
+        salesRows.push([key, item.count || 0, item.amount || 0]);
+      }
+    });
+  }
+
+  const wb = XLSX.utils.book_new();
+  const wsDashboard = XLSX.utils.aoa_to_sheet(dashboardRows);
+  const wsClients = XLSX.utils.aoa_to_sheet(clientRows);
+  const wsSales = XLSX.utils.aoa_to_sheet(salesRows);
+
+  wsDashboard['!cols'] = [{wch:28},{wch:20}];
+  wsClients['!cols'] = [
+    {wch:14},{wch:28},{wch:16},{wch:16},{wch:28},{wch:20},{wch:18},
+    {wch:22},{wch:16},{wch:30},{wch:22},{wch:30},{wch:18},{wch:35},{wch:20},{wch:20}
+  ];
+  wsSales['!cols'] = [{wch:28},{wch:20},{wch:20}];
+
+  XLSX.utils.book_append_sheet(wb, wsDashboard, 'Dashboard');
+  XLSX.utils.book_append_sheet(wb, wsClients, 'Клиенты');
+  XLSX.utils.book_append_sheet(wb, wsSales, 'Продажи');
+
+  const fileDate = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, 'МСБ_ПРОДАЖИ_' + fileDate + '.xlsx');
 }
 
 
