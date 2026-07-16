@@ -750,21 +750,21 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <button class="btn btn-secondary" onclick="resetPeriod()">Сбросить</button>
   </div>
   <div style="margin:-10px 0 22px;color:var(--muted);font-size:13px;line-height:1.5;">
-    Активные клиенты автоматически переходят в следующий месяц. Отказы не входят в потенциальный портфель и учитываются отдельно. Статусы «Выдано» и «Отказ» отражаются только в месяце изменения статуса.
+    Активные клиенты автоматически переходят в следующий месяц. Отказанные клиенты полностью исключены из основных показателей продаж и учитываются только в отдельной карточке «Отказы». Статусы «Выдано» и «Отказ» отражаются только в месяце изменения статуса.
   </div>
 
   <section class="kpi dashboard-kpi-five">
     <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('all')" title="Нажмите, чтобы увидеть всех клиентов периода">
-      <div class="card-label">Клиенты периода</div>
+      <div class="card-label">Клиенты периода без отказов</div>
       <div class="card-value" id="totalClients">...</div>
-      <div class="card-note">Новые + переходящие</div>
+      <div class="card-note">Реальные продажи: новые + переходящие</div>
       <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
     </div>
 
     <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('requests')" title="Нажмите, чтобы увидеть клиентов с заявками">
-      <div class="card-label">Сумма заявок</div>
+      <div class="card-label">Сумма заявок без отказов</div>
       <div class="card-value" id="totalAmount">...</div>
-      <div class="card-note">Общий портфель заявок</div>
+      <div class="card-note">Только действующие заявки</div>
       <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
     </div>
 
@@ -2941,11 +2941,13 @@ function parseClientDate(value) {
 }
 
 function calcStatsFromClients(clients) {
-  const totalClients = clients.length;
-  const totalAmount = clients.reduce((s,c) => s + (Number(c.amount)||0), 0);
-
-  const issued = clients.filter(c => normalizeText(c.status) === 'выдано');
   const rejected = clients.filter(c => normalizeText(c.status) === 'отказ');
+  const salesClients = clients.filter(c => normalizeText(c.status) !== 'отказ');
+
+  const totalClients = salesClients.length;
+  const totalAmount = salesClients.reduce((s,c) => s + (Number(c.amount)||0), 0);
+
+  const issued = salesClients.filter(c => normalizeText(c.status) === 'выдано');
 
   const potentialStatusKeys = new Set([
     'новый клиент',
@@ -2957,7 +2959,7 @@ function calcStatsFromClients(clients) {
     'на рассмотрении'
   ]);
 
-  const potential = clients.filter(c => potentialStatusKeys.has(normalizeText(c.status)));
+  const potential = salesClients.filter(c => potentialStatusKeys.has(normalizeText(c.status)));
 
   const issuedCount = issued.length;
   const issuedAmount = issued.reduce((s,c) => s + (Number(c.amount)||0), 0);
@@ -3543,6 +3545,7 @@ function fillSelect(id, values, first) {
 
 function getDashboardClientSelection(type) {
   const source = periodClients.slice();
+  const salesSource = source.filter(c => normalizeText(c.status) !== 'отказ');
 
   const potentialStatusKeys = new Set([
     'новый клиент',
@@ -3555,7 +3558,7 @@ function getDashboardClientSelection(type) {
   ]);
 
   if (type === 'issued') {
-    return source.filter(c => normalizeText(c.status) === 'выдано');
+    return salesSource.filter(c => normalizeText(c.status) === 'выдано');
   }
 
   if (type === 'rejected') {
@@ -3563,14 +3566,14 @@ function getDashboardClientSelection(type) {
   }
 
   if (type === 'potential') {
-    return source.filter(c => potentialStatusKeys.has(normalizeText(c.status)));
+    return salesSource.filter(c => potentialStatusKeys.has(normalizeText(c.status)));
   }
 
   if (type === 'requests') {
-    return source.filter(c => (Number(c.amount) || 0) > 0);
+    return salesSource.filter(c => (Number(c.amount) || 0) > 0);
   }
 
-  return source;
+  return salesSource;
 }
 
 function getDashboardClientSelectionMeta(type, clients) {
@@ -3599,14 +3602,14 @@ function getDashboardClientSelectionMeta(type, clients) {
 
   if (type === 'requests') {
     return {
-      title: 'Клиенты с заявками',
+      title: 'Действующие заявки без отказов',
       subtitle: clients.length + ' клиент(ов) • сумма заявок: ' + formatMoney(amount)
     };
   }
 
   return {
-    title: 'Все клиенты периода',
-    subtitle: clients.length + ' клиент(ов), включая новых и переходящих'
+    title: 'Клиенты периода без отказов',
+    subtitle: clients.length + ' клиент(ов): новые, переходящие и выданные'
   };
 }
 
