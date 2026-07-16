@@ -591,9 +591,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <nav class="nav">
-    <a class="active" onclick="showPage('dashboard', this)"><span class="icon"></span>Dashboard</a>
-    <a onclick="showPage('clientsPage', this)"><span class="icon"></span>Клиенты</a>
-    <a onclick="showPage('salesPage', this)"><span class="icon"></span>Продажи</a>
+    <a class="active" onclick="showMsbSales(this)"><span class="icon"></span>МСБ ПРОДАЖИ</a>
     <a onclick="showPage('portfolioPage', this)">
     <span class="icon"></span>
     Кредитный портфель
@@ -612,8 +610,8 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="dashboard" class="page active">
   <div class="header">
     <div>
-      <h1>MSB Dashboard</h1>
-      <p>Реальные данные из Telegram CRM и Google Sheets</p>
+      <h1>МСБ ПРОДАЖИ</h1>
+      <p>Объединённый модуль: Dashboard • Клиенты • Продажи</p>
     </div>
     <div class="top-actions"><div class="user-box" id="currentUserBox">Пользователь</div><button class="logout-btn" onclick="logout()">Выйти</button></div>
   </div>
@@ -2374,9 +2372,28 @@ async function fetchJSON(action) {
 
 function showPage(id, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+
+  const page = document.getElementById(id);
+  if (page) page.classList.add('active');
+
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
-  el.classList.add('active');
+  if (el) el.classList.add('active');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showMsbSales(el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+  ['dashboard', 'clientsPage', 'salesPage'].forEach(id => {
+    const page = document.getElementById(id);
+    if (page) page.classList.add('active');
+  });
+
+  document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 
