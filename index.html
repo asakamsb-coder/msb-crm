@@ -668,9 +668,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <input id="dateTo" class="input" type="date" onchange="applyPeriod()">
     <button class="btn btn-secondary" onclick="resetPeriod()">Сбросить</button>
   </div>
+  <div style="margin:-10px 0 22px;color:var(--muted);font-size:13px;line-height:1.5;">
+    Активные клиенты автоматически переходят в следующий месяц. Статусы «Выдано» и «Отказ» учитываются только в месяце изменения статуса.
+  </div>
 
   <section class="kpi">
-    <div class="card"><div class="card-label">Клиенты</div><div class="card-value" id="totalClients">...</div><div class="card-note">Всего в CRM</div></div>
+    <div class="card"><div class="card-label">Клиенты периода</div><div class="card-value" id="totalClients">...</div><div class="card-note">Новые + переходящие</div></div>
     <div class="card"><div class="card-label">Сумма заявок</div><div class="card-value" id="totalAmount">...</div><div class="card-note">Общий портфель заявок</div></div>
     <div class="card"><div class="card-label">Сумма выдач</div><div class="card-value" id="issuedAmount">...</div><div class="card-note" id="conversion">Конверсия ...</div></div>
     <div class="card"><div class="card-label">Потенциальный портфель</div><div class="card-value" id="potentialAmount">...</div><div class="card-note">В работе</div></div>
@@ -2569,35 +2572,61 @@ function buildPeriodOptions() {
   const select = document.getElementById('periodMonth');
   if (!select) return;
 
-  const months = unique(getVisibleClients().map(c => getClientMonth(c)).filter(Boolean)).reverse();
+  const clients = getVisibleClients();
+  const createdMonths = clients.map(c => getClientMonth(c)).filter(Boolean).sort();
+  const statusMonths = clients.map(c => getClientStatusMonth(c)).filter(Boolean).sort();
+
+  const allKnownMonths = createdMonths.concat(statusMonths).sort();
+  const firstMonth = allKnownMonths.length ? allKnownMonths[0] : getMonthKeyFromDate(new Date());
+  const currentMonth = getMonthKeyFromDate(new Date());
+
+  const months = buildMonthRange(firstMonth, currentMonth).reverse();
 
   select.innerHTML = '<option value="all">Все данные</option>';
   months.forEach(month => {
     select.innerHTML += `<option value="${month}">${month}</option>`;
   });
 
-  if (months.length > 0) select.value = months[0];
+  if (months.length > 0) {
+    select.value = currentMonth;
+  }
 }
 
 function applyPeriod() {
-  const month = document.getElementById('periodMonth') ? document.getElementById('periodMonth').value : 'all';
-  const from = document.getElementById('dateFrom') ? document.getElementById('dateFrom').value : '';
-  const to = document.getElementById('dateTo') ? document.getElementById('dateTo').value : '';
+  const month = document.getElementById('periodMonth')
+    ? document.getElementById('periodMonth').value
+    : 'all';
+
+  const from = document.getElementById('dateFrom')
+    ? document.getElementById('dateFrom').value
+    : '';
+
+  const to = document.getElementById('dateTo')
+    ? document.getElementById('dateTo').value
+    : '';
 
   let clients = getVisibleClients();
 
   if (month && month !== 'all') {
-    clients = clients.filter(c => getClientMonth(c) === month);
+    clients = clients
+      .map(c => getClientSnapshotForMonth(c, month))
+      .filter(Boolean);
   }
 
   if (from) {
     const fromDate = new Date(from + 'T00:00:00');
-    clients = clients.filter(c => parseClientDate(c.date || c.createdAt) >= fromDate);
+    clients = clients.filter(c => {
+      const relevantDate = getRelevantClientDate(c, month);
+      return relevantDate >= fromDate;
+    });
   }
 
   if (to) {
     const toDate = new Date(to + 'T23:59:59');
-    clients = clients.filter(c => parseClientDate(c.date || c.createdAt) <= toDate);
+    clients = clients.filter(c => {
+      const relevantDate = getRelevantClientDate(c, month);
+      return relevantDate <= toDate;
+    });
   }
 
   periodClients = clients;
@@ -2626,17 +2655,156 @@ function applyPeriod() {
 }
 
 function resetPeriod() {
-  document.getElementById('periodMonth').value = 'all';
+  const currentMonth = getMonthKeyFromDate(new Date());
+  document.getElementById('periodMonth').value = currentMonth;
   document.getElementById('dateFrom').value = '';
   document.getElementById('dateTo').value = '';
   applyPeriod();
 }
 
 function getClientMonth(c) {
-  if (c.month && String(c.month).match(/^\d{4}-\d{2}$/)) return c.month;
-  const d = parseClientDate(c.date || c.createdAt);
-  if (!d || isNaN(d.getTime())) return '';
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  if (c.month && String(c.month).match(/^\d{4}-\d{2}$/)) return String(c.month);
+
+  const d = parseClientDate(c.createdAt || c.date);
+  if (!d || isNaN(d.getTime()) || d.getFullYear() === 1900) return '';
+
+  return getMonthKeyFromDate(d);
+}
+
+function getClientStatusMonth(c) {
+  const d = parseClientDate(c.statusChangedAt || c.updatedAt);
+  if (!d || isNaN(d.getTime()) || d.getFullYear() === 1900) return '';
+  return getMonthKeyFromDate(d);
+}
+
+function getMonthKeyFromDate(date) {
+  if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+}
+
+function buildMonthRange(firstMonth, lastMonth) {
+  if (!firstMonth || !lastMonth) return [];
+
+  const firstParts = firstMonth.split('-').map(Number);
+  const lastParts = lastMonth.split('-').map(Number);
+
+  let cursor = new Date(firstParts[0], firstParts[1] - 1, 1);
+  const last = new Date(lastParts[0], lastParts[1] - 1, 1);
+  const result = [];
+
+  while (cursor <= last) {
+    result.push(getMonthKeyFromDate(cursor));
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+
+  return result;
+}
+
+function getMonthEndDate(month) {
+  const parts = String(month || '').split('-').map(Number);
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+  return new Date(parts[0], parts[1], 0, 23, 59, 59, 999);
+}
+
+function parseStatusHistory(historyText) {
+  const text = String(historyText || '').trim();
+  if (!text) return [];
+
+  return text
+    .split(/\r?\n/)
+    .map(line => {
+      const parts = line.split('|');
+      if (parts.length < 2) return null;
+
+      const date = parseClientDate(parts[0].trim());
+      const status = parts.slice(1).join('|').trim();
+
+      if (!status || !date || isNaN(date.getTime()) || date.getFullYear() === 1900) {
+        return null;
+      }
+
+      return { date, status };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.date - b.date);
+}
+
+function getClientStatusAsOfMonth(c, month) {
+  const monthEnd = getMonthEndDate(month);
+  if (!monthEnd) return null;
+
+  const history = parseStatusHistory(c.statusHistory);
+  const applicable = history.filter(item => item.date <= monthEnd);
+
+  if (applicable.length) {
+    return {
+      status: applicable[applicable.length - 1].status,
+      statusDate: applicable[applicable.length - 1].date
+    };
+  }
+
+  const createdDate = parseClientDate(c.createdAt || c.date);
+  if (createdDate <= monthEnd) {
+    const currentStatusDate = parseClientDate(c.statusChangedAt || c.updatedAt);
+
+    if (
+      currentStatusDate &&
+      !isNaN(currentStatusDate.getTime()) &&
+      currentStatusDate.getFullYear() !== 1900 &&
+      currentStatusDate <= monthEnd
+    ) {
+      return {
+        status: c.status || 'Новый клиент',
+        statusDate: currentStatusDate
+      };
+    }
+
+    return {
+      status: 'Новый клиент',
+      statusDate: createdDate
+    };
+  }
+
+  return null;
+}
+
+function getClientSnapshotForMonth(c, month) {
+  const createdMonth = getClientMonth(c);
+  if (!createdMonth || createdMonth > month) return null;
+
+  const statusInfo = getClientStatusAsOfMonth(c, month);
+  if (!statusInfo) return null;
+
+  const normalizedStatus = normalizeText(statusInfo.status);
+  const statusMonth = getMonthKeyFromDate(statusInfo.statusDate);
+
+  // Завершённые сделки показываем только в месяце завершения.
+  if (normalizedStatus === 'выдано' || normalizedStatus === 'отказ') {
+    if (statusMonth !== month) return null;
+  }
+
+  return {
+    ...c,
+    originalStatus: c.status,
+    status: statusInfo.status,
+    statusChangedAt: statusInfo.statusDate,
+    reportMonth: month,
+    carriedOver: createdMonth < month && normalizedStatus !== 'выдано' && normalizedStatus !== 'отказ',
+    issuedInReportMonth: normalizedStatus === 'выдано' && statusMonth === month,
+    rejectedInReportMonth: normalizedStatus === 'отказ' && statusMonth === month
+  };
+}
+
+function getRelevantClientDate(c, selectedMonth) {
+  if (selectedMonth && selectedMonth !== 'all') {
+    const status = normalizeText(c.status);
+
+    if (status === 'выдано' || status === 'отказ') {
+      return parseClientDate(c.statusChangedAt || c.updatedAt);
+    }
+  }
+
+  return parseClientDate(c.createdAt || c.date);
 }
 
 function parseClientDate(value) {
