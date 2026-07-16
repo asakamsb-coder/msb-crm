@@ -697,6 +697,82 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   color:var(--blue);
 }
 
+
+.manager-rank-clickable{
+  cursor:pointer;
+  transition:background .18s ease, transform .18s ease;
+}
+.manager-rank-clickable:hover{
+  background:#FFF7F8;
+  transform:translateX(3px);
+}
+.manager-detail-drawer{
+  position:fixed;
+  top:0;
+  right:-760px;
+  width:760px;
+  max-width:100%;
+  height:100vh;
+  background:#fff;
+  border-left:1px solid var(--line);
+  box-shadow:-14px 0 34px rgba(0,0,0,.16);
+  z-index:90;
+  transition:.25s ease;
+  display:flex;
+  flex-direction:column;
+}
+.manager-detail-drawer.active{right:0;}
+.manager-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-bottom:18px;
+}
+.manager-kpi-card{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px;
+  background:#fff;
+}
+.manager-kpi-card .small{
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+.manager-kpi-card .big{
+  font-size:21px;
+  font-weight:900;
+}
+.manager-detail-tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:4px 0 16px;
+}
+.manager-detail-tab{
+  border:1px solid var(--line);
+  background:#fff;
+  color:#374151;
+  padding:10px 12px;
+  border-radius:10px;
+  font-weight:800;
+  cursor:pointer;
+}
+.manager-detail-tab.active{
+  background:var(--brand);
+  border-color:var(--brand);
+  color:#fff;
+}
+.manager-client-section{display:none;}
+.manager-client-section.active{display:block;}
+.manager-client-row{
+  cursor:pointer;
+}
+.manager-client-row:hover{background:#F9FAFB;}
+@media(max-width:760px){
+  .manager-kpi-grid{grid-template-columns:1fr 1fr;}
+}
+
 </style>
 </head>
 
@@ -1452,8 +1528,19 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 
 <section id="managersPage" class="page">
-  <div class="header"><div><h1>Менеджеры</h1><p>KPI, выдачи и конверсия по менеджерам</p></div></div>
-  <div class="panel"><h2>Рейтинг менеджеров</h2><div id="managersFullBox">Загрузка...</div></div>
+  <div class="header">
+    <div>
+      <h1>Менеджеры</h1>
+      <p id="managersPeriodText">KPI, выдачи и конверсия по менеджерам</p>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Рейтинг менеджеров</h2>
+    <p style="color:var(--muted);margin:-8px 0 14px;line-height:1.5;">
+      Нажмите на менеджера, чтобы увидеть клиентов, которые формируют рейтинг, действующих клиентов и отказы отдельно.
+    </p>
+    <div id="managersFullBox">Загрузка...</div>
+  </div>
 </section>
 
 
@@ -1697,6 +1784,60 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 </aside>
 
+
+
+<div class="drawer-overlay" id="managerDrawerOverlay" onclick="closeManagerCard()"></div>
+<aside class="manager-detail-drawer" id="managerDetailDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="managerDrawerName">Карточка менеджера</div>
+      <div class="drawer-subtitle" id="managerDrawerPeriod">Период: -</div>
+    </div>
+    <button class="close-btn" onclick="closeManagerCard()">×</button>
+  </div>
+
+  <div class="drawer-body">
+    <div class="manager-kpi-grid">
+      <div class="manager-kpi-card"><div class="small">Рейтинг</div><div class="big" id="managerDrawerScore">0</div></div>
+      <div class="manager-kpi-card"><div class="small">Клиенты рейтинга</div><div class="big" id="managerDrawerRatingCount">0</div></div>
+      <div class="manager-kpi-card"><div class="small">Действующие</div><div class="big" id="managerDrawerActiveCount">0</div></div>
+      <div class="manager-kpi-card"><div class="small">Отказы</div><div class="big" id="managerDrawerRejectedCount">0</div></div>
+    </div>
+
+    <div class="manager-kpi-grid">
+      <div class="manager-kpi-card"><div class="small">Сумма заявок рейтинга</div><div class="big" id="managerDrawerTotalAmount">0</div></div>
+      <div class="manager-kpi-card"><div class="small">Выдано</div><div class="big" id="managerDrawerIssuedAmount">0</div></div>
+      <div class="manager-kpi-card"><div class="small">Потенциал</div><div class="big" id="managerDrawerPotentialAmount">0</div></div>
+      <div class="manager-kpi-card"><div class="small">Конверсия</div><div class="big" id="managerDrawerConversion">0%</div></div>
+    </div>
+
+    <div class="manager-detail-tabs">
+      <button class="manager-detail-tab active" data-manager-tab="rating" onclick="showManagerClientTab('rating')">⭐ Клиенты рейтинга</button>
+      <button class="manager-detail-tab" data-manager-tab="active" onclick="showManagerClientTab('active')">🟢 Действующие</button>
+      <button class="manager-detail-tab" data-manager-tab="issued" onclick="showManagerClientTab('issued')">✅ Выдано</button>
+      <button class="manager-detail-tab" data-manager-tab="rejected" onclick="showManagerClientTab('rejected')">🔴 Отказы</button>
+    </div>
+
+    <div id="managerClientSection" class="manager-client-section active">
+      <div class="client-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Клиент</th>
+              <th>Статус</th>
+              <th>Сумма</th>
+              <th>Дней</th>
+              <th>Дата</th>
+            </tr>
+          </thead>
+          <tbody id="managerClientsTable">
+            <tr><td colspan="5" class="loading">Выберите менеджера</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</aside>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js">
 
@@ -3036,35 +3177,69 @@ function calcFunnelFromClients(clients) {
 
 function calcManagersFromClients(clients) {
   const map = {};
+  const activeStatuses = new Set([
+    'новый клиент',
+    'переговоры',
+    'документы собираются',
+    'финанализ',
+    'на рассмотрении',
+    'кредитный комитет',
+    'одобрено'
+  ]);
+
   clients.forEach(c => {
     const manager = c.manager || 'Без менеджера';
+
     if (!map[manager]) {
-      map[manager] = { manager, totalClients:0, totalAmount:0, issuedCount:0, issuedAmount:0, potentialAmount:0, conversion:0 };
+      map[manager] = {
+        manager,
+        totalClients:0,
+        totalAmount:0,
+        issuedCount:0,
+        issuedAmount:0,
+        activeCount:0,
+        activeAmount:0,
+        rejectedCount:0,
+        rejectedAmount:0,
+        potentialAmount:0,
+        conversion:0
+      };
     }
+
     const amount = Number(c.amount) || 0;
+    const status = normalizeText(c.status);
+
+    if (status === 'отказ') {
+      map[manager].rejectedCount++;
+      map[manager].rejectedAmount += amount;
+      return;
+    }
+
+    // В рейтинг входят только реальные продажи без отказов.
     map[manager].totalClients++;
     map[manager].totalAmount += amount;
-    if (c.status === 'Выдано') {
+
+    if (status === 'выдано') {
       map[manager].issuedCount++;
       map[manager].issuedAmount += amount;
     }
-    if ([
-      'новый клиент',
-      'переговоры',
-      'документы собираются',
-      'финанализ',
-      'кредитный комитет',
-      'одобрено',
-      'на рассмотрении'
-    ].includes(normalizeText(c.status))) {
+
+    if (activeStatuses.has(status)) {
+      map[manager].activeCount++;
+      map[manager].activeAmount += amount;
       map[manager].potentialAmount += amount;
     }
   });
-  return Object.values(map).map(m => {
-    m.conversion = m.totalClients ? Math.round(m.issuedCount / m.totalClients * 100) : 0;
-    return m;
+
+  return Object.values(map).map(manager => {
+    const decisions = manager.issuedCount + manager.rejectedCount;
+    manager.conversion = decisions
+      ? Math.round(manager.issuedCount / decisions * 100)
+      : 0;
+    return manager;
   });
 }
+
 
 
 
@@ -3874,18 +4049,154 @@ function renderManagers(managers) {
 function renderManagersFull(managers) {
   const box = document.getElementById('managersFullBox');
   box.innerHTML = '';
-  managers.sort((a,b) => calculateScore(b) - calculateScore(a)).forEach((m, index) => {
-    box.innerHTML += `
-      <div class="rank-row">
-        <div>
-          <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:4px;">
-            Клиентов: ${m.totalClients || 0} • Заявки: ${formatMoney(m.totalAmount)} • Выдано: ${formatMoney(m.issuedAmount)} • Конверсия: ${m.conversion || 0}%
+
+  const period = document.getElementById('periodMonth')?.value || 'all';
+  const periodText = document.getElementById('managersPeriodText');
+  if (periodText) {
+    periodText.innerText = period === 'all'
+      ? 'Рейтинг за все данные'
+      : 'Рейтинг за период: ' + period;
+  }
+
+  managers
+    .sort((a,b) => calculateScore(b) - calculateScore(a))
+    .forEach((m, index) => {
+      const encodedManager = encodeURIComponent(m.manager);
+
+      box.innerHTML += `
+        <div class="rank-row manager-rank-clickable"
+             onclick="openManagerCard(decodeURIComponent('${encodedManager}'))"
+             title="Нажмите, чтобы открыть клиентов менеджера">
+          <div>
+            <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px;">
+              Клиенты рейтинга: ${m.totalClients || 0}
+              • Действующие: ${m.activeCount || 0}
+              • Выдано: ${formatMoney(m.issuedAmount)}
+              • Отказы: ${m.rejectedCount || 0}
+              • Конверсия: ${m.conversion || 0}%
+            </div>
           </div>
-        </div>
-        <div class="rank-score">${calculateScore(m)}</div>
-      </div>`;
+          <div class="rank-score">${calculateScore(m)}</div>
+        </div>`;
+    });
+}
+
+
+let selectedManagerName = '';
+let selectedManagerTab = 'rating';
+
+function getManagerClients(managerName, tab) {
+  const clients = periodClients.filter(c => (c.manager || 'Без менеджера') === managerName);
+  const activeStatuses = new Set([
+    'новый клиент',
+    'переговоры',
+    'документы собираются',
+    'финанализ',
+    'на рассмотрении',
+    'кредитный комитет',
+    'одобрено'
+  ]);
+
+  if (tab === 'rejected') {
+    return clients.filter(c => normalizeText(c.status) === 'отказ');
+  }
+
+  if (tab === 'issued') {
+    return clients.filter(c => normalizeText(c.status) === 'выдано');
+  }
+
+  if (tab === 'active') {
+    return clients.filter(c => activeStatuses.has(normalizeText(c.status)));
+  }
+
+  // Клиенты, за которых менеджер получает рейтинг:
+  // действующие + выданные, но без отказов.
+  return clients.filter(c => normalizeText(c.status) !== 'отказ');
+}
+
+function openManagerCard(managerName) {
+  selectedManagerName = managerName;
+  selectedManagerTab = 'rating';
+
+  const managerStats = calcManagersFromClients(periodClients)
+    .find(item => item.manager === managerName);
+
+  const ratingClients = getManagerClients(managerName, 'rating');
+  const activeClients = getManagerClients(managerName, 'active');
+  const rejectedClients = getManagerClients(managerName, 'rejected');
+
+  document.getElementById('managerDrawerName').innerText = managerName;
+
+  const period = document.getElementById('periodMonth')?.value || 'all';
+  document.getElementById('managerDrawerPeriod').innerText =
+    period === 'all' ? 'Период: все данные' : 'Период: ' + period;
+
+  document.getElementById('managerDrawerScore').innerText =
+    managerStats ? calculateScore(managerStats) : 0;
+  document.getElementById('managerDrawerRatingCount').innerText = ratingClients.length;
+  document.getElementById('managerDrawerActiveCount').innerText = activeClients.length;
+  document.getElementById('managerDrawerRejectedCount').innerText = rejectedClients.length;
+  document.getElementById('managerDrawerTotalAmount').innerText =
+    formatMoney(managerStats ? managerStats.totalAmount : 0);
+  document.getElementById('managerDrawerIssuedAmount').innerText =
+    formatMoney(managerStats ? managerStats.issuedAmount : 0);
+  document.getElementById('managerDrawerPotentialAmount').innerText =
+    formatMoney(managerStats ? managerStats.potentialAmount : 0);
+  document.getElementById('managerDrawerConversion').innerText =
+    (managerStats ? managerStats.conversion : 0) + '%';
+
+  document.getElementById('managerDrawerOverlay').classList.add('active');
+  document.getElementById('managerDetailDrawer').classList.add('active');
+
+  showManagerClientTab('rating');
+}
+
+function closeManagerCard() {
+  document.getElementById('managerDrawerOverlay').classList.remove('active');
+  document.getElementById('managerDetailDrawer').classList.remove('active');
+}
+
+function showManagerClientTab(tab) {
+  selectedManagerTab = tab;
+
+  document.querySelectorAll('.manager-detail-tab').forEach(button => {
+    button.classList.toggle('active', button.dataset.managerTab === tab);
   });
+
+  renderManagerClientsTable(getManagerClients(selectedManagerName, tab));
+}
+
+function renderManagerClientsTable(clients) {
+  const tbody = document.getElementById('managerClientsTable');
+  tbody.innerHTML = '';
+
+  if (!clients.length) {
+    tbody.innerHTML = '<tr><td colspan="5">Клиентов в этой категории нет</td></tr>';
+    return;
+  }
+
+  clients
+    .slice()
+    .sort((a,b) => parseClientDate(b.date) - parseClientDate(a.date))
+    .forEach(c => {
+      const workDays = getClientWorkDaysInfo(c);
+
+      tbody.innerHTML += `
+        <tr class="manager-client-row"
+            onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+          <td>
+            <b>${safe(c.name)}</b>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;">
+              ${safe(c.inn)} • ${safe(c.product)}
+            </div>
+          </td>
+          <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
+          <td class="nowrap">${formatMoney(c.amount)}</td>
+          <td class="nowrap">${safe(workDays.label)}</td>
+          <td class="nowrap">${safe(c.date)}</td>
+        </tr>`;
+    });
 }
 
 function calculateScore(m) {
