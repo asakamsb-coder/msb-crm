@@ -668,6 +668,35 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   }
 }
 
+
+.work-days-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:72px;
+  padding:6px 9px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.work-days-good{
+  background:#EAF8EF;
+  color:var(--green);
+}
+.work-days-warning{
+  background:#FFF4E5;
+  color:var(--orange);
+}
+.work-days-danger{
+  background:#FEE2E2;
+  color:var(--red);
+}
+.work-days-finished{
+  background:#EAF1FF;
+  color:var(--blue);
+}
+
 </style>
 </head>
 
@@ -881,6 +910,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <thead>
           <tr>
             <th>Дата</th>
+            <th>Дней в работе</th>
             <th>Клиент</th>
             <th>Телефон</th>
             <th>ИНН</th>
@@ -893,7 +923,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           </tr>
         </thead>
         <tbody id="clientsTable">
-          <tr><td colspan="10" class="loading">Загрузка клиентов...</td></tr>
+          <tr><td colspan="11" class="loading">Загрузка клиентов...</td></tr>
         </tbody>
       </table>
     </div>
@@ -2623,7 +2653,7 @@ function exportMsbSalesExcel() {
   ];
 
   const clientRows = [[
-    'Дата','Клиент','Телефон','ИНН','Бизнес','Отрасль','Регион',
+    'Дата','Дней в работе','Клиент','Телефон','ИНН','Бизнес','Отрасль','Регион',
     'Продукт','Сумма','Цель кредита','Статус','Менеджер',
     'Следующий контакт','Комментарий','Дата создания','Дата изменения'
   ]];
@@ -2631,6 +2661,7 @@ function exportMsbSalesExcel() {
   clients.forEach(c => {
     clientRows.push([
       c.date || '',
+      getClientWorkDaysInfo(c).days,
       c.name || '',
       c.phone || '',
       c.inn || '',
@@ -2674,7 +2705,7 @@ function exportMsbSalesExcel() {
 
   wsDashboard['!cols'] = [{wch:28},{wch:20}];
   wsClients['!cols'] = [
-    {wch:14},{wch:28},{wch:16},{wch:16},{wch:28},{wch:20},{wch:18},
+    {wch:14},{wch:16},{wch:28},{wch:16},{wch:16},{wch:28},{wch:20},{wch:18},
     {wch:22},{wch:16},{wch:30},{wch:22},{wch:30},{wch:18},{wch:35},{wch:20},{wch:20}
   ];
   wsSales['!cols'] = [{wch:28},{wch:20},{wch:20}];
@@ -3497,12 +3528,96 @@ function renderLatestClients(clients) {
   });
 }
 
+
+function getClientStatusEventDate(c, targetStatus) {
+  const target = normalizeText(targetStatus);
+  const history = parseStatusHistory(c.statusHistory);
+
+  const matches = history.filter(item => normalizeText(item.status) === target);
+  if (matches.length) {
+    // Берём первую дату достижения статуса, чтобы измерить реальный срок прохождения сделки.
+    return matches[0].date;
+  }
+
+  if (normalizeText(c.status) === target) {
+    const fallback = parseClientDate(c.statusChangedAt || c.updatedAt);
+    if (fallback && !isNaN(fallback.getTime()) && fallback.getFullYear() !== 1900) {
+      return fallback;
+    }
+  }
+
+  return null;
+}
+
+function getClientWorkDaysInfo(c) {
+  const createdAt = parseClientDate(c.createdAt || c.date);
+
+  if (!createdAt || isNaN(createdAt.getTime()) || createdAt.getFullYear() === 1900) {
+    return {
+      days: 0,
+      label: 'Нет даты',
+      state: 'warning',
+      title: 'Не найдена дата создания клиента'
+    };
+  }
+
+  const status = normalizeText(c.status);
+  let endDate = new Date();
+  let prefix = '';
+  let state = 'active';
+  let title = 'Дней с момента создания до текущей даты';
+
+  if (status === 'выдано') {
+    endDate = getClientStatusEventDate(c, 'Выдано') || parseClientDate(c.statusChangedAt || c.updatedAt);
+    prefix = 'Выдано: ';
+    state = 'finished';
+    title = 'Количество календарных дней от создания клиента до выдачи кредита';
+  } else if (status === 'отказ') {
+    endDate = getClientStatusEventDate(c, 'Отказ') || parseClientDate(c.statusChangedAt || c.updatedAt);
+    prefix = 'Отказ: ';
+    state = 'finished';
+    title = 'Количество календарных дней от создания клиента до отказа';
+  }
+
+  if (!endDate || isNaN(endDate.getTime()) || endDate.getFullYear() === 1900) {
+    endDate = new Date();
+  }
+
+  const start = new Date(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate());
+  const finish = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+  const days = Math.max(0, Math.floor((finish - start) / 86400000));
+
+  return {
+    days,
+    label: prefix + days + ' дн.',
+    state,
+    title
+  };
+}
+
+function renderClientWorkDays(c) {
+  const info = getClientWorkDaysInfo(c);
+
+  let className = 'work-days-good';
+
+  if (info.state === 'finished') {
+    className = 'work-days-finished';
+  } else if (info.days > 30) {
+    className = 'work-days-danger';
+  } else if (info.days > 15) {
+    className = 'work-days-warning';
+  }
+
+  return '<span class="work-days-badge ' + className + '" title="' +
+    safe(info.title) + '">' + safe(info.label) + '</span>';
+}
+
 function renderClients(clients) {
   const tbody = document.getElementById('clientsTable');
   tbody.innerHTML = '';
 
   if (!clients || clients.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10">Клиентов пока нет</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11">Клиентов пока нет</td></tr>';
     return;
   }
 
@@ -3510,6 +3625,7 @@ function renderClients(clients) {
     tbody.innerHTML += `
       <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
         <td class="nowrap">${safe(c.date)}</td>
+        <td class="nowrap">${renderClientWorkDays(c)}</td>
         <td>${safe(c.name)}</td>
         <td class="nowrap">${safe(c.phone)}</td>
         <td class="nowrap">${safe(c.inn)}</td>
@@ -3978,7 +4094,7 @@ function renderMyCabinet() {
 
 
 function exportClientsCSV() {
-  const rows = [['Дата','Клиент','Телефон','ИНН','Бизнес','Регион','Продукт','Сумма','Статус','Менеджер']];
+  const rows = [['Дата','Дней в работе','Клиент','Телефон','ИНН','Бизнес','Регион','Продукт','Сумма','Статус','Менеджер']];
   const tableRows = document.querySelectorAll('#clientsTable tr');
 
   tableRows.forEach(tr => {
