@@ -31,7 +31,8 @@
   --shadow-lg:0 20px 48px rgba(20,21,26,.12);
 }
 *{box-sizing:border-box;margin:0;padding:0;font-family:"Inter","Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased;}
-body{background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;}
+html{background:var(--bg);overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-size:15px;line-height:1.5;overflow-x:hidden;min-height:100vh;}
 .app{display:flex;min-height:100vh;}
 .sidebar{width:280px;background:#fff;border-right:1px solid var(--line);padding:28px 20px;position:fixed;top:0;bottom:0;left:0;z-index:40;transition:transform .25s ease;}
 .brand{margin-bottom:34px;}
@@ -522,6 +523,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   .header h1{font-size:22px;}
   .card-value{font-size:24px;}
   .period-controls .select,.period-controls .input{max-width:none;flex:1 1 140px;}
+  .funnel-item{grid-template-columns:1fr;gap:6px;}
+  .amount{text-align:left;}
+  table{min-width:640px;}
 }
 
 
@@ -1021,6 +1025,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <table>
         <thead>
           <tr>
+            <th>№</th>
             <th>Дата</th>
             <th>Дней в работе</th>
             <th>Клиент</th>
@@ -1035,7 +1040,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           </tr>
         </thead>
         <tbody id="clientsTable">
-          <tr><td colspan="11" class="loading">Загрузка клиентов...</td></tr>
+          <tr><td colspan="12" class="loading">Загрузка клиентов...</td></tr>
         </tbody>
       </table>
     </div>
@@ -1265,15 +1270,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           <table>
             <thead>
               <tr>
-                <th>Ключ дубля</th>
-                <th>Повторов</th>
-                <th>Клиент</th>
                 <th>Кредитный счет</th>
-                <th>Файлы</th>
+                <th>Клиент</th>
+                <th>Повторов</th>
+                <th>Примечание</th>
               </tr>
             </thead>
             <tbody id="portfolioDuplicateTable">
-              <tr><td colspan="5" class="loading">После импорта появится список дублей</td></tr>
+              <tr><td colspan="4" class="loading">После импорта появится список дублей</td></tr>
             </tbody>
           </table>
         </div>
@@ -1401,10 +1405,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <div class="client-table-wrap">
           <table>
             <thead>
-              <tr><th>Тип</th><th>Значение</th><th>Кол-во</th></tr>
+              <tr><th>Тип</th><th>Клиент</th><th>Кол-во договоров</th><th>Сумма</th></tr>
             </thead>
             <tbody id="portfolioFraudTable">
-              <tr><td colspan="3" class="loading">После импорта появятся сигналы</td></tr>
+              <tr><td colspan="4" class="loading">После импорта появятся сигналы</td></tr>
             </tbody>
           </table>
         </div>
@@ -1899,7 +1903,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 </aside>
 
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
@@ -3421,13 +3425,14 @@ function renderClients(clients) {
   tbody.innerHTML = '';
 
   if (!clients || clients.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="11">Клиентов пока нет</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12">Клиентов пока нет</td></tr>';
     return;
   }
 
   registerClientRows('clientsTable', clients);
   tbody.innerHTML = clients.map((c, i) => `
       <tr class="clickable-row" onclick="openClientCardRef('clientsTable', ${i})">
+        <td class="nowrap">${i + 1}</td>
         <td class="nowrap">${safe(c.date)}</td>
         <td class="nowrap">${renderClientWorkDays(c)}</td>
         <td>${safe(c.name)}</td>
@@ -4385,7 +4390,7 @@ function renderImportQuality(result, files, rawRows) {
   if (!tbody) return;
 
   if (!duplicateGroups.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">Дубли кредитов не найдены</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Дубли кредитов не найдены</td></tr>';
     return;
   }
 
@@ -5321,6 +5326,8 @@ function calculatePortfolioEngineV14(contracts, clients, rawRows, duplicateRows)
   const overdue = contracts.filter(c => c.overdueDays > 0 || c.overdueAmount > 0);
   const physical = contracts.filter(c => c.subject === 'P');
   const legal = contracts.filter(c => c.subject === 'J');
+  const physicalClients = clients.filter(c => c.subject === 'P');
+  const legalClients = clients.filter(c => c.subject === 'J');
 
   return {
     rawRows,
@@ -5340,9 +5347,13 @@ function calculatePortfolioEngineV14(contracts, clients, rawRows, duplicateRows)
     physicalCount: physical.length,
     physicalDebt: sumFieldV14(physical, 'totalDebt'),
     physicalOverdueDebt: sumFieldV14(physical, 'overdueBalance'),
+    physicalFpdCount: physicalClients.filter(isFpdClientV14).length,
+    physicalHighRiskCount: physicalClients.filter(c => c.aiRisk >= 70).length,
     legalCount: legal.length,
     legalDebt: sumFieldV14(legal, 'totalDebt'),
     legalOverdueDebt: sumFieldV14(legal, 'overdueBalance'),
+    legalFpdCount: legalClients.filter(isFpdClientV14).length,
+    legalHighRiskCount: legalClients.filter(c => c.aiRisk >= 70).length,
     highRiskCount: contracts.filter(c => c.aiRisk >= 70).length,
     highRiskDebt: sumFieldV14(contracts.filter(c => c.aiRisk >= 70), 'totalDebt'),
     fpdClients: clients.filter(isFpdClientV14),
@@ -5387,8 +5398,8 @@ function renderPortfolioEngineV14(e, historyLines) {
 function renderImportQualityV14(e, duplicateGroups) {
   setText('importRawRows', e.rawRows);
   setText('importUniqueRows', e.totalContracts);
-  setText('importDuplicates', e.duplicateRows);
-  setText('importFilesCount', 'Файлов: ' + (document.getElementById('portfolioFile')?.files?.length || 0));
+  setText('importDuplicateRows', e.duplicateRows);
+  setText('importFileCount', document.getElementById('portfolioFile')?.files?.length || 0);
 
   const tbody = document.getElementById('portfolioDuplicateTable');
   if (!tbody) return;
@@ -5404,14 +5415,17 @@ function renderImportQualityV14(e, duplicateGroups) {
 }
 
 function renderPortfolioSegmentSummaryV14(e) {
-  const box = document.getElementById('portfolioSegmentSummary');
-  if (!box) return;
-  box.innerHTML = `
-    <div class="summary-card"><div class="small">👤 Физические лица</div><div class="big">${e.physicalCount}</div><div class="small">${formatMoney(e.physicalDebt)} • Просрочка ${formatMoney(e.physicalOverdueDebt)}</div></div>
-    <div class="summary-card"><div class="small">🏢 Юридические лица</div><div class="big">${e.legalCount}</div><div class="small">${formatMoney(e.legalDebt)} • Просрочка ${formatMoney(e.legalOverdueDebt)}</div></div>
-    <div class="summary-card"><div class="small">🔴 NPL 90+</div><div class="big">${e.npl90Count}</div><div class="small">${formatMoney(e.npl90Debt)}</div></div>
-    <div class="summary-card"><div class="small">🟠 Expected NPL 30–89</div><div class="big">${e.expectedNplCount}</div><div class="small">${formatMoney(e.expectedNplDebt)}</div></div>
-  `;
+  // ВАЖНО: раньше эта функция писала в контейнер #portfolioSegmentSummary,
+  // которого нет в разметке (мёртвый код — данные никогда не отображались).
+  // Теперь пишет напрямую в карточки панели "Разрез портфеля".
+  setText('physicalLoanCount', e.physicalCount);
+  setText('physicalLoanBalance', formatMoney(e.physicalDebt));
+  setText('legalLoanCount', e.legalCount);
+  setText('legalLoanBalance', formatMoney(e.legalDebt));
+  setText('physicalFpdCount', e.physicalFpdCount);
+  setText('physicalHighRiskCount', e.physicalHighRiskCount);
+  setText('legalFpdCount', e.legalFpdCount);
+  setText('legalHighRiskCount', e.legalHighRiskCount);
 }
 
 function renderPortfolioTableV14(rows) {
