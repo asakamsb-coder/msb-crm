@@ -628,7 +628,27 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   color:var(--brand);
   font-size:12px;
   font-weight:800;
+  opacity:0;
+  transform:translateY(-2px);
+  transition:opacity .15s ease, transform .15s ease;
 }
+.dashboard-kpi-clickable:hover .kpi-click-hint{
+  opacity:1;
+  transform:translateY(0);
+}
+.card-secondary{
+  margin-top:10px;
+  color:var(--muted);
+  font-size:13px;
+}
+.card-secondary b{
+  color:var(--text);
+  font-weight:800;
+}
+.kpi-accent-neutral{border-left:4px solid var(--line);}
+.kpi-accent-orange{border-left:4px solid var(--orange);}
+.kpi-accent-green{border-left:4px solid var(--green);}
+.kpi-accent-red{border-left:4px solid var(--red);}
 .client-selection-banner{
   display:none;
   justify-content:space-between;
@@ -882,44 +902,44 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <section class="kpi dashboard-kpi-five">
-    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('all')" title="Нажмите, чтобы увидеть всех клиентов периода">
-      <div class="card-label">Клиенты периода без отказов</div>
+    <div class="card dashboard-kpi-clickable kpi-accent-neutral" onclick="openDashboardClients('all')">
+      <div class="card-label">Клиенты периода</div>
       <div class="card-value" id="totalClients">...</div>
-      <div class="card-note">Реальные продажи: новые + переходящие</div>
+      <div class="card-secondary">Сумма заявок: <b id="totalAmount">...</b></div>
       <div class="card-trend" id="totalClientsTrend"></div>
-      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
+      <div class="kpi-click-hint">Открыть список →</div>
     </div>
 
-    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('requests')" title="Нажмите, чтобы увидеть клиентов с заявками">
-      <div class="card-label">Сумма заявок без отказов</div>
-      <div class="card-value" id="totalAmount">...</div>
-      <div class="card-note">Только действующие заявки</div>
-      <div class="card-trend" id="totalAmountTrend"></div>
-      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
-    </div>
-
-    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('issued')" title="Нажмите, чтобы увидеть выданных клиентов">
-      <div class="card-label">Сумма выдач</div>
-      <div class="card-value" id="issuedAmount">...</div>
-      <div class="card-note" id="conversion">Конверсия ...</div>
-      <div class="card-trend" id="issuedAmountTrend"></div>
-      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
-    </div>
-
-    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('potential')" title="Нажмите, чтобы увидеть клиентов в работе">
-      <div class="card-label">Потенциальный портфель</div>
-      <div class="card-value" id="potentialAmount">...</div>
-      <div class="card-note">Только клиенты в работе</div>
+    <div class="card dashboard-kpi-clickable kpi-accent-orange" onclick="openDashboardClients('potential')">
+      <div class="card-label">В работе (перспективные)</div>
+      <div class="card-value" id="potentialCount">...</div>
+      <div class="card-secondary">Сумма: <b id="potentialAmount">...</b></div>
       <div class="card-trend" id="potentialAmountTrend"></div>
-      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
+      <div class="kpi-click-hint">Открыть список →</div>
     </div>
 
-    <div class="card dashboard-kpi-clickable" onclick="openDashboardClients('rejected')" title="Нажмите, чтобы увидеть отказанных клиентов">
-      <div class="card-label">Отказы</div>
+    <div class="card dashboard-kpi-clickable kpi-accent-orange" onclick="openDashboardClients('closeToIssue')">
+      <div class="card-label">Ожидается к выдаче</div>
+      <div class="card-value" id="closeToIssueCount">...</div>
+      <div class="card-secondary">Сумма: <b id="closeToIssueAmount">...</b></div>
+      <div class="card-note">Стадии «Одобрено» и «Кредитный комитет»</div>
+      <div class="kpi-click-hint">Открыть список →</div>
+    </div>
+
+    <div class="card dashboard-kpi-clickable kpi-accent-green" onclick="openDashboardClients('issued')">
+      <div class="card-label">Выдано</div>
+      <div class="card-value" id="issuedAmount">...</div>
+      <div class="card-secondary"><b id="issuedCountInline">...</b> сделок • <span id="conversion">конверсия ...</span></div>
+      <div class="card-trend" id="issuedAmountTrend"></div>
+      <div class="kpi-click-hint">Открыть список →</div>
+    </div>
+
+    <div class="card dashboard-kpi-clickable kpi-accent-red" onclick="openDashboardClients('rejected')">
+      <div class="card-label">Отказано</div>
       <div class="card-value" id="rejectedCount">0</div>
-      <div class="card-note refusal-note" id="rejectedAmount">0</div>
+      <div class="card-secondary refusal-note">Сумма: <b id="rejectedAmount">0</b></div>
       <div class="card-trend" id="rejectedCountTrend"></div>
-      <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
+      <div class="kpi-click-hint">Открыть список →</div>
     </div>
   </section>
 
@@ -2650,6 +2670,10 @@ function calcStatsFromClients(clients) {
 
   const potential = salesClients.filter(c => potentialStatusKeys.has(normalizeText(c.status)));
 
+  // "Горячие" сделки — почти готовы к выдаче, последние 2 шага воронки.
+  const closeToIssueStatusKeys = new Set(['одобрено', 'кредитный комитет']);
+  const closeToIssue = salesClients.filter(c => closeToIssueStatusKeys.has(normalizeText(c.status)));
+
   const issuedCount = issued.length;
   const issuedAmount = issued.reduce((s,c) => s + (Number(c.amount)||0), 0);
 
@@ -2657,6 +2681,8 @@ function calcStatsFromClients(clients) {
   const rejectedAmount = rejected.reduce((s,c) => s + (Number(c.amount)||0), 0);
 
   const potentialAmount = potential.reduce((s,c) => s + (Number(c.amount)||0), 0);
+  const closeToIssueCount = closeToIssue.length;
+  const closeToIssueAmount = closeToIssue.reduce((s,c) => s + (Number(c.amount)||0), 0);
 
   const decisionBase = issuedCount + rejectedCount;
   const conversion = decisionBase
@@ -2672,6 +2698,8 @@ function calcStatsFromClients(clients) {
     rejectedAmount,
     potentialCount: potential.length,
     potentialAmount,
+    closeToIssueCount,
+    closeToIssueAmount,
     conversion,
     averageRequest: totalClients ? Math.round(totalAmount / totalClients) : 0,
     averageIssued: issuedCount ? Math.round(issuedAmount / issuedCount) : 0,
@@ -3262,12 +3290,23 @@ function renderStats(stats) {
   document.getElementById('issuedAmount').innerText = formatMoney(stats.issuedAmount);
   document.getElementById('potentialAmount').innerText = formatMoney(stats.potentialAmount);
 
+  const potentialCountBox = document.getElementById('potentialCount');
+  if (potentialCountBox) potentialCountBox.innerText = stats.potentialCount || 0;
+
+  const closeToIssueCountBox = document.getElementById('closeToIssueCount');
+  const closeToIssueAmountBox = document.getElementById('closeToIssueAmount');
+  if (closeToIssueCountBox) closeToIssueCountBox.innerText = stats.closeToIssueCount || 0;
+  if (closeToIssueAmountBox) closeToIssueAmountBox.innerText = formatMoney(stats.closeToIssueAmount);
+
+  const issuedCountInlineBox = document.getElementById('issuedCountInline');
+  if (issuedCountInlineBox) issuedCountInlineBox.innerText = stats.issuedCount || 0;
+
   const rejectedCountBox = document.getElementById('rejectedCount');
   const rejectedAmountBox = document.getElementById('rejectedAmount');
   if (rejectedCountBox) rejectedCountBox.innerText = stats.rejectedCount || 0;
-  if (rejectedAmountBox) rejectedAmountBox.innerText = 'Сумма: ' + formatMoney(stats.rejectedAmount);
+  if (rejectedAmountBox) rejectedAmountBox.innerText = formatMoney(stats.rejectedAmount);
 
-  document.getElementById('conversion').innerText = 'Конверсия ' + (stats.conversion || 0) + '%';
+  document.getElementById('conversion').innerText = 'конверсия ' + (stats.conversion || 0) + '%';
   document.getElementById('averageRequest').innerText = formatMoney(stats.averageRequest);
   document.getElementById('averageIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('issuedCount').innerText = stats.issuedCount || 0;
@@ -3449,6 +3488,8 @@ function getDashboardClientSelection(type) {
     'одобрено'
   ]);
 
+  const closeToIssueStatusKeys = new Set(['одобрено', 'кредитный комитет']);
+
   if (type === 'issued') {
     return salesSource.filter(c => normalizeText(c.status) === 'выдано');
   }
@@ -3459,6 +3500,10 @@ function getDashboardClientSelection(type) {
 
   if (type === 'potential') {
     return salesSource.filter(c => potentialStatusKeys.has(normalizeText(c.status)));
+  }
+
+  if (type === 'closeToIssue') {
+    return salesSource.filter(c => closeToIssueStatusKeys.has(normalizeText(c.status)));
   }
 
   if (type === 'requests') {
@@ -3482,6 +3527,13 @@ function getDashboardClientSelectionMeta(type, clients) {
     return {
       title: 'Потенциальный портфель',
       subtitle: clients.length + ' клиент(ов) в работе • сумма: ' + formatMoney(amount)
+    };
+  }
+
+  if (type === 'closeToIssue') {
+    return {
+      title: 'Ожидается к выдаче',
+      subtitle: clients.length + ' сделок на стадии «Одобрено»/«Кредитный комитет» • сумма: ' + formatMoney(amount)
     };
   }
 
