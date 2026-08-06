@@ -41,12 +41,35 @@ body{background:var(--bg);color:var(--text);}
 .card-label{color:var(--muted);font-size:14px;margin-bottom:12px;}
 .card-value{font-size:31px;font-weight:800;}
 .card-note{margin-top:10px;color:var(--green);font-size:13px;font-weight:600;}
+.card-trend{margin-top:6px;font-size:12px;font-weight:800;}
+.card-trend.trend-up{color:var(--green);}
+.card-trend.trend-down{color:var(--red);}
+.card-trend.trend-flat{color:var(--muted);}
+.trend-chart-legend{display:flex;gap:18px;margin-bottom:10px;font-size:13px;color:var(--muted);font-weight:700;}
+.trend-chart-legend span{display:inline-flex;align-items:center;gap:6px;}
+.trend-chart-dot{width:9px;height:9px;border-radius:999px;display:inline-block;}
+.trend-chart-empty{color:var(--muted);font-size:14px;padding:20px 0;text-align:center;}
 .layout{display:grid;grid-template-columns:2fr 1fr;gap:22px;}
 .panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:22px;}
 .panel h2{font-size:20px;margin-bottom:18px;}
 .funnel-item{display:grid;grid-template-columns:1fr 180px;gap:20px;padding:14px 0;border-bottom:1px solid var(--line);}
 .funnel-title{font-weight:700;}
 .funnel-meta{color:var(--muted);font-size:13px;margin-top:4px;}
+.funnel-conversion{
+  display:inline-block;
+  margin-left:8px;
+  padding:2px 8px;
+  border-radius:999px;
+  background:var(--brand-soft);
+  color:var(--brand);
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.funnel-conversion-base{
+  background:#EEF0F3;
+  color:var(--muted);
+}
 .bar{height:8px;background:#EEF0F3;border-radius:999px;overflow:hidden;margin-top:9px;}
 .bar span{display:block;height:100%;background:var(--brand);border-radius:999px;}
 .amount{font-weight:700;text-align:right;}
@@ -863,6 +886,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="card-label">Клиенты периода без отказов</div>
       <div class="card-value" id="totalClients">...</div>
       <div class="card-note">Реальные продажи: новые + переходящие</div>
+      <div class="card-trend" id="totalClientsTrend"></div>
       <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
     </div>
 
@@ -870,6 +894,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="card-label">Сумма заявок без отказов</div>
       <div class="card-value" id="totalAmount">...</div>
       <div class="card-note">Только действующие заявки</div>
+      <div class="card-trend" id="totalAmountTrend"></div>
       <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
     </div>
 
@@ -877,6 +902,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="card-label">Сумма выдач</div>
       <div class="card-value" id="issuedAmount">...</div>
       <div class="card-note" id="conversion">Конверсия ...</div>
+      <div class="card-trend" id="issuedAmountTrend"></div>
       <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
     </div>
 
@@ -884,6 +910,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="card-label">Потенциальный портфель</div>
       <div class="card-value" id="potentialAmount">...</div>
       <div class="card-note">Только клиенты в работе</div>
+      <div class="card-trend" id="potentialAmountTrend"></div>
       <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
     </div>
 
@@ -891,10 +918,19 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="card-label">Отказы</div>
       <div class="card-value" id="rejectedCount">0</div>
       <div class="card-note refusal-note" id="rejectedAmount">0</div>
+      <div class="card-trend" id="rejectedCountTrend"></div>
       <div class="kpi-click-hint">Нажмите, чтобы открыть список</div>
     </div>
   </section>
 
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <h2 style="margin-bottom:0;">Динамика</h2>
+      <span id="trendChartPeriodLabel" style="font-size:13px;color:var(--muted);font-weight:700;"></span>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Сумма заявок и сумма выдач по дням/месяцам внутри выбранного периода. Наведите на точку, чтобы увидеть значение.</p>
+    <div id="trendChartBox" class="loading">Загрузка графика...</div>
+  </div>
 
   <div class="layout">
     <div>
@@ -904,7 +940,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       </div>
 
       <div class="panel">
-        <h2>Последние клиенты</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+          <h2 style="margin-bottom:0;">Последние клиенты</h2>
+          <a onclick="showMsbSalesTab('clientsPage')" style="font-size:13px;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;">Показать всех →</a>
+        </div>
         <div class="client-table-wrap">
           <table>
             <thead>
@@ -1018,7 +1057,31 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
   </div>
 
-  <div class="panel"><h2>Воронка продаж</h2><div id="salesFunnelBox">Загрузка...</div></div>
+  <div class="layout">
+    <div>
+      <div class="panel"><h2>Воронка продаж</h2><div id="salesFunnelBox">Загрузка...</div></div>
+
+      <div class="panel">
+        <h2>Топ продуктов</h2>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">По сумме заявок за выбранный период, без учёта отказов.</p>
+        <div id="topProductsBox" class="loading">Загрузка...</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>Конверсия по менеджерам</h2>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Доля выданных заявок от принятых решений (выдано / (выдано + отказ)).</p>
+        <div id="salesManagerConversionBox" class="loading">Загрузка...</div>
+      </div>
+
+      <div class="panel">
+        <h2>Топ районов</h2>
+        <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">По сумме заявок за выбранный период.</p>
+        <div id="topRegionsBox" class="loading">Загрузка...</div>
+      </div>
+    </div>
+  </div>
 </section>
 <section id="portfolioPage" class="page">
 
@@ -1948,6 +2011,20 @@ function normalizeText(value) {
 
 let allClients = [];
 let allManagers = [];
+
+// Безопасный реестр клиентов для строк таблиц: вместо того чтобы встраивать
+// весь объект клиента как JSON прямо в onclick-атрибут (что ломается на
+// кавычках/амперсандах в данных и является плохой практикой), таблицы
+// сохраняют отрендеренный список сюда и передают в onclick только индекс.
+const clientRowRegistry = {};
+function registerClientRows(registryName, clients) {
+  clientRowRegistry[registryName] = clients;
+}
+function openClientCardRef(registryName, index) {
+  const list = clientRowRegistry[registryName];
+  const client = list && list[index];
+  if (client) openClientCard(client);
+}
 let allStats = null;
 let allFunnel = null;
 let periodClients = [];
@@ -2188,11 +2265,16 @@ function applyPeriod() {
   const managers = calcManagersFromClients(periodClients);
 
   renderStats(stats);
+  renderTrendBadges(stats);
+  renderTrendChart('trendChartBox', periodClients);
   renderClients(periodClients);
   renderFunnel(funnel, 'funnelBox');
   renderFunnel(funnel, 'salesFunnelBox');
   renderManagers(managers);
   renderManagersFull(managers);
+  renderTopProducts(periodClients);
+  renderTopRegionsForSales(periodClients);
+  renderSalesManagerConversion(managers);
   renderLatestClients(periodClients);
   renderAI(stats);
   buildFilters();
@@ -2204,6 +2286,184 @@ function applyPeriod() {
   const periodText = month && month !== 'all' ? month : 'Все данные';
   const subtitle = document.querySelector('#dashboard .header p');
   if (subtitle) subtitle.innerText = 'Период анализа: ' + periodText;
+}
+
+// Возвращает клиентов "предыдущего периода" — того же типа, что и текущий
+// выбранный период (предыдущий месяц или предыдущий диапазон дат такой же
+// длины), чтобы можно было посчитать % изменения показателей.
+function getPreviousPeriodComparison() {
+  const month = document.getElementById('periodMonth') ? document.getElementById('periodMonth').value : 'all';
+  const from = document.getElementById('dateFrom') ? document.getElementById('dateFrom').value : '';
+  const to = document.getElementById('dateTo') ? document.getElementById('dateTo').value : '';
+
+  const base = getVisibleClients();
+  let prevClients = null;
+  let label = '';
+
+  if (from && to) {
+    const fromDate = new Date(from + 'T00:00:00');
+    const toDate = new Date(to + 'T23:59:59');
+    const rangeMs = toDate - fromDate;
+    if (rangeMs > 0) {
+      const prevTo = new Date(fromDate.getTime() - 24 * 60 * 60 * 1000);
+      const prevFrom = new Date(prevTo.getTime() - rangeMs);
+      prevClients = base.filter(c => {
+        const d = getRelevantClientDate(c, 'all');
+        return d >= prevFrom && d <= prevTo;
+      });
+      label = 'пред. период (' + prevFrom.toLocaleDateString('ru-RU') + ' – ' + prevTo.toLocaleDateString('ru-RU') + ')';
+    }
+  } else if (month && month !== 'all') {
+    const parts = month.split('-').map(Number);
+    let py = parts[0], pm = parts[1] - 1;
+    if (pm === 0) { pm = 12; py -= 1; }
+    const prevMonth = py + '-' + String(pm).padStart(2, '0');
+    prevClients = base.map(c => getClientSnapshotForMonth(c, prevMonth)).filter(Boolean);
+    label = prevMonth;
+  }
+
+  if (!prevClients) return null;
+  return { clients: prevClients, label, stats: calcStatsFromClients(prevClients) };
+}
+
+// invert=true значит "меньше — лучше" (используется для карточки "Отказы").
+function renderTrendBadge(elementId, current, previous, invert) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  if (previous === null || previous === undefined) {
+    el.innerHTML = '';
+    el.className = 'card-trend';
+    return;
+  }
+
+  if (!previous) {
+    el.innerHTML = current > 0 ? 'новое по сравнению с пред. периодом' : 'без изменений';
+    el.className = 'card-trend trend-flat';
+    return;
+  }
+
+  const diffPct = Math.round(((current - previous) / previous) * 100);
+  const isUp = diffPct > 0;
+  const isFlat = diffPct === 0;
+  const goodDirection = invert ? !isUp : isUp;
+
+  const arrow = isFlat ? '→' : (isUp ? '↑' : '↓');
+  const cls = isFlat ? 'trend-flat' : (goodDirection ? 'trend-up' : 'trend-down');
+
+  el.className = 'card-trend ' + cls;
+  el.innerHTML = `${arrow} ${Math.abs(diffPct)}% к пред. периоду`;
+}
+
+function renderTrendBadges(stats) {
+  const prev = getPreviousPeriodComparison();
+  const periodLabelEl = document.getElementById('trendChartPeriodLabel');
+
+  if (!prev) {
+    ['totalClientsTrend','totalAmountTrend','issuedAmountTrend','potentialAmountTrend','rejectedCountTrend'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.innerHTML = ''; el.className = 'card-trend'; }
+    });
+    if (periodLabelEl) periodLabelEl.innerText = '';
+    return;
+  }
+
+  renderTrendBadge('totalClientsTrend', stats.totalClients, prev.stats.totalClients, false);
+  renderTrendBadge('totalAmountTrend', stats.totalAmount, prev.stats.totalAmount, false);
+  renderTrendBadge('issuedAmountTrend', stats.issuedAmount, prev.stats.issuedAmount, false);
+  renderTrendBadge('potentialAmountTrend', stats.potentialAmount, prev.stats.potentialAmount, false);
+  renderTrendBadge('rejectedCountTrend', stats.rejectedCount, prev.stats.rejectedCount, true);
+
+  if (periodLabelEl) periodLabelEl.innerText = 'в сравнении с: ' + prev.label;
+}
+
+// Группирует клиентов периода по дням (или по месяцам, если период очень
+// длинный) для построения графика динамики.
+function buildTrendSeries(clients) {
+  const buckets = {};
+
+  clients.forEach(c => {
+    const d = parseClientDate(c.date || c.createdAt);
+    if (!d || isNaN(d.getTime()) || d.getFullYear() === 1900) return;
+
+    const dayKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    if (!buckets[dayKey]) buckets[dayKey] = { requestAmount: 0, issuedAmount: 0, count: 0 };
+
+    buckets[dayKey].count++;
+    if (normalizeText(c.status) !== 'отказ') buckets[dayKey].requestAmount += Number(c.amount) || 0;
+    if (normalizeText(c.status) === 'выдано') buckets[dayKey].issuedAmount += Number(c.amount) || 0;
+  });
+
+  let days = Object.keys(buckets).sort();
+
+  // Если период длинный (много уникальных дней), группируем по месяцам,
+  // иначе график становится нечитаемым.
+  if (days.length > 45) {
+    const monthBuckets = {};
+    days.forEach(day => {
+      const monthKey = day.slice(0, 7);
+      if (!monthBuckets[monthKey]) monthBuckets[monthKey] = { requestAmount: 0, issuedAmount: 0, count: 0 };
+      monthBuckets[monthKey].requestAmount += buckets[day].requestAmount;
+      monthBuckets[monthKey].issuedAmount += buckets[day].issuedAmount;
+      monthBuckets[monthKey].count += buckets[day].count;
+    });
+    const months = Object.keys(monthBuckets).sort();
+    return { labels: months, buckets: months.map(m => monthBuckets[m]) };
+  }
+
+  return { labels: days, buckets: days.map(d => buckets[d]) };
+}
+
+// Простой линейный график на чистом SVG (без внешних библиотек).
+function renderTrendChart(containerId, clients) {
+  const box = document.getElementById(containerId);
+  if (!box) return;
+
+  const { labels, buckets } = buildTrendSeries(clients);
+
+  if (!labels.length) {
+    box.innerHTML = '<div class="trend-chart-empty">Недостаточно данных с датами для построения графика</div>';
+    return;
+  }
+
+  const width = 900, height = 240, padding = { top: 16, right: 16, bottom: 28, left: 16 };
+  const innerW = width - padding.left - padding.right;
+  const innerH = height - padding.top - padding.bottom;
+
+  const requestValues = buckets.map(b => b.requestAmount);
+  const issuedValues = buckets.map(b => b.issuedAmount);
+  const maxValue = Math.max(1, ...requestValues, ...issuedValues);
+
+  const stepX = labels.length > 1 ? innerW / (labels.length - 1) : 0;
+  const pointX = i => padding.left + stepX * i;
+  const pointY = v => padding.top + innerH - (v / maxValue) * innerH;
+
+  const toPath = values => values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${pointX(i).toFixed(1)} ${pointY(v).toFixed(1)}`).join(' ');
+
+  const labelEvery = Math.max(1, Math.ceil(labels.length / 8));
+  const isMonthly = labels[0] && labels[0].length === 7;
+
+  const axisLabels = labels.map((l, i) => {
+    if (i % labelEvery !== 0 && i !== labels.length - 1) return '';
+    const shortLabel = isMonthly ? l : l.slice(5); // MM-DD
+    return `<text x="${pointX(i).toFixed(1)}" y="${height - 8}" font-size="11" fill="var(--muted)" text-anchor="middle">${shortLabel}</text>`;
+  }).join('');
+
+  const requestDots = requestValues.map((v, i) => `<circle cx="${pointX(i).toFixed(1)}" cy="${pointY(v).toFixed(1)}" r="3.5" fill="var(--brand)"><title>${labels[i]}: заявки ${formatMoney(v)}</title></circle>`).join('');
+  const issuedDots = issuedValues.map((v, i) => `<circle cx="${pointX(i).toFixed(1)}" cy="${pointY(v).toFixed(1)}" r="3.5" fill="var(--blue)"><title>${labels[i]}: выдачи ${formatMoney(v)}</title></circle>`).join('');
+
+  box.innerHTML = `
+    <div class="trend-chart-legend">
+      <span><span class="trend-chart-dot" style="background:var(--brand)"></span>Сумма заявок</span>
+      <span><span class="trend-chart-dot" style="background:var(--blue)"></span>Сумма выдач</span>
+    </div>
+    <svg viewBox="0 0 ${width} ${height}" style="width:100%;height:240px;">
+      <path d="${toPath(requestValues)}" fill="none" stroke="var(--brand)" stroke-width="2.5" />
+      <path d="${toPath(issuedValues)}" fill="none" stroke="var(--blue)" stroke-width="2.5" />
+      ${requestDots}
+      ${issuedDots}
+      ${axisLabels}
+    </svg>`;
 }
 
 function resetPeriod() {
@@ -2501,6 +2761,79 @@ function calcManagersFromClients(clients) {
 
 
 
+function calcProductsFromClients(clients) {
+  const map = {};
+  clients.forEach(c => {
+    if (normalizeText(c.status) === 'отказ') return;
+    const product = c.product || 'Не указан';
+    if (!map[product]) map[product] = { product, count: 0, totalAmount: 0, issuedAmount: 0 };
+    map[product].count++;
+    map[product].totalAmount += Number(c.amount) || 0;
+    if (normalizeText(c.status) === 'выдано') map[product].issuedAmount += Number(c.amount) || 0;
+  });
+  return Object.values(map).sort((a, b) => b.totalAmount - a.totalAmount);
+}
+
+function renderTopProducts(clients) {
+  const box = document.getElementById('topProductsBox');
+  if (!box) return;
+
+  const products = calcProductsFromClients(clients);
+  if (!products.length) {
+    box.innerHTML = 'Данных нет';
+    return;
+  }
+
+  box.innerHTML = products.slice(0, 8).map((p, i) => `
+      <div class="region-rank-row">
+        <div class="region-rank-top">
+          <div>${i + 1}. ${safe(p.product)}</div>
+          <div>${formatMoney(p.totalAmount)}</div>
+        </div>
+        <div class="region-rank-sub">Клиентов: ${p.count} • Выдано: ${formatMoney(p.issuedAmount)}</div>
+      </div>`).join('');
+}
+
+function renderTopRegionsForSales(clients) {
+  const box = document.getElementById('topRegionsBox');
+  if (!box) return;
+
+  const regions = calcRegionsFromClients(clients);
+  if (!regions.length) {
+    box.innerHTML = 'Данных нет';
+    return;
+  }
+
+  box.innerHTML = regions.slice(0, 8).map((r, i) => `
+      <div class="region-rank-row">
+        <div class="region-rank-top">
+          <div>${i + 1}. ${safe(r.region)}</div>
+          <div>${formatMoney(r.totalAmount)}</div>
+        </div>
+        <div class="region-rank-sub">Клиентов: ${r.clients} • Выдано: ${formatMoney(r.issuedAmount)} • Конверсия: ${r.conversion}%</div>
+      </div>`).join('');
+}
+
+function renderSalesManagerConversion(managers) {
+  const box = document.getElementById('salesManagerConversionBox');
+  if (!box) return;
+
+  if (!managers.length) {
+    box.innerHTML = 'Данных нет';
+    return;
+  }
+
+  const sorted = managers.slice().sort((a, b) => b.conversion - a.conversion);
+  box.innerHTML = sorted.map((m, i) => `
+      <div class="rank-row">
+        <div>
+          <div class="rank-name">${i + 1}. ${safe(m.manager)}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px;">Выдано: ${m.issuedCount} • Отказано: ${m.rejectedCount} • Сумма выдач: ${formatMoney(m.issuedAmount)}</div>
+        </div>
+        <div class="rank-score">${m.conversion}%</div>
+      </div>`).join('');
+}
+
 function getSlaLimit(status) {
   const limits = {
     'Новый клиент': 3,
@@ -2658,12 +2991,13 @@ function renderSlaTable(stuck) {
     return;
   }
 
-  stuck.forEach(x => {
+  registerClientRows('slaTable', stuck.map(x => x.client));
+  tbody.innerHTML = stuck.map((x, i) => {
     const c = x.client;
     const riskClass = riskBadgeClass(x.risk.level);
 
-    tbody.innerHTML += `
-      <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+    return `
+      <tr class="clickable-row" onclick="openClientCardRef('slaTable', ${i})">
         <td>${safe(c.name)}</td>
         <td>${safe(c.inn)}</td>
         <td>${safe(c.manager)}</td>
@@ -2676,7 +3010,7 @@ function renderSlaTable(stuck) {
         <td>${formatMoney(c.amount)}</td>
         <td><span class="risk-badge ${riskClass}">${x.risk.text}</span></td>
       </tr>`;
-  });
+  }).join('');
 }
 
 function renderSlaManagers(enriched) {
@@ -2946,18 +3280,23 @@ function renderStats(stats) {
 
 function renderLatestClients(clients) {
   const tbody = document.getElementById('latestClientsTable');
-  tbody.innerHTML = '';
-  clients.slice(0, 5).forEach(c => {
-    tbody.innerHTML += `
-      <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+  const latest = clients.slice(0, 5);
+  registerClientRows('latest', latest);
+
+  if (!latest.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">Клиентов пока нет</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = latest.map((c, i) => `
+      <tr class="clickable-row" onclick="openClientCardRef('latest', ${i})">
         <td>${safe(c.date)}</td>
         <td>${safe(c.name)}</td>
         <td>${safe(c.product)}</td>
         <td>${formatMoney(c.amount)}</td>
         <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
         <td>${safe(c.manager)}</td>
-      </tr>`;
-  });
+      </tr>`).join('');
 }
 
 
@@ -3053,9 +3392,9 @@ function renderClients(clients) {
     return;
   }
 
-  clients.forEach(c => {
-    tbody.innerHTML += `
-      <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+  registerClientRows('clientsTable', clients);
+  tbody.innerHTML = clients.map((c, i) => `
+      <tr class="clickable-row" onclick="openClientCardRef('clientsTable', ${i})">
         <td class="nowrap">${safe(c.date)}</td>
         <td class="nowrap">${renderClientWorkDays(c)}</td>
         <td>${safe(c.name)}</td>
@@ -3067,8 +3406,7 @@ function renderClients(clients) {
         <td class="nowrap">${formatMoney(c.amount)}</td>
         <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
         <td>${safe(c.manager)}</td>
-      </tr>`;
-  });
+      </tr>`).join('');
 }
 
 function buildFilters() {
@@ -3274,18 +3612,41 @@ function renderFunnel(funnel, boxId) {
   const box = document.getElementById(boxId);
   box.innerHTML = '';
 
-  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','Выдано','Отказ','Отложено'];
+  // Основная последовательная воронка (проходит клиент по этим этапам).
+  // "Отказ" и "Отложено" — не шаги воронки, а выходы из неё, поэтому
+  // считаем % конверсии только по основной цепочке.
+  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','Выдано'];
+  const sideStatuses = ['Отказ','Отложено'];
+  const statuses = pipelineStatuses.concat(sideStatuses);
+
   let max = 1;
   statuses.forEach(s => { if (funnel[s] && funnel[s].count > max) max = funnel[s].count; });
+
+  const firstCount = (funnel[pipelineStatuses[0]] && funnel[pipelineStatuses[0]].count) || 0;
+  let prevCount = null;
 
   statuses.forEach(status => {
     const item = funnel[status] || {count:0, amount:0};
     const width = Math.max(3, Math.round((item.count / max) * 100));
+    const isPipelineStep = pipelineStatuses.includes(status);
+
+    let conversionBadge = '';
+    if (isPipelineStep) {
+      if (status === pipelineStatuses[0]) {
+        conversionBadge = '<span class="funnel-conversion funnel-conversion-base">старт воронки</span>';
+      } else {
+        const stepPct = prevCount ? Math.round((item.count / prevCount) * 100) : 0;
+        const totalPct = firstCount ? Math.round((item.count / firstCount) * 100) : 0;
+        conversionBadge = `<span class="funnel-conversion">${stepPct}% от пред. этапа • ${totalPct}% от старта</span>`;
+      }
+      prevCount = item.count;
+    }
+
     box.innerHTML += `
       <div class="funnel-item">
         <div>
           <div class="funnel-title">${status}</div>
-          <div class="funnel-meta">${item.count} клиентов</div>
+          <div class="funnel-meta">${item.count} клиентов ${conversionBadge}</div>
           <div class="bar"><span style="width:${width}%"></span></div>
         </div>
         <div class="amount">${formatMoney(item.amount)}</div>
@@ -3439,15 +3800,13 @@ function renderManagerClientsTable(clients) {
     return;
   }
 
-  clients
-    .slice()
-    .sort((a,b) => parseClientDate(b.date) - parseClientDate(a.date))
-    .forEach(c => {
-      const workDays = getClientWorkDaysInfo(c);
-
-      tbody.innerHTML += `
+  const sorted = clients.slice().sort((a,b) => parseClientDate(b.date) - parseClientDate(a.date));
+  registerClientRows('managerClientsTable', sorted);
+  tbody.innerHTML = sorted.map((c, i) => {
+    const workDays = getClientWorkDaysInfo(c);
+    return `
         <tr class="manager-client-row"
-            onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+            onclick="openClientCardRef('managerClientsTable', ${i})">
           <td>
             <b>${safe(c.name)}</b>
             <div style="font-size:12px;color:var(--muted);margin-top:3px;">
@@ -3459,7 +3818,7 @@ function renderManagerClientsTable(clients) {
           <td class="nowrap">${safe(workDays.label)}</td>
           <td class="nowrap">${safe(c.date)}</td>
         </tr>`;
-    });
+  }).join('');
 }
 
 function calculateScore(m) {
@@ -3636,22 +3995,21 @@ function renderMyCabinet() {
   document.getElementById('myPotentialAmount').innerText = formatMoney(potential);
 
   const tbody = document.getElementById('myClientsTable');
-  tbody.innerHTML = '';
 
   if (!clients.length) {
     tbody.innerHTML = '<tr><td colspan="6">Клиентов пока нет</td></tr>';
   } else {
-    clients.slice(0, 20).forEach(c => {
-      tbody.innerHTML += `
-        <tr class="clickable-row" onclick='openClientCard(${JSON.stringify(c).replace(/'/g, "&apos;")})'>
+    const shown = clients.slice(0, 20);
+    registerClientRows('myClientsTable', shown);
+    tbody.innerHTML = shown.map((c, i) => `
+        <tr class="clickable-row" onclick="openClientCardRef('myClientsTable', ${i})">
           <td>${safe(c.date)}</td>
           <td>${safe(c.name)}</td>
           <td>${safe(c.inn)}</td>
           <td>${safe(c.product)}</td>
           <td>${formatMoney(c.amount)}</td>
           <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
-        </tr>`;
-    });
+        </tr>`).join('');
   }
 
   let insight = '';
