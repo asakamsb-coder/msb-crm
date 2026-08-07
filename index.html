@@ -1110,7 +1110,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <h1>Клиенты PRO</h1>
       <p>Поиск, фильтрация и экспорт клиентской базы</p>
     </div>
-    <div class="user-box" id="clientsCountBox">Клиентов: ...</div>
+    <div class="top-actions">
+      <button class="btn" onclick="openClientForm('create')">+ Добавить клиента</button>
+      <div class="user-box" id="clientsCountBox">Клиентов: ...</div>
+    </div>
   </div>
 
   <div class="msb-sales-tabs">
@@ -2050,6 +2053,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <a class="action-btn primary" id="callBtn" href="#">Позвонить</a>
       <a class="action-btn" id="telegramBtn" href="#" target="_blank">Telegram</a>
     </div>
+    <button class="btn" style="width:100%;margin-bottom:18px;" onclick="openClientForm('edit')">✏️ Редактировать клиента</button>
 
     <div class="panel ai-box" style="margin-bottom:18px;">
       <h2 style="font-size:18px;margin-bottom:10px;">Краткий анализ</h2>
@@ -2065,6 +2069,64 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="info-label" style="margin-bottom:8px;">Комментарий</div>
       <div class="comment-box" id="drawerComment">-</div>
     </div>
+  </div>
+</aside>
+
+<div class="drawer-overlay" id="clientFormOverlay" onclick="closeClientForm()"></div>
+<aside class="client-drawer" id="clientFormDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="clientFormTitle">Добавить клиента</div>
+      <div class="drawer-subtitle" id="clientFormSubtitle">Заполните данные клиента</div>
+    </div>
+    <button class="close-btn" onclick="closeClientForm()">×</button>
+  </div>
+
+  <div class="drawer-body">
+    <div id="clientFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ФИО клиента *</label>
+    <input id="cfName" class="input" style="margin-bottom:14px;" placeholder="Иванов Иван">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Телефон *</label>
+    <input id="cfPhone" class="input" style="margin-bottom:14px;" placeholder="998971234567" maxlength="12">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ИНН *</label>
+    <input id="cfInn" class="input" style="margin-bottom:14px;" placeholder="ИНН или ПИНФЛ">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Название бизнеса</label>
+    <input id="cfBusiness" class="input" style="margin-bottom:14px;">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Отрасль</label>
+    <select id="cfIndustry" class="select" style="margin-bottom:14px;"></select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Сумма кредита</label>
+    <input id="cfAmount" class="input" type="number" min="0" style="margin-bottom:14px;">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Цель кредита</label>
+    <input id="cfPurpose" class="input" style="margin-bottom:14px;">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Статус</label>
+    <select id="cfStatus" class="select" style="margin-bottom:14px;"></select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Регион / район</label>
+    <select id="cfRegion" class="select" style="margin-bottom:14px;"></select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Продукт</label>
+    <select id="cfProduct" class="select" style="margin-bottom:14px;"></select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Следующий контакт (ДД.ММ.ГГГГ)</label>
+    <input id="cfNextContact" class="input" style="margin-bottom:14px;" placeholder="25.08.2026">
+
+    <div id="cfManagerWrap" style="display:none;">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Менеджер</label>
+      <select id="cfManager" class="select" style="margin-bottom:14px;"></select>
+    </div>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Комментарий</label>
+    <textarea id="cfComment" class="input" style="margin-bottom:18px;min-height:90px;resize:vertical;"></textarea>
+
+    <button class="btn" style="width:100%;" id="clientFormSubmitBtn" onclick="submitClientForm()">Сохранить</button>
   </div>
 </aside>
 
@@ -2292,20 +2354,25 @@ let dashboardClientSelection = 'all';
 let portfolioLoans = [];
 let portfolioClients = [];
 let portfolioSegment = 'all';
+let webFormLists = null;
+let currentDrawerClient = null;
+let clientFormMode = 'create';
 
 async function loadCRM() {
   try {
-    const [stats, clients, funnel, managers] = await Promise.all([
+    const [stats, clients, funnel, managers, formLists] = await Promise.all([
       fetchJSON('stats'),
       fetchJSON('clients'),
       fetchJSON('funnel'),
-      fetchJSON('managers')
+      fetchJSON('managers'),
+      fetchJSON('formLists')
     ]);
 
     allStats = stats;
     allClients = clients || [];
     allFunnel = funnel;
     allManagers = managers || [];
+    webFormLists = formLists || null;
 
     buildPeriodOptions();
     applyPeriod();
@@ -4460,6 +4527,7 @@ function renderAI(stats) {
 
 
 function openClientCard(c) {
+  currentDrawerClient = c;
   document.getElementById('drawerClientName').innerText = safe(c.name);
   document.getElementById('drawerClientInn').innerText = 'ИНН: ' + safe(c.inn);
   document.getElementById('drawerPhone').innerText = safe(c.phone);
@@ -4494,6 +4562,189 @@ function openClientCard(c) {
 function closeClientCard() {
   document.getElementById('drawerOverlay').classList.remove('active');
   document.getElementById('clientDrawer').classList.remove('active');
+}
+
+// ============================================================
+// Форма добавления / редактирования клиента прямо из веб-CRM
+// (createClient / updateClient webAction в Apps Script).
+// ============================================================
+
+function fillSelectOptions(id, values, includeEmpty) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  select.innerHTML = includeEmpty ? '<option value="">—</option>' : '';
+  (values || []).forEach(v => {
+    select.innerHTML += `<option value="${v}">${v}</option>`;
+  });
+}
+
+function populateClientFormLists() {
+  if (!webFormLists) return;
+  fillSelectOptions('cfIndustry', webFormLists.industries, true);
+  fillSelectOptions('cfStatus', webFormLists.statuses, false);
+  fillSelectOptions('cfRegion', webFormLists.regions, true);
+  fillSelectOptions('cfProduct', webFormLists.products, true);
+  fillSelectOptions('cfManager', webFormLists.managers, false);
+}
+
+function openClientForm(mode) {
+  clientFormMode = mode;
+
+  if (!webFormLists) {
+    alert('Списки для формы ещё загружаются, подождите пару секунд и попробуйте снова.');
+    return;
+  }
+
+  populateClientFormLists();
+
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const managerWrap = document.getElementById('cfManagerWrap');
+  if (managerWrap) managerWrap.style.display = isAdmin ? 'block' : 'none';
+
+  const errorBox = document.getElementById('clientFormError');
+  if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
+
+  const title = document.getElementById('clientFormTitle');
+  const subtitle = document.getElementById('clientFormSubtitle');
+  const submitBtn = document.getElementById('clientFormSubmitBtn');
+
+  if (mode === 'edit' && currentDrawerClient) {
+    const c = currentDrawerClient;
+    if (title) title.innerText = 'Редактировать клиента';
+    if (subtitle) subtitle.innerText = safe(c.name) + ' • ИНН: ' + safe(c.inn);
+    if (submitBtn) submitBtn.innerText = 'Сохранить изменения';
+
+    document.getElementById('cfName').value = c.name || '';
+    document.getElementById('cfPhone').value = c.phone || '';
+    document.getElementById('cfInn').value = c.inn || '';
+    // ИНН и ФИО при редактировании не меняем через эту форму, чтобы случайно
+    // не создать путаницу с поиском дублей — можно раскомментировать при
+    // необходимости.
+    document.getElementById('cfInn').disabled = true;
+    document.getElementById('cfBusiness').value = c.business || c.industry || '';
+    document.getElementById('cfIndustry').value = '';
+    document.getElementById('cfAmount').value = c.amount || '';
+    document.getElementById('cfPurpose').value = c.purpose || '';
+    document.getElementById('cfStatus').value = c.status || '';
+    document.getElementById('cfRegion').value = c.region || '';
+    document.getElementById('cfProduct').value = c.product || '';
+    document.getElementById('cfNextContact').value = c.nextContact || '';
+    document.getElementById('cfComment').value = c.comment || '';
+    if (isAdmin) document.getElementById('cfManager').value = c.manager || '';
+  } else {
+    clientFormMode = 'create';
+    if (title) title.innerText = 'Добавить клиента';
+    if (subtitle) subtitle.innerText = 'Заполните данные клиента';
+    if (submitBtn) submitBtn.innerText = 'Сохранить';
+
+    ['cfName','cfPhone','cfInn','cfBusiness','cfAmount','cfPurpose','cfNextContact','cfComment'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('cfInn').disabled = false;
+    document.getElementById('cfIndustry').value = '';
+    document.getElementById('cfStatus').value = webFormLists.statuses[0] || 'Новый клиент';
+    document.getElementById('cfRegion').value = '';
+    document.getElementById('cfProduct').value = '';
+    if (isAdmin) document.getElementById('cfManager').value = currentUser.fullName || '';
+  }
+
+  document.getElementById('clientFormOverlay').classList.add('active');
+  document.getElementById('clientFormDrawer').classList.add('active');
+}
+
+function closeClientForm() {
+  document.getElementById('clientFormOverlay').classList.remove('active');
+  document.getElementById('clientFormDrawer').classList.remove('active');
+}
+
+async function postWebAction(body) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  return await response.json();
+}
+
+async function submitClientForm() {
+  const errorBox = document.getElementById('clientFormError');
+  const submitBtn = document.getElementById('clientFormSubmitBtn');
+  const showError = (msg) => {
+    if (errorBox) { errorBox.innerText = msg; errorBox.style.display = 'block'; }
+  };
+
+  if (errorBox) errorBox.style.display = 'none';
+
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const sessionId = localStorage.getItem('msbSessionId');
+
+  const payloadBase = {
+    name: document.getElementById('cfName').value.trim(),
+    phone: document.getElementById('cfPhone').value.trim(),
+    business: document.getElementById('cfBusiness').value.trim(),
+    industry: document.getElementById('cfIndustry').value,
+    amount: document.getElementById('cfAmount').value.trim(),
+    purpose: document.getElementById('cfPurpose').value.trim(),
+    status: document.getElementById('cfStatus').value,
+    region: document.getElementById('cfRegion').value,
+    product: document.getElementById('cfProduct').value,
+    nextContact: document.getElementById('cfNextContact').value.trim(),
+    comment: document.getElementById('cfComment').value.trim()
+  };
+
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Сохранение...'; }
+
+  try {
+    let result;
+
+    if (clientFormMode === 'edit') {
+      const inn = document.getElementById('cfInn').value.trim();
+      const fields = {
+        business: payloadBase.business,
+        amount: payloadBase.amount,
+        purpose: payloadBase.purpose,
+        status: payloadBase.status,
+        city: payloadBase.region,
+        product: payloadBase.product,
+        contact: payloadBase.nextContact,
+        comment: payloadBase.comment,
+        phone: payloadBase.phone
+      };
+
+      result = await postWebAction({
+        webAction: 'updateClient',
+        sessionId: sessionId,
+        inn: inn,
+        fields: fields
+      });
+    } else {
+      const body = Object.assign({
+        webAction: 'createClient',
+        sessionId: sessionId,
+        inn: document.getElementById('cfInn').value.trim()
+      }, payloadBase);
+
+      if (isAdmin) body.manager = document.getElementById('cfManager').value;
+
+      result = await postWebAction(body);
+    }
+
+    if (result.success) {
+      closeClientForm();
+      closeClientCard();
+      await loadCRM();
+    } else {
+      showError(result.message || 'Не удалось сохранить клиента');
+    }
+  } catch (error) {
+    showError('Не удалось связаться с сервером. Проверьте интернет-соединение.');
+    console.error(error);
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerText = clientFormMode === 'edit' ? 'Сохранить изменения' : 'Сохранить';
+    }
+  }
 }
 
 function normalizePhone(phone) {
