@@ -166,11 +166,30 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .manager-trend.trend-up{color:var(--green);}
 .manager-trend.trend-down{color:var(--red);}
 .manager-trend.trend-flat{color:var(--muted);}
-.manager-plan{margin-top:8px;max-width:320px;}
+.manager-plan{margin-top:10px;max-width:420px;}
 .manager-plan-bar{height:7px;border-radius:999px;background:#EEF0F3;overflow:hidden;}
 .manager-plan-bar span{display:block;height:100%;background:var(--brand);border-radius:999px;}
 .manager-plan-text{margin-top:5px;font-size:12px;color:var(--muted);font-weight:600;}
 .manager-plan-text a{color:var(--brand);font-weight:800;cursor:pointer;text-decoration:none;}
+.manager-plan-toggle-btn{
+  margin-top:8px;
+  background:#fff;
+  border:1px solid var(--line);
+  color:var(--text);
+  font-size:12px;
+  font-weight:700;
+  padding:7px 12px;
+  border-radius:999px;
+  cursor:pointer;
+}
+.manager-plan-toggle-btn:hover{border-color:var(--brand);color:var(--brand);}
+.manager-plan-editor{
+  margin-top:4px;
+  padding:12px;
+  background:var(--bg);
+  border:1px solid var(--line);
+  border-radius:var(--radius-sm);
+}
 .ai-box{background:#FFF7F8;border:1px solid #FFD9DF;}
 .ai-box p{color:#4B5563;line-height:1.6;font-size:14px;}
 .footer{margin-top:20px;color:var(--muted);font-size:13px;}
@@ -1700,6 +1719,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       Нажмите на менеджера, чтобы увидеть клиентов, которые формируют рейтинг, действующих клиентов и отказы отдельно.
     </p>
 
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <label style="display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:5px;">Период</label>
+        <select id="managerPeriodMonth" class="select" style="min-width:160px;" onchange="applyManagerPeriod()"></select>
+      </div>
+      <div>
+        <label style="display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:5px;">Сравнить с</label>
+        <select id="managerComparePeriod" class="select" style="min-width:200px;" onchange="applyManagerPeriod()"></select>
+      </div>
+    </div>
+
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
       <input id="managerSearchInput" class="input" placeholder="Поиск менеджера по имени..." style="max-width:280px;flex:1 1 200px;" oninput="applyManagerFilters()">
       <select id="managerSortSelect" class="select" style="max-width:220px;flex:1 1 180px;" onchange="applyManagerFilters()">
@@ -2388,6 +2418,60 @@ function exportMsbSalesExcel() {
 }
 
 
+// Период для блока "Менеджеры" независим от периода на Dashboard — строится
+// от ВСЕХ клиентов (allClients), чтобы список месяцев не зависел от роли.
+function buildManagerPeriodOptions() {
+  const select = document.getElementById('managerPeriodMonth');
+  const compareSelect = document.getElementById('managerComparePeriod');
+  if (!select) return;
+
+  const createdMonths = allClients.map(c => getClientMonth(c)).filter(Boolean).sort();
+  const statusMonths = allClients.map(c => getClientStatusMonth(c)).filter(Boolean).sort();
+  const allKnownMonths = createdMonths.concat(statusMonths).sort();
+  const firstMonth = allKnownMonths.length ? allKnownMonths[0] : getMonthKeyFromDate(new Date());
+  const currentMonth = getMonthKeyFromDate(new Date());
+  const months = buildMonthRange(firstMonth, currentMonth).reverse();
+
+  const prevValue = select.value;
+  select.innerHTML = '<option value="all">Все данные</option>';
+  months.forEach(month => { select.innerHTML += `<option value="${month}">${month}</option>`; });
+  select.value = months.includes(prevValue) ? prevValue : (months.length ? currentMonth : 'all');
+
+  if (compareSelect) {
+    const prevCompareValue = compareSelect.value;
+    compareSelect.innerHTML = '<option value="auto">Авто: предыдущий месяц</option><option value="none">Не сравнивать</option>';
+    months.forEach(month => { compareSelect.innerHTML += `<option value="${month}">${month}</option>`; });
+    compareSelect.value = (prevCompareValue && (prevCompareValue === 'auto' || prevCompareValue === 'none' || months.includes(prevCompareValue)))
+      ? prevCompareValue
+      : 'auto';
+  }
+}
+
+function applyManagerPeriod() {
+  const month = document.getElementById('managerPeriodMonth')?.value || 'all';
+  const teamClientsForPeriod = filterClientsByPeriod(allClients, month, '', '');
+  const managers = calcManagersFromClients(teamClientsForPeriod);
+  renderManagersFull(managers, teamClientsForPeriod, month);
+}
+
+// Возвращает клиентов периода сравнения по выбору в managerComparePeriod:
+// 'auto' — автоматически предыдущий месяц, 'none' — без сравнения,
+// либо конкретный месяц, выбранный вручную.
+function getManagerComparisonClients(month, compareValue, baseClients) {
+  if (!compareValue || compareValue === 'none' || !month || month === 'all') return null;
+
+  let compareMonth = compareValue;
+  if (compareValue === 'auto') {
+    const parts = month.split('-').map(Number);
+    let py = parts[0], pm = parts[1] - 1;
+    if (pm === 0) { pm = 12; py -= 1; }
+    compareMonth = py + '-' + String(pm).padStart(2, '0');
+  }
+
+  const clients = baseClients.map(c => getClientSnapshotForMonth(c, compareMonth)).filter(Boolean);
+  return { clients, label: compareMonth };
+}
+
 function buildPeriodOptions() {
   const select = document.getElementById('periodMonth');
   if (!select) return;
@@ -2472,7 +2556,8 @@ function applyPeriod() {
   renderFunnel(funnel, 'funnelBox');
   renderFunnel(funnel, 'salesFunnelBox');
   renderManagers(managers);
-  renderManagersFull(managers, teamClientsForPeriod);
+  buildManagerPeriodOptions();
+  applyManagerPeriod();
   renderTopProducts(periodClients);
   renderTopRegionsForSales(periodClients);
   renderSalesManagerConversion(managers);
@@ -2973,6 +3058,21 @@ function calcManagersFromClients(clients) {
 // Считает, сколько у каждого менеджера зависших (просроченных по SLA) сделок
 // в переданном списке клиентов. Использует ту же логику риска, что и
 // страница "SLA контроль", чтобы цифры совпадали.
+// Сколько новых клиентов/заявок принял менеджер именно в этом периоде
+// (по дате создания клиента, а не по текущему статусу — учитываются все
+// обращения, включая те, что потом закончились отказом).
+function getManagerNewClientCounts(month) {
+  const counts = {};
+
+  allClients.forEach(c => {
+    if (month !== 'all' && getClientMonth(c) !== month) return;
+    const name = c.manager || 'Без менеджера';
+    counts[name] = (counts[name] || 0) + 1;
+  });
+
+  return counts;
+}
+
 function getManagerStuckCounts(clients) {
   const active = clients.filter(c => getActiveStatuses().includes(c.status));
   const counts = {};
@@ -3002,28 +3102,50 @@ function getManagerPlansStore() {
 
 function getManagerPlan(managerName, monthKey) {
   const store = getManagerPlansStore();
-  return (store[monthKey] && store[monthKey][managerName]) || 0;
+  const entry = store[monthKey] && store[monthKey][managerName];
+  return entry ? { count: Number(entry.count) || 0, amount: Number(entry.amount) || 0 } : { count: 0, amount: 0 };
 }
 
-function setManagerPlanValue(managerName, monthKey, amount) {
+function setManagerPlanValue(managerName, monthKey, count, amount) {
   const store = getManagerPlansStore();
   if (!store[monthKey]) store[monthKey] = {};
-  store[monthKey][managerName] = amount;
+  store[monthKey][managerName] = { count, amount };
   localStorage.setItem('msbManagerPlans', JSON.stringify(store));
 }
 
-function editManagerPlan(managerName, monthKey) {
-  const current = getManagerPlan(managerName, monthKey);
-  const input = prompt('План выдач на ' + monthKey + ' для ' + managerName + ' (сумма в сумах):', current || '');
-  if (input === null) return;
+function resetManagerPlanValue(managerName, monthKey) {
+  const store = getManagerPlansStore();
+  if (store[monthKey]) {
+    delete store[monthKey][managerName];
+  }
+  localStorage.setItem('msbManagerPlans', JSON.stringify(store));
+}
 
-  const amount = Number(String(input).replace(/[^\d]/g, ''));
-  if (!amount || amount < 0) {
-    alert('Введите корректную сумму');
+function toggleManagerPlanEditor(rowId) {
+  const el = document.getElementById('planEditor_' + rowId);
+  if (!el) return;
+  const willOpen = el.style.display === 'none' || !el.style.display;
+  document.querySelectorAll('.manager-plan-editor').forEach(box => { box.style.display = 'none'; });
+  el.style.display = willOpen ? 'block' : 'none';
+}
+
+function saveManagerPlan(rowId, managerName, monthKey) {
+  const countInput = document.getElementById('planCount_' + rowId);
+  const amountInput = document.getElementById('planAmount_' + rowId);
+  const count = Number(countInput ? countInput.value : 0) || 0;
+  const amount = Number(amountInput ? amountInput.value : 0) || 0;
+
+  if (count <= 0 && amount <= 0) {
+    alert('Укажите количество сделок и/или сумму плана');
     return;
   }
 
-  setManagerPlanValue(managerName, monthKey, amount);
+  setManagerPlanValue(managerName, monthKey, count, amount);
+  applyManagerFilters();
+}
+
+function resetManagerPlanUI(managerName, monthKey) {
+  resetManagerPlanValue(managerName, monthKey);
   applyManagerFilters();
 }
 
@@ -3964,8 +4086,11 @@ function renderManagers(managers) {
 let managersPageData = [];
 let managersPageMonthKey = 'all';
 
-function renderManagersFull(managers, teamClientsForPeriod) {
-  const period = document.getElementById('periodMonth')?.value || 'all';
+function renderManagersFull(managers, teamClientsForPeriod, monthOverride) {
+  const period = monthOverride !== undefined
+    ? monthOverride
+    : (document.getElementById('managerPeriodMonth')?.value || 'all');
+
   const periodText = document.getElementById('managersPeriodText');
   if (periodText) {
     periodText.innerText = period === 'all'
@@ -3979,35 +4104,39 @@ function renderManagersFull(managers, teamClientsForPeriod) {
   if (hintText) {
     const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
     hintText.innerText = isAdmin
-      ? 'Нажмите на менеджера, чтобы увидеть его клиентов. План на месяц можно задать или изменить ссылкой под именем менеджера.'
+      ? 'Нажмите на менеджера, чтобы увидеть его клиентов. Кнопка «План на месяц» под строкой — задать план по количеству и сумме.'
       : 'Здесь видно место в команде. Открыть список клиентов можно только по своей строке.';
   }
 
   const teamClients = teamClientsForPeriod || periodClients;
 
-  // Зависшие сделки считаем за тот же период, что и весь рейтинг.
+  // Зависшие сделки и новые клиенты считаем за тот же период, что и рейтинг.
   const stuckCounts = getManagerStuckCounts(teamClients);
+  const newClientCounts = getManagerNewClientCounts(period);
 
-  // Тренд к прошлому месяцу (доступен только если выбран конкретный период).
-  const prevComparison = getPreviousPeriodComparison(allClients);
-  const prevRanked = prevComparison
-    ? calcManagersFromClients(prevComparison.clients).slice().sort((a,b) => calculateScore(b) - calculateScore(a))
+  // Сравнение с выбранным периодом (авто = пред. месяц, либо конкретный месяц).
+  const compareValue = document.getElementById('managerComparePeriod')?.value || 'auto';
+  const comparison = getManagerComparisonClients(period, compareValue, allClients);
+  const compareRanked = comparison
+    ? calcManagersFromClients(comparison.clients).slice().sort((a,b) => calculateScore(b) - calculateScore(a))
     : null;
 
   managersPageData = managers.map(m => {
     const stuckCount = stuckCounts[m.manager] || 0;
+    const newCount = newClientCounts[m.manager] || 0;
     let trend = null;
 
-    if (prevRanked) {
-      const prevIndex = prevRanked.findIndex(pm => pm.manager === m.manager);
+    if (compareRanked) {
+      const compIndex = compareRanked.findIndex(pm => pm.manager === m.manager);
       trend = {
-        prevRank: prevIndex >= 0 ? prevIndex + 1 : null,
-        prevIssuedAmount: prevIndex >= 0 ? prevRanked[prevIndex].issuedAmount : 0
+        compareLabel: comparison.label,
+        compareRank: compIndex >= 0 ? compIndex + 1 : null,
+        compareIssuedAmount: compIndex >= 0 ? compareRanked[compIndex].issuedAmount : 0
       };
     }
 
-    const plan = period !== 'all' ? getManagerPlan(m.manager, period) : 0;
-    return Object.assign({}, m, { stuckCount, trend, plan });
+    const plan = period !== 'all' ? getManagerPlan(m.manager, period) : { count: 0, amount: 0 };
+    return Object.assign({}, m, { stuckCount, newCount, trend, plan });
   });
 
   applyManagerFilters();
@@ -4027,6 +4156,7 @@ function applyManagerFilters() {
     issuedAmount: (a,b) => b.issuedAmount - a.issuedAmount,
     conversion: (a,b) => b.conversion - a.conversion,
     totalClients: (a,b) => b.totalClients - a.totalClients,
+    newCount: (a,b) => b.newCount - a.newCount,
     stuckCount: (a,b) => b.stuckCount - a.stuckCount
   };
 
@@ -4045,34 +4175,57 @@ function applyManagerFilters() {
   const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
   const myName = currentUser ? normalizeText(currentUser.fullName || currentUser.login) : '';
 
-  box.innerHTML = list.map(m => {
+  box.innerHTML = list.map((m, i) => {
     const rank = fullRanked.findIndex(x => x.manager === m.manager) + 1;
     const encodedManager = encodeURIComponent(m.manager);
+    const rowId = 'mgr' + i;
     const isMe = myName && normalizeText(m.manager) === myName;
 
     let trendHtml = '';
-    if (m.trend && m.trend.prevRank !== null) {
-      const rankDelta = m.trend.prevRank - rank;
-      const amountDelta = m.trend.prevIssuedAmount
-        ? Math.round(((m.issuedAmount - m.trend.prevIssuedAmount) / m.trend.prevIssuedAmount) * 100)
+    if (m.trend && m.trend.compareRank !== null) {
+      const rankDelta = m.trend.compareRank - rank;
+      const amountDelta = m.trend.compareIssuedAmount
+        ? Math.round(((m.issuedAmount - m.trend.compareIssuedAmount) / m.trend.compareIssuedAmount) * 100)
         : (m.issuedAmount > 0 ? 100 : 0);
       const arrow = rankDelta > 0 ? '↑' : (rankDelta < 0 ? '↓' : '→');
       const cls = rankDelta > 0 ? 'trend-up' : (rankDelta < 0 ? 'trend-down' : 'trend-flat');
-      trendHtml = `<div class="manager-trend ${cls}">${arrow} ${amountDelta >= 0 ? '+' : ''}${amountDelta}% к пред. месяцу по выдачам</div>`;
+      trendHtml = `<div class="manager-trend ${cls}">${arrow} ${amountDelta >= 0 ? '+' : ''}${amountDelta}% по выдачам к ${m.trend.compareLabel}</div>`;
+    } else if (m.trend === null && managersPageMonthKey !== 'all') {
+      trendHtml = '';
     }
 
     let planHtml = '';
-    if (managersPageMonthKey !== 'all') {
-      if (m.plan > 0) {
-        const pct = Math.min(999, Math.round((m.issuedAmount / m.plan) * 100));
-        planHtml = `
-            <div class="manager-plan">
-              <div class="manager-plan-bar"><span style="width:${Math.min(100, pct)}%"></span></div>
-              <div class="manager-plan-text">План: ${formatMoney(m.plan)} • Выполнено ${pct}%${isAdmin ? ` • <a onclick="event.stopPropagation();editManagerPlan(decodeURIComponent('${encodedManager}'),'${managersPageMonthKey}')">изменить</a>` : ''}</div>
-            </div>`;
-      } else if (isAdmin) {
-        planHtml = `<div class="manager-plan"><a onclick="event.stopPropagation();editManagerPlan(decodeURIComponent('${encodedManager}'),'${managersPageMonthKey}')">+ Задать план на месяц</a></div>`;
-      }
+    if (isAdmin && managersPageMonthKey !== 'all') {
+      const hasPlan = m.plan.count > 0 || m.plan.amount > 0;
+      const pctAmount = m.plan.amount > 0 ? Math.min(999, Math.round((m.issuedAmount / m.plan.amount) * 100)) : null;
+      const pctCount = m.plan.count > 0 ? Math.min(999, Math.round((m.issuedCount / m.plan.count) * 100)) : null;
+
+      planHtml = `
+          <div class="manager-plan">
+            ${hasPlan ? `
+              <div class="manager-plan-bar"><span style="width:${Math.min(100, pctAmount ?? pctCount ?? 0)}%"></span></div>
+              <div class="manager-plan-text">
+                План: ${m.plan.count > 0 ? m.plan.count + ' сделок' : ''}${m.plan.count > 0 && m.plan.amount > 0 ? ' • ' : ''}${m.plan.amount > 0 ? formatMoney(m.plan.amount) : ''}
+                ${pctCount !== null ? ` • Выполнено по кол-ву: ${pctCount}%` : ''}${pctAmount !== null ? ` • по сумме: ${pctAmount}%` : ''}
+              </div>` : ''}
+            <button type="button" class="manager-plan-toggle-btn" onclick="event.stopPropagation();toggleManagerPlanEditor('${rowId}')">🎯 ${hasPlan ? 'Изменить план' : 'Задать план на месяц'}</button>
+            <div class="manager-plan-editor" id="planEditor_${rowId}" style="display:none;" onclick="event.stopPropagation()">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                <div>
+                  <label style="display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;">Кол-во сделок</label>
+                  <input type="number" min="0" class="input" id="planCount_${rowId}" value="${m.plan.count || ''}" style="width:120px;" placeholder="0">
+                </div>
+                <div>
+                  <label style="display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;">Сумма плана (сум)</label>
+                  <input type="number" min="0" class="input" id="planAmount_${rowId}" value="${m.plan.amount || ''}" style="width:170px;" placeholder="0">
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px;">
+                <button type="button" class="btn" onclick="saveManagerPlan('${rowId}', decodeURIComponent('${encodedManager}'),'${managersPageMonthKey}')">Сохранить</button>
+                <button type="button" class="btn btn-secondary" onclick="resetManagerPlanUI(decodeURIComponent('${encodedManager}'),'${managersPageMonthKey}')">Сбросить план</button>
+              </div>
+            </div>
+          </div>`;
     }
 
     const stuckHtml = m.stuckCount > 0
@@ -4086,10 +4239,11 @@ function applyManagerFilters() {
 
     return `
         <div class="rank-row${clickable ? ' manager-rank-clickable' : ''}${isMe ? ' manager-rank-me' : ''}" ${rowOpenAttrs}>
-          <div>
+          <div style="flex:1;min-width:0;">
             <div class="rank-name">${rank}. ${safe(m.manager)}${isMe ? ' <span class="manager-me-tag">Это вы</span>' : ''}</div>
             <div style="font-size:13px;color:var(--muted);margin-top:4px;">
-              Клиенты: ${m.totalClients || 0}
+              Новых клиентов/заявок: <b style="color:var(--text);">${m.newCount}</b>
+              • Клиенты в рейтинге: ${m.totalClients || 0}
               • Действующие: ${m.activeCount || 0}
               • Выдано: ${formatMoney(m.issuedAmount)}
               • Отказы: ${m.rejectedCount || 0}
