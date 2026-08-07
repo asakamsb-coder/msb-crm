@@ -2448,8 +2448,13 @@ function showPage(id, el) {
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
   if (el) el.classList.add('active');
 
-  if (id === 'myCabinetPage' && currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR')) {
-    loadUsersList();
+  if (id === 'myCabinetPage') {
+    renderIssuedReconciliationUI();
+    renderAnnualPlanUI();
+
+    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR')) {
+      loadUsersList();
+    }
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4932,6 +4937,11 @@ function renderMyCabinet() {
 
 function openLocalDB() {
   return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('IndexedDB недоступен в этом браузере'));
+      return;
+    }
+
     const req = indexedDB.open('msbCrmLocal', 1);
     req.onupgradeneeded = () => {
       const db = req.result;
@@ -4941,11 +4951,28 @@ function openLocalDB() {
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('IndexedDB заблокирован другой вкладкой'));
   });
 }
 
+// Некоторые "упакованные" браузеры/режимы просмотра вообще не вызывают ни
+// onsuccess, ни onerror у indexedDB.open — запрос просто зависает навсегда.
+// Поэтому подстраховываемся таймаутом: если за 3 секунды ответа нет,
+// считаем, что локального хранилища нет, и работаем без него, а не
+// зависаем в состоянии "Загрузка..." навечно.
+function withTimeout(promise, ms, fallbackValue) {
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => resolve(fallbackValue), ms))
+  ]);
+}
+
 async function saveIssuedPortfolioToDB(rows) {
-  const db = await openLocalDB();
+  const db = await withTimeout(openLocalDB(), 3000, null);
+  if (!db) {
+    throw new Error('Не удалось открыть локальное хранилище браузера (IndexedDB). Загрузка файла выдач в этом браузере недоступна.');
+  }
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction('issuedPortfolio', 'readwrite');
     const store = tx.objectStore('issuedPortfolio');
@@ -4958,14 +4985,16 @@ async function saveIssuedPortfolioToDB(rows) {
 
 async function loadIssuedPortfolioFromDB() {
   try {
-    const db = await openLocalDB();
-    return await new Promise((resolve, reject) => {
+    const db = await withTimeout(openLocalDB(), 3000, null);
+    if (!db) return [];
+
+    return await withTimeout(new Promise((resolve, reject) => {
       const tx = db.transaction('issuedPortfolio', 'readonly');
       const store = tx.objectStore('issuedPortfolio');
       const req = store.getAll();
       req.onsuccess = () => resolve(req.result || []);
       req.onerror = () => reject(req.error);
-    });
+    }), 3000, []);
   } catch (e) {
     return [];
   }
@@ -5154,8 +5183,9 @@ async function renderIssuedReconciliationUI() {
   const metaBox = document.getElementById('issuedPortfolioMetaText');
   if (!box) return;
 
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-  if (uploadPanel) uploadPanel.style.display = isAdmin ? 'block' : 'none';
+  try {
+    const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    if (uploadPanel) uploadPanel.style.display = isAdmin ? 'block' : 'none';
 
   const meta = getIssuedPortfolioMeta();
   if (metaBox) {
@@ -5232,6 +5262,10 @@ async function renderIssuedReconciliationUI() {
         </tbody>
       </table>
     </div>`;
+  } catch (error) {
+    console.error(error);
+    box.innerHTML = '<div class="loading">Не удалось построить сверку: ' + safe(error.message) + '</div>';
+  }
 }
 
 // ============================================================
@@ -5267,9 +5301,10 @@ function renderAnnualPlanUI() {
   const editPanel = document.getElementById('annualPlanEditPanel');
   if (!box) return;
 
-  const year = '2026';
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-  if (editPanel) editPanel.style.display = isAdmin ? 'block' : 'none';
+  try {
+    const year = '2026';
+    const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    if (editPanel) editPanel.style.display = isAdmin ? 'block' : 'none';
 
   const plan = getAnnualPlanYear(year);
 
@@ -5325,6 +5360,10 @@ function renderAnnualPlanUI() {
           <input type="number" min="0" class="input" id="planMonth_${m}" value="${plan[m] || ''}" placeholder="0" style="width:150px;">
         </div>`).join('');
     }
+  }
+  } catch (error) {
+    console.error(error);
+    box.innerHTML = '<div class="loading">Не удалось построить план: ' + safe(error.message) + '</div>';
   }
 }
 
