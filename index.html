@@ -162,6 +162,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   margin-left:4px;
 }
 .manager-stuck-badge{color:var(--orange);font-weight:700;}
+.recon-badge{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:12.5px;
+  font-weight:800;
+}
+.recon-ok{background:var(--green-soft);color:var(--green);}
+.recon-warn{background:var(--orange-soft);color:var(--orange);}
+.recon-bad{background:var(--red-soft);color:var(--red);}
 .manager-trend{margin-top:6px;font-size:12.5px;font-weight:800;}
 .manager-trend.trend-up{color:var(--green);}
 .manager-trend.trend-down{color:var(--red);}
@@ -1890,6 +1900,53 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <p id="myCabinetAi">-</p>
       </div>
     </div>
+  </div>
+
+  <div class="panel">
+    <h2>Сверка выданных кредитов 2026</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+      Сравнение реестра фактических выдач (загружается отдельным файлом) с тем, что менеджеры отметили статусом «Выдано» в CRM. Сверка идёт по ИНН, так как ФИО в разных источниках может отличаться.
+    </p>
+
+    <div id="issuedPortfolioUploadPanel" style="margin-bottom:16px;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:5px;">Файл выдач (ИНН, Сумма, Дата выдачи, Менеджер)</label>
+          <input type="file" id="issuedPortfolioFile" accept=".xlsx,.xls,.csv" multiple>
+        </div>
+        <button class="btn" onclick="uploadIssuedPortfolio()">Загрузить и сверить</button>
+        <button class="btn btn-secondary" onclick="clearIssuedPortfolio()">Удалить загруженные данные</button>
+      </div>
+      <div id="issuedPortfolioUploadStatus" style="margin-top:8px;font-size:13px;color:var(--muted);"></div>
+      <div id="issuedPortfolioMetaText" style="margin-top:6px;font-size:12px;color:var(--muted);"></div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);">
+        ⚠ Файл хранится только в этом браузере (не на сервере) — на другом устройстве его нужно будет загрузить заново.
+      </div>
+    </div>
+
+    <div id="issuedReconciliationSummary" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;"></div>
+    <div id="issuedReconciliationBox" class="loading">Загрузка...</div>
+  </div>
+
+  <div class="panel">
+    <h2>Годовой план 2026</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+      План по сумме выдач на каждый месяц 2026 года и фактическое выполнение по всей команде.
+    </p>
+
+    <div id="annualPlanEditPanel" style="margin-bottom:16px;padding:14px;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);">
+      <div id="annualPlanEditFields" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+        <button class="btn" onclick="saveAnnualPlanFromUI()">Сохранить план</button>
+        <button class="btn btn-secondary" onclick="resetAnnualPlan()">Сбросить план</button>
+        <span id="annualPlanSaveMessage" style="font-weight:700;font-size:13px;"></span>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);">
+        ⚠ План сохраняется только в этом браузере — не на сервере.
+      </div>
+    </div>
+
+    <div id="annualPlanBox" class="loading">Загрузка...</div>
   </div>
 </section>
 
@@ -4573,8 +4630,441 @@ function renderMyCabinet() {
   }
 
   document.getElementById('myCabinetAi').innerText = insight;
+
+  renderIssuedReconciliationUI();
+  renderAnnualPlanUI();
 }
 
+// ============================================================
+// Сверка фактических выдач (загруженный файл) с данными CRM.
+// ВАЖНО: файл может быть большим (реестр выдач за весь год), поэтому
+// строки храним в IndexedDB браузера (значительно больше лимита
+// localStorage ~5-10MB). Это решает "не должны исчезать при обновлении",
+// но данные остаются только в этом браузере/устройстве — не на сервере.
+// ============================================================
+
+function openLocalDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('msbCrmLocal', 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('issuedPortfolio')) {
+        db.createObjectStore('issuedPortfolio', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveIssuedPortfolioToDB(rows) {
+  const db = await openLocalDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('issuedPortfolio', 'readwrite');
+    const store = tx.objectStore('issuedPortfolio');
+    store.clear();
+    rows.forEach((row, i) => store.put(Object.assign({ id: i }, row)));
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function loadIssuedPortfolioFromDB() {
+  try {
+    const db = await openLocalDB();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction('issuedPortfolio', 'readonly');
+      const store = tx.objectStore('issuedPortfolio');
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveIssuedPortfolioMeta(meta) {
+  localStorage.setItem('msbIssuedPortfolioMeta', JSON.stringify(meta));
+}
+
+function getIssuedPortfolioMeta() {
+  try {
+    return JSON.parse(localStorage.getItem('msbIssuedPortfolioMeta') || 'null');
+  } catch (e) {
+    return null;
+  }
+}
+
+let issuedPortfolioCache = null;
+
+function parseIssuedPortfolioFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        let rows = [];
+
+        workbook.SheetNames.forEach(sheetName => {
+          const sheet = workbook.Sheets[sheetName];
+          const raw = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+          rows = rows.concat(parseIssuedPortfolioRows(raw));
+        });
+
+        resolve(rows);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = function() {
+      reject(new Error('Не удалось открыть файл: ' + file.name));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function parseIssuedPortfolioRows(rawRows) {
+  if (!rawRows || !rawRows.length) return [];
+
+  const headerIndex = rawRows.findIndex(row => {
+    const headers = row.map(h => normalizeHeaderV14(h));
+    return headers.some(h => h.includes('инн'));
+  });
+
+  if (headerIndex === -1) {
+    throw new Error('Не найден столбец "ИНН" в файле. Проверьте, что в файле есть колонки ИНН, Сумма, Дата выдачи, Менеджер.');
+  }
+
+  const headers = rawRows[headerIndex].map(h => String(h || '').trim());
+  const rows = [];
+
+  for (let i = headerIndex + 1; i < rawRows.length; i++) {
+    const rawRow = rawRows[i];
+    if (!rawRow || rawRow.every(cell => cell === '' || cell === null || cell === undefined)) continue;
+
+    const obj = {};
+    headers.forEach((h, idx) => { if (h) obj[h] = rawRow[idx]; });
+
+    const inn = cleanTextV14(getByHeaderV14(obj, ['ИНН', 'Инн', 'INN'])).replace(/\D/g, '');
+    if (!inn) continue;
+
+    rows.push({
+      inn,
+      client: cleanTextV14(getByHeaderV14(obj, ['Клиент', 'Наименование клиента', 'ФИО', 'Заемщик'])),
+      amount: parseMoneyV14(getByHeaderV14(obj, ['Сумма', 'Сумма выдачи', 'Сумма кредита'])),
+      issueDate: parseDateV14(getByHeaderV14(obj, ['Дата выдачи', 'Дата выдача', 'Дата'])),
+      manager: cleanTextV14(getByHeaderV14(obj, ['Менеджер', 'Сотрудник', 'Ответственный']))
+    });
+  }
+
+  return rows;
+}
+
+async function uploadIssuedPortfolio() {
+  const input = document.getElementById('issuedPortfolioFile');
+  const statusBox = document.getElementById('issuedPortfolioUploadStatus');
+
+  if (!input || !input.files || !input.files.length) {
+    if (statusBox) statusBox.innerText = 'Выберите файл';
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    if (statusBox) statusBox.innerText = 'Библиотека Excel ещё не загрузилась, подождите пару секунд и попробуйте снова';
+    return;
+  }
+
+  if (statusBox) statusBox.innerText = 'Обработка файла...';
+
+  try {
+    let allRows = [];
+    for (const file of input.files) {
+      const rows = await parseIssuedPortfolioFile(file);
+      allRows = allRows.concat(rows);
+    }
+
+    await saveIssuedPortfolioToDB(allRows);
+    saveIssuedPortfolioMeta({
+      fileNames: Array.from(input.files).map(f => f.name).join(', '),
+      uploadedAt: new Date().toLocaleString('ru-RU'),
+      rowCount: allRows.length
+    });
+
+    issuedPortfolioCache = allRows;
+    if (statusBox) statusBox.innerText = 'Загружено строк: ' + allRows.length;
+    input.value = '';
+    renderIssuedReconciliationUI();
+  } catch (error) {
+    if (statusBox) statusBox.innerText = 'Ошибка: ' + error.message;
+    console.error(error);
+  }
+}
+
+async function clearIssuedPortfolio() {
+  if (!confirm('Удалить загруженный реестр выдач из этого браузера?')) return;
+  await saveIssuedPortfolioToDB([]);
+  saveIssuedPortfolioMeta(null);
+  issuedPortfolioCache = [];
+  renderIssuedReconciliationUI();
+}
+
+// Сверяет строки загруженного файла (по ИНН) с клиентами CRM в статусе
+// "Выдано". Возвращает единый список совпадений/расхождений.
+function reconcileIssuedPortfolio(fileRows, crmClients) {
+  const issuedCrm = crmClients.filter(c => normalizeText(c.status) === 'выдано');
+  const crmByInn = {};
+  issuedCrm.forEach(c => {
+    const inn = String(c.inn || '').replace(/\D/g, '');
+    if (!inn) return;
+    if (!crmByInn[inn]) crmByInn[inn] = [];
+    crmByInn[inn].push(c);
+  });
+
+  const matchedInns = new Set();
+  const results = [];
+
+  fileRows.forEach(row => {
+    const crmMatches = crmByInn[row.inn] || [];
+    if (!crmMatches.length) {
+      results.push({ type: 'missing_in_crm', inn: row.inn, client: row.client, manager: row.manager, fileAmount: row.amount, crmAmount: null, crmManager: null });
+      return;
+    }
+
+    matchedInns.add(row.inn);
+    const crmClient = crmMatches[0];
+    const amountsMatch = Math.abs((Number(crmClient.amount) || 0) - (Number(row.amount) || 0)) < 1;
+
+    results.push({
+      type: amountsMatch ? 'match' : 'mismatch',
+      inn: row.inn,
+      client: row.client || crmClient.name,
+      manager: row.manager || crmClient.manager,
+      fileAmount: row.amount,
+      crmAmount: crmClient.amount,
+      crmManager: crmClient.manager
+    });
+  });
+
+  issuedCrm.forEach(c => {
+    const inn = String(c.inn || '').replace(/\D/g, '');
+    if (inn && !matchedInns.has(inn)) {
+      results.push({ type: 'missing_in_file', inn, client: c.name, manager: c.manager, fileAmount: null, crmAmount: c.amount, crmManager: c.manager });
+    }
+  });
+
+  return results;
+}
+
+async function renderIssuedReconciliationUI() {
+  const box = document.getElementById('issuedReconciliationBox');
+  const summaryBox = document.getElementById('issuedReconciliationSummary');
+  const uploadPanel = document.getElementById('issuedPortfolioUploadPanel');
+  const metaBox = document.getElementById('issuedPortfolioMetaText');
+  if (!box) return;
+
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  if (uploadPanel) uploadPanel.style.display = isAdmin ? 'block' : 'none';
+
+  const meta = getIssuedPortfolioMeta();
+  if (metaBox) {
+    metaBox.innerText = meta
+      ? `Файл: ${meta.fileNames} • Строк: ${meta.rowCount} • Загружено: ${meta.uploadedAt}`
+      : 'Файл выдач ещё не загружен';
+  }
+
+  if (issuedPortfolioCache === null) {
+    issuedPortfolioCache = await loadIssuedPortfolioFromDB();
+  }
+
+  if (!issuedPortfolioCache.length) {
+    box.innerHTML = '<div class="loading">Загрузите реестр фактических выдач, чтобы увидеть сверку</div>';
+    if (summaryBox) summaryBox.innerHTML = '';
+    return;
+  }
+
+  let results = reconcileIssuedPortfolio(issuedPortfolioCache, allClients);
+
+  if (!isAdmin) {
+    const myName = normalizeText(currentUser.fullName || currentUser.login);
+    results = results.filter(r => normalizeText(r.manager) === myName || normalizeText(r.crmManager) === myName);
+  }
+
+  const counts = { match: 0, mismatch: 0, missing_in_crm: 0, missing_in_file: 0 };
+  results.forEach(r => counts[r.type]++);
+
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <span class="recon-badge recon-ok">✅ Совпадает: ${counts.match}</span>
+      <span class="recon-badge recon-warn">⚠ Расхождение суммы: ${counts.mismatch}</span>
+      <span class="recon-badge recon-bad">❗ Нет в CRM: ${counts.missing_in_crm}</span>
+      <span class="recon-badge recon-bad">❗ Нет в файле выдач: ${counts.missing_in_file}</span>`;
+  }
+
+  const typeLabels = {
+    match: '✅ Совпадает',
+    mismatch: '⚠ Расхождение',
+    missing_in_crm: '❗ Нет в CRM',
+    missing_in_file: '❗ Нет в файле'
+  };
+  const typeClass = {
+    match: 'recon-ok',
+    mismatch: 'recon-warn',
+    missing_in_crm: 'recon-bad',
+    missing_in_file: 'recon-bad'
+  };
+
+  if (!results.length) {
+    box.innerHTML = '<div class="loading">По вашим клиентам расхождений не найдено</div>';
+    return;
+  }
+
+  const sorted = results.slice().sort((a,b) => {
+    const order = { mismatch: 0, missing_in_crm: 1, missing_in_file: 2, match: 3 };
+    return order[a.type] - order[b.type];
+  });
+
+  box.innerHTML = `
+    <div class="client-table-wrap">
+      <table>
+        <thead><tr><th>ИНН</th><th>Клиент</th><th>Менеджер</th><th>Сумма (файл)</th><th>Сумма (CRM)</th><th>Статус</th></tr></thead>
+        <tbody>
+          ${sorted.map(r => `
+            <tr>
+              <td class="nowrap">${safe(r.inn)}</td>
+              <td>${safe(r.client)}</td>
+              <td>${safe(r.manager)}</td>
+              <td class="nowrap">${r.fileAmount !== null ? formatMoney(r.fileAmount) : '—'}</td>
+              <td class="nowrap">${r.crmAmount !== null ? formatMoney(r.crmAmount) : '—'}</td>
+              <td><span class="recon-badge ${typeClass[r.type]}">${typeLabels[r.type]}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// ============================================================
+// Годовой / месячный план выдач (локально, localStorage — небольшой объём
+// данных, в отличие от реестра выдач).
+// ============================================================
+
+function getAnnualPlanStore() {
+  try {
+    return JSON.parse(localStorage.getItem('msbAnnualPlan') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveAnnualPlanStore(store) {
+  localStorage.setItem('msbAnnualPlan', JSON.stringify(store));
+}
+
+function getAnnualPlanYear(year) {
+  const store = getAnnualPlanStore();
+  return store[year] || {};
+}
+
+function saveAnnualPlanMonths(year, months) {
+  const store = getAnnualPlanStore();
+  store[year] = months;
+  saveAnnualPlanStore(store);
+}
+
+function renderAnnualPlanUI() {
+  const box = document.getElementById('annualPlanBox');
+  const editPanel = document.getElementById('annualPlanEditPanel');
+  if (!box) return;
+
+  const year = '2026';
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  if (editPanel) editPanel.style.display = isAdmin ? 'block' : 'none';
+
+  const plan = getAnnualPlanYear(year);
+
+  // Факт по месяцам — сумма всех клиентов "Выдано" в этом месяце (по всей команде).
+  const issued = allClients.filter(c => normalizeText(c.status) === 'выдано');
+  const actualByMonth = {};
+  issued.forEach(c => {
+    const m = getClientStatusMonth(c) || getClientMonth(c);
+    if (!m) return;
+    actualByMonth[m] = (actualByMonth[m] || 0) + (Number(c.amount) || 0);
+  });
+
+  const months = [];
+  for (let mm = 1; mm <= 12; mm++) months.push(year + '-' + String(mm).padStart(2, '0'));
+
+  let totalPlan = 0, totalActual = 0;
+
+  box.innerHTML = `
+    <div class="client-table-wrap">
+      <table>
+        <thead><tr><th>Месяц</th><th>План</th><th>Факт</th><th>% выполнения</th></tr></thead>
+        <tbody>
+          ${months.map(m => {
+            const planAmount = Number(plan[m]) || 0;
+            const actualAmount = actualByMonth[m] || 0;
+            totalPlan += planAmount;
+            totalActual += actualAmount;
+            const pct = planAmount > 0 ? Math.round(actualAmount / planAmount * 100) : null;
+            return `
+              <tr>
+                <td>${m}</td>
+                <td>${planAmount > 0 ? formatMoney(planAmount) : '—'}</td>
+                <td>${formatMoney(actualAmount)}</td>
+                <td>${pct !== null ? pct + '%' : '—'}</td>
+              </tr>`;
+          }).join('')}
+          <tr style="font-weight:800;">
+            <td>Итого за ${year}</td>
+            <td>${totalPlan > 0 ? formatMoney(totalPlan) : '—'}</td>
+            <td>${formatMoney(totalActual)}</td>
+            <td>${totalPlan > 0 ? Math.round(totalActual / totalPlan * 100) + '%' : '—'}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>`;
+
+  if (isAdmin) {
+    const editBox = document.getElementById('annualPlanEditFields');
+    if (editBox) {
+      editBox.innerHTML = months.map(m => `
+        <div>
+          <label style="display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;">${m}</label>
+          <input type="number" min="0" class="input" id="planMonth_${m}" value="${plan[m] || ''}" placeholder="0" style="width:150px;">
+        </div>`).join('');
+    }
+  }
+}
+
+function saveAnnualPlanFromUI() {
+  const year = '2026';
+  const months = {};
+  for (let mm = 1; mm <= 12; mm++) {
+    const m = year + '-' + String(mm).padStart(2, '0');
+    const input = document.getElementById('planMonth_' + m);
+    const value = Number(input ? input.value : 0) || 0;
+    if (value > 0) months[m] = value;
+  }
+  saveAnnualPlanMonths(year, months);
+  renderAnnualPlanUI();
+  const msg = document.getElementById('annualPlanSaveMessage');
+  if (msg) {
+    msg.innerText = 'План сохранён';
+    msg.style.color = '#15803D';
+    setTimeout(() => { msg.innerText = ''; }, 3000);
+  }
+}
+
+function resetAnnualPlan() {
+  if (!confirm('Сбросить годовой план на 2026?')) return;
+  saveAnnualPlanMonths('2026', {});
+  renderAnnualPlanUI();
+}
 
 function exportClientsCSV() {
   const rows = [['Дата','Дней в работе','Клиент','Телефон','ИНН','Бизнес','Регион','Продукт','Сумма','Статус','Менеджер']];
