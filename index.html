@@ -2268,6 +2268,7 @@ async function login() {
 
     applyRoleView();
     loadCRM();
+    startInactivityWatcher();
 
   } catch (error) {
     errorBox.innerText = 'Ошибка соединения с сервером';
@@ -2276,21 +2277,56 @@ async function login() {
   }
 }
 
+// ВАЖНО (требование безопасности): при каждом открытии ссылки CRM всегда
+// должен запрашивать логин и пароль заново — сохранённая сессия в браузере
+// НЕ используется для автоматического входа. tryAutoLogin() больше не
+// вызывается при загрузке страницы.
 function tryAutoLogin() {
-  const savedUser = localStorage.getItem('msbUser');
-  const savedSession = localStorage.getItem('msbSessionId');
-
-  if (savedUser && savedSession) {
-    currentUser = JSON.parse(savedUser);
-    document.getElementById('loginScreen').style.display = 'none';
-    applyRoleView();
-    loadCRM();
+  const reason = localStorage.getItem('msbLogoutReason');
+  if (reason === 'inactivity') {
+    const errorBox = document.getElementById('loginError');
+    if (errorBox) {
+      errorBox.innerText = 'Сессия завершена из-за бездействия. Войдите снова.';
+      errorBox.style.display = 'block';
+    }
+    localStorage.removeItem('msbLogoutReason');
   }
 }
 
-function logout() {
+// --- Автовыход при бездействии ---
+const INACTIVITY_TIMEOUT_MS = 60 * 1000; // 1 минута. Можно изменить здесь при необходимости.
+let inactivityTimer = null;
+
+function resetInactivityTimer() {
+  if (!currentUser) return;
+  clearTimeout(inactivityTimer);
+  inactivityTimer = setTimeout(logoutDueToInactivity, INACTIVITY_TIMEOUT_MS);
+}
+
+function startInactivityWatcher() {
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+  resetInactivityTimer();
+}
+
+function stopInactivityWatcher() {
+  clearTimeout(inactivityTimer);
+}
+
+function logoutDueToInactivity() {
+  stopInactivityWatcher();
   localStorage.removeItem('msbSessionId');
   localStorage.removeItem('msbUser');
+  localStorage.setItem('msbLogoutReason', 'inactivity');
+  location.reload();
+}
+
+function logout() {
+  stopInactivityWatcher();
+  localStorage.removeItem('msbSessionId');
+  localStorage.removeItem('msbUser');
+  localStorage.removeItem('msbLogoutReason');
   location.reload();
 }
 
