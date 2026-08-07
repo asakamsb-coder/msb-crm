@@ -312,6 +312,29 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   margin-bottom:14px;
   font-size:14px;
 }
+.password-field{position:relative;}
+.password-field input{padding-right:44px;}
+.password-toggle{
+  position:absolute;
+  right:6px;
+  top:50%;
+  transform:translateY(-58%);
+  background:none;
+  border:none;
+  cursor:pointer;
+  font-size:17px;
+  line-height:1;
+  color:var(--muted);
+  width:36px;
+  height:36px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
+  opacity:.7;
+}
+.password-toggle:hover{background:#F3F4F6;opacity:1;}
+.password-toggle.is-visible{color:var(--brand);opacity:1;}
 .login-error{
   display:none;
   background:#FEE2E2;
@@ -522,10 +545,58 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   .header{align-items:flex-start;}
   .header h1{font-size:22px;}
   .card-value{font-size:24px;}
-  .period-controls .select,.period-controls .input{max-width:none;flex:1 1 140px;}
+  .period-controls{gap:10px 8px;}
+  .period-controls .select,.period-controls .input{max-width:none;flex:1 1 140px;min-height:44px;}
   .funnel-item{grid-template-columns:1fr;gap:6px;}
   .amount{text-align:left;}
   table{min-width:640px;}
+
+  /* Кнопки и поля ввода — увеличенные зоны нажатия под палец (мин. 44px) */
+  .btn{min-height:44px;padding:12px 18px;font-size:15px;}
+  .input,.select{min-height:44px;font-size:16px;padding:12px 14px;}
+  .filters{gap:10px;}
+  .filters .btn{width:100%;}
+  .msb-sales-tab{min-height:44px;padding:11px 14px;}
+  .portfolio-tab,.portfolio-segment-btn{min-height:44px;display:inline-flex;align-items:center;}
+  .nav a{min-height:46px;}
+  .logout-btn{min-height:44px;padding:10px 14px;}
+  .client-selection-reset{min-height:40px;}
+
+  /* Таблицы с самым частым использованием на мобильном — показываем только
+     ключевые столбцы, остальное доступно по клику на строку (открывается
+     полная карточка клиента). Так не нужно листать таблицу вбок. */
+  .mtbl-clients{min-width:0;width:100%;}
+  .mtbl-clients th:nth-child(2),.mtbl-clients td:nth-child(2),
+  .mtbl-clients th:nth-child(3),.mtbl-clients td:nth-child(3),
+  .mtbl-clients th:nth-child(5),.mtbl-clients td:nth-child(5),
+  .mtbl-clients th:nth-child(6),.mtbl-clients td:nth-child(6),
+  .mtbl-clients th:nth-child(7),.mtbl-clients td:nth-child(7),
+  .mtbl-clients th:nth-child(8),.mtbl-clients td:nth-child(8),
+  .mtbl-clients th:nth-child(9),.mtbl-clients td:nth-child(9),
+  .mtbl-clients th:nth-child(12),.mtbl-clients td:nth-child(12){display:none;}
+
+  .mtbl-latest{min-width:0;width:100%;}
+  .mtbl-latest th:nth-child(1),.mtbl-latest td:nth-child(1),
+  .mtbl-latest th:nth-child(3),.mtbl-latest td:nth-child(3),
+  .mtbl-latest th:nth-child(6),.mtbl-latest td:nth-child(6){display:none;}
+
+  .mtbl-sla{min-width:0;width:100%;}
+  .mtbl-sla th:nth-child(2),.mtbl-sla td:nth-child(2),
+  .mtbl-sla th:nth-child(3),.mtbl-sla td:nth-child(3),
+  .mtbl-sla th:nth-child(5),.mtbl-sla td:nth-child(5),
+  .mtbl-sla th:nth-child(6),.mtbl-sla td:nth-child(6),
+  .mtbl-sla th:nth-child(7),.mtbl-sla td:nth-child(7),
+  .mtbl-sla th:nth-child(8),.mtbl-sla td:nth-child(8),
+  .mtbl-sla th:nth-child(9),.mtbl-sla td:nth-child(9){display:none;}
+
+  .mtbl-my{min-width:0;width:100%;}
+  .mtbl-my th:nth-child(1),.mtbl-my td:nth-child(1),
+  .mtbl-my th:nth-child(3),.mtbl-my td:nth-child(3),
+  .mtbl-my th:nth-child(4),.mtbl-my td:nth-child(4){display:none;}
+
+  /* Крупнее текст и просторнее строки в оставшихся столбцах — легче читать и попадать пальцем */
+  .mtbl-clients td,.mtbl-latest td,.mtbl-sla td,.mtbl-my td{padding:14px 10px;font-size:14px;}
+  .mtbl-clients th,.mtbl-latest th,.mtbl-sla th,.mtbl-my th{padding:10px;}
 }
 
 
@@ -805,16 +876,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <input id="loginInput" placeholder="Например: director">
 
     <label>Пароль</label>
-    <input id="passwordInput" type="password" placeholder="Введите пароль">
+    <div class="password-field">
+      <input id="passwordInput" type="password" placeholder="Введите пароль">
+      <button type="button" class="password-toggle" onclick="togglePasswordVisibility('passwordInput', this)" aria-label="Показать пароль">👁</button>
+    </div>
 
     <button class="btn" style="width:100%;margin-top:4px;" onclick="login()">Войти</button>
-
-    <div class="login-help">
-      Тестовые доступы:<br>
-      Управляющий: <b>director</b> / <b>1234</b><br>
-      Менеджер: <b>allayarov</b> / <b>1234</b><br>
-      Менеджер: <b>amir</b> / <b>1234</b>
-    </div>
   </div>
 </div>
 
@@ -946,7 +1013,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           <a onclick="openDashboardClients('all')" style="font-size:13px;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;">Показать всех →</a>
         </div>
         <div class="client-table-wrap">
-          <table>
+          <table class="mtbl-latest">
             <thead>
               <tr><th>Дата</th><th>Клиент</th><th>Продукт</th><th>Сумма</th><th>Статус</th><th>Менеджер</th></tr>
             </thead>
@@ -1022,7 +1089,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <div class="client-table-wrap">
-      <table>
+      <table class="mtbl-clients">
         <thead>
           <tr>
             <th>№</th>
@@ -1481,7 +1548,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="panel">
         <h2>Зависшие клиенты</h2>
         <div class="client-table-wrap">
-          <table>
+          <table class="mtbl-sla">
             <thead>
               <tr>
                 <th>Клиент</th>
@@ -1623,33 +1690,43 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div style="max-width:450px;">
 
     <label>Старый пароль</label>
-    <input
-      type="password"
-      id="oldPassword"
-      class="input"
-      placeholder="Введите старый пароль">
+    <div class="password-field">
+      <input
+        type="password"
+        id="oldPassword"
+        class="input"
+        placeholder="Введите старый пароль">
+      <button type="button" class="password-toggle" onclick="togglePasswordVisibility('oldPassword', this)" aria-label="Показать пароль">👁</button>
+    </div>
 
     <label style="margin-top:10px;display:block;">
       Новый пароль
     </label>
-    <input
-      type="password"
-      id="newPassword"
-      class="input"
-      placeholder="Введите новый пароль">
+    <div class="password-field">
+      <input
+        type="password"
+        id="newPassword"
+        class="input"
+        placeholder="Введите новый пароль">
+      <button type="button" class="password-toggle" onclick="togglePasswordVisibility('newPassword', this)" aria-label="Показать пароль">👁</button>
+    </div>
 
     <label style="margin-top:10px;display:block;">
       Повторите новый пароль
     </label>
-    <input
-      type="password"
-      id="confirmPassword"
-      class="input"
-      placeholder="Повторите пароль">
+    <div class="password-field">
+      <input
+        type="password"
+        id="confirmPassword"
+        class="input"
+        placeholder="Повторите пароль">
+      <button type="button" class="password-toggle" onclick="togglePasswordVisibility('confirmPassword', this)" aria-label="Показать пароль">👁</button>
+    </div>
 
     <button
       class="btn"
       style="margin-top:15px;"
+      id="changePasswordBtn"
       onclick="changePassword()">
       Сменить пароль
     </button>
@@ -1659,6 +1736,49 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       style="margin-top:15px;font-weight:700;">
     </div>
 
+  </div>
+</div>
+
+<div class="panel" data-admin="true">
+  <h2>Пользователи</h2>
+  <p style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+    Добавление нового логина и пароля для сотрудника. Раздел виден только управляющему.
+  </p>
+
+  <div style="max-width:520px;">
+    <label>ФИО сотрудника</label>
+    <input type="text" id="newUserFullName" class="input" placeholder="Например: Иванов Иван">
+
+    <label style="margin-top:10px;display:block;">Логин</label>
+    <input type="text" id="newUserLogin" class="input" placeholder="Например: ivanov" autocomplete="off">
+
+    <label style="margin-top:10px;display:block;">Пароль</label>
+    <div class="password-field">
+      <input type="password" id="newUserPassword" class="input" placeholder="Придумайте пароль" autocomplete="new-password">
+      <button type="button" class="password-toggle" onclick="togglePasswordVisibility('newUserPassword', this)" aria-label="Показать пароль">👁</button>
+    </div>
+
+    <label style="margin-top:10px;display:block;">Роль</label>
+    <select id="newUserRole" class="select">
+      <option value="MANAGER">Менеджер</option>
+      <option value="DIRECTOR">Управляющий</option>
+    </select>
+
+    <button class="btn" style="margin-top:15px;" id="createUserBtn" onclick="createUser()">Создать пользователя</button>
+
+    <div id="createUserMessage" style="margin-top:15px;font-weight:700;"></div>
+  </div>
+
+  <div style="margin-top:24px;">
+    <h2 style="font-size:16px;margin-bottom:12px;">Существующие пользователи</h2>
+    <div class="client-table-wrap">
+      <table>
+        <thead><tr><th>ФИО</th><th>Логин</th><th>Роль</th></tr></thead>
+        <tbody id="usersListTable">
+          <tr><td colspan="3" class="loading">Загрузка...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
   
@@ -1674,7 +1794,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="panel">
         <h2>Мои клиенты</h2>
         <div class="client-table-wrap">
-          <table>
+          <table class="mtbl-my">
             <thead>
               <tr><th>Дата</th><th>Клиент</th><th>ИНН</th><th>Продукт</th><th>Сумма</th><th>Статус</th></tr>
             </thead>
@@ -1911,6 +2031,17 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4G
 
 let currentUser = null;
 
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const willShow = input.type === 'password';
+  input.type = willShow ? 'text' : 'password';
+  if (btn) {
+    btn.classList.toggle('is-visible', willShow);
+    btn.setAttribute('aria-label', willShow ? 'Скрыть пароль' : 'Показать пароль');
+  }
+}
+
 async function login() {
   const loginValue = document.getElementById('loginInput').value.trim();
   const passwordValue = document.getElementById('passwordInput').value.trim();
@@ -2085,6 +2216,10 @@ function showPage(id, el) {
 
   document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
   if (el) el.classList.add('active');
+
+  if (id === 'myCabinetPage' && currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR')) {
+    loadUsersList();
+  }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -4116,11 +4251,97 @@ function safe(value) {
   return value === null || value === undefined || value === '' ? '-' : value;
 }
 
+async function createUser() {
+  const fullName = document.getElementById('newUserFullName').value.trim();
+  const login = document.getElementById('newUserLogin').value.trim();
+  const password = document.getElementById('newUserPassword').value.trim();
+  const role = document.getElementById('newUserRole').value;
+  const msg = document.getElementById('createUserMessage');
+  const btn = document.getElementById('createUserBtn');
+
+  msg.innerText = '';
+  msg.style.color = '#111827';
+
+  if (!fullName || !login || !password) {
+    msg.style.color = '#DC2626';
+    msg.innerText = 'Заполните все поля';
+    return;
+  }
+
+  if (password.length < 4) {
+    msg.style.color = '#DC2626';
+    msg.innerText = 'Пароль должен быть не короче 4 символов';
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.innerText = 'Создание...'; }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        webAction: 'createUser',
+        sessionId: localStorage.getItem('msbSessionId'),
+        fullName: fullName,
+        login: login,
+        password: password,
+        role: role
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      msg.style.color = '#15803D';
+      msg.innerText = 'Пользователь создан';
+      document.getElementById('newUserFullName').value = '';
+      document.getElementById('newUserLogin').value = '';
+      document.getElementById('newUserPassword').value = '';
+      loadUsersList();
+    } else {
+      msg.style.color = '#DC2626';
+      msg.innerText = result.message || 'Ошибка создания пользователя. Проверьте, что в Apps Script реализовано действие createUser.';
+    }
+  } catch (error) {
+    msg.style.color = '#DC2626';
+    msg.innerText = 'Не удалось связаться с сервером.';
+    console.error(error);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = 'Создать пользователя'; }
+  }
+}
+
+async function loadUsersList() {
+  const tbody = document.getElementById('usersListTable');
+  if (!tbody) return;
+
+  try {
+    const users = await fetchJSON('users');
+
+    if (!users || !users.length) {
+      tbody.innerHTML = '<tr><td colspan="3">Список пуст или бэкенд ещё не отдаёт действие "users"</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>${safe(u.fullName)}</td>
+        <td>${safe(u.login)}</td>
+        <td>${(u.role === 'ADMIN' || u.role === 'DIRECTOR') ? 'Управляющий' : 'Менеджер'}</td>
+      </tr>`).join('');
+  } catch (error) {
+    tbody.innerHTML = '<tr><td colspan="3">Не удалось загрузить список пользователей</td></tr>';
+    console.error(error);
+  }
+}
+
 async function changePassword() {
   const oldPassword = document.getElementById('oldPassword').value.trim();
   const newPassword = document.getElementById('newPassword').value.trim();
   const confirmPassword = document.getElementById('confirmPassword').value.trim();
   const msg = document.getElementById('passwordMessage');
+  const btn = document.getElementById('changePasswordBtn');
 
   msg.innerText = '';
   msg.style.color = '#111827';
@@ -4137,29 +4358,45 @@ async function changePassword() {
     return;
   }
 
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      webAction: 'changePassword',
-      sessionId: localStorage.getItem('msbSessionId'),
-      oldPassword: oldPassword,
-      newPassword: newPassword
-    })
-  });
-
-  const result = await response.json();
-
-  if (result.success) {
-    msg.style.color = '#15803D';
-    msg.innerText = 'Пароль успешно изменён';
-
-    document.getElementById('oldPassword').value = '';
-    document.getElementById('newPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
-  } else {
+  if (newPassword.length < 4) {
     msg.style.color = '#DC2626';
-    msg.innerText = result.message || 'Ошибка смены пароля';
+    msg.innerText = 'Новый пароль должен быть не короче 4 символов';
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.innerText = 'Сохранение...'; }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        webAction: 'changePassword',
+        sessionId: localStorage.getItem('msbSessionId'),
+        oldPassword: oldPassword,
+        newPassword: newPassword
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      msg.style.color = '#15803D';
+      msg.innerText = 'Пароль успешно изменён';
+
+      document.getElementById('oldPassword').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+    } else {
+      msg.style.color = '#DC2626';
+      msg.innerText = result.message || 'Ошибка смены пароля';
+    }
+  } catch (error) {
+    msg.style.color = '#DC2626';
+    msg.innerText = 'Не удалось связаться с сервером. Проверьте интернет-соединение и попробуйте снова.';
+    console.error(error);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = 'Сменить пароль'; }
   }
 }
   
