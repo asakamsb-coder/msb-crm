@@ -142,6 +142,35 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .rank-row{display:flex;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line);}
 .rank-name{font-weight:700;}
 .rank-score{font-weight:800;color:var(--brand);}
+.manager-rank-me{
+  background:var(--brand-soft);
+  border-radius:var(--radius-sm);
+  padding-left:12px;
+  padding-right:12px;
+  margin:0 -12px;
+  border-bottom:1px solid transparent;
+}
+.manager-me-tag{
+  display:inline-block;
+  background:var(--brand);
+  color:#fff;
+  font-size:10px;
+  font-weight:800;
+  padding:2px 7px;
+  border-radius:999px;
+  vertical-align:middle;
+  margin-left:4px;
+}
+.manager-stuck-badge{color:var(--orange);font-weight:700;}
+.manager-trend{margin-top:6px;font-size:12.5px;font-weight:800;}
+.manager-trend.trend-up{color:var(--green);}
+.manager-trend.trend-down{color:var(--red);}
+.manager-trend.trend-flat{color:var(--muted);}
+.manager-plan{margin-top:8px;max-width:320px;}
+.manager-plan-bar{height:7px;border-radius:999px;background:#EEF0F3;overflow:hidden;}
+.manager-plan-bar span{display:block;height:100%;background:var(--brand);border-radius:999px;}
+.manager-plan-text{margin-top:5px;font-size:12px;color:var(--muted);font-weight:600;}
+.manager-plan-text a{color:var(--brand);font-weight:800;cursor:pointer;text-decoration:none;}
 .ai-box{background:#FFF7F8;border:1px solid #FFD9DF;}
 .ai-box p{color:#4B5563;line-height:1.6;font-size:14px;}
 .footer{margin-top:20px;color:var(--muted);font-size:13px;}
@@ -911,7 +940,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <a onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
     <a onclick="showPage('regionsPage', this)"><span class="icon"></span>Районы</a>
     <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>Мой кабинет</a>
-    <a data-admin="true" onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
+    <a onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
     <a onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
   </nav>
 </aside>
@@ -1667,9 +1696,21 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
   <div class="panel">
     <h2>Рейтинг менеджеров</h2>
-    <p style="color:var(--muted);margin:-8px 0 14px;line-height:1.5;">
+    <p style="color:var(--muted);margin:-8px 0 14px;line-height:1.5;" id="managersHintText">
       Нажмите на менеджера, чтобы увидеть клиентов, которые формируют рейтинг, действующих клиентов и отказы отдельно.
     </p>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+      <input id="managerSearchInput" class="input" placeholder="Поиск менеджера по имени..." style="max-width:280px;flex:1 1 200px;" oninput="applyManagerFilters()">
+      <select id="managerSortSelect" class="select" style="max-width:220px;flex:1 1 180px;" onchange="applyManagerFilters()">
+        <option value="score">Сортировка: по очкам</option>
+        <option value="issuedAmount">По сумме выдач</option>
+        <option value="conversion">По конверсии</option>
+        <option value="totalClients">По количеству клиентов</option>
+        <option value="stuckCount">По зависшим сделкам</option>
+      </select>
+    </div>
+
     <div id="managersFullBox">Загрузка...</div>
   </div>
 </section>
@@ -2371,6 +2412,28 @@ function buildPeriodOptions() {
   }
 }
 
+function filterClientsByPeriod(sourceClients, month, from, to) {
+  let clients = sourceClients;
+
+  if (month && month !== 'all') {
+    clients = clients
+      .map(c => getClientSnapshotForMonth(c, month))
+      .filter(Boolean);
+  }
+
+  if (from) {
+    const fromDate = new Date(from + 'T00:00:00');
+    clients = clients.filter(c => getRelevantClientDate(c, month) >= fromDate);
+  }
+
+  if (to) {
+    const toDate = new Date(to + 'T23:59:59');
+    clients = clients.filter(c => getRelevantClientDate(c, month) <= toDate);
+  }
+
+  return clients;
+}
+
 function applyPeriod() {
   dashboardClientSelection = 'all';
   const selectionBanner = document.getElementById('clientSelectionBanner');
@@ -2388,34 +2451,19 @@ function applyPeriod() {
     : '';
 
   let clients = getVisibleClients();
-
-  if (month && month !== 'all') {
-    clients = clients
-      .map(c => getClientSnapshotForMonth(c, month))
-      .filter(Boolean);
-  }
-
-  if (from) {
-    const fromDate = new Date(from + 'T00:00:00');
-    clients = clients.filter(c => {
-      const relevantDate = getRelevantClientDate(c, month);
-      return relevantDate >= fromDate;
-    });
-  }
-
-  if (to) {
-    const toDate = new Date(to + 'T23:59:59');
-    clients = clients.filter(c => {
-      const relevantDate = getRelevantClientDate(c, month);
-      return relevantDate <= toDate;
-    });
-  }
+  clients = filterClientsByPeriod(clients, month, from, to);
 
   periodClients = clients;
 
+  // Рейтинг менеджеров должен быть виден и обычным менеджерам (не только
+  // управляющему), поэтому считаем его от ВСЕХ клиентов команды, а не от
+  // periodClients, который для менеджера содержит только его собственных
+  // клиентов (это правильно для остальных разделов CRM, но не для рейтинга).
+  const teamClientsForPeriod = filterClientsByPeriod(allClients, month, from, to);
+
   const stats = calcStatsFromClients(periodClients);
   const funnel = calcFunnelFromClients(periodClients);
-  const managers = calcManagersFromClients(periodClients);
+  const managers = calcManagersFromClients(teamClientsForPeriod);
 
   renderStats(stats);
   renderTrendBadges(stats);
@@ -2424,7 +2472,7 @@ function applyPeriod() {
   renderFunnel(funnel, 'funnelBox');
   renderFunnel(funnel, 'salesFunnelBox');
   renderManagers(managers);
-  renderManagersFull(managers);
+  renderManagersFull(managers, teamClientsForPeriod);
   renderTopProducts(periodClients);
   renderTopRegionsForSales(periodClients);
   renderSalesManagerConversion(managers);
@@ -2444,12 +2492,12 @@ function applyPeriod() {
 // Возвращает клиентов "предыдущего периода" — того же типа, что и текущий
 // выбранный период (предыдущий месяц или предыдущий диапазон дат такой же
 // длины), чтобы можно было посчитать % изменения показателей.
-function getPreviousPeriodComparison() {
+function getPreviousPeriodComparison(baseClients) {
   const month = document.getElementById('periodMonth') ? document.getElementById('periodMonth').value : 'all';
   const from = document.getElementById('dateFrom') ? document.getElementById('dateFrom').value : '';
   const to = document.getElementById('dateTo') ? document.getElementById('dateTo').value : '';
 
-  const base = getVisibleClients();
+  const base = baseClients || getVisibleClients();
   let prevClients = null;
   let label = '';
 
@@ -2921,6 +2969,63 @@ function calcManagersFromClients(clients) {
 
 
 
+
+// Считает, сколько у каждого менеджера зависших (просроченных по SLA) сделок
+// в переданном списке клиентов. Использует ту же логику риска, что и
+// страница "SLA контроль", чтобы цифры совпадали.
+function getManagerStuckCounts(clients) {
+  const active = clients.filter(c => getActiveStatuses().includes(c.status));
+  const counts = {};
+
+  active.forEach(c => {
+    const risk = getSlaRisk(c);
+    if (risk.level !== 'normal') {
+      const name = c.manager || 'Без менеджера';
+      counts[name] = (counts[name] || 0) + 1;
+    }
+  });
+
+  return counts;
+}
+
+// --- Планы менеджеров (локально, в этом браузере) ---
+// ВАЖНО: планы сохраняются в localStorage, то есть только на этом
+// устройстве/браузере, а не на сервере. Если открыть CRM с другого
+// компьютера или телефона, планы там нужно будет ввести заново.
+function getManagerPlansStore() {
+  try {
+    return JSON.parse(localStorage.getItem('msbManagerPlans') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function getManagerPlan(managerName, monthKey) {
+  const store = getManagerPlansStore();
+  return (store[monthKey] && store[monthKey][managerName]) || 0;
+}
+
+function setManagerPlanValue(managerName, monthKey, amount) {
+  const store = getManagerPlansStore();
+  if (!store[monthKey]) store[monthKey] = {};
+  store[monthKey][managerName] = amount;
+  localStorage.setItem('msbManagerPlans', JSON.stringify(store));
+}
+
+function editManagerPlan(managerName, monthKey) {
+  const current = getManagerPlan(managerName, monthKey);
+  const input = prompt('План выдач на ' + monthKey + ' для ' + managerName + ' (сумма в сумах):', current || '');
+  if (input === null) return;
+
+  const amount = Number(String(input).replace(/[^\d]/g, ''));
+  if (!amount || amount < 0) {
+    alert('Введите корректную сумму');
+    return;
+  }
+
+  setManagerPlanValue(managerName, monthKey, amount);
+  applyManagerFilters();
+}
 
 function calcProductsFromClients(clients) {
   const map = {};
@@ -3856,10 +3961,10 @@ function renderManagers(managers) {
   });
 }
 
-function renderManagersFull(managers) {
-  const box = document.getElementById('managersFullBox');
-  box.innerHTML = '';
+let managersPageData = [];
+let managersPageMonthKey = 'all';
 
+function renderManagersFull(managers, teamClientsForPeriod) {
   const period = document.getElementById('periodMonth')?.value || 'all';
   const periodText = document.getElementById('managersPeriodText');
   if (periodText) {
@@ -3868,28 +3973,134 @@ function renderManagersFull(managers) {
       : 'Рейтинг за период: ' + period;
   }
 
-  managers
-    .sort((a,b) => calculateScore(b) - calculateScore(a))
-    .forEach((m, index) => {
-      const encodedManager = encodeURIComponent(m.manager);
+  managersPageMonthKey = period;
 
-      box.innerHTML += `
-        <div class="rank-row manager-rank-clickable"
-             onclick="openManagerCard(decodeURIComponent('${encodedManager}'))"
-             title="Нажмите, чтобы открыть клиентов менеджера">
+  const hintText = document.getElementById('managersHintText');
+  if (hintText) {
+    const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    hintText.innerText = isAdmin
+      ? 'Нажмите на менеджера, чтобы увидеть его клиентов. План на месяц можно задать или изменить ссылкой под именем менеджера.'
+      : 'Здесь видно место в команде. Открыть список клиентов можно только по своей строке.';
+  }
+
+  const teamClients = teamClientsForPeriod || periodClients;
+
+  // Зависшие сделки считаем за тот же период, что и весь рейтинг.
+  const stuckCounts = getManagerStuckCounts(teamClients);
+
+  // Тренд к прошлому месяцу (доступен только если выбран конкретный период).
+  const prevComparison = getPreviousPeriodComparison(allClients);
+  const prevRanked = prevComparison
+    ? calcManagersFromClients(prevComparison.clients).slice().sort((a,b) => calculateScore(b) - calculateScore(a))
+    : null;
+
+  managersPageData = managers.map(m => {
+    const stuckCount = stuckCounts[m.manager] || 0;
+    let trend = null;
+
+    if (prevRanked) {
+      const prevIndex = prevRanked.findIndex(pm => pm.manager === m.manager);
+      trend = {
+        prevRank: prevIndex >= 0 ? prevIndex + 1 : null,
+        prevIssuedAmount: prevIndex >= 0 ? prevRanked[prevIndex].issuedAmount : 0
+      };
+    }
+
+    const plan = period !== 'all' ? getManagerPlan(m.manager, period) : 0;
+    return Object.assign({}, m, { stuckCount, trend, plan });
+  });
+
+  applyManagerFilters();
+}
+
+function applyManagerFilters() {
+  const box = document.getElementById('managersFullBox');
+  if (!box) return;
+
+  const searchInput = document.getElementById('managerSearchInput');
+  const sortSelect = document.getElementById('managerSortSelect');
+  const query = searchInput ? normalizeText(searchInput.value.trim()) : '';
+  const sortBy = sortSelect ? sortSelect.value : 'score';
+
+  const sorters = {
+    score: (a,b) => calculateScore(b) - calculateScore(a),
+    issuedAmount: (a,b) => b.issuedAmount - a.issuedAmount,
+    conversion: (a,b) => b.conversion - a.conversion,
+    totalClients: (a,b) => b.totalClients - a.totalClients,
+    stuckCount: (a,b) => b.stuckCount - a.stuckCount
+  };
+
+  // Позиция в ПОЛНОМ рейтинге (по очкам) — не зависит от поиска/сортировки в UI.
+  const fullRanked = managersPageData.slice().sort(sorters.score);
+
+  let list = managersPageData.slice();
+  if (query) list = list.filter(m => normalizeText(m.manager).includes(query));
+  list.sort(sorters[sortBy] || sorters.score);
+
+  if (!list.length) {
+    box.innerHTML = '<div class="loading">Никого не нашли</div>';
+    return;
+  }
+
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const myName = currentUser ? normalizeText(currentUser.fullName || currentUser.login) : '';
+
+  box.innerHTML = list.map(m => {
+    const rank = fullRanked.findIndex(x => x.manager === m.manager) + 1;
+    const encodedManager = encodeURIComponent(m.manager);
+    const isMe = myName && normalizeText(m.manager) === myName;
+
+    let trendHtml = '';
+    if (m.trend && m.trend.prevRank !== null) {
+      const rankDelta = m.trend.prevRank - rank;
+      const amountDelta = m.trend.prevIssuedAmount
+        ? Math.round(((m.issuedAmount - m.trend.prevIssuedAmount) / m.trend.prevIssuedAmount) * 100)
+        : (m.issuedAmount > 0 ? 100 : 0);
+      const arrow = rankDelta > 0 ? '↑' : (rankDelta < 0 ? '↓' : '→');
+      const cls = rankDelta > 0 ? 'trend-up' : (rankDelta < 0 ? 'trend-down' : 'trend-flat');
+      trendHtml = `<div class="manager-trend ${cls}">${arrow} ${amountDelta >= 0 ? '+' : ''}${amountDelta}% к пред. месяцу по выдачам</div>`;
+    }
+
+    let planHtml = '';
+    if (managersPageMonthKey !== 'all') {
+      if (m.plan > 0) {
+        const pct = Math.min(999, Math.round((m.issuedAmount / m.plan) * 100));
+        planHtml = `
+            <div class="manager-plan">
+              <div class="manager-plan-bar"><span style="width:${Math.min(100, pct)}%"></span></div>
+              <div class="manager-plan-text">План: ${formatMoney(m.plan)} • Выполнено ${pct}%${isAdmin ? ` • <a onclick="event.stopPropagation();editManagerPlan(decodeURIComponent('${encodedManager}'),'${managersPageMonthKey}')">изменить</a>` : ''}</div>
+            </div>`;
+      } else if (isAdmin) {
+        planHtml = `<div class="manager-plan"><a onclick="event.stopPropagation();editManagerPlan(decodeURIComponent('${encodedManager}'),'${managersPageMonthKey}')">+ Задать план на месяц</a></div>`;
+      }
+    }
+
+    const stuckHtml = m.stuckCount > 0
+      ? ` • <span class="manager-stuck-badge">⚠ Зависших: ${m.stuckCount}</span>`
+      : '';
+
+    const clickable = isAdmin || isMe;
+    const rowOpenAttrs = clickable
+      ? `onclick="openManagerCard(decodeURIComponent('${encodedManager}'))" title="Нажмите, чтобы открыть клиентов"`
+      : '';
+
+    return `
+        <div class="rank-row${clickable ? ' manager-rank-clickable' : ''}${isMe ? ' manager-rank-me' : ''}" ${rowOpenAttrs}>
           <div>
-            <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
+            <div class="rank-name">${rank}. ${safe(m.manager)}${isMe ? ' <span class="manager-me-tag">Это вы</span>' : ''}</div>
             <div style="font-size:13px;color:var(--muted);margin-top:4px;">
-              Клиенты рейтинга: ${m.totalClients || 0}
+              Клиенты: ${m.totalClients || 0}
               • Действующие: ${m.activeCount || 0}
               • Выдано: ${formatMoney(m.issuedAmount)}
               • Отказы: ${m.rejectedCount || 0}
-              • Конверсия: ${m.conversion || 0}%
+              • Конверсия: ${m.conversion || 0}%${stuckHtml}
             </div>
+            ${trendHtml}
+            ${planHtml}
           </div>
           <div class="rank-score">${calculateScore(m)}</div>
         </div>`;
-    });
+  }).join('');
 }
 
 
