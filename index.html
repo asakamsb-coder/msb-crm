@@ -6157,6 +6157,9 @@ async function submitMicroprojectForm() {
     if (result.success) {
       closeMicroprojectForm();
       await loadMahallaData();
+      if (result.photoWarning) {
+        alert('Проект сохранён, но с фото проблема:\n\n' + result.photoWarning + '\n\nПопробуйте открыть проект и загрузить фото ещё раз через "Изменить". Если не получится — сообщите управляющему (возможно, нужно заново выдать доступ к Google Drive после обновления скрипта).');
+      }
     } else {
       showError(result.message || 'Не удалось сохранить проект');
     }
