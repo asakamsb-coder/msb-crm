@@ -966,6 +966,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .mp-section-title:first-of-type{margin-top:0;}
 .mp-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;}
 .mp-photo-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
+.mp-money-field{position:relative;margin-bottom:14px;}
+.mp-money-field input{padding-right:52px;}
+.mp-money-suffix{
+  position:absolute;
+  right:14px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  pointer-events:none;
+}
 .microproject-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
 .microproject-name{font-weight:800;font-size:15px;}
 .microproject-meta{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.6;}
@@ -2145,18 +2157,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <select id="mpMahalla" class="select" style="margin-bottom:14px;"></select>
 
     <label class="mp-label">ФИО инициатора *</label>
-    <input id="mpApplicantName" class="input" style="margin-bottom:14px;">
+    <input id="mpApplicantName" class="input" style="margin-bottom:14px;" placeholder="Например: Ибрагимов Алишер Амирович">
 
     <label class="mp-label">Телефон</label>
     <input id="mpApplicantContact" class="input" style="margin-bottom:14px;" placeholder="998971234567">
 
     <label class="mp-label">Статус</label>
-    <select id="mpSubjectStatus" class="select" style="margin-bottom:14px;" onchange="toggleSubjectStatusFields()">
-      <option>Физлицо</option>
-      <option>Самозанятый</option>
-      <option>ИП</option>
-      <option>Юрлицо</option>
-    </select>
+    <select id="mpSubjectStatus" class="select" style="margin-bottom:14px;" onchange="toggleSubjectStatusFields()"></select>
 
     <div id="mpPinflWrap">
       <label class="mp-label">ПИНФЛ</label>
@@ -2209,13 +2216,22 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="mp-section-title">Финансирование</div>
 
     <label class="mp-label">Общая стоимость проекта</label>
-    <input id="mpTotalCost" class="input" type="number" min="0" style="margin-bottom:14px;">
+    <div class="mp-money-field">
+      <input id="mpTotalCost" class="input mp-money-input" type="text" inputmode="numeric" placeholder="0">
+      <span class="mp-money-suffix">сум</span>
+    </div>
 
     <label class="mp-label">Собственные средства</label>
-    <input id="mpOwnFunds" class="input" type="number" min="0" style="margin-bottom:14px;">
+    <div class="mp-money-field">
+      <input id="mpOwnFunds" class="input mp-money-input" type="text" inputmode="numeric" placeholder="0">
+      <span class="mp-money-suffix">сум</span>
+    </div>
 
     <label class="mp-label">Нужный кредит</label>
-    <input id="mpCreditNeeded" class="input" type="number" min="0" style="margin-bottom:14px;">
+    <div class="mp-money-field">
+      <input id="mpCreditNeeded" class="input mp-money-input" type="text" inputmode="numeric" placeholder="0">
+      <span class="mp-money-suffix">сум</span>
+    </div>
 
     <label class="mp-label">Нужна субсидия?</label>
     <select id="mpNeedsSubsidy" class="select" style="margin-bottom:14px;">
@@ -5521,6 +5537,22 @@ async function submitBankerForm() {
 
 // --- Форма: добавить/редактировать микропроект ---
 
+// Денежные поля (Общая стоимость / Собственные средства / Нужный кредит):
+// принимают только цифры, автоматически расставляют пробелы между
+// разрядами при вводе — текст ввести невозможно.
+function formatMoneyInputDisplay(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('ru-RU').replace(/,/g, ' ');
+}
+
+document.addEventListener('input', function(e) {
+  if (e.target && e.target.classList && e.target.classList.contains('mp-money-input')) {
+    const digits = e.target.value.replace(/\D/g, '');
+    e.target.value = formatMoneyInputDisplay(digits);
+  }
+});
+
 function toggleSubjectStatusFields() {
   const status = document.getElementById('mpSubjectStatus').value;
   const isLegal = status === 'Юрлицо';
@@ -5539,9 +5571,11 @@ function openMicroprojectForm(mode, id) {
   if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
 
   const mahallaSelect = document.getElementById('mpMahalla');
-  const visible = getVisibleMahallas();
-  mahallaSelect.innerHTML = visible.map(m => `<option value="${safe(m.name)}">${safe(m.name)}</option>`).join('');
+  const officialMahallas = (webFormLists && webFormLists.mahallas) || [];
+  const mahallaOptions = officialMahallas.length ? officialMahallas : getVisibleMahallas().map(m => m.name);
+  mahallaSelect.innerHTML = mahallaOptions.map(name => `<option value="${safe(name)}">${safe(name)}</option>`).join('');
 
+  fillSelectOptions('mpSubjectStatus', (webFormLists && webFormLists.subjectStatuses) || ['Физлицо','Самозанятый','ИП','СП','Юрлицо','Другое'], false);
   fillSelectOptions('mpIndustry', (webFormLists && webFormLists.industries) || [], false);
 
   document.getElementById('mpPhotos').value = '';
@@ -5579,9 +5613,9 @@ function openMicroprojectForm(mode, id) {
     document.getElementById('mpStartYear').value = p.startYear || '';
     document.getElementById('mpHasPremises').value = p.hasPremises || 'Нет';
     document.getElementById('mpNeededPurchases').value = p.neededPurchases || '';
-    document.getElementById('mpTotalCost').value = p.totalCost || '';
-    document.getElementById('mpOwnFunds').value = p.ownFunds || '';
-    document.getElementById('mpCreditNeeded').value = p.creditNeeded || '';
+    document.getElementById('mpTotalCost').value = formatMoneyInputDisplay(p.totalCost);
+    document.getElementById('mpOwnFunds').value = formatMoneyInputDisplay(p.ownFunds);
+    document.getElementById('mpCreditNeeded').value = formatMoneyInputDisplay(p.creditNeeded);
     document.getElementById('mpNeedsSubsidy').value = p.needsSubsidy || 'Нет';
     document.getElementById('mpNewJobs').value = p.newJobs || '';
     document.getElementById('mpSiteVisited').value = p.siteVisited || 'Нет';
@@ -5756,9 +5790,9 @@ async function submitMicroprojectForm() {
       startYear: document.getElementById('mpStartYear').value.trim(),
       hasPremises: document.getElementById('mpHasPremises').value,
       neededPurchases: document.getElementById('mpNeededPurchases').value.trim(),
-      totalCost: document.getElementById('mpTotalCost').value.trim(),
-      ownFunds: document.getElementById('mpOwnFunds').value.trim(),
-      creditNeeded: document.getElementById('mpCreditNeeded').value.trim(),
+      totalCost: document.getElementById('mpTotalCost').value.replace(/\D/g, ''),
+      ownFunds: document.getElementById('mpOwnFunds').value.replace(/\D/g, ''),
+      creditNeeded: document.getElementById('mpCreditNeeded').value.replace(/\D/g, ''),
       needsSubsidy: document.getElementById('mpNeedsSubsidy').value,
       newJobs: document.getElementById('mpNewJobs').value.trim(),
       siteVisited: document.getElementById('mpSiteVisited').value,
