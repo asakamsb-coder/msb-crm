@@ -966,6 +966,24 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .mp-section-title:first-of-type{margin-top:0;}
 .mp-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;}
 .mp-photo-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
+.mp-photo-thumb-wrap{position:relative;display:inline-block;}
+.mp-photo-remove-btn{
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  border:none;
+  background:var(--red);
+  color:#fff;
+  font-size:13px;
+  line-height:1;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 .mp-money-field{position:relative;margin-bottom:14px;}
 .mp-money-field input{padding-right:52px;}
 .mp-money-suffix{
@@ -2091,15 +2109,21 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <button class="btn" onclick="openMicroprojectForm('create')">+ Добавить микропроект</button>
       </div>
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+      <div id="microprojectStatsBox"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 16px;">
         <select id="microprojectMahallaFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()"><option value="">Все махалли</option></select>
-        <select id="microprojectStatusFilter" class="select" style="max-width:200px;" onchange="renderMicroprojectsList()">
+        <select id="microprojectStatusFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()">
           <option value="">Все статусы</option>
-          <option>Идея</option>
-          <option>На рассмотрении</option>
-          <option>Одобрено</option>
-          <option>Запущено</option>
-          <option>Отклонено</option>
+          <option>Выявлен</option>
+          <option>Изучается</option>
+          <option>Бизнес-план</option>
+          <option>Финансирование</option>
+          <option>Одобрен</option>
+          <option>Профинансирован</option>
+          <option>Запущен</option>
+          <option>Работает</option>
+          <option>Проблемный/закрыт</option>
         </select>
       </div>
 
@@ -2631,7 +2655,7 @@ function tryAutoLogin() {
 }
 
 // --- Автовыход при бездействии ---
-const INACTIVITY_TIMEOUT_MS = 60 * 1000; // 1 минута. Можно изменить здесь при необходимости.
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 минут. Можно изменить здесь при необходимости.
 let inactivityTimer = null;
 
 function resetInactivityTimer() {
@@ -5391,19 +5415,97 @@ function renderMahallasList() {
   }).join('');
 }
 
+const MICROPROJECT_STAGES = [
+  'Выявлен', 'Изучается', 'Бизнес-план', 'Финансирование',
+  'Одобрен', 'Профинансирован', 'Запущен', 'Работает', 'Проблемный/закрыт'
+];
+
+function renderMicroprojectStats(list) {
+  const box = document.getElementById('microprojectStatsBox');
+  if (!box) return;
+
+  if (!list.length) {
+    box.innerHTML = '';
+    return;
+  }
+
+  const total = list.length;
+  const totalJobs = list.reduce((s, p) => s + (Number(p.newJobs) || 0), 0);
+  const totalCost = list.reduce((s, p) => s + (Number(p.totalCost) || 0), 0);
+  const totalCredit = list.reduce((s, p) => s + (Number(p.creditNeeded) || 0), 0);
+  const subsidyCount = list.filter(p => p.needsSubsidy === 'Да').length;
+  const visitedCount = list.filter(p => p.siteVisited === 'Да').length;
+  const activeCount = list.filter(p => p.status !== 'Проблемный/закрыт').length;
+  const launchedCount = list.filter(p => p.status === 'Запущен' || p.status === 'Работает').length;
+
+  const stageColors = {
+    'Выявлен': 'var(--blue)', 'Изучается': 'var(--blue)',
+    'Бизнес-план': 'var(--orange)', 'Финансирование': 'var(--orange)',
+    'Одобрен': 'var(--green)', 'Профинансирован': 'var(--green)',
+    'Запущен': 'var(--green)', 'Работает': 'var(--green)',
+    'Проблемный/закрыт': 'var(--red)'
+  };
+
+  const stageCounts = MICROPROJECT_STAGES.map(stage => ({
+    stage,
+    count: list.filter(p => p.status === stage).length
+  }));
+  const maxStageCount = Math.max(1, ...stageCounts.map(s => s.count));
+
+  box.innerHTML = `
+    <section class="kpi" style="margin-bottom:16px;">
+      <div class="card kpi-accent-neutral">
+        <div class="card-label">Всего проектов</div>
+        <div class="card-value">${total}</div>
+        <div class="card-secondary">Активных: <b>${activeCount}</b> • Запущено/работает: <b>${launchedCount}</b></div>
+      </div>
+      <div class="card kpi-accent-green">
+        <div class="card-label">Новых рабочих мест</div>
+        <div class="card-value">${totalJobs}</div>
+        <div class="card-secondary">Объект посещён: <b>${visitedCount}</b> из ${total}</div>
+      </div>
+      <div class="card kpi-accent-orange">
+        <div class="card-label">Общая стоимость проектов</div>
+        <div class="card-value">${formatMoney(totalCost)}</div>
+        <div class="card-secondary">Нужный кредит: <b>${formatMoney(totalCredit)}</b></div>
+      </div>
+      <div class="card kpi-accent-red">
+        <div class="card-label">Нужна субсидия</div>
+        <div class="card-value">${subsidyCount}</div>
+        <div class="card-secondary">${total ? Math.round(subsidyCount / total * 100) : 0}% от всех проектов</div>
+      </div>
+    </section>
+
+    <div class="panel" style="margin-bottom:0;padding:18px 20px;">
+      <div style="font-size:13px;font-weight:800;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.03em;">Проекты по стадиям</div>
+      ${stageCounts.map(s => `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div style="width:150px;font-size:13px;font-weight:600;flex-shrink:0;">${s.stage}</div>
+          <div style="flex:1;height:8px;background:#EEF0F3;border-radius:999px;overflow:hidden;">
+            <span style="display:block;height:100%;width:${Math.max(3, Math.round(s.count / maxStageCount * 100))}%;background:${stageColors[s.stage]};border-radius:999px;"></span>
+          </div>
+          <div style="width:28px;text-align:right;font-weight:800;font-size:13px;flex-shrink:0;">${s.count}</div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
 function renderMicroprojectsList() {
   const box = document.getElementById('microprojectsBox');
   if (!box) return;
 
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-  const visibleMahallaNames = new Set(getVisibleMahallas().map(m => m.name));
-
-  let list = allMicroprojects.filter(p => isAdmin || visibleMahallaNames.has(p.mahalla));
+  // Список проектов больше не фильтруется по закреплению за махаллей —
+  // раз любой банкир может добавить проект в любую из 17 махаллей, он
+  // должен видеть (и уметь найти) все проекты, включая свои собственные,
+  // а не только те, что попадают в его формально закреплённую махаллю.
+  let list = allMicroprojects.slice();
 
   const mahallaFilter = document.getElementById('microprojectMahallaFilter')?.value || '';
   const statusFilter = document.getElementById('microprojectStatusFilter')?.value || '';
   if (mahallaFilter) list = list.filter(p => p.mahalla === mahallaFilter);
   if (statusFilter) list = list.filter(p => p.status === statusFilter);
+
+  renderMicroprojectStats(list);
 
   if (!list.length) {
     box.innerHTML = '<div class="loading">Микропроектов не найдено</div>';
@@ -5737,28 +5839,56 @@ function resizeImageFile(file, maxWidth) {
 
 document.addEventListener('change', function(e) {
   if (e.target && e.target.id === 'mpPhotos' && e.target.files && e.target.files.length) {
-    mpSelectedPhotoFiles = Array.from(e.target.files).slice(0, 5);
+    // ВАЖНО: раньше новый выбор ПОЛНОСТЬЮ заменял предыдущий (так устроен
+    // обычный <input type="file">), из-за чего при повторном открытии
+    // выбора файла первое выбранное фото пропадало — казалось, что
+    // "второе фото не грузится". Теперь фото добавляются к уже выбранным.
+    const newFiles = Array.from(e.target.files);
+    const combined = mpSelectedPhotoFiles.concat(newFiles);
 
-    const wrap = document.getElementById('mpPhotoPreviewWrap');
-    wrap.innerHTML = '';
-    wrap.style.display = 'flex';
-
-    mpSelectedPhotoFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = function(ev) {
-        const img = document.createElement('img');
-        img.src = ev.target.result;
-        img.className = 'mp-photo-thumb';
-        wrap.appendChild(img);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if (e.target.files.length > 5) {
-      alert('Можно приложить максимум 5 фото. Взяты первые 5.');
+    if (combined.length > 5) {
+      alert('Можно приложить максимум 5 фото. Лишние не будут добавлены.');
     }
+
+    mpSelectedPhotoFiles = combined.slice(0, 5);
+    e.target.value = ''; // чтобы можно было при необходимости выбрать то же фото ещё раз
+
+    renderMpPhotoPreviews();
   }
 });
+
+function renderMpPhotoPreviews() {
+  const wrap = document.getElementById('mpPhotoPreviewWrap');
+  wrap.innerHTML = '';
+  wrap.style.display = mpSelectedPhotoFiles.length ? 'flex' : 'none';
+
+  mpSelectedPhotoFiles.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'mp-photo-thumb-wrap';
+
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'mp-photo-thumb';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'mp-photo-remove-btn';
+      removeBtn.innerText = '×';
+      removeBtn.title = 'Убрать фото';
+      removeBtn.onclick = function() {
+        mpSelectedPhotoFiles.splice(index, 1);
+        renderMpPhotoPreviews();
+      };
+
+      thumbWrap.appendChild(img);
+      thumbWrap.appendChild(removeBtn);
+      wrap.appendChild(thumbWrap);
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 // Определяет координаты через GPS телефона/браузера (стандартный запрос
 // разрешения покажется один раз).
