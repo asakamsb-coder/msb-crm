@@ -2126,6 +2126,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <button class="btn" onclick="openMicroprojectForm('create')">+ Добавить микропроект</button>
       </div>
 
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <button class="msb-sales-tab active" id="mpViewActiveBtn" onclick="setMicroprojectViewMode('active')">Активные</button>
+        <button class="msb-sales-tab" id="mpViewRejectedBtn" onclick="setMicroprojectViewMode('rejected')">⚠ Неперспективные</button>
+      </div>
+
       <div id="microprojectStatsBox"></div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 16px;">
@@ -2247,6 +2252,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <button class="btn" style="width:100%;" id="mdEditBtn" onclick="closeMicroprojectDetail();openMicroprojectForm('edit', mdCurrentId)">✏️ Редактировать проект</button>
+    <button class="btn btn-secondary" style="width:100%;margin-top:10px;background:var(--red);display:none;" id="mdDeleteBtn" onclick="deleteMicroprojectConfirm()">🗑 Удалить проект</button>
   </div>
 </aside>
 
@@ -2362,14 +2368,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </select>
 
     <label class="mp-label">Геолокация</label>
-    <div style="display:flex;gap:8px;margin-bottom:6px;">
+    <div id="mpGeoEditWrap" style="display:flex;gap:8px;margin-bottom:6px;">
       <input id="mpGeolocation" class="input" placeholder="Координаты" readonly style="flex:1;">
       <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="captureMicroprojectGeolocation()">📍 GPS</button>
     </div>
+    <div id="mpGeoLockedNote" style="display:none;font-size:12px;color:var(--muted);margin-bottom:6px;">🔒 Нельзя изменить после создания проекта — это доказательство посещения объекта</div>
     <div id="mpGeoStatus" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
 
     <label class="mp-label">Фото объекта (до 5 шт.)</label>
-    <input type="file" id="mpPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+    <div id="mpPhotoEditWrap">
+      <input type="file" id="mpPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+    </div>
+    <div id="mpPhotoLockedNote" style="display:none;font-size:12px;color:var(--muted);margin-bottom:6px;">🔒 Нельзя изменить после создания проекта — это доказательство посещения объекта</div>
     <div id="mpPhotoPreviewWrap" style="display:none;margin-bottom:6px;flex-wrap:wrap;gap:8px;"></div>
     <div id="mpExistingPhotosWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
 
@@ -5604,6 +5614,12 @@ function renderMicroprojectsList() {
   // а не только те, что попадают в его формально закреплённую махаллю.
   let list = allMicroprojects.slice();
 
+  // Неперспективные (оценка банкира "Нецелесообразный") — отдельный
+  // список, не смешивается с активной работой по умолчанию.
+  list = list.filter(p => (microprojectViewMode === 'rejected')
+    ? p.bankerAssessment === 'Нецелесообразный'
+    : p.bankerAssessment !== 'Нецелесообразный');
+
   const query = normalizeText((document.getElementById('microprojectSearchInput')?.value || '').trim());
   const mahallaFilter = document.getElementById('microprojectMahallaFilter')?.value || '';
   const statusFilter = document.getElementById('microprojectStatusFilter')?.value || '';
@@ -5785,6 +5801,14 @@ function toggleSubjectStatusFields() {
 let mpSelectedPhotoFiles = [];
 
 let mdCurrentId = null;
+let microprojectViewMode = 'active';
+
+function setMicroprojectViewMode(mode) {
+  microprojectViewMode = mode;
+  document.getElementById('mpViewActiveBtn').classList.toggle('active', mode === 'active');
+  document.getElementById('mpViewRejectedBtn').classList.toggle('active', mode === 'rejected');
+  renderMicroprojectsList();
+}
 
 function openMicroprojectDetail(id) {
   const p = allMicroprojects.find(x => x.id === id);
@@ -5835,8 +5859,45 @@ function openMicroprojectDetail(id) {
     photosBox.innerHTML = '<div style="color:var(--muted);font-size:13px;">Фото не загружены</div>';
   }
 
+  const isAdminUser = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const isOwner = currentUser && normalizeText(p.banker) === normalizeText(currentUser.fullName || currentUser.login);
+  document.getElementById('mdEditBtn').style.display = (isAdminUser || isOwner) ? 'block' : 'none';
+  document.getElementById('mdDeleteBtn').style.display = isAdminUser ? 'block' : 'none';
+
   document.getElementById('microprojectDetailOverlay').classList.add('active');
   document.getElementById('microprojectDetailDrawer').classList.add('active');
+}
+
+async function deleteMicroprojectConfirm() {
+  const p = allMicroprojects.find(x => x.id === mdCurrentId);
+  if (!p) return;
+
+  if (!confirm('Удалить проект «' + p.projectName + '» безвозвратно? Это действие нельзя отменить.')) return;
+
+  const deleteBtn = document.getElementById('mdDeleteBtn');
+  deleteBtn.disabled = true;
+  deleteBtn.innerText = 'Удаление...';
+
+  try {
+    const result = await postWebAction({
+      webAction: 'deleteMicroproject',
+      sessionId: localStorage.getItem('msbSessionId'),
+      id: mdCurrentId
+    });
+
+    if (result.success) {
+      closeMicroprojectDetail();
+      await loadMahallaData();
+    } else {
+      alert(result.message || 'Не удалось удалить проект');
+    }
+  } catch (error) {
+    alert('Не удалось связаться с сервером');
+    console.error(error);
+  } finally {
+    deleteBtn.disabled = false;
+    deleteBtn.innerText = '🗑 Удалить проект';
+  }
 }
 
 function closeMicroprojectDetail() {
@@ -5915,6 +5976,15 @@ function openMicroprojectForm(mode, id) {
     document.getElementById('mpStatus').value = p.status || 'Выявлен';
     toggleSubjectStatusFields();
 
+    const isAdminUser = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    // Геолокация и фото — доказательство реального посещения объекта,
+    // зафиксированное при создании. Банкир не может их поменять задним
+    // числом, только управляющий (см. пояснение в Apps Script).
+    document.getElementById('mpGeoEditWrap').style.display = isAdminUser ? 'flex' : 'none';
+    document.getElementById('mpGeoLockedNote').style.display = isAdminUser ? 'none' : 'block';
+    document.getElementById('mpPhotoEditWrap').style.display = isAdminUser ? 'block' : 'none';
+    document.getElementById('mpPhotoLockedNote').style.display = isAdminUser ? 'none' : 'block';
+
     const photos = String(p.photoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
     if (photos.length) {
       const wrap = document.getElementById('mpExistingPhotosWrap');
@@ -5925,6 +5995,11 @@ function openMicroprojectForm(mode, id) {
     microprojectFormMode = 'create';
     title.innerText = 'Добавить микропроект';
     submitBtn.innerText = 'Сохранить';
+
+    document.getElementById('mpGeoEditWrap').style.display = 'flex';
+    document.getElementById('mpGeoLockedNote').style.display = 'none';
+    document.getElementById('mpPhotoEditWrap').style.display = 'block';
+    document.getElementById('mpPhotoLockedNote').style.display = 'none';
 
     mahallaSelect.disabled = false;
     document.getElementById('mpProjectName').value = '';
