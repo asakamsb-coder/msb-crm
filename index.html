@@ -1040,18 +1040,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <nav class="nav">
-    <a class="active" onclick="showMsbSales(this)"><span class="icon"></span>МСБ ПРОДАЖИ</a>
-    <a onclick="showPage('portfolioPage', this)">
+    <a class="active" data-msb-only="true" onclick="showMsbSales(this)"><span class="icon"></span>МСБ ПРОДАЖИ</a>
+    <a data-msb-only="true" onclick="showPage('portfolioPage', this)">
     <span class="icon"></span>
     Кредитный портфель
 </a>
-    <a data-admin="true" onclick="showPage('slaPage', this)"><span class="icon"></span>SLA контроль</a>
-    <a onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
-    <a onclick="showPage('regionsPage', this)"><span class="icon"></span>Районы</a>
+    <a data-admin="true" data-msb-only="true" onclick="showPage('slaPage', this)"><span class="icon"></span>SLA контроль</a>
+    <a data-msb-only="true" onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
+    <a data-msb-only="true" onclick="showPage('regionsPage', this)"><span class="icon"></span>Районы</a>
     <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>Мой кабинет</a>
-    <a onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
-    <a onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
-    <a onclick="showPage('mahallaPage', this)"><span class="icon"></span>Махалля</a>
+    <a data-msb-only="true" onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
+    <a data-msb-only="true" onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
+    <a id="mahallaNavLink" onclick="showPage('mahallaPage', this)"><span class="icon"></span>Махалля</a>
   </nav>
 </aside>
 
@@ -1926,6 +1926,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <label style="margin-top:10px;display:block;">Роль</label>
     <select id="newUserRole" class="select">
       <option value="MANAGER">Менеджер</option>
+      <option value="MAHALLA_BANKER">Банкир Махалли</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
 
@@ -1947,6 +1948,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 </div>
   
+  <div id="myCabinetMsbBlock">
   <section class="kpi">
     <div class="card"><div class="card-label">Мои клиенты</div><div class="card-value" id="myClientsCount">0</div></div>
     <div class="card"><div class="card-label">Мои заявки</div><div class="card-value" id="myTotalAmount">0</div></div>
@@ -2031,6 +2033,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <div id="annualPlanBox" class="loading">Загрузка...</div>
+  </div>
   </div>
 </section>
 
@@ -2674,6 +2677,8 @@ function applyRoleView() {
   document.getElementById('myCabinetRole').innerText =
     currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR'
       ? 'Управляющий'
+      : currentUser.role === 'MAHALLA_BANKER'
+      ? 'Банкир Махалли'
       : 'Менеджер';
 
   document.querySelectorAll('[data-admin="true"]').forEach(el => {
@@ -2683,6 +2688,17 @@ function applyRoleView() {
       el.classList.remove('hidden-by-role');
     }
   });
+
+  // Махалля — отдельный блок/отдел. Банкир Махалли не должен видеть и даже
+  // грузить разделы МСБ (Dashboard, Клиенты, Портфель, SLA, Статистика,
+  // Районы, Менеджеры, AI Центр) — только "Махалля" и "Мой кабинет".
+  const isMahallaOnly = currentUser.role === 'MAHALLA_BANKER';
+  document.querySelectorAll('[data-msb-only="true"]').forEach(el => {
+    el.classList.toggle('hidden-by-role', isMahallaOnly);
+  });
+
+  const myCabinetMsbBlock = document.getElementById('myCabinetMsbBlock');
+  if (myCabinetMsbBlock) myCabinetMsbBlock.classList.toggle('hidden-by-role', isMahallaOnly);
 }
 
 function getVisibleClients() {
@@ -2730,6 +2746,16 @@ let clientFormMode = 'create';
 
 async function loadCRM() {
   try {
+    // Махалля — отдельный отдел. Банкиру Махалли не нужны и не должны
+    // грузиться данные МСБ (клиенты, статистика, воронка, менеджеры) —
+    // только список для форм и сам раздел "Махалля".
+    if (currentUser && currentUser.role === 'MAHALLA_BANKER') {
+      webFormLists = await fetchJSON('formLists');
+      const mahallaLink = document.getElementById('mahallaNavLink');
+      showPage('mahallaPage', mahallaLink);
+      return;
+    }
+
     const [stats, clients, funnel, managers, formLists] = await Promise.all([
       fetchJSON('stats'),
       fetchJSON('clients'),
@@ -5571,9 +5597,19 @@ function openMicroprojectForm(mode, id) {
   if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
 
   const mahallaSelect = document.getElementById('mpMahalla');
-  const officialMahallas = (webFormLists && webFormLists.mahallas) || [];
-  const mahallaOptions = officialMahallas.length ? officialMahallas : getVisibleMahallas().map(m => m.name);
-  mahallaSelect.innerHTML = mahallaOptions.map(name => `<option value="${safe(name)}">${safe(name)}</option>`).join('');
+  const isAdminUser = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  // Управляющий может завести проект в любую махаллю филиала (официальный
+  // список из паспорта). Банкир — только в закреплённые за собой махалли,
+  // это же проверяется и на сервере, так что подделать запрос смысла нет.
+  const mahallaOptions = isAdminUser
+    ? ((webFormLists && webFormLists.mahallas) || getVisibleMahallas().map(m => m.name))
+    : getVisibleMahallas().map(m => m.name);
+
+  if (!mahallaOptions.length) {
+    mahallaSelect.innerHTML = '<option value="">Нет закреплённых махаллей — обратитесь к управляющему</option>';
+  } else {
+    mahallaSelect.innerHTML = mahallaOptions.map(name => `<option value="${safe(name)}">${safe(name)}</option>`).join('');
+  }
 
   fillSelectOptions('mpSubjectStatus', (webFormLists && webFormLists.subjectStatuses) || ['Физлицо','Самозанятый','ИП','СП','Юрлицо','Другое'], false);
   fillSelectOptions('mpIndustry', (webFormLists && webFormLists.industries) || [], false);
