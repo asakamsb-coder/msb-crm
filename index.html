@@ -5597,16 +5597,14 @@ function openMicroprojectForm(mode, id) {
   if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
 
   const mahallaSelect = document.getElementById('mpMahalla');
-  const isAdminUser = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-  // Управляющий может завести проект в любую махаллю филиала (официальный
-  // список из паспорта). Банкир — только в закреплённые за собой махалли,
-  // это же проверяется и на сервере, так что подделать запрос смысла нет.
-  const mahallaOptions = isAdminUser
-    ? ((webFormLists && webFormLists.mahallas) || getVisibleMahallas().map(m => m.name))
-    : getVisibleMahallas().map(m => m.name);
+  // По решению управляющего закрепление банкира за конкретной махаллей
+  // больше не ограничивает выбор при добавлении проекта — переназначать
+  // вручную при каждом увольнении/найме неудобно. Виден полный список
+  // из 17 махаллей филиала (та же проверка есть и на сервере).
+  const mahallaOptions = (webFormLists && webFormLists.mahallas) || getVisibleMahallas().map(m => m.name);
 
   if (!mahallaOptions.length) {
-    mahallaSelect.innerHTML = '<option value="">Нет закреплённых махаллей — обратитесь к управляющему</option>';
+    mahallaSelect.innerHTML = '<option value="">Список махаллей не загружен</option>';
   } else {
     mahallaSelect.innerHTML = mahallaOptions.map(name => `<option value="${safe(name)}">${safe(name)}</option>`).join('');
   }
