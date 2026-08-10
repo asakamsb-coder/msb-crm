@@ -2642,6 +2642,10 @@ async function login() {
 // должен запрашивать логин и пароль заново — сохранённая сессия в браузере
 // НЕ используется для автоматического входа. tryAutoLogin() больше не
 // вызывается при загрузке страницы.
+// Обновление страницы (F5) больше НЕ требует повторного входа — сохранённая
+// сессия восстанавливается автоматически. Единственная защита теперь —
+// таймер бездействия (INACTIVITY_TIMEOUT_MS ниже): если пользователь не
+// проявляет активности дольше этого времени, его всё равно разлогинит.
 function tryAutoLogin() {
   const reason = localStorage.getItem('msbLogoutReason');
   if (reason === 'inactivity') {
@@ -2651,6 +2655,22 @@ function tryAutoLogin() {
       errorBox.style.display = 'block';
     }
     localStorage.removeItem('msbLogoutReason');
+    return;
+  }
+
+  const savedUser = localStorage.getItem('msbUser');
+  const savedSession = localStorage.getItem('msbSessionId');
+
+  if (savedUser && savedSession) {
+    currentUser = JSON.parse(savedUser);
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('loadingScreen').classList.add('active');
+
+    applyRoleView();
+    loadCRM().finally(() => {
+      document.getElementById('loadingScreen').classList.remove('active');
+    });
+    startInactivityWatcher();
   }
 }
 
