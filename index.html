@@ -967,6 +967,15 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .mp-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;}
 .mp-photo-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
 .mp-photo-thumb-wrap{position:relative;display:inline-block;}
+.mp-photo-broken{
+  width:64px;height:64px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;text-align:center;
+  background:var(--bg);
+  border:1px dashed var(--line);
+  border-radius:10px;
+  color:var(--muted);
+}
 .mp-photo-remove-btn{
   position:absolute;
   top:-6px;
@@ -2163,6 +2172,52 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="drawer-body">
     <div id="bankerFormList"></div>
     <button class="btn" style="width:100%;margin-top:18px;" onclick="submitBankerForm()">Сохранить</button>
+  </div>
+</aside>
+
+<div class="drawer-overlay" id="microprojectDetailOverlay" onclick="closeMicroprojectDetail()"></div>
+<aside class="client-drawer" id="microprojectDetailDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="mdName">Микропроект</div>
+      <div class="drawer-subtitle" id="mdSubtitle">-</div>
+    </div>
+    <button class="close-btn" onclick="closeMicroprojectDetail()">×</button>
+  </div>
+
+  <div class="drawer-body">
+    <div class="info-grid">
+      <div class="info-card"><div class="info-label">Статус</div><div class="info-value" id="mdStatus">-</div></div>
+      <div class="info-card"><div class="info-label">Оценка банкира</div><div class="info-value" id="mdAssessment">-</div></div>
+      <div class="info-card"><div class="info-label">Махалля</div><div class="info-value" id="mdMahalla">-</div></div>
+      <div class="info-card"><div class="info-label">Банкир</div><div class="info-value" id="mdBanker">-</div></div>
+      <div class="info-card"><div class="info-label">Инициатор</div><div class="info-value" id="mdApplicant">-</div></div>
+      <div class="info-card"><div class="info-label">Телефон</div><div class="info-value" id="mdContact">-</div></div>
+      <div class="info-card"><div class="info-label">Статус субъекта</div><div class="info-value" id="mdSubjectStatus">-</div></div>
+      <div class="info-card"><div class="info-label">ПИНФЛ / ИНН</div><div class="info-value" id="mdIdentity">-</div></div>
+      <div class="info-card"><div class="info-label">Отрасль</div><div class="info-value" id="mdIndustry">-</div></div>
+      <div class="info-card"><div class="info-label">Тип проекта</div><div class="info-value" id="mdProjectType">-</div></div>
+      <div class="info-card full"><div class="info-label">Что будет производить/оказывать</div><div class="info-value" id="mdDescription">-</div></div>
+      <div class="info-card"><div class="info-label">Начало бизнеса</div><div class="info-value" id="mdStart">-</div></div>
+      <div class="info-card"><div class="info-label">Есть помещение/земля</div><div class="info-value" id="mdPremises">-</div></div>
+      <div class="info-card full"><div class="info-label">Что нужно купить</div><div class="info-value" id="mdPurchases">-</div></div>
+      <div class="info-card"><div class="info-label">Общая стоимость</div><div class="info-value" id="mdTotalCost">-</div></div>
+      <div class="info-card"><div class="info-label">Собственные средства</div><div class="info-value" id="mdOwnFunds">-</div></div>
+      <div class="info-card"><div class="info-label">Нужный кредит</div><div class="info-value" id="mdCredit">-</div></div>
+      <div class="info-card"><div class="info-label">Нужна субсидия</div><div class="info-value" id="mdSubsidy">-</div></div>
+      <div class="info-card"><div class="info-label">Новых рабочих мест</div><div class="info-value" id="mdJobs">-</div></div>
+      <div class="info-card"><div class="info-label">Объект посещён</div><div class="info-value" id="mdVisited">-</div></div>
+      <div class="info-card"><div class="info-label">Геолокация</div><div class="info-value" id="mdGeo">-</div></div>
+      <div class="info-card"><div class="info-label">Обновлено</div><div class="info-value" id="mdUpdated">-</div></div>
+      <div class="info-card full"><div class="info-label">Комментарий банкира</div><div class="info-value" id="mdComment">-</div></div>
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <div class="info-label" style="margin-bottom:8px;">Фото объекта</div>
+      <div id="mdPhotos" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+    </div>
+
+    <button class="btn" style="width:100%;" id="mdEditBtn" onclick="closeMicroprojectDetail();openMicroprojectForm('edit', mdCurrentId)">✏️ Редактировать проект</button>
   </div>
 </aside>
 
@@ -5551,17 +5606,18 @@ function renderMicroprojectsList() {
   };
 
   box.innerHTML = list.slice().reverse().map(p => {
+    const encodedId = encodeURIComponent(p.id);
     const photos = String(p.photoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
     const photosHtml = photos.length
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${photos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')}</div>`
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${photos.map(url => renderMpPhotoThumb(url)).join('')}</div>`
       : '';
 
     const mapLink = p.geolocation
-      ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(p.geolocation)}" target="_blank" style="color:var(--brand);font-weight:700;">📍 Открыть на карте</a>`
+      ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(p.geolocation)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:700;">📍 Открыть на карте</a>`
       : '';
 
     return `
-      <div class="microproject-card">
+      <div class="microproject-card clickable-row" onclick="openMicroprojectDetail(decodeURIComponent('${encodedId}'))">
         <div class="microproject-top">
           <div style="flex:1;min-width:0;">
             <div class="microproject-name">
@@ -5581,11 +5637,21 @@ function renderMicroprojectsList() {
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
             <span class="status ${statusColors[p.status] || 'status-blue'}">${safe(p.status)}</span>
-            <button class="btn btn-secondary" onclick="openMicroprojectForm('edit', decodeURIComponent('${encodeURIComponent(p.id)}'))">Изменить</button>
+            <button class="btn btn-secondary" onclick="event.stopPropagation();openMicroprojectForm('edit', decodeURIComponent('${encodedId}'))">Изменить</button>
           </div>
         </div>
       </div>`;
   }).join('');
+}
+
+// Показывает миниатюру фото с подстраховкой: если картинка не
+// загрузилась (Google Drive иногда отдаёт заглушку вместо файла), вместо
+// пустой/битой картинки покажется кликабельная ссылка "Открыть фото".
+function renderMpPhotoThumb(url) {
+  const safeUrl = safe(url);
+  return `<a href="${safeUrl}" target="_blank" onclick="event.stopPropagation()" class="mp-photo-thumb-link">
+      <img src="${safeUrl}" class="mp-photo-thumb" onerror="this.parentElement.innerHTML='📷 Фото'; this.parentElement.classList.add('mp-photo-broken');">
+    </a>`;
 }
 
 // --- Форма: добавить махаллю ---
@@ -5709,6 +5775,66 @@ function toggleSubjectStatusFields() {
 }
 
 let mpSelectedPhotoFiles = [];
+
+let mdCurrentId = null;
+
+function openMicroprojectDetail(id) {
+  const p = allMicroprojects.find(x => x.id === id);
+  if (!p) { alert('Проект не найден'); return; }
+
+  mdCurrentId = id;
+
+  document.getElementById('mdName').innerText = safe(p.projectName);
+  document.getElementById('mdSubtitle').innerText = safe(p.mahalla) + ' • ' + safe(p.applicantName);
+  document.getElementById('mdStatus').innerText = safe(p.status);
+  document.getElementById('mdAssessment').innerText = safe(p.bankerAssessment);
+  document.getElementById('mdMahalla').innerText = safe(p.mahalla);
+  document.getElementById('mdBanker').innerText = safe(p.banker);
+  document.getElementById('mdApplicant').innerText = safe(p.applicantName);
+  document.getElementById('mdContact').innerText = safe(p.applicantContact);
+  document.getElementById('mdSubjectStatus').innerText = safe(p.subjectStatus);
+  document.getElementById('mdIdentity').innerText = p.inn ? ('ИНН: ' + p.inn) : (p.pinfl ? ('ПИНФЛ: ' + p.pinfl) : '-');
+  document.getElementById('mdIndustry').innerText = safe(p.industry);
+  document.getElementById('mdProjectType').innerText = safe(p.projectType);
+  document.getElementById('mdDescription').innerText = safe(p.description);
+  document.getElementById('mdStart').innerText = (p.startMonth || p.startYear) ? (safe(p.startMonth) + ' ' + safe(p.startYear)) : '-';
+  document.getElementById('mdPremises').innerText = safe(p.hasPremises);
+  document.getElementById('mdPurchases').innerText = safe(p.neededPurchases);
+  document.getElementById('mdTotalCost').innerText = p.totalCost ? formatMoney(p.totalCost) : '-';
+  document.getElementById('mdOwnFunds').innerText = p.ownFunds ? formatMoney(p.ownFunds) : '-';
+  document.getElementById('mdCredit').innerText = p.creditNeeded ? formatMoney(p.creditNeeded) : '-';
+  document.getElementById('mdSubsidy').innerText = safe(p.needsSubsidy);
+  document.getElementById('mdJobs').innerText = safe(p.newJobs || 0);
+  document.getElementById('mdVisited').innerText = safe(p.siteVisited);
+  document.getElementById('mdUpdated').innerText = safe(p.updatedAt);
+  document.getElementById('mdComment').innerText = safe(p.comment);
+
+  const geoBox = document.getElementById('mdGeo');
+  if (p.geolocation) {
+    geoBox.innerHTML = `<a href="https://www.google.com/maps?q=${encodeURIComponent(p.geolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(p.geolocation)}</a>`;
+  } else {
+    geoBox.innerText = '-';
+  }
+
+  const photos = String(p.photoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+  const photosBox = document.getElementById('mdPhotos');
+  if (photos.length) {
+    photosBox.innerHTML = photos.map(url => `
+      <a href="${safe(url)}" target="_blank" class="mp-photo-thumb-link">
+        <img src="${safe(url)}" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line);" onerror="this.parentElement.outerHTML='<a href=&quot;${safe(url)}&quot; target=&quot;_blank&quot; class=&quot;mp-photo-broken&quot; style=&quot;width:120px;height:120px;text-decoration:none;&quot;>📷 Открыть фото</a>';">
+      </a>`).join('');
+  } else {
+    photosBox.innerHTML = '<div style="color:var(--muted);font-size:13px;">Фото не загружены</div>';
+  }
+
+  document.getElementById('microprojectDetailOverlay').classList.add('active');
+  document.getElementById('microprojectDetailDrawer').classList.add('active');
+}
+
+function closeMicroprojectDetail() {
+  document.getElementById('microprojectDetailOverlay').classList.remove('active');
+  document.getElementById('microprojectDetailDrawer').classList.remove('active');
+}
 
 function openMicroprojectForm(mode, id) {
   microprojectFormMode = mode;
