@@ -689,9 +689,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   .mtbl-my th:nth-child(3),.mtbl-my td:nth-child(3),
   .mtbl-my th:nth-child(4),.mtbl-my td:nth-child(4){display:none;}
 
+  .mtbl-microprojects{min-width:0;width:100%;}
+  .mtbl-microprojects th:nth-child(2),.mtbl-microprojects td:nth-child(2),
+  .mtbl-microprojects th:nth-child(5),.mtbl-microprojects td:nth-child(5),
+  .mtbl-microprojects th:nth-child(6),.mtbl-microprojects td:nth-child(6),
+  .mtbl-microprojects th:nth-child(7),.mtbl-microprojects td:nth-child(7),
+  .mtbl-microprojects th:nth-child(9),.mtbl-microprojects td:nth-child(9),
+  .mtbl-microprojects th:nth-child(10),.mtbl-microprojects td:nth-child(10){display:none;}
+
   /* Крупнее текст и просторнее строки в оставшихся столбцах — легче читать и попадать пальцем */
-  .mtbl-clients td,.mtbl-latest td,.mtbl-sla td,.mtbl-my td{padding:14px 10px;font-size:14px;}
-  .mtbl-clients th,.mtbl-latest th,.mtbl-sla th,.mtbl-my th{padding:10px;}
+  .mtbl-clients td,.mtbl-latest td,.mtbl-sla td,.mtbl-my td,.mtbl-microprojects td{padding:14px 10px;font-size:14px;}
+  .mtbl-clients th,.mtbl-latest th,.mtbl-sla th,.mtbl-my th,.mtbl-microprojects th{padding:10px;}
 }
 
 
@@ -2121,6 +2129,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div id="microprojectStatsBox"></div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 16px;">
+        <input id="microprojectSearchInput" class="input" placeholder="Поиск по проекту, инициатору, ПИНФЛ/ИНН" style="max-width:280px;flex:1 1 200px;" oninput="renderMicroprojectsList()">
         <select id="microprojectMahallaFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()"><option value="">Все махалли</option></select>
         <select id="microprojectStatusFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()">
           <option value="">Все статусы</option>
@@ -2136,7 +2145,27 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         </select>
       </div>
 
-      <div id="microprojectsBox" class="loading">Загрузка...</div>
+      <div class="client-table-wrap">
+        <table class="mtbl-microprojects">
+          <thead>
+            <tr>
+              <th>№</th>
+              <th>Дата</th>
+              <th>Махалля</th>
+              <th>Проект</th>
+              <th>Инициатор</th>
+              <th>Отрасль</th>
+              <th>Стоимость</th>
+              <th>Статус</th>
+              <th>Оценка</th>
+              <th>Банкир</th>
+            </tr>
+          </thead>
+          <tbody id="microprojectsBox">
+            <tr><td colspan="10" class="loading">Загрузка...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>
@@ -5575,15 +5604,20 @@ function renderMicroprojectsList() {
   // а не только те, что попадают в его формально закреплённую махаллю.
   let list = allMicroprojects.slice();
 
+  const query = normalizeText((document.getElementById('microprojectSearchInput')?.value || '').trim());
   const mahallaFilter = document.getElementById('microprojectMahallaFilter')?.value || '';
   const statusFilter = document.getElementById('microprojectStatusFilter')?.value || '';
+
+  if (query) {
+    list = list.filter(p => normalizeText([p.projectName, p.applicantName, p.pinfl, p.inn, p.mahalla].join(' ')).includes(query));
+  }
   if (mahallaFilter) list = list.filter(p => p.mahalla === mahallaFilter);
   if (statusFilter) list = list.filter(p => p.status === statusFilter);
 
   renderMicroprojectStats(list);
 
   if (!list.length) {
-    box.innerHTML = '<div class="loading">Микропроектов не найдено</div>';
+    box.innerHTML = '<tr><td colspan="10" class="loading">Микропроектов не найдено</td></tr>';
     return;
   }
 
@@ -5605,53 +5639,27 @@ function renderMicroprojectsList() {
     'Нецелесообразный': 'status-red'
   };
 
-  box.innerHTML = list.slice().reverse().map(p => {
+  const sorted = list.slice().reverse();
+
+  box.innerHTML = sorted.map((p, i) => {
     const encodedId = encodeURIComponent(p.id);
-    const photos = String(p.photoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
-    const photosHtml = photos.length
-      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${photos.map(url => renderMpPhotoThumb(url)).join('')}</div>`
-      : '';
-
-    const mapLink = p.geolocation
-      ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(p.geolocation)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:700;">📍 Открыть на карте</a>`
-      : '';
-
     return `
-      <div class="microproject-card clickable-row" onclick="openMicroprojectDetail(decodeURIComponent('${encodedId}'))">
-        <div class="microproject-top">
-          <div style="flex:1;min-width:0;">
-            <div class="microproject-name">
-              ${safe(p.projectName)}
-              ${p.needsSubsidy === 'Да' ? ' <span class="status status-orange" style="font-size:11px;">Нужна субсидия</span>' : ''}
-              ${p.bankerAssessment ? ` <span class="status ${assessmentColors[p.bankerAssessment] || 'status-blue'}" style="font-size:11px;">${safe(p.bankerAssessment)}</span>` : ''}
-            </div>
-            <div class="microproject-meta">
-              Махалля: ${safe(p.mahalla)} • Инициатор: ${safe(p.applicantName)} ${p.applicantContact ? '(' + safe(p.applicantContact) + ')' : ''}<br>
-              ${safe(p.subjectStatus)}${p.inn ? ' • ИНН: ' + safe(p.inn) : ''}${p.pinfl ? ' • ПИНФЛ: ' + safe(p.pinfl) : ''}<br>
-              ${p.industry ? 'Отрасль: ' + safe(p.industry) + ' • ' : ''}${safe(p.projectType)}${p.startMonth || p.startYear ? ' с ' + safe(p.startMonth) + ' ' + safe(p.startYear) : ''}<br>
-              Стоимость: ${p.totalCost ? formatMoney(p.totalCost) : '—'} • Кредит: ${p.creditNeeded ? formatMoney(p.creditNeeded) : '—'} • Новых мест: ${safe(p.newJobs || 0)}<br>
-              Банкир: ${safe(p.banker)} • Посещён: ${safe(p.siteVisited)} • Обновлено: ${safe(p.updatedAt)}
-              ${mapLink ? '<br>' + mapLink : ''}
-            </div>
-            ${photosHtml}
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-            <span class="status ${statusColors[p.status] || 'status-blue'}">${safe(p.status)}</span>
-            <button class="btn btn-secondary" onclick="event.stopPropagation();openMicroprojectForm('edit', decodeURIComponent('${encodedId}'))">Изменить</button>
-          </div>
-        </div>
-      </div>`;
+      <tr class="clickable-row" onclick="openMicroprojectDetail(decodeURIComponent('${encodedId}'))">
+        <td class="nowrap">${i + 1}</td>
+        <td class="nowrap">${safe(p.createdAt)}</td>
+        <td>${safe(p.mahalla)}</td>
+        <td>
+          ${safe(p.projectName)}
+          ${p.photoUrls ? ' <span title="Есть фото">📷</span>' : ''}
+        </td>
+        <td>${safe(p.applicantName)}</td>
+        <td>${safe(p.industry)}</td>
+        <td class="nowrap">${p.totalCost ? formatMoney(p.totalCost) : '—'}</td>
+        <td><span class="status ${statusColors[p.status] || 'status-blue'}">${safe(p.status)}</span></td>
+        <td>${p.bankerAssessment ? `<span class="status ${assessmentColors[p.bankerAssessment] || 'status-blue'}">${safe(p.bankerAssessment)}</span>` : '—'}</td>
+        <td>${safe(p.banker)}</td>
+      </tr>`;
   }).join('');
-}
-
-// Показывает миниатюру фото с подстраховкой: если картинка не
-// загрузилась (Google Drive иногда отдаёт заглушку вместо файла), вместо
-// пустой/битой картинки покажется кликабельная ссылка "Открыть фото".
-function renderMpPhotoThumb(url) {
-  const safeUrl = safe(url);
-  return `<a href="${safeUrl}" target="_blank" onclick="event.stopPropagation()" class="mp-photo-thumb-link">
-      <img src="${safeUrl}" class="mp-photo-thumb" onerror="this.parentElement.innerHTML='📷 Фото'; this.parentElement.classList.add('mp-photo-broken');">
-    </a>`;
 }
 
 // --- Форма: добавить махаллю ---
