@@ -946,6 +946,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   color:#fff;
 }
 .manager-client-section{display:none;}
+.mahalla-tab-section{display:none;}
+.mahalla-tab-section.active{display:block;}
+.mahalla-row{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;}
+.mahalla-row-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+.mahalla-row-name{font-weight:800;font-size:15px;}
+.mahalla-row-meta{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.6;}
+.microproject-card{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;}
+.microproject-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+.microproject-name{font-weight:800;font-size:15px;}
+.microproject-meta{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.6;}
 .manager-client-section.active{display:block;}
 .manager-client-row{
   cursor:pointer;
@@ -1016,6 +1026,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>Мой кабинет</a>
     <a onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
     <a onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
+    <a onclick="showPage('mahallaPage', this)"><span class="icon"></span>Махалля</a>
   </nav>
 </aside>
 
@@ -2004,6 +2015,144 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
+<section id="mahallaPage" class="page">
+  <div class="header">
+    <div>
+      <h1>Махалля</h1>
+      <p>Паспорта махаллей и микропроекты предпринимателей. Отдельный блок, не связан с клиентской базой CRM.</p>
+    </div>
+  </div>
+
+  <div class="msb-sales-tabs">
+    <button class="msb-sales-tab active" data-mahalla-tab="mahallaList" onclick="showMahallaTab('mahallaList')">🏘️ Махалли</button>
+    <button class="msb-sales-tab" data-mahalla-tab="microprojectsList" onclick="showMahallaTab('microprojectsList')">💡 Микропроекты</button>
+  </div>
+
+  <div id="mahallaListSection" class="mahalla-tab-section active">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div>
+          <h2 style="margin-bottom:4px;">Список махаллей</h2>
+          <p style="color:var(--muted);font-size:13px;">Показатели (население, дворы и т.д.) заполняются импортом файла-паспорта — пока могут быть пустыми.</p>
+        </div>
+        <button class="btn" id="addMahallaBtn" style="display:none;" onclick="openMahallaForm()">+ Добавить махаллю</button>
+      </div>
+      <div id="mahallasBox" class="loading">Загрузка...</div>
+    </div>
+  </div>
+
+  <div id="microprojectsListSection" class="mahalla-tab-section">
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div>
+          <h2 style="margin-bottom:4px;">Микропроекты</h2>
+          <p style="color:var(--muted);font-size:13px;">Проекты предпринимателей из махаллей, которые ведёт закреплённый банкир.</p>
+        </div>
+        <button class="btn" onclick="openMicroprojectForm('create')">+ Добавить микропроект</button>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <select id="microprojectMahallaFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()"><option value="">Все махалли</option></select>
+        <select id="microprojectStatusFilter" class="select" style="max-width:200px;" onchange="renderMicroprojectsList()">
+          <option value="">Все статусы</option>
+          <option>Идея</option>
+          <option>На рассмотрении</option>
+          <option>Одобрено</option>
+          <option>Запущено</option>
+          <option>Отклонено</option>
+        </select>
+      </div>
+
+      <div id="microprojectsBox" class="loading">Загрузка...</div>
+    </div>
+  </div>
+</section>
+
+<div class="drawer-overlay" id="mahallaFormOverlay" onclick="closeMahallaForm()"></div>
+<aside class="client-drawer" id="mahallaFormDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title">Добавить махаллю</div>
+      <div class="drawer-subtitle">Название и (опционально) банкиры</div>
+    </div>
+    <button class="close-btn" onclick="closeMahallaForm()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div id="mahallaFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Название махалли *</label>
+    <input id="mfName" class="input" style="margin-bottom:18px;" placeholder="Например: Дустлик">
+
+    <button class="btn" style="width:100%;" onclick="submitMahallaForm()">Сохранить</button>
+  </div>
+</aside>
+
+<div class="drawer-overlay" id="bankerFormOverlay" onclick="closeBankerForm()"></div>
+<aside class="client-drawer" id="bankerFormDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="bankerFormTitle">Назначить банкира</div>
+      <div class="drawer-subtitle">Можно выбрать несколько менеджеров</div>
+    </div>
+    <button class="close-btn" onclick="closeBankerForm()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div id="bankerFormList"></div>
+    <button class="btn" style="width:100%;margin-top:18px;" onclick="submitBankerForm()">Сохранить</button>
+  </div>
+</aside>
+
+<div class="drawer-overlay" id="microprojectFormOverlay" onclick="closeMicroprojectForm()"></div>
+<aside class="client-drawer" id="microprojectFormDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="microprojectFormTitle">Добавить микропроект</div>
+      <div class="drawer-subtitle">Проект предпринимателя из махалли</div>
+    </div>
+    <button class="close-btn" onclick="closeMicroprojectForm()">×</button>
+  </div>
+  <div class="drawer-body">
+    <div id="microprojectFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Махалля *</label>
+    <select id="mpMahalla" class="select" style="margin-bottom:14px;"></select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Название проекта *</label>
+    <input id="mpProjectName" class="input" style="margin-bottom:14px;">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ФИО инициатора *</label>
+    <input id="mpApplicantName" class="input" style="margin-bottom:14px;">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Контакт</label>
+    <input id="mpApplicantContact" class="input" style="margin-bottom:14px;" placeholder="998971234567">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Нужная сумма</label>
+    <input id="mpAmountNeeded" class="input" type="number" min="0" style="margin-bottom:14px;">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Тип поддержки</label>
+    <select id="mpSupportType" class="select" style="margin-bottom:14px;">
+      <option>Кредит</option>
+      <option>Субсидия</option>
+      <option>Обучение</option>
+      <option>Другое</option>
+    </select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Статус</label>
+    <select id="mpStatus" class="select" style="margin-bottom:14px;">
+      <option>Идея</option>
+      <option>На рассмотрении</option>
+      <option>Одобрено</option>
+      <option>Запущено</option>
+      <option>Отклонено</option>
+    </select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Комментарий</label>
+    <textarea id="mpComment" class="input" style="margin-bottom:18px;min-height:90px;resize:vertical;"></textarea>
+
+    <button class="btn" style="width:100%;" id="microprojectFormSubmitBtn" onclick="submitMicroprojectForm()">Сохранить</button>
+  </div>
+</aside>
+
 <div class="footer" id="updatedAt">MSB CRM Web 2.10 • Asakabank Nukus BXM</div>
 
 </main>
@@ -2504,6 +2653,10 @@ function showPage(id, el) {
     if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR')) {
       loadUsersList();
     }
+  }
+
+  if (id === 'mahallaPage') {
+    loadMahallaData();
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4834,6 +4987,374 @@ async function submitClientForm() {
       submitBtn.disabled = false;
       submitBtn.innerText = clientFormMode === 'edit' ? 'Сохранить изменения' : 'Сохранить';
     }
+  }
+}
+
+// ============================================================
+// МАХАЛЛЯ — паспорта махаллей и микропроекты. Полностью отдельный блок,
+// не связан с клиентской базой CRM. Данные грузятся лениво (только когда
+// пользователь заходит на вкладку "Махалля"), чтобы не замедлять обычный
+// вход в систему.
+// ============================================================
+
+let allMahallas = [];
+let allMicroprojects = [];
+let mahallaDataLoaded = false;
+let microprojectFormMode = 'create';
+let editingMicroprojectId = null;
+let bankerFormMahallaId = null;
+
+async function loadMahallaData() {
+  const mahallasBox = document.getElementById('mahallasBox');
+  const microBox = document.getElementById('microprojectsBox');
+
+  try {
+    const [mahallas, microprojects] = await Promise.all([
+      fetchJSON('mahallas'),
+      fetchJSON('microprojects')
+    ]);
+
+    allMahallas = mahallas || [];
+    allMicroprojects = microprojects || [];
+    mahallaDataLoaded = true;
+
+    const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    const addBtn = document.getElementById('addMahallaBtn');
+    if (addBtn) addBtn.style.display = isAdmin ? 'inline-block' : 'none';
+
+    fillMahallaFilterSelect();
+    renderMahallasList();
+    renderMicroprojectsList();
+  } catch (error) {
+    console.error(error);
+    if (mahallasBox) mahallasBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли</div>';
+    if (microBox) microBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли</div>';
+  }
+}
+
+function showMahallaTab(tab) {
+  document.querySelectorAll('.mahalla-tab-section').forEach(el => el.classList.remove('active'));
+  const section = document.getElementById(tab + 'Section');
+  if (section) section.classList.add('active');
+
+  document.querySelectorAll('[data-mahalla-tab]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mahallaTab === tab);
+  });
+}
+
+// Менеджер видит только свои махалли (где его имя есть в поле "Банкиры"),
+// управляющий видит все.
+function getVisibleMahallas() {
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  if (isAdmin) return allMahallas;
+
+  const myName = normalizeText(currentUser.fullName || currentUser.login);
+  return allMahallas.filter(m => normalizeText(m.bankers || '').includes(myName));
+}
+
+function fillMahallaFilterSelect() {
+  const select = document.getElementById('microprojectMahallaFilter');
+  if (!select) return;
+  const visible = getVisibleMahallas();
+  select.innerHTML = '<option value="">Все махалли</option>' + visible.map(m => `<option value="${safe(m.name)}">${safe(m.name)}</option>`).join('');
+}
+
+function renderMahallasList() {
+  const box = document.getElementById('mahallasBox');
+  if (!box) return;
+
+  const visible = getVisibleMahallas();
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+
+  if (!visible.length) {
+    box.innerHTML = '<div class="loading">' + (isAdmin ? 'Махаллей пока нет — добавьте первую.' : 'За вами пока не закреплена ни одна махалля.') + '</div>';
+    return;
+  }
+
+  box.innerHTML = visible.map(m => {
+    const projectsCount = allMicroprojects.filter(p => p.mahalla === m.name).length;
+    const passportParts = [];
+    if (m.population) passportParts.push('Население: ' + safe(m.population));
+    if (m.households) passportParts.push('Дворов: ' + safe(m.households));
+    if (m.unemployed) passportParts.push('Безработных: ' + safe(m.unemployed));
+    if (m.activeEntrepreneurs) passportParts.push('Действующих ИП/СХ: ' + safe(m.activeEntrepreneurs));
+    const passportText = passportParts.length ? passportParts.join(' • ') : 'Паспорт ещё не загружен';
+
+    return `
+      <div class="mahalla-row">
+        <div class="mahalla-row-top">
+          <div>
+            <div class="mahalla-row-name">${safe(m.name)}</div>
+            <div class="mahalla-row-meta">
+              Банкир(ы): ${m.bankers ? safe(m.bankers) : 'не назначен'}<br>
+              ${passportText}<br>
+              Микропроектов: ${projectsCount}
+            </div>
+          </div>
+          ${isAdmin ? `<button class="btn btn-secondary" onclick="openBankerForm('${encodeURIComponent(m.id)}','${encodeURIComponent(m.name)}','${encodeURIComponent(m.bankers || '')}')">Назначить банкира</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderMicroprojectsList() {
+  const box = document.getElementById('microprojectsBox');
+  if (!box) return;
+
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const visibleMahallaNames = new Set(getVisibleMahallas().map(m => m.name));
+
+  let list = allMicroprojects.filter(p => isAdmin || visibleMahallaNames.has(p.mahalla));
+
+  const mahallaFilter = document.getElementById('microprojectMahallaFilter')?.value || '';
+  const statusFilter = document.getElementById('microprojectStatusFilter')?.value || '';
+  if (mahallaFilter) list = list.filter(p => p.mahalla === mahallaFilter);
+  if (statusFilter) list = list.filter(p => p.status === statusFilter);
+
+  if (!list.length) {
+    box.innerHTML = '<div class="loading">Микропроектов не найдено</div>';
+    return;
+  }
+
+  const statusColors = {
+    'Идея': 'status-blue',
+    'На рассмотрении': 'status-orange',
+    'Одобрено': 'status-green',
+    'Запущено': 'status-green',
+    'Отклонено': 'status-red'
+  };
+
+  box.innerHTML = list.slice().reverse().map(p => `
+      <div class="microproject-card">
+        <div class="microproject-top">
+          <div>
+            <div class="microproject-name">${safe(p.projectName)}</div>
+            <div class="microproject-meta">
+              Махалля: ${safe(p.mahalla)} • Инициатор: ${safe(p.applicantName)} ${p.applicantContact ? '(' + safe(p.applicantContact) + ')' : ''}<br>
+              Нужная сумма: ${p.amountNeeded ? formatMoney(p.amountNeeded) : '—'} • Поддержка: ${safe(p.supportType)}<br>
+              Банкир: ${safe(p.banker)} • Обновлено: ${safe(p.updatedAt)}
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+            <span class="status ${statusColors[p.status] || 'status-blue'}">${safe(p.status)}</span>
+            <button class="btn btn-secondary" onclick="openMicroprojectForm('edit', decodeURIComponent('${encodeURIComponent(p.id)}'))">Изменить</button>
+          </div>
+        </div>
+      </div>`).join('');
+}
+
+// --- Форма: добавить махаллю ---
+
+function openMahallaForm() {
+  document.getElementById('mfName').value = '';
+  const errorBox = document.getElementById('mahallaFormError');
+  if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
+  document.getElementById('mahallaFormOverlay').classList.add('active');
+  document.getElementById('mahallaFormDrawer').classList.add('active');
+}
+
+function closeMahallaForm() {
+  document.getElementById('mahallaFormOverlay').classList.remove('active');
+  document.getElementById('mahallaFormDrawer').classList.remove('active');
+}
+
+async function submitMahallaForm() {
+  const errorBox = document.getElementById('mahallaFormError');
+  const name = document.getElementById('mfName').value.trim();
+
+  if (!name) {
+    errorBox.innerText = 'Введите название махалли';
+    errorBox.style.display = 'block';
+    return;
+  }
+
+  try {
+    const result = await postWebAction({
+      webAction: 'createMahalla',
+      sessionId: localStorage.getItem('msbSessionId'),
+      name: name
+    });
+
+    if (result.success) {
+      closeMahallaForm();
+      await loadMahallaData();
+    } else {
+      errorBox.innerText = result.message || 'Не удалось добавить махаллю';
+      errorBox.style.display = 'block';
+    }
+  } catch (error) {
+    errorBox.innerText = 'Не удалось связаться с сервером';
+    errorBox.style.display = 'block';
+    console.error(error);
+  }
+}
+
+// --- Форма: назначить банкира ---
+
+function openBankerForm(encodedId, encodedName, encodedCurrentBankers) {
+  bankerFormMahallaId = decodeURIComponent(encodedId);
+  const name = decodeURIComponent(encodedName);
+  const currentBankers = decodeURIComponent(encodedCurrentBankers).split(',').map(s => s.trim()).filter(Boolean);
+
+  document.getElementById('bankerFormTitle').innerText = 'Банкиры: ' + name;
+
+  const managers = (webFormLists && webFormLists.managers) || [];
+  const listBox = document.getElementById('bankerFormList');
+  listBox.innerHTML = managers.map(m => `
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-weight:600;font-size:14px;">
+        <input type="checkbox" value="${safe(m)}" ${currentBankers.includes(m) ? 'checked' : ''} style="width:18px;height:18px;">
+        ${safe(m)}
+      </label>`).join('');
+
+  document.getElementById('bankerFormOverlay').classList.add('active');
+  document.getElementById('bankerFormDrawer').classList.add('active');
+}
+
+function closeBankerForm() {
+  document.getElementById('bankerFormOverlay').classList.remove('active');
+  document.getElementById('bankerFormDrawer').classList.remove('active');
+}
+
+async function submitBankerForm() {
+  const checked = Array.from(document.querySelectorAll('#bankerFormList input[type="checkbox"]:checked')).map(el => el.value);
+
+  try {
+    const result = await postWebAction({
+      webAction: 'assignMahallaBanker',
+      sessionId: localStorage.getItem('msbSessionId'),
+      mahallaId: bankerFormMahallaId,
+      bankers: checked.join(', ')
+    });
+
+    if (result.success) {
+      closeBankerForm();
+      await loadMahallaData();
+    } else {
+      alert(result.message || 'Не удалось назначить банкира');
+    }
+  } catch (error) {
+    alert('Не удалось связаться с сервером');
+    console.error(error);
+  }
+}
+
+// --- Форма: добавить/редактировать микропроект ---
+
+function openMicroprojectForm(mode, id) {
+  microprojectFormMode = mode;
+  editingMicroprojectId = id || null;
+
+  const errorBox = document.getElementById('microprojectFormError');
+  if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
+
+  const mahallaSelect = document.getElementById('mpMahalla');
+  const visible = getVisibleMahallas();
+  mahallaSelect.innerHTML = visible.map(m => `<option value="${safe(m.name)}">${safe(m.name)}</option>`).join('');
+
+  const title = document.getElementById('microprojectFormTitle');
+  const submitBtn = document.getElementById('microprojectFormSubmitBtn');
+
+  if (mode === 'edit' && editingMicroprojectId) {
+    const p = allMicroprojects.find(x => x.id === editingMicroprojectId);
+    if (!p) { alert('Проект не найден'); return; }
+
+    title.innerText = 'Редактировать микропроект';
+    submitBtn.innerText = 'Сохранить изменения';
+
+    mahallaSelect.value = p.mahalla;
+    mahallaSelect.disabled = true;
+    document.getElementById('mpProjectName').value = p.projectName || '';
+    document.getElementById('mpProjectName').disabled = true;
+    document.getElementById('mpApplicantName').value = p.applicantName || '';
+    document.getElementById('mpApplicantName').disabled = true;
+    document.getElementById('mpApplicantContact').value = p.applicantContact || '';
+    document.getElementById('mpAmountNeeded').value = p.amountNeeded || '';
+    document.getElementById('mpSupportType').value = p.supportType || 'Кредит';
+    document.getElementById('mpStatus').value = p.status || 'Идея';
+    document.getElementById('mpComment').value = p.comment || '';
+  } else {
+    microprojectFormMode = 'create';
+    title.innerText = 'Добавить микропроект';
+    submitBtn.innerText = 'Сохранить';
+
+    mahallaSelect.disabled = false;
+    document.getElementById('mpProjectName').value = '';
+    document.getElementById('mpProjectName').disabled = false;
+    document.getElementById('mpApplicantName').value = '';
+    document.getElementById('mpApplicantName').disabled = false;
+    document.getElementById('mpApplicantContact').value = '';
+    document.getElementById('mpAmountNeeded').value = '';
+    document.getElementById('mpSupportType').value = 'Кредит';
+    document.getElementById('mpStatus').value = 'Идея';
+    document.getElementById('mpComment').value = '';
+  }
+
+  document.getElementById('microprojectFormOverlay').classList.add('active');
+  document.getElementById('microprojectFormDrawer').classList.add('active');
+}
+
+function closeMicroprojectForm() {
+  document.getElementById('microprojectFormOverlay').classList.remove('active');
+  document.getElementById('microprojectFormDrawer').classList.remove('active');
+}
+
+async function submitMicroprojectForm() {
+  const errorBox = document.getElementById('microprojectFormError');
+  const submitBtn = document.getElementById('microprojectFormSubmitBtn');
+  const showError = (msg) => { errorBox.innerText = msg; errorBox.style.display = 'block'; };
+  errorBox.style.display = 'none';
+
+  submitBtn.disabled = true;
+
+  try {
+    let result;
+
+    if (microprojectFormMode === 'edit') {
+      result = await postWebAction({
+        webAction: 'updateMicroproject',
+        sessionId: localStorage.getItem('msbSessionId'),
+        id: editingMicroprojectId,
+        fields: {
+          amountNeeded: document.getElementById('mpAmountNeeded').value.trim(),
+          supportType: document.getElementById('mpSupportType').value,
+          status: document.getElementById('mpStatus').value,
+          comment: document.getElementById('mpComment').value.trim()
+        }
+      });
+    } else {
+      const mahalla = document.getElementById('mpMahalla').value;
+      const projectName = document.getElementById('mpProjectName').value.trim();
+      const applicantName = document.getElementById('mpApplicantName').value.trim();
+
+      if (!mahalla) { showError('Выберите махаллю'); submitBtn.disabled = false; return; }
+      if (!projectName) { showError('Введите название проекта'); submitBtn.disabled = false; return; }
+      if (!applicantName) { showError('Введите ФИО инициатора'); submitBtn.disabled = false; return; }
+
+      result = await postWebAction({
+        webAction: 'createMicroproject',
+        sessionId: localStorage.getItem('msbSessionId'),
+        mahalla: mahalla,
+        projectName: projectName,
+        applicantName: applicantName,
+        applicantContact: document.getElementById('mpApplicantContact').value.trim(),
+        amountNeeded: document.getElementById('mpAmountNeeded').value.trim(),
+        supportType: document.getElementById('mpSupportType').value,
+        status: document.getElementById('mpStatus').value,
+        comment: document.getElementById('mpComment').value.trim()
+      });
+    }
+
+    if (result.success) {
+      closeMicroprojectForm();
+      await loadMahallaData();
+    } else {
+      showError(result.message || 'Не удалось сохранить проект');
+    }
+  } catch (error) {
+    showError('Не удалось связаться с сервером');
+    console.error(error);
+  } finally {
+    submitBtn.disabled = false;
   }
 }
 
