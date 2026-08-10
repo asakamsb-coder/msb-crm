@@ -953,6 +953,19 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .mahalla-row-name{font-weight:800;font-size:15px;}
 .mahalla-row-meta{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.6;}
 .microproject-card{border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;}
+.mp-section-title{
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  color:var(--brand);
+  margin:22px 0 12px;
+  padding-bottom:8px;
+  border-bottom:2px solid var(--brand-soft);
+}
+.mp-section-title:first-of-type{margin-top:0;}
+.mp-label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;}
+.mp-photo-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line);}
 .microproject-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
 .microproject-name{font-weight:800;font-size:15px;}
 .microproject-meta{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.6;}
@@ -2029,11 +2042,23 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <div id="mahallaListSection" class="mahalla-tab-section active">
+    <div class="panel" id="mahallaPassportUploadPanel" style="display:none;">
+      <h2>Импорт паспорта махаллей</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+        Загрузите официальный Excel-файл (население, дворы, безработные, малообеспеченные семьи, план/факт по микропроектам, рабочим местам и кредитам). Махалли из файла, которых ещё нет в списке, будут созданы автоматически; существующие — обновлены по названию.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+        <input type="file" id="mahallaPassportFile" accept=".xlsx,.xls">
+        <button class="btn" onclick="uploadMahallaPassport()">Загрузить паспорт</button>
+      </div>
+      <div id="mahallaPassportUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
+    </div>
+
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <div>
           <h2 style="margin-bottom:4px;">Список махаллей</h2>
-          <p style="color:var(--muted);font-size:13px;">Показатели (население, дворы и т.д.) заполняются импортом файла-паспорта — пока могут быть пустыми.</p>
+          <p style="color:var(--muted);font-size:13px;">Показатели заполняются импортом файла-паспорта — пока могут быть пустыми, если файл ещё не загружен.</p>
         </div>
         <button class="btn" id="addMahallaBtn" style="display:none;" onclick="openMahallaForm()">+ Добавить махаллю</button>
       </div>
@@ -2114,40 +2139,135 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="drawer-body">
     <div id="microprojectFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Махалля *</label>
+    <div class="mp-section-title">Кто и где</div>
+
+    <label class="mp-label">Махалля *</label>
     <select id="mpMahalla" class="select" style="margin-bottom:14px;"></select>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Название проекта *</label>
-    <input id="mpProjectName" class="input" style="margin-bottom:14px;">
-
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ФИО инициатора *</label>
+    <label class="mp-label">ФИО инициатора *</label>
     <input id="mpApplicantName" class="input" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Контакт</label>
+    <label class="mp-label">Телефон</label>
     <input id="mpApplicantContact" class="input" style="margin-bottom:14px;" placeholder="998971234567">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Нужная сумма</label>
-    <input id="mpAmountNeeded" class="input" type="number" min="0" style="margin-bottom:14px;">
-
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Тип поддержки</label>
-    <select id="mpSupportType" class="select" style="margin-bottom:14px;">
-      <option>Кредит</option>
-      <option>Субсидия</option>
-      <option>Обучение</option>
-      <option>Другое</option>
+    <label class="mp-label">Статус</label>
+    <select id="mpSubjectStatus" class="select" style="margin-bottom:14px;" onchange="toggleSubjectStatusFields()">
+      <option>Физлицо</option>
+      <option>Самозанятый</option>
+      <option>ИП</option>
+      <option>Юрлицо</option>
     </select>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Статус</label>
-    <select id="mpStatus" class="select" style="margin-bottom:14px;">
-      <option>Идея</option>
-      <option>На рассмотрении</option>
-      <option>Одобрено</option>
-      <option>Запущено</option>
-      <option>Отклонено</option>
+    <div id="mpPinflWrap">
+      <label class="mp-label">ПИНФЛ</label>
+      <input id="mpPinfl" class="input" style="margin-bottom:14px;">
+    </div>
+
+    <div id="mpInnWrap" style="display:none;">
+      <label class="mp-label">ИНН</label>
+      <input id="mpInn" class="input" style="margin-bottom:14px;">
+    </div>
+
+    <div class="mp-section-title">Проект</div>
+
+    <label class="mp-label">Название проекта *</label>
+    <input id="mpProjectName" class="input" style="margin-bottom:14px;">
+
+    <label class="mp-label">Отрасль</label>
+    <select id="mpIndustry" class="select" style="margin-bottom:14px;"></select>
+
+    <label class="mp-label">Что будет производить/оказывать</label>
+    <textarea id="mpDescription" class="input" style="margin-bottom:14px;min-height:70px;resize:vertical;"></textarea>
+
+    <label class="mp-label">Новый бизнес или расширение</label>
+    <select id="mpProjectType" class="select" style="margin-bottom:14px;">
+      <option>Новый</option>
+      <option>Расширение действующего</option>
     </select>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Комментарий</label>
-    <textarea id="mpComment" class="input" style="margin-bottom:18px;min-height:90px;resize:vertical;"></textarea>
+    <label class="mp-label">Начало бизнеса</label>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <select id="mpStartMonth" class="select" style="flex:1;">
+        <option value="">Месяц</option>
+        <option>Январь</option><option>Февраль</option><option>Март</option>
+        <option>Апрель</option><option>Май</option><option>Июнь</option>
+        <option>Июль</option><option>Август</option><option>Сентябрь</option>
+        <option>Октябрь</option><option>Ноябрь</option><option>Декабрь</option>
+      </select>
+      <input id="mpStartYear" class="input" type="number" placeholder="Год" style="flex:1;">
+    </div>
+
+    <label class="mp-label">Есть помещение/земля?</label>
+    <select id="mpHasPremises" class="select" style="margin-bottom:14px;">
+      <option>Нет</option>
+      <option>Да</option>
+    </select>
+
+    <label class="mp-label">Что нужно купить (оборудование/сырьё)</label>
+    <textarea id="mpNeededPurchases" class="input" style="margin-bottom:18px;min-height:70px;resize:vertical;"></textarea>
+
+    <div class="mp-section-title">Финансирование</div>
+
+    <label class="mp-label">Общая стоимость проекта</label>
+    <input id="mpTotalCost" class="input" type="number" min="0" style="margin-bottom:14px;">
+
+    <label class="mp-label">Собственные средства</label>
+    <input id="mpOwnFunds" class="input" type="number" min="0" style="margin-bottom:14px;">
+
+    <label class="mp-label">Нужный кредит</label>
+    <input id="mpCreditNeeded" class="input" type="number" min="0" style="margin-bottom:14px;">
+
+    <label class="mp-label">Нужна субсидия?</label>
+    <select id="mpNeedsSubsidy" class="select" style="margin-bottom:14px;">
+      <option>Нет</option>
+      <option>Да</option>
+    </select>
+
+    <label class="mp-label">Новых рабочих мест</label>
+    <input id="mpNewJobs" class="input" type="number" min="0" style="margin-bottom:18px;">
+
+    <div class="mp-section-title">Проверка банкиром</div>
+
+    <label class="mp-label">Объект посещён?</label>
+    <select id="mpSiteVisited" class="select" style="margin-bottom:14px;">
+      <option>Нет</option>
+      <option>Да</option>
+    </select>
+
+    <label class="mp-label">Геолокация</label>
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <input id="mpGeolocation" class="input" placeholder="Координаты" readonly style="flex:1;">
+      <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="captureMicroprojectGeolocation()">📍 GPS</button>
+    </div>
+    <div id="mpGeoStatus" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+
+    <label class="mp-label">Фото объекта (до 5 шт.)</label>
+    <input type="file" id="mpPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+    <div id="mpPhotoPreviewWrap" style="display:none;margin-bottom:6px;flex-wrap:wrap;gap:8px;"></div>
+    <div id="mpExistingPhotosWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
+
+    <label class="mp-label">Оценка банкира</label>
+    <select id="mpBankerAssessment" class="select" style="margin-bottom:14px;">
+      <option>Перспективный</option>
+      <option>Требует доработки</option>
+      <option>Нецелесообразный</option>
+    </select>
+
+    <label class="mp-label">Комментарий (риски, проблемы, что нужно для запуска)</label>
+    <textarea id="mpComment" class="input" style="margin-bottom:14px;min-height:80px;resize:vertical;"></textarea>
+
+    <label class="mp-label">Статус проекта</label>
+    <select id="mpStatus" class="select" style="margin-bottom:18px;">
+      <option>Выявлен</option>
+      <option>Изучается</option>
+      <option>Бизнес-план</option>
+      <option>Финансирование</option>
+      <option>Одобрен</option>
+      <option>Профинансирован</option>
+      <option>Запущен</option>
+      <option>Работает</option>
+      <option>Проблемный/закрыт</option>
+    </select>
 
     <button class="btn" style="width:100%;" id="microprojectFormSubmitBtn" onclick="submitMicroprojectForm()">Сохранить</button>
   </div>
@@ -5021,6 +5141,8 @@ async function loadMahallaData() {
     const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
     const addBtn = document.getElementById('addMahallaBtn');
     if (addBtn) addBtn.style.display = isAdmin ? 'inline-block' : 'none';
+    const uploadPanel = document.getElementById('mahallaPassportUploadPanel');
+    if (uploadPanel) uploadPanel.style.display = isAdmin ? 'block' : 'none';
 
     fillMahallaFilterSelect();
     renderMahallasList();
@@ -5029,6 +5151,113 @@ async function loadMahallaData() {
     console.error(error);
     if (mahallasBox) mahallasBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли</div>';
     if (microBox) microBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли</div>';
+  }
+}
+
+// Парсит официальный Excel-отчёт "Асака Бириктирилган МФЙ Статистика".
+// Формат фиксированный (гос. отчёт), поэтому колонки берём по позициям,
+// а не по названию заголовка — заголовок в файле трёхуровневый (слитые
+// ячейки Режа/Факт/%), гибкий поиск здесь не подходит.
+// Данные начинаются с 7-й строки; итоговые/районные строки пропускаем —
+// у них пустая колонка C (название махалли).
+function parseMahallaPassportFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        const result = [];
+        for (let i = 6; i < rows.length; i++) { // строка 7 = индекс 6
+          const row = rows[i];
+          const name = String(row[2] || '').trim();
+          if (!name) continue; // итоговая/районная строка без названия махалли
+
+          result.push({
+            district: String(row[1] || '').trim(),
+            name: name,
+            passportBanker: String(row[3] || '').trim(),
+            driver: String(row[4] || '').trim(),
+            streets: row[5] || '',
+            population: row[6] || '',
+            households: row[7] || '',
+            lowIncomeFamilies: row[8] || '',
+            unemployed: row[9] || '',
+            microprojectsPlan: row[10] || '',
+            microprojectsFact: row[11] || '',
+            urgentMicroprojectsPlan: row[13] || '',
+            urgentMicroprojectsFact: row[14] || '',
+            permanentJobsPlan: row[16] || '',
+            permanentJobsFact: row[17] || '',
+            incomeJobsPlan: row[19] || '',
+            incomeJobsFact: row[20] || '',
+            creditFirstStepPlan: row[22] || '',
+            creditFirstStepFact: row[23] || '',
+            creditPQ312Plan: row[25] || '',
+            creditPQ312Fact: row[26] || '',
+            creditMahallaProjectPlan: row[28] || '',
+            creditMahallaProjectFact: row[29] || ''
+          });
+        }
+
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = function() {
+      reject(new Error('Не удалось открыть файл: ' + file.name));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function uploadMahallaPassport() {
+  const input = document.getElementById('mahallaPassportFile');
+  const statusBox = document.getElementById('mahallaPassportUploadStatus');
+
+  if (!input || !input.files || !input.files.length) {
+    if (statusBox) statusBox.innerText = 'Выберите файл';
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    if (statusBox) statusBox.innerText = 'Библиотека Excel ещё не загрузилась, подождите пару секунд и попробуйте снова';
+    return;
+  }
+
+  if (statusBox) statusBox.innerText = 'Обработка файла...';
+
+  try {
+    const rows = await parseMahallaPassportFile(input.files[0]);
+
+    if (!rows.length) {
+      if (statusBox) statusBox.innerText = 'В файле не найдено ни одной строки с названием махалли';
+      return;
+    }
+
+    const result = await postWebAction({
+      webAction: 'importMahallaPassport',
+      sessionId: localStorage.getItem('msbSessionId'),
+      rows: rows
+    });
+
+    if (result.success) {
+      if (statusBox) statusBox.innerText = result.message;
+      input.value = '';
+      await loadMahallaData();
+    } else {
+      if (statusBox) statusBox.innerText = result.message || 'Ошибка импорта';
+    }
+  } catch (error) {
+    if (statusBox) statusBox.innerText = 'Ошибка чтения файла: ' + error.message;
+    console.error(error);
   }
 }
 
@@ -5067,18 +5296,40 @@ function renderMahallasList() {
   const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
 
   if (!visible.length) {
-    box.innerHTML = '<div class="loading">' + (isAdmin ? 'Махаллей пока нет — добавьте первую.' : 'За вами пока не закреплена ни одна махалля.') + '</div>';
+    box.innerHTML = '<div class="loading">' + (isAdmin ? 'Махаллей пока нет — добавьте первую или загрузите паспорт.' : 'За вами пока не закреплена ни одна махалля.') + '</div>';
     return;
   }
 
+  const planFactRow = (label, plan, fact, unit) => {
+    if (!plan && !fact) return '';
+    const pct = plan ? Math.round((Number(fact) || 0) / Number(plan) * 100) : null;
+    return `${label}: ${safe(fact)}${unit || ''} из ${safe(plan)}${unit || ''}${pct !== null ? ' (' + pct + '%)' : ''}`;
+  };
+
   box.innerHTML = visible.map(m => {
     const projectsCount = allMicroprojects.filter(p => p.mahalla === m.name).length;
+
     const passportParts = [];
+    if (m.district) passportParts.push('Район: ' + safe(m.district));
     if (m.population) passportParts.push('Население: ' + safe(m.population));
     if (m.households) passportParts.push('Дворов: ' + safe(m.households));
+    if (m.streets) passportParts.push('Улиц: ' + safe(m.streets));
     if (m.unemployed) passportParts.push('Безработных: ' + safe(m.unemployed));
+    if (m.lowIncomeFamilies) passportParts.push('Малообеспеченных семей: ' + safe(m.lowIncomeFamilies));
     if (m.activeEntrepreneurs) passportParts.push('Действующих ИП/СХ: ' + safe(m.activeEntrepreneurs));
+    if (m.driver) passportParts.push('Драйвер: ' + safe(m.driver));
+    if (m.passportBanker) passportParts.push('Банкир (паспорт): ' + safe(m.passportBanker));
     const passportText = passportParts.length ? passportParts.join(' • ') : 'Паспорт ещё не загружен';
+
+    const programLines = [
+      planFactRow('Микропроекты', m.microprojectsPlan, m.microprojectsFact),
+      planFactRow('Срочные микропроекты (40 дн)', m.urgentMicroprojectsPlan, m.urgentMicroprojectsFact),
+      planFactRow('Пост. рабочие места', m.permanentJobsPlan, m.permanentJobsFact),
+      planFactRow('Раб. места (рост дохода)', m.incomeJobsPlan, m.incomeJobsFact),
+      planFactRow('Кредиты "Первый шаг в бизнес"', m.creditFirstStepPlan, m.creditFirstStepFact, ' млн'),
+      planFactRow('Кредиты ПҚ-312', m.creditPQ312Plan, m.creditPQ312Fact, ' млн'),
+      planFactRow('Кредиты "Проект махалли"', m.creditMahallaProjectPlan, m.creditMahallaProjectFact, ' млн')
+    ].filter(Boolean);
 
     return `
       <div class="mahalla-row">
@@ -5086,9 +5337,10 @@ function renderMahallasList() {
           <div>
             <div class="mahalla-row-name">${safe(m.name)}</div>
             <div class="mahalla-row-meta">
-              Банкир(ы): ${m.bankers ? safe(m.bankers) : 'не назначен'}<br>
+              Банкир(ы) в CRM: ${m.bankers ? safe(m.bankers) : 'не назначен'}<br>
               ${passportText}<br>
-              Микропроектов: ${projectsCount}
+              Микропроектов в CRM: ${projectsCount}
+              ${programLines.length ? '<br>' + programLines.join(' • ') : ''}
             </div>
           </div>
           ${isAdmin ? `<button class="btn btn-secondary" onclick="openBankerForm('${encodeURIComponent(m.id)}','${encodeURIComponent(m.name)}','${encodeURIComponent(m.bankers || '')}')">Назначить банкира</button>` : ''}
@@ -5117,30 +5369,59 @@ function renderMicroprojectsList() {
   }
 
   const statusColors = {
-    'Идея': 'status-blue',
-    'На рассмотрении': 'status-orange',
-    'Одобрено': 'status-green',
-    'Запущено': 'status-green',
-    'Отклонено': 'status-red'
+    'Выявлен': 'status-blue',
+    'Изучается': 'status-blue',
+    'Бизнес-план': 'status-orange',
+    'Финансирование': 'status-orange',
+    'Одобрен': 'status-green',
+    'Профинансирован': 'status-green',
+    'Запущен': 'status-green',
+    'Работает': 'status-green',
+    'Проблемный/закрыт': 'status-red'
   };
 
-  box.innerHTML = list.slice().reverse().map(p => `
+  const assessmentColors = {
+    'Перспективный': 'status-green',
+    'Требует доработки': 'status-orange',
+    'Нецелесообразный': 'status-red'
+  };
+
+  box.innerHTML = list.slice().reverse().map(p => {
+    const photos = String(p.photoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+    const photosHtml = photos.length
+      ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${photos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')}</div>`
+      : '';
+
+    const mapLink = p.geolocation
+      ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(p.geolocation)}" target="_blank" style="color:var(--brand);font-weight:700;">📍 Открыть на карте</a>`
+      : '';
+
+    return `
       <div class="microproject-card">
         <div class="microproject-top">
-          <div>
-            <div class="microproject-name">${safe(p.projectName)}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="microproject-name">
+              ${safe(p.projectName)}
+              ${p.needsSubsidy === 'Да' ? ' <span class="status status-orange" style="font-size:11px;">Нужна субсидия</span>' : ''}
+              ${p.bankerAssessment ? ` <span class="status ${assessmentColors[p.bankerAssessment] || 'status-blue'}" style="font-size:11px;">${safe(p.bankerAssessment)}</span>` : ''}
+            </div>
             <div class="microproject-meta">
               Махалля: ${safe(p.mahalla)} • Инициатор: ${safe(p.applicantName)} ${p.applicantContact ? '(' + safe(p.applicantContact) + ')' : ''}<br>
-              Нужная сумма: ${p.amountNeeded ? formatMoney(p.amountNeeded) : '—'} • Поддержка: ${safe(p.supportType)}<br>
-              Банкир: ${safe(p.banker)} • Обновлено: ${safe(p.updatedAt)}
+              ${safe(p.subjectStatus)}${p.inn ? ' • ИНН: ' + safe(p.inn) : ''}${p.pinfl ? ' • ПИНФЛ: ' + safe(p.pinfl) : ''}<br>
+              ${p.industry ? 'Отрасль: ' + safe(p.industry) + ' • ' : ''}${safe(p.projectType)}${p.startMonth || p.startYear ? ' с ' + safe(p.startMonth) + ' ' + safe(p.startYear) : ''}<br>
+              Стоимость: ${p.totalCost ? formatMoney(p.totalCost) : '—'} • Кредит: ${p.creditNeeded ? formatMoney(p.creditNeeded) : '—'} • Новых мест: ${safe(p.newJobs || 0)}<br>
+              Банкир: ${safe(p.banker)} • Посещён: ${safe(p.siteVisited)} • Обновлено: ${safe(p.updatedAt)}
+              ${mapLink ? '<br>' + mapLink : ''}
             </div>
+            ${photosHtml}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
             <span class="status ${statusColors[p.status] || 'status-blue'}">${safe(p.status)}</span>
             <button class="btn btn-secondary" onclick="openMicroprojectForm('edit', decodeURIComponent('${encodeURIComponent(p.id)}'))">Изменить</button>
           </div>
         </div>
-      </div>`).join('');
+      </div>`;
+  }).join('');
 }
 
 // --- Форма: добавить махаллю ---
@@ -5240,9 +5521,19 @@ async function submitBankerForm() {
 
 // --- Форма: добавить/редактировать микропроект ---
 
+function toggleSubjectStatusFields() {
+  const status = document.getElementById('mpSubjectStatus').value;
+  const isLegal = status === 'Юрлицо';
+  document.getElementById('mpPinflWrap').style.display = isLegal ? 'none' : 'block';
+  document.getElementById('mpInnWrap').style.display = isLegal ? 'block' : 'none';
+}
+
+let mpSelectedPhotoFiles = [];
+
 function openMicroprojectForm(mode, id) {
   microprojectFormMode = mode;
   editingMicroprojectId = id || null;
+  mpSelectedPhotoFiles = [];
 
   const errorBox = document.getElementById('microprojectFormError');
   if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
@@ -5250,6 +5541,16 @@ function openMicroprojectForm(mode, id) {
   const mahallaSelect = document.getElementById('mpMahalla');
   const visible = getVisibleMahallas();
   mahallaSelect.innerHTML = visible.map(m => `<option value="${safe(m.name)}">${safe(m.name)}</option>`).join('');
+
+  fillSelectOptions('mpIndustry', (webFormLists && webFormLists.industries) || [], false);
+
+  document.getElementById('mpPhotos').value = '';
+  document.getElementById('mpPhotoPreviewWrap').style.display = 'none';
+  document.getElementById('mpPhotoPreviewWrap').innerHTML = '';
+  document.getElementById('mpExistingPhotosWrap').style.display = 'none';
+  document.getElementById('mpExistingPhotosWrap').innerHTML = '';
+  document.getElementById('mpGeolocation').value = '';
+  document.getElementById('mpGeoStatus').innerText = '';
 
   const title = document.getElementById('microprojectFormTitle');
   const submitBtn = document.getElementById('microprojectFormSubmitBtn');
@@ -5268,10 +5569,34 @@ function openMicroprojectForm(mode, id) {
     document.getElementById('mpApplicantName').value = p.applicantName || '';
     document.getElementById('mpApplicantName').disabled = true;
     document.getElementById('mpApplicantContact').value = p.applicantContact || '';
-    document.getElementById('mpAmountNeeded').value = p.amountNeeded || '';
-    document.getElementById('mpSupportType').value = p.supportType || 'Кредит';
-    document.getElementById('mpStatus').value = p.status || 'Идея';
+    document.getElementById('mpSubjectStatus').value = p.subjectStatus || 'Физлицо';
+    document.getElementById('mpPinfl').value = p.pinfl || '';
+    document.getElementById('mpInn').value = p.inn || '';
+    document.getElementById('mpIndustry').value = p.industry || '';
+    document.getElementById('mpDescription').value = p.description || '';
+    document.getElementById('mpProjectType').value = p.projectType || 'Новый';
+    document.getElementById('mpStartMonth').value = p.startMonth || '';
+    document.getElementById('mpStartYear').value = p.startYear || '';
+    document.getElementById('mpHasPremises').value = p.hasPremises || 'Нет';
+    document.getElementById('mpNeededPurchases').value = p.neededPurchases || '';
+    document.getElementById('mpTotalCost').value = p.totalCost || '';
+    document.getElementById('mpOwnFunds').value = p.ownFunds || '';
+    document.getElementById('mpCreditNeeded').value = p.creditNeeded || '';
+    document.getElementById('mpNeedsSubsidy').value = p.needsSubsidy || 'Нет';
+    document.getElementById('mpNewJobs').value = p.newJobs || '';
+    document.getElementById('mpSiteVisited').value = p.siteVisited || 'Нет';
+    document.getElementById('mpGeolocation').value = p.geolocation || '';
+    document.getElementById('mpBankerAssessment').value = p.bankerAssessment || 'Перспективный';
     document.getElementById('mpComment').value = p.comment || '';
+    document.getElementById('mpStatus').value = p.status || 'Выявлен';
+    toggleSubjectStatusFields();
+
+    const photos = String(p.photoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (photos.length) {
+      const wrap = document.getElementById('mpExistingPhotosWrap');
+      wrap.innerHTML = photos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('');
+      wrap.style.display = 'flex';
+    }
   } else {
     microprojectFormMode = 'create';
     title.innerText = 'Добавить микропроект';
@@ -5283,10 +5608,26 @@ function openMicroprojectForm(mode, id) {
     document.getElementById('mpApplicantName').value = '';
     document.getElementById('mpApplicantName').disabled = false;
     document.getElementById('mpApplicantContact').value = '';
-    document.getElementById('mpAmountNeeded').value = '';
-    document.getElementById('mpSupportType').value = 'Кредит';
-    document.getElementById('mpStatus').value = 'Идея';
+    document.getElementById('mpSubjectStatus').value = 'Физлицо';
+    document.getElementById('mpPinfl').value = '';
+    document.getElementById('mpInn').value = '';
+    document.getElementById('mpIndustry').value = '';
+    document.getElementById('mpDescription').value = '';
+    document.getElementById('mpProjectType').value = 'Новый';
+    document.getElementById('mpStartMonth').value = '';
+    document.getElementById('mpStartYear').value = '';
+    document.getElementById('mpHasPremises').value = 'Нет';
+    document.getElementById('mpNeededPurchases').value = '';
+    document.getElementById('mpTotalCost').value = '';
+    document.getElementById('mpOwnFunds').value = '';
+    document.getElementById('mpCreditNeeded').value = '';
+    document.getElementById('mpNeedsSubsidy').value = 'Нет';
+    document.getElementById('mpNewJobs').value = '';
+    document.getElementById('mpSiteVisited').value = 'Нет';
+    document.getElementById('mpBankerAssessment').value = 'Перспективный';
     document.getElementById('mpComment').value = '';
+    document.getElementById('mpStatus').value = 'Выявлен';
+    toggleSubjectStatusFields();
   }
 
   document.getElementById('microprojectFormOverlay').classList.add('active');
@@ -5298,6 +5639,84 @@ function closeMicroprojectForm() {
   document.getElementById('microprojectFormDrawer').classList.remove('active');
 }
 
+// Уменьшает фото до максимум 1280px по ширине и сжимает в JPEG перед
+// отправкой на сервер — без этого фото с телефона (несколько МБ) будет
+// долго грузиться и займёт много места на Google Drive.
+function resizeImageFile(file, maxWidth) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxWidth) {
+          h = Math.round(h * (maxWidth / w));
+          w = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+      };
+      img.onerror = () => reject(new Error('Не удалось прочитать изображение'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Не удалось прочитать файл'));
+    reader.readAsDataURL(file);
+  });
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'mpPhotos' && e.target.files && e.target.files.length) {
+    mpSelectedPhotoFiles = Array.from(e.target.files).slice(0, 5);
+
+    const wrap = document.getElementById('mpPhotoPreviewWrap');
+    wrap.innerHTML = '';
+    wrap.style.display = 'flex';
+
+    mpSelectedPhotoFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        const img = document.createElement('img');
+        img.src = ev.target.result;
+        img.className = 'mp-photo-thumb';
+        wrap.appendChild(img);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (e.target.files.length > 5) {
+      alert('Можно приложить максимум 5 фото. Взяты первые 5.');
+    }
+  }
+});
+
+// Определяет координаты через GPS телефона/браузера (стандартный запрос
+// разрешения покажется один раз).
+function captureMicroprojectGeolocation() {
+  const status = document.getElementById('mpGeoStatus');
+  if (!navigator.geolocation) {
+    status.innerText = 'Геолокация не поддерживается этим браузером';
+    return;
+  }
+
+  status.innerText = 'Определение местоположения...';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      document.getElementById('mpGeolocation').value = lat + ', ' + lng;
+      status.innerText = 'Координаты определены';
+    },
+    (err) => {
+      status.innerText = 'Не удалось определить местоположение: ' + err.message;
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
 async function submitMicroprojectForm() {
   const errorBox = document.getElementById('microprojectFormError');
   const submitBtn = document.getElementById('microprojectFormSubmitBtn');
@@ -5305,43 +5724,82 @@ async function submitMicroprojectForm() {
   errorBox.style.display = 'none';
 
   submitBtn.disabled = true;
+  const originalBtnText = submitBtn.innerText;
 
   try {
+    let photos = [];
+    if (mpSelectedPhotoFiles.length) {
+      submitBtn.innerText = 'Обработка фото...';
+      for (const file of mpSelectedPhotoFiles) {
+        const resized = await resizeImageFile(file, 1280);
+        photos.push({
+          base64: resized.base64,
+          mimeType: resized.mimeType,
+          fileName: 'photo_' + (photos.length + 1) + '.jpg'
+        });
+      }
+    }
+
+    submitBtn.innerText = 'Сохранение...';
+    const subjectStatus = document.getElementById('mpSubjectStatus').value;
+    const isLegal = subjectStatus === 'Юрлицо';
+
+    const commonFields = {
+      applicantContact: document.getElementById('mpApplicantContact').value.trim(),
+      subjectStatus: subjectStatus,
+      pinfl: isLegal ? '' : document.getElementById('mpPinfl').value.trim(),
+      inn: isLegal ? document.getElementById('mpInn').value.trim() : '',
+      industry: document.getElementById('mpIndustry').value,
+      description: document.getElementById('mpDescription').value.trim(),
+      projectType: document.getElementById('mpProjectType').value,
+      startMonth: document.getElementById('mpStartMonth').value,
+      startYear: document.getElementById('mpStartYear').value.trim(),
+      hasPremises: document.getElementById('mpHasPremises').value,
+      neededPurchases: document.getElementById('mpNeededPurchases').value.trim(),
+      totalCost: document.getElementById('mpTotalCost').value.trim(),
+      ownFunds: document.getElementById('mpOwnFunds').value.trim(),
+      creditNeeded: document.getElementById('mpCreditNeeded').value.trim(),
+      needsSubsidy: document.getElementById('mpNeedsSubsidy').value,
+      newJobs: document.getElementById('mpNewJobs').value.trim(),
+      siteVisited: document.getElementById('mpSiteVisited').value,
+      geolocation: document.getElementById('mpGeolocation').value.trim(),
+      bankerAssessment: document.getElementById('mpBankerAssessment').value,
+      comment: document.getElementById('mpComment').value.trim(),
+      status: document.getElementById('mpStatus').value
+    };
+
     let result;
 
     if (microprojectFormMode === 'edit') {
-      result = await postWebAction({
+      const body = {
         webAction: 'updateMicroproject',
         sessionId: localStorage.getItem('msbSessionId'),
         id: editingMicroprojectId,
-        fields: {
-          amountNeeded: document.getElementById('mpAmountNeeded').value.trim(),
-          supportType: document.getElementById('mpSupportType').value,
-          status: document.getElementById('mpStatus').value,
-          comment: document.getElementById('mpComment').value.trim()
-        }
-      });
+        fields: commonFields
+      };
+      if (photos.length) body.photos = photos;
+
+      result = await postWebAction(body);
     } else {
       const mahalla = document.getElementById('mpMahalla').value;
       const projectName = document.getElementById('mpProjectName').value.trim();
       const applicantName = document.getElementById('mpApplicantName').value.trim();
 
-      if (!mahalla) { showError('Выберите махаллю'); submitBtn.disabled = false; return; }
-      if (!projectName) { showError('Введите название проекта'); submitBtn.disabled = false; return; }
-      if (!applicantName) { showError('Введите ФИО инициатора'); submitBtn.disabled = false; return; }
+      if (!mahalla) { showError('Выберите махаллю'); submitBtn.disabled = false; submitBtn.innerText = originalBtnText; return; }
+      if (!projectName) { showError('Введите название проекта'); submitBtn.disabled = false; submitBtn.innerText = originalBtnText; return; }
+      if (!applicantName) { showError('Введите ФИО инициатора'); submitBtn.disabled = false; submitBtn.innerText = originalBtnText; return; }
 
-      result = await postWebAction({
+      const body = Object.assign({
         webAction: 'createMicroproject',
         sessionId: localStorage.getItem('msbSessionId'),
         mahalla: mahalla,
         projectName: projectName,
-        applicantName: applicantName,
-        applicantContact: document.getElementById('mpApplicantContact').value.trim(),
-        amountNeeded: document.getElementById('mpAmountNeeded').value.trim(),
-        supportType: document.getElementById('mpSupportType').value,
-        status: document.getElementById('mpStatus').value,
-        comment: document.getElementById('mpComment').value.trim()
-      });
+        applicantName: applicantName
+      }, commonFields);
+
+      if (photos.length) body.photos = photos;
+
+      result = await postWebAction(body);
     }
 
     if (result.success) {
@@ -5355,6 +5813,7 @@ async function submitMicroprojectForm() {
     console.error(error);
   } finally {
     submitBtn.disabled = false;
+    submitBtn.innerText = microprojectFormMode === 'edit' ? 'Сохранить изменения' : 'Сохранить';
   }
 }
 
