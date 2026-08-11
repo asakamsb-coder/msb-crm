@@ -1076,17 +1076,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
   <nav class="nav">
     <a class="active" data-msb-only="true" onclick="showMsbSales(this)"><span class="icon"></span>МСБ ПРОДАЖИ</a>
-    <a data-msb-only="true" onclick="showPage('portfolioPage', this)">
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('portfolioPage', this)">
     <span class="icon"></span>
     Кредитный портфель
 </a>
-    <a data-admin="true" data-msb-only="true" onclick="showPage('slaPage', this)"><span class="icon"></span>SLA контроль</a>
-    <a data-msb-only="true" onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
-    <a data-msb-only="true" onclick="showPage('regionsPage', this)"><span class="icon"></span>Районы</a>
+    <a data-admin="true" data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('slaPage', this)"><span class="icon"></span>SLA контроль</a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('statsPage', this)"><span class="icon"></span>Статистика</a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('regionsPage', this)"><span class="icon"></span>Районы</a>
     <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>Мой кабинет</a>
-    <a data-msb-only="true" onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
-    <a data-msb-only="true" onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
-    <a id="mahallaNavLink" onclick="showPage('mahallaPage', this)"><span class="icon"></span>Махалля</a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('managersPage', this)"><span class="icon"></span>Менеджеры</a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('aiPage', this)"><span class="icon"></span>AI Центр</a>
+    <a id="mahallaNavLink" data-hide-for-monitor="true" onclick="showPage('mahallaPage', this)"><span class="icon"></span>Махалля</a>
   </nav>
 </aside>
 
@@ -1962,6 +1962,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <select id="newUserRole" class="select">
       <option value="MANAGER">Менеджер</option>
       <option value="MAHALLA_BANKER">Банкир Махалли</option>
+      <option value="CREDIT_MONITOR">Менеджер кредитного мониторинга</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
 
@@ -2520,6 +2521,63 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="info-label" style="margin-bottom:8px;">Комментарий</div>
       <div class="comment-box" id="drawerComment">-</div>
     </div>
+
+    <div class="panel" style="margin-top:18px;" id="monitoringPanel">
+      <h2 style="font-size:18px;margin-bottom:10px;">🔍 Проверка "4 глаз"</h2>
+
+      <div class="info-grid" style="margin-bottom:14px;">
+        <div class="info-card"><div class="info-label">Гео бизнеса (менеджер)</div><div class="info-value" id="drawerManagerGeo">-</div></div>
+        <div class="info-card"><div class="info-label">Вердикт монитора</div><div class="info-value" id="drawerMonitorVerdict">-</div></div>
+        <div class="info-card"><div class="info-label">Кто проверял</div><div class="info-value" id="drawerMonitorName">-</div></div>
+        <div class="info-card"><div class="info-label">Дата проверки</div><div class="info-value" id="drawerMonitorDate">-</div></div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <div class="info-label" style="margin-bottom:6px;">Фото бизнеса (менеджер)</div>
+        <div id="drawerManagerPhotos" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div id="drawerMonitorResultWrap" style="display:none;margin-bottom:14px;">
+        <div class="info-label" style="margin-bottom:6px;">Комментарий монитора</div>
+        <div class="comment-box" id="drawerMonitorComment" style="margin-bottom:14px;">-</div>
+        <div class="info-label" style="margin-bottom:6px;">Фото бизнеса (монитор)</div>
+        <div id="drawerMonitorBusinessPhotos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+        <div class="info-label" style="margin-bottom:6px;">Фото залога (монитор)</div>
+        <div id="drawerMonitorCollateralPhotos" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div id="monitorSubmitFormWrap" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--line);">
+        <div class="mp-section-title" style="margin-top:0;">Моя проверка</div>
+
+        <label class="mp-label">Моя геолокация</label>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <input id="monGeolocation" class="input" placeholder="Координаты" readonly style="flex:1;">
+          <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="captureMonitorGeolocation()">📍 GPS</button>
+        </div>
+        <div id="monGeoStatus" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+
+        <label class="mp-label">Фото бизнеса (моё)</label>
+        <input type="file" id="monBusinessPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+        <div id="monBusinessPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
+
+        <label class="mp-label">Фото залога/обеспечения</label>
+        <input type="file" id="monCollateralPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+        <div id="monCollateralPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
+
+        <label class="mp-label">Комментарий</label>
+        <textarea id="monComment" class="input" style="margin-bottom:14px;min-height:70px;resize:vertical;"></textarea>
+
+        <label class="mp-label">Вердикт</label>
+        <select id="monVerdict" class="select" style="margin-bottom:14px;">
+          <option value="Перспективный">Перспективный — бизнес и залог в порядке</option>
+          <option value="Проблема">Проблема — есть замечания</option>
+        </select>
+
+        <div id="monitorFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
+
+        <button class="btn" style="width:100%;" id="monitorSubmitBtn" onclick="submitMonitoringForm()">Отправить результат проверки</button>
+      </div>
+    </div>
   </div>
 </aside>
 
@@ -2576,6 +2634,21 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Комментарий</label>
     <textarea id="cfComment" class="input" style="margin-bottom:18px;min-height:90px;resize:vertical;"></textarea>
+
+    <div class="mp-section-title">Проверка "4 глаз" (перед выдачей)</div>
+
+    <label class="mp-label">Геолокация бизнеса</label>
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <input id="cfGeolocation" class="input" placeholder="Координаты" readonly style="flex:1;">
+      <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="captureClientGeolocation()">📍 GPS</button>
+    </div>
+    <div id="cfGeoStatus" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Без геолокации нельзя поставить статус «На проверке в мониторинге» — монитору некуда будет ехать.</div>
+
+    <label class="mp-label">Фото бизнеса</label>
+    <input type="file" id="cfPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+    <div id="cfPhotoPreviewWrap" style="display:none;margin-bottom:6px;flex-wrap:wrap;gap:8px;"></div>
+    <div id="cfExistingPhotosWrap" style="display:none;margin-bottom:18px;flex-wrap:wrap;gap:8px;"></div>
 
     <button class="btn" style="width:100%;" id="clientFormSubmitBtn" onclick="submitClientForm()">Сохранить</button>
   </div>
@@ -2817,6 +2890,8 @@ function applyRoleView() {
       ? 'Управляющий'
       : currentUser.role === 'MAHALLA_BANKER'
       ? 'Банкир Махалли'
+      : currentUser.role === 'CREDIT_MONITOR'
+      ? 'Менеджер кредитного мониторинга'
       : 'Менеджер';
 
   document.querySelectorAll('[data-admin="true"]').forEach(el => {
@@ -2833,6 +2908,14 @@ function applyRoleView() {
   const isMahallaOnly = currentUser.role === 'MAHALLA_BANKER';
   document.querySelectorAll('[data-msb-only="true"]').forEach(el => {
     el.classList.toggle('hidden-by-role', isMahallaOnly);
+  });
+
+  // Менеджер кредитного мониторинга работает только с "МСБ Продажи"
+  // (там же, где и клиенты, которых он проверяет) — остальные разделы
+  // (Портфель, SLA, Статистика, Районы, Менеджеры, AI, Махалля) ему не нужны.
+  const isMonitorOnly = currentUser.role === 'CREDIT_MONITOR';
+  document.querySelectorAll('[data-hide-for-monitor="true"]').forEach(el => {
+    el.classList.toggle('hidden-by-role', isMonitorOnly);
   });
 
   const myCabinetMsbBlock = document.getElementById('myCabinetMsbBlock');
@@ -2880,6 +2963,7 @@ let portfolioClients = [];
 let portfolioSegment = 'all';
 let webFormLists = null;
 let currentDrawerClient = null;
+let cfSelectedPhotoFiles = [];
 let clientFormMode = 'create';
 
 async function loadCRM() {
@@ -3641,7 +3725,7 @@ function calcStatsFromClients(clients) {
 }
 
 function calcFunnelFromClients(clients) {
-  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','Выдано','Отказ','Отложено','На рассмотрении'];
+  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Выдано','Отказ','Отложено','На рассмотрении'];
   const funnel = {};
   statuses.forEach(s => funnel[s] = {count:0, amount:0});
   clients.forEach(c => {
@@ -3897,7 +3981,8 @@ function getSlaLimit(status) {
     'Финанализ': 5,
     'На рассмотрении': 5,
     'Кредитный комитет': 3,
-    'Одобрено': 2
+    'Одобрено': 2,
+    'На проверке в мониторинге': 3
   };
 
   return limits[status] || 7;
@@ -3911,7 +3996,8 @@ function getActiveStatuses() {
     'Финанализ',
     'На рассмотрении',
     'Кредитный комитет',
-    'Одобрено'
+    'Одобрено',
+    'На проверке в мониторинге'
   ];
 }
 
@@ -4201,7 +4287,7 @@ function calcRegionsFromClients(clients) {
       map[region].issuedCount++;
     }
 
-    if (['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На рассмотрении'].includes(c.status)) {
+    if (['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','На рассмотрении'].includes(c.status)) {
       map[region].potentialAmount += amount;
     }
   });
@@ -4695,7 +4781,7 @@ function renderFunnel(funnel, boxId) {
   // Основная последовательная воронка (проходит клиент по этим этапам).
   // "Отказ" и "Отложено" — не шаги воронки, а выходы из неё, поэтому
   // считаем % конверсии только по основной цепочке.
-  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','Выдано'];
+  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Выдано'];
   const sideStatuses = ['Отказ','Отложено'];
   const statuses = pipelineStatuses.concat(sideStatuses);
 
@@ -5098,13 +5184,213 @@ function openClientCard(c) {
 
   document.getElementById('drawerAiText').innerText = buildClientInsight(c);
 
+  renderMonitoringPanel(c);
+
   document.getElementById('drawerOverlay').classList.add('active');
   document.getElementById('clientDrawer').classList.add('active');
+}
+
+function renderMonitoringPanel(c) {
+  document.getElementById('drawerManagerGeo').innerHTML = c.managerGeolocation
+    ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(c.managerGeolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(c.managerGeolocation)}</a>`
+    : '-';
+  document.getElementById('drawerMonitorVerdict').innerHTML = c.monitorVerdict
+    ? `<span class="status ${c.monitorVerdict === 'Перспективный' ? 'status-green' : 'status-orange'}">${safe(c.monitorVerdict)}</span>`
+    : '<span style="color:var(--muted);">Ещё не проверялся</span>';
+  document.getElementById('drawerMonitorName').innerText = safe(c.monitorName);
+  document.getElementById('drawerMonitorDate').innerText = safe(c.monitorDate);
+
+  const managerPhotos = String(c.managerPhotoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+  document.getElementById('drawerManagerPhotos').innerHTML = managerPhotos.length
+    ? managerPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
+    : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
+
+  const resultWrap = document.getElementById('drawerMonitorResultWrap');
+  if (c.monitorVerdict) {
+    resultWrap.style.display = 'block';
+    document.getElementById('drawerMonitorComment').innerText = safe(c.monitorComment);
+
+    const bPhotos = String(c.monitorPhotoBusinessUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+    document.getElementById('drawerMonitorBusinessPhotos').innerHTML = bPhotos.length
+      ? bPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
+      : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
+
+    const cPhotos = String(c.monitorPhotoCollateralUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+    document.getElementById('drawerMonitorCollateralPhotos').innerHTML = cPhotos.length
+      ? cPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
+      : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
+  } else {
+    resultWrap.style.display = 'none';
+  }
+
+  const canMonitor = currentUser && (currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const formWrap = document.getElementById('monitorSubmitFormWrap');
+  formWrap.style.display = canMonitor ? 'block' : 'none';
+
+  if (canMonitor) {
+    monBusinessPhotoFiles = [];
+    monCollateralPhotoFiles = [];
+    document.getElementById('monBusinessPhotos').value = '';
+    document.getElementById('monCollateralPhotos').value = '';
+    document.getElementById('monBusinessPhotoPreviewWrap').innerHTML = '';
+    document.getElementById('monBusinessPhotoPreviewWrap').style.display = 'none';
+    document.getElementById('monCollateralPhotoPreviewWrap').innerHTML = '';
+    document.getElementById('monCollateralPhotoPreviewWrap').style.display = 'none';
+    document.getElementById('monGeolocation').value = '';
+    document.getElementById('monGeoStatus').innerText = '';
+    document.getElementById('monComment').value = '';
+    document.getElementById('monVerdict').value = 'Перспективный';
+    const errorBox = document.getElementById('monitorFormError');
+    if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
+  }
 }
 
 function closeClientCard() {
   document.getElementById('drawerOverlay').classList.remove('active');
   document.getElementById('clientDrawer').classList.remove('active');
+}
+
+// ============================================================
+// Форма проверки мониторинга (принцип "4 глаз") внутри карточки клиента.
+// ============================================================
+
+let monBusinessPhotoFiles = [];
+let monCollateralPhotoFiles = [];
+
+function captureMonitorGeolocation() {
+  const status = document.getElementById('monGeoStatus');
+  if (!navigator.geolocation) {
+    status.innerText = 'Геолокация не поддерживается этим браузером';
+    return;
+  }
+
+  status.innerText = 'Определение местоположения...';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      document.getElementById('monGeolocation').value = lat + ', ' + lng;
+      status.innerText = 'Координаты определены';
+    },
+    (err) => {
+      status.innerText = 'Не удалось определить местоположение: ' + err.message;
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function renderMonitorPhotoPreview(files, wrapId, onRemove) {
+  const wrap = document.getElementById(wrapId);
+  wrap.innerHTML = '';
+  wrap.style.display = files.length ? 'flex' : 'none';
+
+  files.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'mp-photo-thumb-wrap';
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'mp-photo-thumb';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'mp-photo-remove-btn';
+      removeBtn.innerText = '×';
+      removeBtn.onclick = function() { onRemove(index); };
+      thumbWrap.appendChild(img);
+      thumbWrap.appendChild(removeBtn);
+      wrap.appendChild(thumbWrap);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function rerenderMonBusinessPhotos() {
+  renderMonitorPhotoPreview(monBusinessPhotoFiles, 'monBusinessPhotoPreviewWrap', (i) => {
+    monBusinessPhotoFiles.splice(i, 1);
+    rerenderMonBusinessPhotos();
+  });
+}
+
+function rerenderMonCollateralPhotos() {
+  renderMonitorPhotoPreview(monCollateralPhotoFiles, 'monCollateralPhotoPreviewWrap', (i) => {
+    monCollateralPhotoFiles.splice(i, 1);
+    rerenderMonCollateralPhotos();
+  });
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'monBusinessPhotos' && e.target.files && e.target.files.length) {
+    const combined = monBusinessPhotoFiles.concat(Array.from(e.target.files));
+    if (combined.length > 5) alert('Можно приложить максимум 5 фото.');
+    monBusinessPhotoFiles = combined.slice(0, 5);
+    e.target.value = '';
+    rerenderMonBusinessPhotos();
+  }
+
+  if (e.target && e.target.id === 'monCollateralPhotos' && e.target.files && e.target.files.length) {
+    const combined = monCollateralPhotoFiles.concat(Array.from(e.target.files));
+    if (combined.length > 5) alert('Можно приложить максимум 5 фото.');
+    monCollateralPhotoFiles = combined.slice(0, 5);
+    e.target.value = '';
+    rerenderMonCollateralPhotos();
+  }
+});
+
+async function resizePhotosArray(files) {
+  const result = [];
+  for (const file of files) {
+    const resized = await resizeImageFile(file, 1280);
+    result.push({ base64: resized.base64, mimeType: resized.mimeType, fileName: 'photo_' + (result.length + 1) + '.jpg' });
+  }
+  return result;
+}
+
+async function submitMonitoringForm() {
+  const errorBox = document.getElementById('monitorFormError');
+  const submitBtn = document.getElementById('monitorSubmitBtn');
+  const showError = (msg) => { errorBox.innerText = msg; errorBox.style.display = 'block'; };
+  errorBox.style.display = 'none';
+
+  const geolocation = document.getElementById('monGeolocation').value.trim();
+  if (!geolocation) { showError('Определите геолокацию (кнопка GPS)'); return; }
+
+  submitBtn.disabled = true;
+  const originalText = submitBtn.innerText;
+
+  try {
+    submitBtn.innerText = 'Обработка фото...';
+    const businessPhotos = await resizePhotosArray(monBusinessPhotoFiles);
+    const collateralPhotos = await resizePhotosArray(monCollateralPhotoFiles);
+
+    submitBtn.innerText = 'Отправка...';
+
+    const result = await postWebAction({
+      webAction: 'submitClientMonitoring',
+      sessionId: localStorage.getItem('msbSessionId'),
+      inn: currentDrawerClient.inn,
+      geolocation: geolocation,
+      businessPhotos: businessPhotos,
+      collateralPhotos: collateralPhotos,
+      comment: document.getElementById('monComment').value.trim(),
+      verdict: document.getElementById('monVerdict').value
+    });
+
+    if (result.success) {
+      closeClientCard();
+      await loadCRM();
+      if (result.photoWarning) alert('Сохранено, но с фото проблема:\n\n' + result.photoWarning);
+    } else {
+      showError(result.message || 'Не удалось сохранить проверку');
+    }
+  } catch (error) {
+    showError('Не удалось связаться с сервером');
+    console.error(error);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerText = originalText;
+  }
 }
 
 // ============================================================
@@ -5174,6 +5460,23 @@ function openClientForm(mode) {
     document.getElementById('cfNextContact').value = c.nextContact || '';
     document.getElementById('cfComment').value = c.comment || '';
     if (isAdmin) document.getElementById('cfManager').value = c.manager || '';
+
+    document.getElementById('cfGeolocation').value = c.managerGeolocation || '';
+    document.getElementById('cfGeoStatus').innerText = '';
+    cfSelectedPhotoFiles = [];
+    document.getElementById('cfPhotos').value = '';
+    document.getElementById('cfPhotoPreviewWrap').style.display = 'none';
+    document.getElementById('cfPhotoPreviewWrap').innerHTML = '';
+
+    const existingPhotos = String(c.managerPhotoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+    const existingWrap = document.getElementById('cfExistingPhotosWrap');
+    if (existingPhotos.length) {
+      existingWrap.innerHTML = existingPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('');
+      existingWrap.style.display = 'flex';
+    } else {
+      existingWrap.style.display = 'none';
+      existingWrap.innerHTML = '';
+    }
   } else {
     clientFormMode = 'create';
     if (title) title.innerText = 'Добавить клиента';
@@ -5189,6 +5492,15 @@ function openClientForm(mode) {
     document.getElementById('cfRegion').value = '';
     document.getElementById('cfProduct').value = '';
     if (isAdmin) document.getElementById('cfManager').value = currentUser.fullName || '';
+
+    document.getElementById('cfGeolocation').value = '';
+    document.getElementById('cfGeoStatus').innerText = '';
+    cfSelectedPhotoFiles = [];
+    document.getElementById('cfPhotos').value = '';
+    document.getElementById('cfPhotoPreviewWrap').style.display = 'none';
+    document.getElementById('cfPhotoPreviewWrap').innerHTML = '';
+    document.getElementById('cfExistingPhotosWrap').style.display = 'none';
+    document.getElementById('cfExistingPhotosWrap').innerHTML = '';
   }
 
   document.getElementById('clientFormOverlay').classList.add('active');
@@ -5198,6 +5510,80 @@ function openClientForm(mode) {
 function closeClientForm() {
   document.getElementById('clientFormOverlay').classList.remove('active');
   document.getElementById('clientFormDrawer').classList.remove('active');
+}
+
+// Геолокация бизнеса для формы клиента — та же логика, что и для
+// микропроектов (captureMicroprojectGeolocation), просто другие ID полей.
+function captureClientGeolocation() {
+  const status = document.getElementById('cfGeoStatus');
+  if (!navigator.geolocation) {
+    status.innerText = 'Геолокация не поддерживается этим браузером';
+    return;
+  }
+
+  status.innerText = 'Определение местоположения...';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      document.getElementById('cfGeolocation').value = lat + ', ' + lng;
+      status.innerText = 'Координаты определены';
+    },
+    (err) => {
+      status.innerText = 'Не удалось определить местоположение: ' + err.message;
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'cfPhotos' && e.target.files && e.target.files.length) {
+    const newFiles = Array.from(e.target.files);
+    const combined = cfSelectedPhotoFiles.concat(newFiles);
+
+    if (combined.length > 5) {
+      alert('Можно приложить максимум 5 фото. Лишние не будут добавлены.');
+    }
+
+    cfSelectedPhotoFiles = combined.slice(0, 5);
+    e.target.value = '';
+
+    renderCfPhotoPreviews();
+  }
+});
+
+function renderCfPhotoPreviews() {
+  const wrap = document.getElementById('cfPhotoPreviewWrap');
+  wrap.innerHTML = '';
+  wrap.style.display = cfSelectedPhotoFiles.length ? 'flex' : 'none';
+
+  cfSelectedPhotoFiles.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'mp-photo-thumb-wrap';
+
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'mp-photo-thumb';
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'mp-photo-remove-btn';
+      removeBtn.innerText = '×';
+      removeBtn.title = 'Убрать фото';
+      removeBtn.onclick = function() {
+        cfSelectedPhotoFiles.splice(index, 1);
+        renderCfPhotoPreviews();
+      };
+
+      thumbWrap.appendChild(img);
+      thumbWrap.appendChild(removeBtn);
+      wrap.appendChild(thumbWrap);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 async function postWebAction(body) {
@@ -5232,12 +5618,23 @@ async function submitClientForm() {
     region: document.getElementById('cfRegion').value,
     product: document.getElementById('cfProduct').value,
     nextContact: document.getElementById('cfNextContact').value.trim(),
-    comment: document.getElementById('cfComment').value.trim()
+    comment: document.getElementById('cfComment').value.trim(),
+    geolocation: document.getElementById('cfGeolocation').value.trim()
   };
 
   if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Сохранение...'; }
 
   try {
+    let photos = [];
+    if (cfSelectedPhotoFiles.length) {
+      if (submitBtn) submitBtn.innerText = 'Обработка фото...';
+      for (const file of cfSelectedPhotoFiles) {
+        const resized = await resizeImageFile(file, 1280);
+        photos.push({ base64: resized.base64, mimeType: resized.mimeType, fileName: 'photo_' + (photos.length + 1) + '.jpg' });
+      }
+      if (submitBtn) submitBtn.innerText = 'Сохранение...';
+    }
+
     let result;
 
     if (clientFormMode === 'edit') {
@@ -5251,15 +5648,14 @@ async function submitClientForm() {
         product: payloadBase.product,
         contact: payloadBase.nextContact,
         comment: payloadBase.comment,
-        phone: payloadBase.phone
+        phone: payloadBase.phone,
+        geolocation: payloadBase.geolocation
       };
 
-      result = await postWebAction({
-        webAction: 'updateClient',
-        sessionId: sessionId,
-        inn: inn,
-        fields: fields
-      });
+      const body = { webAction: 'updateClient', sessionId: sessionId, inn: inn, fields: fields };
+      if (photos.length) body.photos = photos;
+
+      result = await postWebAction(body);
     } else {
       const body = Object.assign({
         webAction: 'createClient',
@@ -5268,6 +5664,7 @@ async function submitClientForm() {
       }, payloadBase);
 
       if (isAdmin) body.manager = document.getElementById('cfManager').value;
+      if (photos.length) body.photos = photos;
 
       result = await postWebAction(body);
     }
@@ -5276,6 +5673,9 @@ async function submitClientForm() {
       closeClientForm();
       closeClientCard();
       await loadCRM();
+      if (result.photoWarning) {
+        alert('Клиент сохранён, но с фото проблема:\n\n' + result.photoWarning);
+      }
     } else {
       showError(result.message || 'Не удалось сохранить клиента');
     }
@@ -6306,6 +6706,8 @@ function buildClientInsight(c) {
 
   if (status === 'Выдано') {
     text += 'Клиент уже доведен до выдачи. Следующий шаг — кросс-продажи и удержание клиента.';
+  } else if (status === 'На проверке в мониторинге') {
+    text += 'Клиент передан на независимую проверку кредитного мониторинга. Выдача заблокирована, пока не будет положительное заключение.';
   } else if (status === 'Одобрено') {
     text += 'Клиент находится на сильном этапе. Нужно быстро довести сделку до выдачи.';
   } else if (status === 'Финанализ' || status === 'Кредитный комитет') {
@@ -6342,7 +6744,7 @@ function renderMyCabinet() {
   const issuedClients = clients.filter(c => c.status === 'Выдано');
   const issuedAmount = issuedClients.reduce((s,c) => s + (Number(c.amount)||0), 0);
   const potential = clients
-    .filter(c => ['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено'].includes(c.status))
+    .filter(c => ['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге'].includes(c.status))
     .reduce((s,c) => s + (Number(c.amount)||0), 0);
 
   document.getElementById('myClientsCount').innerText = total;
@@ -6877,7 +7279,7 @@ function formatMoney(value) {
 
 function statusClass(status) {
   if (status === 'Выдано' || status === 'Одобрено') return 'status-green';
-  if (status === 'Финанализ' || status === 'Документы собираются') return 'status-orange';
+  if (status === 'Финанализ' || status === 'Документы собираются' || status === 'На проверке в мониторинге') return 'status-orange';
   if (status === 'Переговоры' || status === 'Новый клиент') return 'status-blue';
   if (status === 'Отказ') return 'status-red';
   return 'status-blue';
