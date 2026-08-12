@@ -1165,6 +1165,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
   </section>
 
+  <div id="monitorRejectedAlert" data-admin="true" style="display:none;background:#FFF3E3;border:1px solid #F5C67A;border-radius:14px;padding:16px 20px;margin-bottom:22px;cursor:pointer;" onclick="openMonitorRejectedList()">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div>
+        <div style="font-weight:800;color:var(--orange);font-size:15px;">⚠️ Отклонено юридическим мониторингом: <span id="monitorRejectedCount">0</span></div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px;">Клиенты, по которым мониторинг нашёл проблему — возвращены на «Кредитный комитет», требуют внимания</div>
+      </div>
+      <div style="color:var(--orange);font-weight:700;">Открыть список →</div>
+    </div>
+  </div>
+
   <div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <h2 style="margin-bottom:0;">Динамика</h2>
@@ -1962,7 +1972,8 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <select id="newUserRole" class="select">
       <option value="MANAGER">Менеджер</option>
       <option value="MAHALLA_BANKER">Банкир Махалли</option>
-      <option value="CREDIT_MONITOR">Менеджер кредитного мониторинга</option>
+      <option value="CREDIT_MONITOR">Юридический мониторинг</option>
+      <option value="COLLATERAL_OFFICER">Сотрудник по залогу</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
 
@@ -2525,44 +2536,68 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="panel" style="margin-top:18px;" id="monitoringPanel">
       <h2 style="font-size:18px;margin-bottom:10px;">🔍 Проверка "4 глаз"</h2>
 
+      <div id="deviceOverlapWarning" data-admin="true" style="display:none;background:#FDEAEC;border:1px solid #F3B4BC;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#B4232F;font-weight:700;"></div>
+
+      <div class="mp-section-title" style="margin-top:0;">Бизнес (менеджер)</div>
+      <div class="info-grid" style="margin-bottom:10px;">
+        <div class="info-card"><div class="info-label">Геолокация бизнеса</div><div class="info-value" id="drawerManagerGeo">-</div></div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="info-label" style="margin-bottom:6px;">Фото бизнеса</div>
+        <div id="drawerManagerPhotos" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div class="mp-section-title">Залог (сотрудник по залогу)</div>
+      <div class="info-grid" style="margin-bottom:10px;">
+        <div class="info-card"><div class="info-label">Геолокация залога</div><div class="info-value" id="drawerCollateralGeo">-</div></div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div class="info-label" style="margin-bottom:6px;">Фото залога</div>
+        <div id="drawerCollateralPhotos" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div id="collateralSubmitFormWrap" style="display:none;margin-bottom:18px;padding-top:14px;border-top:1px solid var(--line);">
+        <div class="mp-label" style="font-weight:800;margin-bottom:10px;">Загрузить данные по залогу</div>
+
+        <label class="mp-label">Геолокация залога</label>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <input id="colGeolocation" class="input" placeholder="Координаты" readonly style="flex:1;">
+          <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="captureCollateralGeolocation()">📍 GPS</button>
+        </div>
+        <div id="colGeoStatus" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+
+        <label class="mp-label">Фото залога (до 5 шт.)</label>
+        <input type="file" id="colPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+        <div id="colPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
+
+        <div id="collateralFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
+
+        <button class="btn" style="width:100%;" id="collateralSubmitBtn" onclick="submitCollateralForm()">Сохранить данные по залогу</button>
+      </div>
+
+      <div class="mp-section-title">Заключение юридического мониторинга</div>
       <div class="info-grid" style="margin-bottom:14px;">
-        <div class="info-card"><div class="info-label">Гео бизнеса (менеджер)</div><div class="info-value" id="drawerManagerGeo">-</div></div>
-        <div class="info-card"><div class="info-label">Вердикт монитора</div><div class="info-value" id="drawerMonitorVerdict">-</div></div>
+        <div class="info-card"><div class="info-label">Вердикт</div><div class="info-value" id="drawerMonitorVerdict">-</div></div>
         <div class="info-card"><div class="info-label">Кто проверял</div><div class="info-value" id="drawerMonitorName">-</div></div>
         <div class="info-card"><div class="info-label">Дата проверки</div><div class="info-value" id="drawerMonitorDate">-</div></div>
       </div>
 
-      <div style="margin-bottom:14px;">
-        <div class="info-label" style="margin-bottom:6px;">Фото бизнеса (менеджер)</div>
-        <div id="drawerManagerPhotos" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-      </div>
-
       <div id="drawerMonitorResultWrap" style="display:none;margin-bottom:14px;">
-        <div class="info-label" style="margin-bottom:6px;">Комментарий монитора</div>
-        <div class="comment-box" id="drawerMonitorComment" style="margin-bottom:14px;">-</div>
-        <div class="info-label" style="margin-bottom:6px;">Фото бизнеса (монитор)</div>
-        <div id="drawerMonitorBusinessPhotos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
-        <div class="info-label" style="margin-bottom:6px;">Фото залога (монитор)</div>
-        <div id="drawerMonitorCollateralPhotos" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+        <div class="info-label" style="margin-bottom:6px;">Комментарий</div>
+        <div class="comment-box" id="drawerMonitorComment">-</div>
+        <div class="info-label" style="margin:14px 0 6px;">Где находился монитор при вердикте</div>
+        <div class="info-value" id="drawerMonitorGeo">-</div>
       </div>
 
-      <div id="monitorSubmitFormWrap" style="display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--line);">
-        <div class="mp-section-title" style="margin-top:0;">Моя проверка</div>
+      <div id="monitorSubmitFormWrap" style="display:none;margin-top:10px;padding-top:14px;border-top:1px solid var(--line);">
+        <div class="mp-label" style="font-weight:800;margin-bottom:10px;">Моё заключение (проверяю уже загруженное выше — своих фото не требуется)</div>
 
-        <label class="mp-label">Моя геолокация</label>
+        <label class="mp-label">Моя геолокация (в момент вердикта)</label>
         <div style="display:flex;gap:8px;margin-bottom:6px;">
           <input id="monGeolocation" class="input" placeholder="Координаты" readonly style="flex:1;">
           <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="captureMonitorGeolocation()">📍 GPS</button>
         </div>
         <div id="monGeoStatus" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
-
-        <label class="mp-label">Фото бизнеса (моё)</label>
-        <input type="file" id="monBusinessPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
-        <div id="monBusinessPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
-
-        <label class="mp-label">Фото залога/обеспечения</label>
-        <input type="file" id="monCollateralPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
-        <div id="monCollateralPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
 
         <label class="mp-label">Комментарий</label>
         <textarea id="monComment" class="input" style="margin-bottom:14px;min-height:70px;resize:vertical;"></textarea>
@@ -2891,7 +2926,9 @@ function applyRoleView() {
       : currentUser.role === 'MAHALLA_BANKER'
       ? 'Банкир Махалли'
       : currentUser.role === 'CREDIT_MONITOR'
-      ? 'Менеджер кредитного мониторинга'
+      ? 'Юридический мониторинг'
+      : currentUser.role === 'COLLATERAL_OFFICER'
+      ? 'Сотрудник по залогу'
       : 'Менеджер';
 
   document.querySelectorAll('[data-admin="true"]').forEach(el => {
@@ -2910,10 +2947,11 @@ function applyRoleView() {
     el.classList.toggle('hidden-by-role', isMahallaOnly);
   });
 
-  // Менеджер кредитного мониторинга работает только с "МСБ Продажи"
-  // (там же, где и клиенты, которых он проверяет) — остальные разделы
-  // (Портфель, SLA, Статистика, Районы, Менеджеры, AI, Махалля) ему не нужны.
-  const isMonitorOnly = currentUser.role === 'CREDIT_MONITOR';
+  // Юридический мониторинг и сотрудник по залогу работают только с "МСБ
+  // Продажи" (там же, где и клиенты, которых они проверяют/дополняют) —
+  // остальные разделы (Портфель, SLA, Статистика, Районы, Менеджеры, AI,
+  // Махалля) им не нужны.
+  const isMonitorOnly = currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'COLLATERAL_OFFICER';
   document.querySelectorAll('[data-hide-for-monitor="true"]').forEach(el => {
     el.classList.toggle('hidden-by-role', isMonitorOnly);
   });
@@ -3319,10 +3357,30 @@ function applyPeriod() {
   renderMyCabinet();
   renderSLAControl(periodClients);
   renderRegions(periodClients);
+  renderMonitorRejectedAlert();
 
   const periodText = month && month !== 'all' ? month : 'Все данные';
   const subtitle = document.querySelector('#dashboard .header p');
   if (subtitle) subtitle.innerText = 'Период анализа: ' + periodText;
+}
+
+// Показывает управляющему предупреждение о клиентах, которых юридический
+// мониторинг отклонил (вердикт "Проблема"). Считается по ВСЕМ клиентам,
+// не только за выбранный период — это про "требует внимания сейчас".
+function renderMonitorRejectedAlert() {
+  const alertBox = document.getElementById('monitorRejectedAlert');
+  if (!alertBox) return;
+
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  if (!isAdmin) { alertBox.style.display = 'none'; return; }
+
+  const rejected = getDashboardClientSelection('monitorRejected');
+  document.getElementById('monitorRejectedCount').innerText = rejected.length;
+  alertBox.style.display = rejected.length ? 'block' : 'none';
+}
+
+function openMonitorRejectedList() {
+  openDashboardClients('monitorRejected');
 }
 
 // Возвращает клиентов "предыдущего периода" — того же типа, что и текущий
@@ -3725,7 +3783,7 @@ function calcStatsFromClients(clients) {
 }
 
 function calcFunnelFromClients(clients) {
-  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Выдано','Отказ','Отложено','На рассмотрении'];
+  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано','Отказ','Отложено','На рассмотрении'];
   const funnel = {};
   statuses.forEach(s => funnel[s] = {count:0, amount:0});
   clients.forEach(c => {
@@ -3982,7 +4040,8 @@ function getSlaLimit(status) {
     'На рассмотрении': 5,
     'Кредитный комитет': 3,
     'Одобрено': 2,
-    'На проверке в мониторинге': 3
+    'На проверке в мониторинге': 3,
+    'Мониторинг пройден': 2
   };
 
   return limits[status] || 7;
@@ -3997,7 +4056,8 @@ function getActiveStatuses() {
     'На рассмотрении',
     'Кредитный комитет',
     'Одобрено',
-    'На проверке в мониторинге'
+    'На проверке в мониторинге',
+    'Мониторинг пройден'
   ];
 }
 
@@ -4287,7 +4347,7 @@ function calcRegionsFromClients(clients) {
       map[region].issuedCount++;
     }
 
-    if (['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','На рассмотрении'].includes(c.status)) {
+    if (['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','На рассмотрении'].includes(c.status)) {
       map[region].potentialAmount += amount;
     }
   });
@@ -4624,6 +4684,10 @@ function getDashboardClientSelection(type) {
     return salesSource.filter(c => (Number(c.amount) || 0) > 0);
   }
 
+  if (type === 'monitorRejected') {
+    return getVisibleClients().filter(c => c.monitorVerdict === 'Проблема' && normalizeText(c.status) === 'кредитный комитет');
+  }
+
   return salesSource;
 }
 
@@ -4662,6 +4726,13 @@ function getDashboardClientSelectionMeta(type, clients) {
     return {
       title: 'Действующие заявки без отказов',
       subtitle: clients.length + ' клиент(ов) • сумма заявок: ' + formatMoney(amount)
+    };
+  }
+
+  if (type === 'monitorRejected') {
+    return {
+      title: 'Отклонено юридическим мониторингом',
+      subtitle: clients.length + ' клиент(ов) — вернулись на «Кредитный комитет», нужно решение'
     };
   }
 
@@ -4781,7 +4852,7 @@ function renderFunnel(funnel, boxId) {
   // Основная последовательная воронка (проходит клиент по этим этапам).
   // "Отказ" и "Отложено" — не шаги воронки, а выходы из неё, поэтому
   // считаем % конверсии только по основной цепочке.
-  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Выдано'];
+  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано'];
   const sideStatuses = ['Отказ','Отложено'];
   const statuses = pipelineStatuses.concat(sideStatuses);
 
@@ -5191,51 +5262,70 @@ function openClientCard(c) {
 }
 
 function renderMonitoringPanel(c) {
+  const overlapBox = document.getElementById('deviceOverlapWarning');
+  if (overlapBox) {
+    if (c.deviceOverlapPairs && c.deviceOverlapPairs.length) {
+      overlapBox.innerText = '⚠️ Подозрение: с одного и того же устройства заходили под разными ролями (' + c.deviceOverlapPairs.join('; ') + '). Возможна передача логина коллеге.';
+      overlapBox.style.display = 'block';
+    } else {
+      overlapBox.style.display = 'none';
+    }
+  }
+
   document.getElementById('drawerManagerGeo').innerHTML = c.managerGeolocation
     ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(c.managerGeolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(c.managerGeolocation)}</a>`
     : '-';
-  document.getElementById('drawerMonitorVerdict').innerHTML = c.monitorVerdict
-    ? `<span class="status ${c.monitorVerdict === 'Перспективный' ? 'status-green' : 'status-orange'}">${safe(c.monitorVerdict)}</span>`
-    : '<span style="color:var(--muted);">Ещё не проверялся</span>';
-  document.getElementById('drawerMonitorName').innerText = safe(c.monitorName);
-  document.getElementById('drawerMonitorDate').innerText = safe(c.monitorDate);
 
   const managerPhotos = String(c.managerPhotoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
   document.getElementById('drawerManagerPhotos').innerHTML = managerPhotos.length
     ? managerPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
     : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
 
+  document.getElementById('drawerCollateralGeo').innerHTML = c.collateralGeolocation
+    ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(c.collateralGeolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(c.collateralGeolocation)}</a>`
+    : '-';
+
+  const collateralPhotos = String(c.collateralPhotoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+  document.getElementById('drawerCollateralPhotos').innerHTML = collateralPhotos.length
+    ? collateralPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
+    : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
+
+  document.getElementById('drawerMonitorVerdict').innerHTML = c.monitorVerdict
+    ? `<span class="status ${c.monitorVerdict === 'Перспективный' ? 'status-green' : 'status-orange'}">${safe(c.monitorVerdict)}</span>`
+    : '<span style="color:var(--muted);">Ещё не проверялся</span>';
+  document.getElementById('drawerMonitorName').innerText = safe(c.monitorName);
+  document.getElementById('drawerMonitorDate').innerText = safe(c.monitorDate);
+
   const resultWrap = document.getElementById('drawerMonitorResultWrap');
   if (c.monitorVerdict) {
     resultWrap.style.display = 'block';
     document.getElementById('drawerMonitorComment').innerText = safe(c.monitorComment);
-
-    const bPhotos = String(c.monitorPhotoBusinessUrls || '').split(',').map(s => s.trim()).filter(Boolean);
-    document.getElementById('drawerMonitorBusinessPhotos').innerHTML = bPhotos.length
-      ? bPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
-      : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
-
-    const cPhotos = String(c.monitorPhotoCollateralUrls || '').split(',').map(s => s.trim()).filter(Boolean);
-    document.getElementById('drawerMonitorCollateralPhotos').innerHTML = cPhotos.length
-      ? cPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
-      : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
+    document.getElementById('drawerMonitorGeo').innerHTML = c.monitorGeolocation
+      ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(c.monitorGeolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(c.monitorGeolocation)}</a>`
+      : '-';
   } else {
     resultWrap.style.display = 'none';
   }
 
-  const canMonitor = currentUser && (currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-  const formWrap = document.getElementById('monitorSubmitFormWrap');
-  formWrap.style.display = canMonitor ? 'block' : 'none';
+  // Форма сотрудника по залогу
+  const canSubmitCollateral = currentUser && (currentUser.role === 'COLLATERAL_OFFICER' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  document.getElementById('collateralSubmitFormWrap').style.display = canSubmitCollateral ? 'block' : 'none';
+  if (canSubmitCollateral) {
+    colSelectedPhotoFiles = [];
+    document.getElementById('colPhotos').value = '';
+    document.getElementById('colPhotoPreviewWrap').innerHTML = '';
+    document.getElementById('colPhotoPreviewWrap').style.display = 'none';
+    document.getElementById('colGeolocation').value = '';
+    document.getElementById('colGeoStatus').innerText = '';
+    const colError = document.getElementById('collateralFormError');
+    if (colError) { colError.style.display = 'none'; colError.innerText = ''; }
+  }
 
+  // Форма юридического мониторинга — только заключение, без своих фото,
+  // но геолокацию в момент вердикта фиксирует обязательно.
+  const canMonitor = currentUser && (currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  document.getElementById('monitorSubmitFormWrap').style.display = canMonitor ? 'block' : 'none';
   if (canMonitor) {
-    monBusinessPhotoFiles = [];
-    monCollateralPhotoFiles = [];
-    document.getElementById('monBusinessPhotos').value = '';
-    document.getElementById('monCollateralPhotos').value = '';
-    document.getElementById('monBusinessPhotoPreviewWrap').innerHTML = '';
-    document.getElementById('monBusinessPhotoPreviewWrap').style.display = 'none';
-    document.getElementById('monCollateralPhotoPreviewWrap').innerHTML = '';
-    document.getElementById('monCollateralPhotoPreviewWrap').style.display = 'none';
     document.getElementById('monGeolocation').value = '';
     document.getElementById('monGeoStatus').innerText = '';
     document.getElementById('monComment').value = '';
@@ -5251,12 +5341,39 @@ function closeClientCard() {
 }
 
 // ============================================================
-// Форма проверки мониторинга (принцип "4 глаз") внутри карточки клиента.
+// Проверка "4 глаз" внутри карточки клиента: форма сотрудника по залогу
+// (гео + фото залога) и форма юридического мониторинга (только вердикт,
+// без своих фото — он проверяет уже загруженное менеджером и залоговиком).
 // ============================================================
 
-let monBusinessPhotoFiles = [];
-let monCollateralPhotoFiles = [];
+let colSelectedPhotoFiles = [];
 
+function captureCollateralGeolocation() {
+  const status = document.getElementById('colGeoStatus');
+  if (!navigator.geolocation) {
+    status.innerText = 'Геолокация не поддерживается этим браузером';
+    return;
+  }
+
+  status.innerText = 'Определение местоположения...';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      document.getElementById('colGeolocation').value = lat + ', ' + lng;
+      status.innerText = 'Координаты определены';
+    },
+    (err) => {
+      status.innerText = 'Не удалось определить местоположение: ' + err.message;
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+// Монитор обязан зафиксировать СВОЮ геолокацию в момент вынесения
+// вердикта — иначе можно было бы "проверить" клиента, не выходя из
+// кабинета.
 function captureMonitorGeolocation() {
   const status = document.getElementById('monGeoStatus');
   if (!navigator.geolocation) {
@@ -5280,12 +5397,12 @@ function captureMonitorGeolocation() {
   );
 }
 
-function renderMonitorPhotoPreview(files, wrapId, onRemove) {
-  const wrap = document.getElementById(wrapId);
+function renderColPhotoPreviews() {
+  const wrap = document.getElementById('colPhotoPreviewWrap');
   wrap.innerHTML = '';
-  wrap.style.display = files.length ? 'flex' : 'none';
+  wrap.style.display = colSelectedPhotoFiles.length ? 'flex' : 'none';
 
-  files.forEach((file, index) => {
+  colSelectedPhotoFiles.forEach((file, index) => {
     const reader = new FileReader();
     reader.onload = function(ev) {
       const thumbWrap = document.createElement('div');
@@ -5297,7 +5414,10 @@ function renderMonitorPhotoPreview(files, wrapId, onRemove) {
       removeBtn.type = 'button';
       removeBtn.className = 'mp-photo-remove-btn';
       removeBtn.innerText = '×';
-      removeBtn.onclick = function() { onRemove(index); };
+      removeBtn.onclick = function() {
+        colSelectedPhotoFiles.splice(index, 1);
+        renderColPhotoPreviews();
+      };
       thumbWrap.appendChild(img);
       thumbWrap.appendChild(removeBtn);
       wrap.appendChild(thumbWrap);
@@ -5306,35 +5426,13 @@ function renderMonitorPhotoPreview(files, wrapId, onRemove) {
   });
 }
 
-function rerenderMonBusinessPhotos() {
-  renderMonitorPhotoPreview(monBusinessPhotoFiles, 'monBusinessPhotoPreviewWrap', (i) => {
-    monBusinessPhotoFiles.splice(i, 1);
-    rerenderMonBusinessPhotos();
-  });
-}
-
-function rerenderMonCollateralPhotos() {
-  renderMonitorPhotoPreview(monCollateralPhotoFiles, 'monCollateralPhotoPreviewWrap', (i) => {
-    monCollateralPhotoFiles.splice(i, 1);
-    rerenderMonCollateralPhotos();
-  });
-}
-
 document.addEventListener('change', function(e) {
-  if (e.target && e.target.id === 'monBusinessPhotos' && e.target.files && e.target.files.length) {
-    const combined = monBusinessPhotoFiles.concat(Array.from(e.target.files));
+  if (e.target && e.target.id === 'colPhotos' && e.target.files && e.target.files.length) {
+    const combined = colSelectedPhotoFiles.concat(Array.from(e.target.files));
     if (combined.length > 5) alert('Можно приложить максимум 5 фото.');
-    monBusinessPhotoFiles = combined.slice(0, 5);
+    colSelectedPhotoFiles = combined.slice(0, 5);
     e.target.value = '';
-    rerenderMonBusinessPhotos();
-  }
-
-  if (e.target && e.target.id === 'monCollateralPhotos' && e.target.files && e.target.files.length) {
-    const combined = monCollateralPhotoFiles.concat(Array.from(e.target.files));
-    if (combined.length > 5) alert('Можно приложить максимум 5 фото.');
-    monCollateralPhotoFiles = combined.slice(0, 5);
-    e.target.value = '';
-    rerenderMonCollateralPhotos();
+    renderColPhotoPreviews();
   }
 });
 
@@ -5347,13 +5445,13 @@ async function resizePhotosArray(files) {
   return result;
 }
 
-async function submitMonitoringForm() {
-  const errorBox = document.getElementById('monitorFormError');
-  const submitBtn = document.getElementById('monitorSubmitBtn');
+async function submitCollateralForm() {
+  const errorBox = document.getElementById('collateralFormError');
+  const submitBtn = document.getElementById('collateralSubmitBtn');
   const showError = (msg) => { errorBox.innerText = msg; errorBox.style.display = 'block'; };
   errorBox.style.display = 'none';
 
-  const geolocation = document.getElementById('monGeolocation').value.trim();
+  const geolocation = document.getElementById('colGeolocation').value.trim();
   if (!geolocation) { showError('Определите геолокацию (кнопка GPS)'); return; }
 
   submitBtn.disabled = true;
@@ -5361,26 +5459,64 @@ async function submitMonitoringForm() {
 
   try {
     submitBtn.innerText = 'Обработка фото...';
-    const businessPhotos = await resizePhotosArray(monBusinessPhotoFiles);
-    const collateralPhotos = await resizePhotosArray(monCollateralPhotoFiles);
+    const photos = await resizePhotosArray(colSelectedPhotoFiles);
 
-    submitBtn.innerText = 'Отправка...';
+    submitBtn.innerText = 'Сохранение...';
 
     const result = await postWebAction({
-      webAction: 'submitClientMonitoring',
+      webAction: 'submitCollateralInfo',
       sessionId: localStorage.getItem('msbSessionId'),
       inn: currentDrawerClient.inn,
       geolocation: geolocation,
-      businessPhotos: businessPhotos,
-      collateralPhotos: collateralPhotos,
-      comment: document.getElementById('monComment').value.trim(),
-      verdict: document.getElementById('monVerdict').value
+      photos: photos,
+      deviceInfo: getDeviceFingerprint()
     });
 
     if (result.success) {
       closeClientCard();
       await loadCRM();
       if (result.photoWarning) alert('Сохранено, но с фото проблема:\n\n' + result.photoWarning);
+    } else {
+      showError(result.message || 'Не удалось сохранить данные по залогу');
+    }
+  } catch (error) {
+    showError('Не удалось связаться с сервером');
+    console.error(error);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerText = originalText;
+  }
+}
+
+async function submitMonitoringForm() {
+  const errorBox = document.getElementById('monitorFormError');
+  const submitBtn = document.getElementById('monitorSubmitBtn');
+  const showError = (msg) => { errorBox.innerText = msg; errorBox.style.display = 'block'; };
+  errorBox.style.display = 'none';
+
+  const verdict = document.getElementById('monVerdict').value;
+  const comment = document.getElementById('monComment').value.trim();
+  const geolocation = document.getElementById('monGeolocation').value.trim();
+
+  if (!geolocation) { showError('Сначала определите свою геолокацию (кнопка GPS) — без неё нельзя вынести вердикт.'); return; }
+
+  submitBtn.disabled = true;
+  const originalText = submitBtn.innerText;
+
+  try {
+    const result = await postWebAction({
+      webAction: 'submitClientMonitoring',
+      sessionId: localStorage.getItem('msbSessionId'),
+      inn: currentDrawerClient.inn,
+      comment: comment,
+      verdict: verdict,
+      geolocation: geolocation,
+      deviceInfo: getDeviceFingerprint()
+    });
+
+    if (result.success) {
+      closeClientCard();
+      await loadCRM();
     } else {
       showError(result.message || 'Не удалось сохранить проверку');
     }
@@ -5586,6 +5722,23 @@ function renderCfPhotoPreviews() {
   });
 }
 
+// Лёгкий отпечаток устройства/браузера — не 100% уникальный ID, но
+// достаточно устойчивая метка, чтобы поймать случай "дал коллеге свой
+// логин, он зашёл со своего же телефона под чужим аккаунтом". Используется
+// только для сравнения между тремя ролями "4 глаз" по одному клиенту.
+function getDeviceFingerprint() {
+  try {
+    return [
+      navigator.userAgent,
+      (screen.width || 0) + 'x' + (screen.height || 0),
+      navigator.language || '',
+      new Date().getTimezoneOffset()
+    ].join(' | ');
+  } catch (e) {
+    return '';
+  }
+}
+
 async function postWebAction(body) {
   const response = await fetch(API_URL, {
     method: 'POST',
@@ -5652,7 +5805,7 @@ async function submitClientForm() {
         geolocation: payloadBase.geolocation
       };
 
-      const body = { webAction: 'updateClient', sessionId: sessionId, inn: inn, fields: fields };
+      const body = { webAction: 'updateClient', sessionId: sessionId, inn: inn, fields: fields, deviceInfo: getDeviceFingerprint() };
       if (photos.length) body.photos = photos;
 
       result = await postWebAction(body);
@@ -5660,7 +5813,8 @@ async function submitClientForm() {
       const body = Object.assign({
         webAction: 'createClient',
         sessionId: sessionId,
-        inn: document.getElementById('cfInn').value.trim()
+        inn: document.getElementById('cfInn').value.trim(),
+        deviceInfo: getDeviceFingerprint()
       }, payloadBase);
 
       if (isAdmin) body.manager = document.getElementById('cfManager').value;
@@ -6706,8 +6860,10 @@ function buildClientInsight(c) {
 
   if (status === 'Выдано') {
     text += 'Клиент уже доведен до выдачи. Следующий шаг — кросс-продажи и удержание клиента.';
+  } else if (status === 'Мониторинг пройден') {
+    text += 'Юридический мониторинг подтвердил проект. Можно ставить статус "Выдано".';
   } else if (status === 'На проверке в мониторинге') {
-    text += 'Клиент передан на независимую проверку кредитного мониторинга. Выдача заблокирована, пока не будет положительное заключение.';
+    text += 'Клиент передан на независимую проверку юридического мониторинга. Выдача заблокирована, пока не будет положительное заключение.';
   } else if (status === 'Одобрено') {
     text += 'Клиент находится на сильном этапе. Нужно быстро довести сделку до выдачи.';
   } else if (status === 'Финанализ' || status === 'Кредитный комитет') {
@@ -6744,7 +6900,7 @@ function renderMyCabinet() {
   const issuedClients = clients.filter(c => c.status === 'Выдано');
   const issuedAmount = issuedClients.reduce((s,c) => s + (Number(c.amount)||0), 0);
   const potential = clients
-    .filter(c => ['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге'].includes(c.status))
+    .filter(c => ['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден'].includes(c.status))
     .reduce((s,c) => s + (Number(c.amount)||0), 0);
 
   document.getElementById('myClientsCount').innerText = total;
@@ -7280,6 +7436,7 @@ function formatMoney(value) {
 function statusClass(status) {
   if (status === 'Выдано' || status === 'Одобрено') return 'status-green';
   if (status === 'Финанализ' || status === 'Документы собираются' || status === 'На проверке в мониторинге') return 'status-orange';
+  if (status === 'Мониторинг пройден') return 'status-green';
   if (status === 'Переговоры' || status === 'Новый клиент') return 'status-blue';
   if (status === 'Отказ') return 'status-red';
   return 'status-blue';
