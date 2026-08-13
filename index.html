@@ -462,6 +462,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   align-items:center;
   gap:10px;
 }
+.global-top-bar{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+}
 .logout-btn{
   border:1px solid var(--line);
   background:#fff;
@@ -1102,13 +1109,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 <main class="main">
 
+<div class="global-top-bar">
+  <div class="user-box" id="currentUserBox">Пользователь</div>
+  <button class="logout-btn" onclick="logout()">Выйти</button>
+</div>
+
 <section id="dashboard" class="page active">
   <div class="header">
     <div>
       <h1>МСБ ПРОДАЖИ</h1>
       <p>Объединённый модуль: Dashboard • Клиенты • Продажи</p>
     </div>
-    <div class="top-actions"><div class="user-box" id="currentUserBox">Пользователь</div><button class="logout-btn" onclick="logout()">Выйти</button></div>
   </div>
 
   <div class="msb-sales-tabs">
@@ -6407,7 +6418,8 @@ function openMicroprojectDetail(id) {
 
   const geoBox = document.getElementById('mdGeo');
   if (p.geolocation) {
-    geoBox.innerHTML = `<a href="https://www.google.com/maps?q=${encodeURIComponent(p.geolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(p.geolocation)}</a>`;
+    geoBox.innerHTML = `<a href="https://www.google.com/maps?q=${encodeURIComponent(p.geolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(p.geolocation)}</a>` +
+      (p.geoCapturedAt ? `<div style="font-size:12px;color:var(--muted);font-weight:400;margin-top:2px;">Зафиксировано: ${safe(p.geoCapturedAt)}</div>` : '');
   } else {
     geoBox.innerText = '-';
   }
@@ -6473,6 +6485,7 @@ function openMicroprojectForm(mode, id) {
   microprojectFormMode = mode;
   editingMicroprojectId = id || null;
   mpSelectedPhotoFiles = [];
+  mpGeoCapturedAt = null;
 
   const errorBox = document.getElementById('microprojectFormError');
   if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
@@ -6685,6 +6698,8 @@ function renderMpPhotoPreviews() {
 
 // Определяет координаты через GPS телефона/браузера (стандартный запрос
 // разрешения покажется один раз).
+let mpGeoCapturedAt = null;
+
 function captureMicroprojectGeolocation() {
   const status = document.getElementById('mpGeoStatus');
   if (!navigator.geolocation) {
@@ -6699,7 +6714,10 @@ function captureMicroprojectGeolocation() {
       const lat = pos.coords.latitude.toFixed(6);
       const lng = pos.coords.longitude.toFixed(6);
       document.getElementById('mpGeolocation').value = lat + ', ' + lng;
-      status.innerText = 'Координаты определены';
+      // Фиксируем момент реального нажатия GPS, а не момент, когда форма
+      // потом сохранится — между этим может пройти несколько минут.
+      mpGeoCapturedAt = new Date();
+      status.innerText = 'Координаты определены (' + mpGeoCapturedAt.toLocaleString('ru-RU') + ')';
     },
     (err) => {
       status.innerText = 'Не удалось определить местоположение: ' + err.message;
@@ -6789,6 +6807,7 @@ async function submitMicroprojectForm() {
       }, commonFields);
 
       if (photos.length) body.photos = photos;
+      if (mpGeoCapturedAt) body.geoCapturedAt = mpGeoCapturedAt.toISOString();
 
       result = await postWebAction(body);
     }
