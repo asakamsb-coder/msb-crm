@@ -2877,6 +2877,12 @@ async function login() {
 
     localStorage.setItem('msbSessionId', result.sessionId);
     localStorage.setItem('msbUser', JSON.stringify(result.user));
+    // sessionStorage живёт только пока открыта эта вкладка/приложение —
+    // стирается сам при закрытии браузера/PWA. Используется ниже в
+    // tryAutoLogin(), чтобы отличить "просто обновил страницу" (можно
+    // войти автоматически) от "закрыл и заново открыл браузер/приложение"
+    // (нужно запросить логин и пароль заново).
+    sessionStorage.setItem('msbActiveSession', '1');
 
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('loadingScreen').classList.add('active');
@@ -2903,6 +2909,12 @@ async function login() {
 // сессия восстанавливается автоматически. Единственная защита теперь —
 // таймер бездействия (INACTIVITY_TIMEOUT_MS ниже): если пользователь не
 // проявляет активности дольше этого времени, его всё равно разлогинит.
+// Обновление страницы (F5) в РАМКАХ ОДНОЙ И ТОЙ ЖЕ вкладки/сеанса
+// восстанавливает сессию автоматически. А вот если браузер или PWA-
+// приложение было полностью закрыто и открыто заново — sessionStorage
+// (в отличие от localStorage) стирается сам, и это исключает автовход,
+// запрашивая логин и пароль заново. Плюс отдельная защита — таймер
+// бездействия (INACTIVITY_TIMEOUT_MS ниже).
 function tryAutoLogin() {
   const reason = localStorage.getItem('msbLogoutReason');
   if (reason === 'inactivity') {
@@ -2912,6 +2924,13 @@ function tryAutoLogin() {
       errorBox.style.display = 'block';
     }
     localStorage.removeItem('msbLogoutReason');
+    return;
+  }
+
+  // Метки sessionStorage нет — значит вкладка/приложение были закрыты и
+  // открыты заново. Не восстанавливаем сессию автоматически, даже если
+  // в localStorage ещё лежат действительные данные для входа.
+  if (!sessionStorage.getItem('msbActiveSession')) {
     return;
   }
 
@@ -2957,6 +2976,7 @@ function logoutDueToInactivity() {
   localStorage.removeItem('msbSessionId');
   localStorage.removeItem('msbUser');
   localStorage.setItem('msbLogoutReason', 'inactivity');
+  sessionStorage.removeItem('msbActiveSession');
   location.reload();
 }
 
@@ -2965,6 +2985,7 @@ function logout() {
   localStorage.removeItem('msbSessionId');
   localStorage.removeItem('msbUser');
   localStorage.removeItem('msbLogoutReason');
+  sessionStorage.removeItem('msbActiveSession');
   location.reload();
 }
 
