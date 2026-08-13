@@ -653,7 +653,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 }
 
 @media(max-width:640px){
-  .kpi,.summary-row,.sla-grid{grid-template-columns:1fr;}
+  .kpi,.summary-row,.sla-grid,.bank-balance-grid{grid-template-columns:1fr;}
   .header{align-items:flex-start;}
   .header h1{font-size:22px;}
   .card-value{font-size:24px;}
@@ -1807,6 +1807,32 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="card"><div class="card-label">Конверсия</div><div class="card-value" id="statsConversion">...</div></div>
     <div class="card"><div class="card-label">Выдачи</div><div class="card-value" id="statsIssuedCount">...</div></div>
   </section>
+
+  <div class="panel" style="margin-top:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
+      <div>
+        <h2 style="margin-bottom:4px;">💰 Баланс банка</h2>
+        <p style="color:var(--muted);font-size:13px;">Форма 0101BS, загружается отдельным файлом каждый месяц</p>
+      </div>
+    </div>
+
+    <div id="bankBalanceUploadPanel" data-admin="true" style="margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius-sm);">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;">Загрузить баланс за месяц (файл формы 0101BS)</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <input type="file" id="bankBalanceFile" accept=".xlsx,.xls">
+        <button class="btn" onclick="uploadBankBalanceFile()">Загрузить</button>
+      </div>
+      <div id="bankBalanceUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
+    </div>
+
+    <div id="bankBalancePeriodSelectorWrap" style="display:none;margin-bottom:20px;">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;">Период</label>
+      <select id="bankBalancePeriodSelect" class="select" style="max-width:220px;" onchange="renderBankBalanceDashboard()"></select>
+    </div>
+
+    <div id="bankBalanceEmptyState" class="loading">Баланс ещё не загружен — загрузите первый файл выше.</div>
+    <div id="bankBalanceDashboard" style="display:none;"></div>
+  </div>
 </section>
 
 
@@ -3100,6 +3126,10 @@ function showPage(id, el) {
 
   if (id === 'mahallaPage') {
     loadMahallaData();
+  }
+
+  if (id === 'statsPage') {
+    loadBankBalanceData();
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4509,6 +4539,416 @@ function renderStats(stats) {
   document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
   document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
   document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.10 • Обновлено: ' + (stats.updatedAt || '');
+}
+
+// ============================================================
+// БАЛАНС БАНКА — парсер формы 0101BS, загрузка, дашборд, динамика,
+// текстовый разбор. Данные грузятся лениво (только при заходе на
+// вкладку "Статистика").
+// ============================================================
+
+let allBankBalances = [];
+let bankBalanceDataLoaded = false;
+
+async function loadBankBalanceData() {
+  try {
+    allBankBalances = await fetchJSON('bankBalances') || [];
+    bankBalanceDataLoaded = true;
+
+    const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    const uploadPanel = document.getElementById('bankBalanceUploadPanel');
+    if (uploadPanel) uploadPanel.style.display = isAdmin ? 'block' : 'none';
+
+    if (!allBankBalances.length) {
+      document.getElementById('bankBalanceEmptyState').style.display = 'block';
+      document.getElementById('bankBalanceDashboard').style.display = 'none';
+      document.getElementById('bankBalancePeriodSelectorWrap').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('bankBalanceEmptyState').style.display = 'none';
+    document.getElementById('bankBalanceDashboard').style.display = 'block';
+
+    const selectorWrap = document.getElementById('bankBalancePeriodSelectorWrap');
+    const select = document.getElementById('bankBalancePeriodSelect');
+    selectorWrap.style.display = allBankBalances.length > 1 ? 'block' : 'none';
+    select.innerHTML = allBankBalances.slice().reverse().map(b => `<option value="${b.period}">${formatPeriodLabel(b.period)}</option>`).join('');
+
+    renderBankBalanceDashboard();
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+function formatPeriodLabel(period) {
+  const months = ['', 'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+  const parts = String(period).split('-');
+  const y = parts[0], m = parseInt(parts[1], 10);
+  return (months[m] || period) + ' ' + y;
+}
+
+// ---- Парсер файла 0101BS ----
+// Формат стандартный (гос. форма ЦБ), поэтому парсим по структурным
+// признакам, а не по конкретным цифрам — код будет работать на любой
+// месяц без переделки.
+//   - Заголовок раздела: колонка A вида "10000 АКТИВЛАР" (код+имя вместе)
+//   - Заголовок подгруппы: колонка A = 5-значный код, колонка B = текст, колонка C пусто
+//   - Строка "Итого по XXXXX": подытог подгруппы — берём код из текста и
+//     последнее увиденное имя подгруппы с этим кодом
+//   - Строка "ИТОГО <РАЗДЕЛ> - XXXXX": итог всего раздела
+//   - "ПО БАНКУ: ФОЙДА (+), ЗАРАР (-)": финансовый результат
+function parseBankBalanceFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        let reportDate = '';
+        let period = '';
+
+        const sections = {
+          assets: { name: null, total: 0, items: [] },
+          liabilities: { name: null, total: 0, items: [] },
+          equity: { name: null, total: 0, items: [] },
+          income: { name: null, total: 0, items: [] },
+          expenses: { name: null, total: 0, items: [] }
+        };
+
+        let currentSectionKey = null;
+        let lastGroupName = {}; // код подгруппы -> название
+        let profit = 0;
+
+        const sectionByPrefix = {
+          '10000': 'assets',
+          '20000': 'liabilities',
+          '30000': 'equity',
+          '40000': 'income',
+          '50000': 'expenses'
+        };
+
+        rows.forEach(row => {
+          const a = String(row[0] === undefined || row[0] === null ? '' : row[0]).trim();
+          const b = String(row[1] === undefined || row[1] === null ? '' : row[1]).trim();
+          const c = row[2];
+
+          if (!a && !b) return;
+
+          // Дата отчёта
+          if (!reportDate) {
+            const m = a.match(/(?:за|as of)?\s*(\d{2})\.(\d{2})\.(\d{4})/i);
+            if (a.toUpperCase().includes('БАЛАНСОВЫЙ ОТЧЕТ') && m) {
+              reportDate = m[1] + '.' + m[2] + '.' + m[3];
+              period = m[3] + '-' + m[2];
+            }
+          }
+
+          // Финансовый результат — проверяем ДО фильтра "мы внутри раздела",
+          // потому что к этой строке предыдущий раздел (50000) уже закрыт.
+          if (a.toUpperCase().includes('ФОЙДА') && a.toUpperCase().includes('ЗАРАР')) {
+            profit = Number(c) || 0;
+            return;
+          }
+
+          // Заголовок раздела: "10000 АКТИВЛАР" и т.п.
+          const sectionMatch = a.match(/^(\d{5})\s+\S/);
+          if (sectionMatch && sectionByPrefix[sectionMatch[1]]) {
+            currentSectionKey = sectionByPrefix[sectionMatch[1]];
+            return;
+          }
+          if (a.startsWith('90000')) {
+            currentSectionKey = null; // внебаланс не показываем в дашборде
+            return;
+          }
+
+          if (!currentSectionKey) return;
+
+          // Заголовок подгруппы: 5-значный код в A, текст в B, C пусто
+          if (/^\d{5}$/.test(a) && b && (c === '' || c === undefined || c === null)) {
+            lastGroupName[a] = b;
+            return;
+          }
+
+          // Промежуточный итог подгруппы
+          const groupTotalMatch = a.match(/^Итого по (\d{5})$/i);
+          if (groupTotalMatch) {
+            const code = groupTotalMatch[1];
+            const val = Number(c) || 0;
+            if (val !== 0) {
+              sections[currentSectionKey].items.push({
+                code: code,
+                name: lastGroupName[code] || code,
+                amount: val
+              });
+            }
+            return;
+          }
+
+          // Итог всего раздела: "ИТОГО АКТИВЛАР - 10000" и т.п.
+          if (/^ИТОГО\s/i.test(a) && typeof c === 'number') {
+            sections[currentSectionKey].total = c;
+            currentSectionKey = null;
+            return;
+          }
+        });
+
+        if (!period) {
+          reject(new Error('Не удалось найти дату отчёта в файле — проверьте, что это правильный файл формы 0101BS'));
+          return;
+        }
+
+        resolve({
+          period: period,
+          reportDate: reportDate,
+          totals: {
+            assets: sections.assets.total,
+            liabilities: sections.liabilities.total,
+            equity: sections.equity.total,
+            income: sections.income.total,
+            expenses: sections.expenses.total,
+            profit: profit
+          },
+          details: {
+            assets: sections.assets.items,
+            liabilities: sections.liabilities.items,
+            equity: sections.equity.items,
+            income: sections.income.items,
+            expenses: sections.expenses.items
+          }
+        });
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    reader.onerror = () => reject(new Error('Не удалось открыть файл'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function uploadBankBalanceFile() {
+  const input = document.getElementById('bankBalanceFile');
+  const statusBox = document.getElementById('bankBalanceUploadStatus');
+
+  if (!input.files || !input.files.length) {
+    statusBox.innerText = 'Выберите файл';
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    statusBox.innerText = 'Библиотека Excel ещё не загрузилась, подождите пару секунд и попробуйте снова';
+    return;
+  }
+
+  statusBox.innerText = 'Обработка файла...';
+
+  try {
+    const parsed = await parseBankBalanceFile(input.files[0]);
+
+    statusBox.innerText = 'Загрузка на сервер...';
+
+    const result = await postWebAction({
+      webAction: 'uploadBankBalance',
+      sessionId: localStorage.getItem('msbSessionId'),
+      period: parsed.period,
+      reportDate: parsed.reportDate,
+      totals: parsed.totals,
+      details: parsed.details
+    });
+
+    if (result.success) {
+      statusBox.innerText = result.message + ' (' + formatPeriodLabel(parsed.period) + ')';
+      input.value = '';
+      await loadBankBalanceData();
+    } else {
+      statusBox.innerText = result.message || 'Ошибка загрузки';
+    }
+  } catch (error) {
+    statusBox.innerText = 'Ошибка чтения файла: ' + error.message;
+    console.error(error);
+  }
+}
+
+function renderBankBalanceDashboard() {
+  const box = document.getElementById('bankBalanceDashboard');
+  if (!box || !allBankBalances.length) return;
+
+  const select = document.getElementById('bankBalancePeriodSelect');
+  const selectedPeriod = select && select.value ? select.value : allBankBalances[allBankBalances.length - 1].period;
+  const current = allBankBalances.find(b => b.period === selectedPeriod) || allBankBalances[allBankBalances.length - 1];
+
+  const idx = allBankBalances.findIndex(b => b.period === current.period);
+  const prev = idx > 0 ? allBankBalances[idx - 1] : null;
+
+  const t = current.totals;
+  const pctChange = (now, before) => {
+    if (!before) return null;
+    return Math.round((now - before) / Math.abs(before) * 1000) / 10;
+  };
+
+  const trendBadge = (val) => {
+    if (val === null || val === undefined) return '';
+    const arrow = val >= 0 ? '↑' : '↓';
+    const color = val >= 0 ? 'var(--green)' : 'var(--red)';
+    return `<span style="color:${color};font-size:12px;font-weight:800;">${arrow} ${Math.abs(val)}% к пред. месяцу</span>`;
+  };
+
+  const barsHtml = (items, colorVar) => {
+    const sorted = items.slice().sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 12);
+    const max = Math.max(1, ...sorted.map(i => Math.abs(i.amount)));
+    return sorted.map(i => `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <div style="width:260px;font-size:12.5px;flex-shrink:0;" title="${safe(i.name)}">${safe(i.name).length > 46 ? safe(i.name).slice(0, 46) + '…' : safe(i.name)}</div>
+        <div style="flex:1;height:8px;background:#EEF0F3;border-radius:999px;overflow:hidden;">
+          <span style="display:block;height:100%;width:${Math.max(2, Math.round(Math.abs(i.amount) / max * 100))}%;background:${colorVar};border-radius:999px;"></span>
+        </div>
+        <div style="width:110px;text-align:right;font-weight:800;font-size:12.5px;flex-shrink:0;">${formatMoney(i.amount)}</div>
+      </div>`).join('');
+  };
+
+  box.innerHTML = `
+    <section class="kpi" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-label">Активы</div>
+        <div class="card-value">${formatMoney(t.assets)}</div>
+        <div class="card-secondary">${trendBadge(pctChange(t.assets, prev?.totals.assets))}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Обязательства</div>
+        <div class="card-value">${formatMoney(t.liabilities)}</div>
+        <div class="card-secondary">${trendBadge(pctChange(t.liabilities, prev?.totals.liabilities))}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Капитал</div>
+        <div class="card-value" style="${t.equity < 0 ? 'color:var(--red);' : ''}">${formatMoney(t.equity)}</div>
+        <div class="card-secondary">${trendBadge(pctChange(t.equity, prev?.totals.equity))}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Прибыль / убыток за месяц</div>
+        <div class="card-value" style="${t.profit < 0 ? 'color:var(--red);' : 'color:var(--green);'}">${formatMoney(t.profit)}</div>
+        <div class="card-secondary">${trendBadge(pctChange(t.profit, prev?.totals.profit))}</div>
+      </div>
+    </section>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="bank-balance-grid">
+      <div class="panel" style="margin-bottom:0;">
+        <h3 style="font-size:15px;margin-bottom:14px;">Состав активов (крупнейшие статьи)</h3>
+        ${barsHtml(current.details.assets, 'var(--blue)') || '<div class="loading">Нет данных</div>'}
+      </div>
+      <div class="panel" style="margin-bottom:0;">
+        <h3 style="font-size:15px;margin-bottom:14px;">Состав обязательств (крупнейшие статьи)</h3>
+        ${barsHtml(current.details.liabilities, 'var(--orange)') || '<div class="loading">Нет данных</div>'}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3 style="font-size:15px;margin-bottom:14px;">Доходы и расходы за месяц</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="bank-balance-grid">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--muted);margin-bottom:10px;">Доходы: ${formatMoney(t.income)}</div>
+          ${barsHtml(current.details.income, 'var(--green)') || '<div class="loading">Нет данных</div>'}
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--muted);margin-bottom:10px;">Расходы: ${formatMoney(t.expenses)}</div>
+          ${barsHtml(current.details.expenses, 'var(--red)') || '<div class="loading">Нет данных</div>'}
+        </div>
+      </div>
+    </div>
+
+    ${allBankBalances.length > 1 ? renderBankBalanceTrend() : ''}
+
+    <div class="panel ai-box">
+      <h3 style="font-size:15px;margin-bottom:10px;">🤖 ИИ-анализ</h3>
+      <p style="white-space:pre-line;font-size:14px;line-height:1.6;">${buildBankBalanceInsight(current, prev)}</p>
+    </div>
+  `;
+}
+
+function renderBankBalanceTrend() {
+  const sorted = allBankBalances.slice().sort((a, b) => a.period.localeCompare(b.period));
+  const w = 700, h = 220, pad = 40;
+  const maxVal = Math.max(1, ...sorted.map(b => Math.max(b.totals.assets, b.totals.liabilities, Math.abs(b.totals.equity))));
+  const stepX = sorted.length > 1 ? (w - pad * 2) / (sorted.length - 1) : 0;
+  const y = (v) => h - pad - (v / maxVal) * (h - pad * 2);
+  const x = (i) => pad + i * stepX;
+
+  const line = (key, color) => {
+    const points = sorted.map((b, i) => `${x(i).toFixed(1)},${y(b.totals[key]).toFixed(1)}`).join(' ');
+    return `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2.5"/>` +
+      sorted.map((b, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(b.totals[key]).toFixed(1)}" r="3.5" fill="${color}"><title>${formatPeriodLabel(b.period)}: ${formatMoney(b.totals[key])}</title></circle>`).join('');
+  };
+
+  const labels = sorted.map((b, i) => `<text x="${x(i).toFixed(1)}" y="${h - 12}" font-size="11" fill="var(--muted)" text-anchor="middle">${formatPeriodLabel(b.period).split(' ')[0].slice(0,3)}</text>`).join('');
+
+  return `
+    <div class="panel">
+      <h3 style="font-size:15px;margin-bottom:6px;">Динамика по месяцам</h3>
+      <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:10px;">
+        <span>🔵 Активы</span><span>🟠 Обязательства</span><span>🟢 Капитал</span>
+      </div>
+      <svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;">
+        ${line('assets', 'var(--blue)')}
+        ${line('liabilities', 'var(--orange)')}
+        ${line('equity', 'var(--green)')}
+        ${labels}
+      </svg>
+    </div>`;
+}
+
+// Текстовый разбор — правило-ориентированный (без внешних вызовов),
+// подсвечивает крупнейшие статьи и тревожные сигналы.
+function buildBankBalanceInsight(current, prev) {
+  const t = current.totals;
+  const lines = [];
+
+  lines.push(`Баланс за ${formatPeriodLabel(current.period)}: активы ${formatMoney(t.assets)}, обязательства ${formatMoney(t.liabilities)}, капитал ${formatMoney(t.equity)}.`);
+
+  if (t.equity < 0) {
+    lines.push('⚠️ Капитал отрицательный — стоит уточнить у головного банка, является ли это нормой для филиальной отчётности (часто связано с внутренними расчётами с головным офисом) или требует внимания.');
+  }
+
+  if (t.profit < 0) {
+    lines.push('⚠️ Финансовый результат месяца — убыток ' + formatMoney(Math.abs(t.profit)) + '.');
+  } else if (t.profit > 0) {
+    lines.push('✅ Месяц закрыт с прибылью ' + formatMoney(t.profit) + '.');
+  }
+
+  const topAsset = current.details.assets.slice().sort((a, b) => b.amount - a.amount)[0];
+  if (topAsset) {
+    lines.push('Крупнейшая статья активов: «' + topAsset.name + '» — ' + formatMoney(topAsset.amount) + ' (' + Math.round(topAsset.amount / t.assets * 100) + '% всех активов).');
+  }
+
+  const topLiability = current.details.liabilities.slice().sort((a, b) => b.amount - a.amount)[0];
+  if (topLiability) {
+    lines.push('Крупнейшая статья обязательств: «' + topLiability.name + '» — ' + formatMoney(topLiability.amount) + ' (' + Math.round(topLiability.amount / t.liabilities * 100) + '% всех обязательств).');
+  }
+
+  const provisionExpense = current.details.expenses.find(e => /резерв|зарар/i.test(e.name));
+  if (provisionExpense && t.expenses) {
+    const share = Math.round(provisionExpense.amount / t.expenses * 100);
+    if (share >= 30) {
+      lines.push('⚠️ Резервы под возможные потери составляют ' + share + '% всех расходов месяца — крупная доля, стоит проверить качество кредитного портфеля (см. раздел «Кредитный портфель»).');
+    }
+  }
+
+  if (prev) {
+    const assetsDelta = t.assets - prev.totals.assets;
+    const liabDelta = t.liabilities - prev.totals.liabilities;
+    if (Math.abs(assetsDelta) / Math.max(1, prev.totals.assets) > 0.1) {
+      lines.push((assetsDelta > 0 ? 'Активы выросли' : 'Активы сократились') + ' более чем на 10% по сравнению с ' + formatPeriodLabel(prev.period) + ' (' + formatMoney(Math.abs(assetsDelta)) + ').');
+    }
+    if (Math.abs(liabDelta) / Math.max(1, prev.totals.liabilities) > 0.1) {
+      lines.push((liabDelta > 0 ? 'Обязательства выросли' : 'Обязательства сократились') + ' более чем на 10% по сравнению с ' + formatPeriodLabel(prev.period) + ' (' + formatMoney(Math.abs(liabDelta)) + ').');
+    }
+  } else {
+    lines.push('Это первый загруженный месяц — динамика и сравнение появятся после загрузки следующего периода.');
+  }
+
+  return lines.join('\n\n');
 }
 
 function renderLatestClients(clients) {
