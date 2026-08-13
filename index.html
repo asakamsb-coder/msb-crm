@@ -1808,6 +1808,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="card"><div class="card-label">Выдачи</div><div class="card-value" id="statsIssuedCount">...</div></div>
   </section>
 
+  <section class="kpi" style="margin-top:16px;">
+    <div class="card"><div class="card-label">Пассив (обязательства)</div><div class="card-value" id="statsBalanceLiabilities">Нет данных</div></div>
+    <div class="card"><div class="card-label">Прибыль / убыток за месяц</div><div class="card-value" id="statsBalanceProfit">Нет данных</div></div>
+    <div class="card"><div class="card-label">Резерв под потери (расходы)</div><div class="card-value" id="statsBalanceReserve">Нет данных</div></div>
+    <div class="card"><div class="card-label">Портфель физлиц</div><div class="card-value" id="statsPortfolioIndividuals">Нет данных</div></div>
+    <div class="card"><div class="card-label">Портфель юрлиц + ИП</div><div class="card-value" id="statsPortfolioLegal">Нет данных</div></div>
+  </section>
+
   <div class="panel" style="margin-top:24px;">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
       <div>
@@ -4784,6 +4792,8 @@ function renderBankBalanceDashboard() {
   const idx = allBankBalances.findIndex(b => b.period === current.period);
   const prev = idx > 0 ? allBankBalances[idx - 1] : null;
 
+  updateTopBalanceCards(current);
+
   const t = current.totals;
   const pctChange = (now, before) => {
     if (!before) return null;
@@ -4866,6 +4876,38 @@ function renderBankBalanceDashboard() {
       <p style="white-space:pre-line;font-size:14px;line-height:1.6;">${buildBankBalanceInsight(current, prev)}</p>
     </div>
   `;
+}
+
+// Обновляет 5 карточек баланса в самом верху "Статистики" (пассив,
+// прибыль, резерв, портфель физлиц, портфель юрлиц+ИП) — на основе
+// последнего загруженного месяца. Классификация физ/юрлиц идёт по
+// ключевым словам в названии статьи, а не по коду счёта — так парсер
+// продолжит работать корректно, даже если коды слегка сместятся в
+// будущих файлах.
+function updateTopBalanceCards(current) {
+  const t = current.totals;
+
+  document.getElementById('statsBalanceLiabilities').innerText = formatMoney(t.liabilities);
+  document.getElementById('statsBalanceProfit').innerText = formatMoney(t.profit);
+  document.getElementById('statsBalanceProfit').style.color = t.profit < 0 ? 'var(--red)' : 'var(--green)';
+
+  const reserveItem = current.details.expenses.find(e => /захира|резерв/i.test(e.name));
+  document.getElementById('statsBalanceReserve').innerText = reserveItem ? formatMoney(reserveItem.amount) : '—';
+
+  const isLoanItem = (name) => /кредит/i.test(name);
+  const isIndividual = (name) => /жисмоний шахс/i.test(name);
+  const isLegalOrIe = (name) => /(якка тартибдаги тадбиркор|хусусий корхона|корхона|ширкат|жамият)/i.test(name);
+
+  const portfolioIndividuals = current.details.assets
+    .filter(i => isLoanItem(i.name) && isIndividual(i.name))
+    .reduce((s, i) => s + i.amount, 0);
+
+  const portfolioLegal = current.details.assets
+    .filter(i => isLoanItem(i.name) && isLegalOrIe(i.name))
+    .reduce((s, i) => s + i.amount, 0);
+
+  document.getElementById('statsPortfolioIndividuals').innerText = formatMoney(portfolioIndividuals);
+  document.getElementById('statsPortfolioLegal').innerText = formatMoney(portfolioLegal);
 }
 
 function renderBankBalanceTrend() {
