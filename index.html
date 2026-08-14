@@ -604,6 +604,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .clickable-row:hover{
   background:#F9FAFB;
 }
+.row-flagged{
+  background:var(--red-soft)!important;
+}
+.row-flagged:hover{
+  background:#FBD5D9!important;
+}
 
 .timeline{
   border-left:2px solid var(--line);
@@ -2606,6 +2612,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="mp-section-title">Залог (сотрудник по залогу)</div>
       <div class="info-grid" style="margin-bottom:10px;">
         <div class="info-card"><div class="info-label">Геолокация залога</div><div class="info-value" id="drawerCollateralGeo">-</div></div>
+        <div class="info-card"><div class="info-label">Вид обеспечения</div><div class="info-value" id="drawerCollateralType">-</div></div>
+        <div class="info-card"><div class="info-label">Владелец залога</div><div class="info-value" id="drawerCollateralOwner">-</div></div>
+      </div>
+      <div style="margin-bottom:14px;" id="drawerCollateralCommentWrap">
+        <div class="info-label" style="margin-bottom:6px;">Комментарий по обеспечению</div>
+        <div class="comment-box" id="drawerCollateralComment">-</div>
       </div>
       <div style="margin-bottom:14px;">
         <div class="info-label" style="margin-bottom:6px;">Фото залога</div>
@@ -2626,9 +2638,26 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <input type="file" id="colPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
         <div id="colPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
 
+        <label class="mp-label">Вид обеспечения</label>
+        <select id="colType" class="select" style="margin-bottom:14px;">
+          <option>Недвижимость</option>
+          <option>Транспорт</option>
+          <option>Оборудование</option>
+          <option>Товар в обороте</option>
+          <option>Депозит</option>
+          <option>Гарантия / поручительство</option>
+          <option>Другое</option>
+        </select>
+
+        <label class="mp-label">Владелец залога</label>
+        <input id="colOwner" class="input" style="margin-bottom:14px;" placeholder="ФИО или название владельца">
+
+        <label class="mp-label">Комментарий по обеспечению</label>
+        <textarea id="colComment" class="input" style="margin-bottom:14px;min-height:70px;resize:vertical;"></textarea>
+
         <div id="collateralFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
 
-        <button class="btn" style="width:100%;" id="collateralSubmitBtn" onclick="submitCollateralForm()">Сохранить данные по залогу</button>
+        <button class="btn" style="width:100%;" id="collateralSubmitBtn" onclick="submitCollateralForm()">Сохранить и передать на проверку в мониторинг</button>
       </div>
 
       <div class="mp-section-title">Заключение юридического мониторинга</div>
@@ -2643,10 +2672,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <div class="comment-box" id="drawerMonitorComment">-</div>
         <div class="info-label" style="margin:14px 0 6px;">Где находился монитор при вердикте</div>
         <div class="info-value" id="drawerMonitorGeo">-</div>
+        <div class="info-label" style="margin:14px 0 6px;">Фото бизнеса (монитор)</div>
+        <div id="drawerMonitorBusinessPhotos" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+        <div class="info-label" style="margin-bottom:6px;">Фото залога (монитор)</div>
+        <div id="drawerMonitorCollateralPhotos" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
       </div>
 
       <div id="monitorSubmitFormWrap" style="display:none;margin-top:10px;padding-top:14px;border-top:1px solid var(--line);">
-        <div class="mp-label" style="font-weight:800;margin-bottom:10px;">Моё заключение (проверяю уже загруженное выше — своих фото не требуется)</div>
+        <div class="mp-label" style="font-weight:800;margin-bottom:10px;">Моё заключение (выезд на место, бизнес + залог)</div>
 
         <label class="mp-label">Моя геолокация (в момент вердикта)</label>
         <div style="display:flex;gap:8px;margin-bottom:6px;">
@@ -2654,6 +2687,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="captureMonitorGeolocation()">📍 GPS</button>
         </div>
         <div id="monGeoStatus" style="font-size:12px;color:var(--muted);margin-bottom:14px;"></div>
+
+        <label class="mp-label">Моё фото бизнеса (до 5 шт.)</label>
+        <input type="file" id="monBusinessPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+        <div id="monBusinessPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
+
+        <label class="mp-label">Моё фото залога (до 5 шт.)</label>
+        <input type="file" id="monCollateralPhotos" accept="image/*" capture="environment" multiple style="margin-bottom:6px;">
+        <div id="monCollateralPhotoPreviewWrap" style="display:none;margin-bottom:14px;flex-wrap:wrap;gap:8px;"></div>
 
         <label class="mp-label">Комментарий</label>
         <textarea id="monComment" class="input" style="margin-bottom:14px;min-height:70px;resize:vertical;"></textarea>
@@ -3868,7 +3909,7 @@ function calcStatsFromClients(clients) {
 }
 
 function calcFunnelFromClients(clients) {
-  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано','Отказ','Отложено','На рассмотрении'];
+  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано','Отказ','Отложено','На рассмотрении'];
   const funnel = {};
   statuses.forEach(s => funnel[s] = {count:0, amount:0});
   clients.forEach(c => {
@@ -4126,6 +4167,7 @@ function getSlaLimit(status) {
     'Кредитный комитет': 3,
     'Одобрено': 2,
     'На проверке в мониторинге': 3,
+    'Залоговик': 3,
     'Мониторинг пройден': 2
   };
 
@@ -4142,6 +4184,7 @@ function getActiveStatuses() {
     'Кредитный комитет',
     'Одобрено',
     'На проверке в мониторинге',
+    'Залоговик',
     'Мониторинг пройден'
   ];
 }
@@ -4432,7 +4475,7 @@ function calcRegionsFromClients(clients) {
       map[region].issuedCount++;
     }
 
-    if (['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','На рассмотрении'].includes(c.status)) {
+    if (['Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','На рассмотрении'].includes(c.status)) {
       map[region].potentialAmount += amount;
     }
   });
@@ -5134,12 +5177,14 @@ function renderClients(clients) {
   }
 
   registerClientRows('clientsTable', clients);
-  tbody.innerHTML = clients.map((c, i) => `
-      <tr class="clickable-row" onclick="openClientCardRef('clientsTable', ${i})">
+  tbody.innerHTML = clients.map((c, i) => {
+    const flagged = c.monitorVerdict === 'Проблема';
+    return `
+      <tr class="clickable-row${flagged ? ' row-flagged' : ''}" onclick="openClientCardRef('clientsTable', ${i})" ${flagged ? 'title="Отклонено юридическим мониторингом"' : ''}>
         <td class="nowrap">${i + 1}</td>
         <td class="nowrap">${safe(c.date)}</td>
         <td class="nowrap">${renderClientWorkDays(c)}</td>
-        <td>${safe(c.name)}</td>
+        <td>${safe(c.name)}${flagged ? ' <span class="status status-red" style="font-size:10.5px;">⚠ Мониторинг: проблема</span>' : ''}</td>
         <td class="nowrap">${safe(c.phone)}</td>
         <td class="nowrap">${safe(c.inn)}</td>
         <td>${safe(c.business || c.industry)}</td>
@@ -5148,7 +5193,8 @@ function renderClients(clients) {
         <td class="nowrap">${formatMoney(c.amount)}</td>
         <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
         <td>${safe(c.manager)}</td>
-      </tr>`).join('');
+      </tr>`;
+  }).join('');
 }
 
 function buildFilters() {
@@ -5381,7 +5427,7 @@ function renderFunnel(funnel, boxId) {
   // Основная последовательная воронка (проходит клиент по этим этапам).
   // "Отказ" и "Отложено" — не шаги воронки, а выходы из неё, поэтому
   // считаем % конверсии только по основной цепочке.
-  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано'];
+  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано'];
   const sideStatuses = ['Отказ','Отложено'];
   const statuses = pipelineStatuses.concat(sideStatuses);
 
@@ -5813,6 +5859,16 @@ function renderMonitoringPanel(c) {
   document.getElementById('drawerCollateralGeo').innerHTML = c.collateralGeolocation
     ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(c.collateralGeolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(c.collateralGeolocation)}</a>`
     : '-';
+  document.getElementById('drawerCollateralType').innerText = c.collateralType ? safe(c.collateralType) : '-';
+  document.getElementById('drawerCollateralOwner').innerText = c.collateralOwner ? safe(c.collateralOwner) : '-';
+
+  const collateralCommentWrap = document.getElementById('drawerCollateralCommentWrap');
+  if (c.collateralComment) {
+    collateralCommentWrap.style.display = 'block';
+    document.getElementById('drawerCollateralComment').innerText = safe(c.collateralComment);
+  } else {
+    collateralCommentWrap.style.display = 'none';
+  }
 
   const collateralPhotos = String(c.collateralPhotoUrls || '').split(',').map(s => s.trim()).filter(Boolean);
   document.getElementById('drawerCollateralPhotos').innerHTML = collateralPhotos.length
@@ -5820,7 +5876,7 @@ function renderMonitoringPanel(c) {
     : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
 
   document.getElementById('drawerMonitorVerdict').innerHTML = c.monitorVerdict
-    ? `<span class="status ${c.monitorVerdict === 'Перспективный' ? 'status-green' : 'status-orange'}">${safe(c.monitorVerdict)}</span>`
+    ? `<span class="status ${c.monitorVerdict === 'Перспективный' ? 'status-green' : 'status-red'}">${safe(c.monitorVerdict)}</span>`
     : '<span style="color:var(--muted);">Ещё не проверялся</span>';
   document.getElementById('drawerMonitorName').innerText = safe(c.monitorName);
   document.getElementById('drawerMonitorDate').innerText = safe(c.monitorDate);
@@ -5832,6 +5888,16 @@ function renderMonitoringPanel(c) {
     document.getElementById('drawerMonitorGeo').innerHTML = c.monitorGeolocation
       ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(c.monitorGeolocation)}" target="_blank" style="color:var(--brand);font-weight:800;">📍 ${safe(c.monitorGeolocation)}</a>`
       : '-';
+
+    const monitorBusinessPhotos = String(c.monitorPhotoBusinessUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+    document.getElementById('drawerMonitorBusinessPhotos').innerHTML = monitorBusinessPhotos.length
+      ? monitorBusinessPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
+      : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
+
+    const monitorCollateralPhotos = String(c.monitorPhotoCollateralUrls || '').split(',').map(s => s.trim()).filter(Boolean);
+    document.getElementById('drawerMonitorCollateralPhotos').innerHTML = monitorCollateralPhotos.length
+      ? monitorCollateralPhotos.map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('')
+      : '<span style="color:var(--muted);font-size:13px;">Фото не загружены</span>';
   } else {
     resultWrap.style.display = 'none';
   }
@@ -5846,6 +5912,9 @@ function renderMonitoringPanel(c) {
     document.getElementById('colPhotoPreviewWrap').style.display = 'none';
     document.getElementById('colGeolocation').value = '';
     document.getElementById('colGeoStatus').innerText = '';
+    document.getElementById('colType').value = 'Недвижимость';
+    document.getElementById('colOwner').value = '';
+    document.getElementById('colComment').value = '';
     const colError = document.getElementById('collateralFormError');
     if (colError) { colError.style.display = 'none'; colError.innerText = ''; }
   }
@@ -5859,6 +5928,14 @@ function renderMonitoringPanel(c) {
     document.getElementById('monGeoStatus').innerText = '';
     document.getElementById('monComment').value = '';
     document.getElementById('monVerdict').value = 'Перспективный';
+    monBusinessPhotoFiles = [];
+    monCollateralPhotoFiles = [];
+    document.getElementById('monBusinessPhotos').value = '';
+    document.getElementById('monCollateralPhotos').value = '';
+    document.getElementById('monBusinessPhotoPreviewWrap').innerHTML = '';
+    document.getElementById('monBusinessPhotoPreviewWrap').style.display = 'none';
+    document.getElementById('monCollateralPhotoPreviewWrap').innerHTML = '';
+    document.getElementById('monCollateralPhotoPreviewWrap').style.display = 'none';
     const errorBox = document.getElementById('monitorFormError');
     if (errorBox) { errorBox.style.display = 'none'; errorBox.innerText = ''; }
   }
@@ -5926,6 +6003,84 @@ function captureMonitorGeolocation() {
   );
 }
 
+let monBusinessPhotoFiles = [];
+let monCollateralPhotoFiles = [];
+
+function renderMonBusinessPhotoPreviews() {
+  const wrap = document.getElementById('monBusinessPhotoPreviewWrap');
+  wrap.innerHTML = '';
+  wrap.style.display = monBusinessPhotoFiles.length ? 'flex' : 'none';
+
+  monBusinessPhotoFiles.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'mp-photo-thumb-wrap';
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'mp-photo-thumb';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'mp-photo-remove-btn';
+      removeBtn.innerText = '×';
+      removeBtn.onclick = function() {
+        monBusinessPhotoFiles.splice(index, 1);
+        renderMonBusinessPhotoPreviews();
+      };
+      thumbWrap.appendChild(img);
+      thumbWrap.appendChild(removeBtn);
+      wrap.appendChild(thumbWrap);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderMonCollateralPhotoPreviews() {
+  const wrap = document.getElementById('monCollateralPhotoPreviewWrap');
+  wrap.innerHTML = '';
+  wrap.style.display = monCollateralPhotoFiles.length ? 'flex' : 'none';
+
+  monCollateralPhotoFiles.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'mp-photo-thumb-wrap';
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'mp-photo-thumb';
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'mp-photo-remove-btn';
+      removeBtn.innerText = '×';
+      removeBtn.onclick = function() {
+        monCollateralPhotoFiles.splice(index, 1);
+        renderMonCollateralPhotoPreviews();
+      };
+      thumbWrap.appendChild(img);
+      thumbWrap.appendChild(removeBtn);
+      wrap.appendChild(thumbWrap);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'monBusinessPhotos' && e.target.files && e.target.files.length) {
+    const combined = monBusinessPhotoFiles.concat(Array.from(e.target.files));
+    if (combined.length > 5) alert('Можно приложить максимум 5 фото.');
+    monBusinessPhotoFiles = combined.slice(0, 5);
+    e.target.value = '';
+    renderMonBusinessPhotoPreviews();
+  }
+  if (e.target && e.target.id === 'monCollateralPhotos' && e.target.files && e.target.files.length) {
+    const combined = monCollateralPhotoFiles.concat(Array.from(e.target.files));
+    if (combined.length > 5) alert('Можно приложить максимум 5 фото.');
+    monCollateralPhotoFiles = combined.slice(0, 5);
+    e.target.value = '';
+    renderMonCollateralPhotoPreviews();
+  }
+});
+
 function renderColPhotoPreviews() {
   const wrap = document.getElementById('colPhotoPreviewWrap');
   wrap.innerHTML = '';
@@ -5981,7 +6136,14 @@ async function submitCollateralForm() {
   errorBox.style.display = 'none';
 
   const geolocation = document.getElementById('colGeolocation').value.trim();
+  const collateralType = document.getElementById('colType').value;
+  const collateralOwner = document.getElementById('colOwner').value.trim();
+  const comment = document.getElementById('colComment').value.trim();
+
   if (!geolocation) { showError('Определите геолокацию (кнопка GPS)'); return; }
+  if (!collateralOwner) { showError('Укажите владельца залога'); return; }
+  if (!comment) { showError('Укажите комментарий по обеспечению'); return; }
+  if (!colSelectedPhotoFiles.length) { showError('Прикрепите хотя бы одно фото залога'); return; }
 
   submitBtn.disabled = true;
   const originalText = submitBtn.innerText;
@@ -5997,6 +6159,9 @@ async function submitCollateralForm() {
       sessionId: localStorage.getItem('msbSessionId'),
       inn: currentDrawerClient.inn,
       geolocation: geolocation,
+      collateralType: collateralType,
+      collateralOwner: collateralOwner,
+      comment: comment,
       photos: photos,
       deviceInfo: getDeviceFingerprint()
     });
@@ -6033,6 +6198,12 @@ async function submitMonitoringForm() {
   const originalText = submitBtn.innerText;
 
   try {
+    submitBtn.innerText = 'Обработка фото...';
+    const businessPhotos = await resizePhotosArray(monBusinessPhotoFiles);
+    const collateralPhotos = await resizePhotosArray(monCollateralPhotoFiles);
+
+    submitBtn.innerText = 'Отправка...';
+
     const result = await postWebAction({
       webAction: 'submitClientMonitoring',
       sessionId: localStorage.getItem('msbSessionId'),
@@ -6040,12 +6211,15 @@ async function submitMonitoringForm() {
       comment: comment,
       verdict: verdict,
       geolocation: geolocation,
+      businessPhotos: businessPhotos,
+      collateralPhotos: collateralPhotos,
       deviceInfo: getDeviceFingerprint()
     });
 
     if (result.success) {
       closeClientCard();
       await loadCRM();
+      if (result.photoWarning) alert('Сохранено, но с фото проблема:\n\n' + result.photoWarning);
     } else {
       showError(result.message || 'Не удалось сохранить проверку');
     }
@@ -7408,6 +7582,8 @@ function buildClientInsight(c) {
     text += 'Юридический мониторинг подтвердил проект. Можно ставить статус "Выдано".';
   } else if (status === 'На проверке в мониторинге') {
     text += 'Клиент передан на независимую проверку юридического мониторинга. Выдача заблокирована, пока не будет положительное заключение.';
+  } else if (status === 'Залоговик') {
+    text += 'Клиент передан сотруднику по залогу — ждём геолокацию, фото и данные по обеспечению.';
   } else if (status === 'Одобрено') {
     text += 'Клиент находится на сильном этапе. Нужно быстро довести сделку до выдачи.';
   } else if (status === 'Финанализ' || status === 'Кредитный комитет') {
@@ -7444,7 +7620,7 @@ function renderMyCabinet() {
   const issuedClients = clients.filter(c => c.status === 'Выдано');
   const issuedAmount = issuedClients.reduce((s,c) => s + (Number(c.amount)||0), 0);
   const potential = clients
-    .filter(c => ['Переговоры','Документы собираются','Финанализ','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден'].includes(c.status))
+    .filter(c => ['Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден'].includes(c.status))
     .reduce((s,c) => s + (Number(c.amount)||0), 0);
 
   document.getElementById('myClientsCount').innerText = total;
@@ -7979,7 +8155,7 @@ function formatMoney(value) {
 
 function statusClass(status) {
   if (status === 'Выдано' || status === 'Одобрено') return 'status-green';
-  if (status === 'Финанализ' || status === 'Документы собираются' || status === 'На проверке в мониторинге') return 'status-orange';
+  if (status === 'Финанализ' || status === 'Документы собираются' || status === 'На проверке в мониторинге' || status === 'Залоговик') return 'status-orange';
   if (status === 'Мониторинг пройден') return 'status-green';
   if (status === 'Переговоры' || status === 'Новый клиент') return 'status-blue';
   if (status === 'Отказ') return 'status-red';
