@@ -3085,7 +3085,13 @@ function applyRoleView() {
 function getVisibleClients() {
   if (!currentUser) return [];
 
-  if (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR') {
+  // Управляющий/директор, заместитель (только просмотр), юридический
+  // мониторинг и сотрудник по залогу — все они по своей роли должны
+  // работать с ЛЮБЫМ клиентом, а не только с "своими" (они никогда и не
+  // являются менеджером клиента, поэтому фильтр по владельцу ниже для них
+  // всегда возвращал бы пустой список — это и была причина бага).
+  const seesAllClients = ['ADMIN', 'DIRECTOR', 'DEPUTY', 'CREDIT_MONITOR', 'COLLATERAL_OFFICER'].includes(currentUser.role);
+  if (seesAllClients) {
     return allClients;
   }
 
