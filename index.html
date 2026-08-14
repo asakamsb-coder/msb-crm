@@ -2029,6 +2029,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <option value="MAHALLA_BANKER">Банкир Махалли</option>
       <option value="CREDIT_MONITOR">Юридический мониторинг</option>
       <option value="COLLATERAL_OFFICER">Сотрудник по залогу</option>
+      <option value="DEPUTY">Заместитель (только просмотр)</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
 
@@ -3005,14 +3006,18 @@ function applyRoleView() {
       ? 'Юридический мониторинг'
       : currentUser.role === 'COLLATERAL_OFFICER'
       ? 'Сотрудник по залогу'
+      : currentUser.role === 'DEPUTY'
+      ? 'Заместитель (только просмотр)'
       : 'Менеджер';
 
+  // Заместитель видит всё то же, что и управляющий (включая
+  // административные панели), но реально изменить/удалить ничего не
+  // может — это блокируется централизованно на сервере и на фронтенде
+  // (см. postWebAction). Поэтому здесь его приравниваем к ADMIN/DIRECTOR
+  // именно по ВИДИМОСТИ разделов.
+  const isAdminOrDeputy = currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY';
   document.querySelectorAll('[data-admin="true"]').forEach(el => {
-    if (currentUser.role !== 'ADMIN' && currentUser.role !== 'DIRECTOR') {
-      el.classList.add('hidden-by-role');
-    } else {
-      el.classList.remove('hidden-by-role');
-    }
+    el.classList.toggle('hidden-by-role', !isAdminOrDeputy);
   });
 
   // Махалля — отдельный блок/отдел. Банкир Махалли не должен видеть и даже
@@ -3024,8 +3029,8 @@ function applyRoleView() {
   });
 
   // Юридический мониторинг и сотрудник по залогу работают только с "МСБ
-  // Продажи" (там же, где и клиенты, которых они проверяют/дополняют) —
-  // остальные разделы (Портфель, SLA, Статистика, Районы, Менеджеры, AI,
+  // Продажи" (там же, где клиенты, которых они проверяют/дополняют) —
+  // остальные разделы (Портфель, SLA, Бухгалтерия, Районы, Менеджеры, AI,
   // Махалля) им не нужны.
   const isMonitorOnly = currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'COLLATERAL_OFFICER';
   document.querySelectorAll('[data-hide-for-monitor="true"]').forEach(el => {
@@ -6264,6 +6269,13 @@ function getDeviceFingerprint() {
 }
 
 async function postWebAction(body) {
+  // Заместитель (DEPUTY) — доступ только на просмотр. Блокируем сразу на
+  // фронтенде, не дожидаясь ответа сервера (сервер тоже это проверяет —
+  // это просто для мгновенной обратной связи, а не единственная защита).
+  if (currentUser && currentUser.role === 'DEPUTY' && body.webAction && body.webAction !== 'login' && body.webAction !== 'changePassword') {
+    return { success: false, message: 'У вас доступ только на просмотр. Изменения и удаление недоступны.' };
+  }
+
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
