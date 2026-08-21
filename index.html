@@ -4375,27 +4375,34 @@ async function loadOverdueData() {
 // Файл содержит ВЕСЬ портфель (десятки тысяч строк), а не только
 // просроченные — отбираем только строки с "Дни просрочки" > 0 прямо на
 // фронтенде, чтобы на сервер уходил уже отфильтрованный, компактный список.
-function parseOverduePortfolioFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+// Обработка файла идёт в ОТДЕЛЬНОМ ПОТОКЕ (Web Worker), а не в основном —
+// файл банка большой (десятки тысяч строк, под сотню колонок), и без
+// воркера главный поток браузера блокируется на секунды (а на слабом
+// телефоне — вплоть до минуты), из-за чего интерфейс выглядит "зависшим":
+// даже статус "Обработка файла..." может не успеть отрисоваться, потому
+// что браузер блокируется раньше, чем перерисует экран.
+let overdueParserWorker = null;
 
-    reader.onload = function(e) {
+function getOverdueParserWorker() {
+  if (overdueParserWorker) return overdueParserWorker;
+
+  const workerCode = `
+    importScripts('https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js');
+
+    self.onmessage = function(e) {
       try {
-        const data = new Uint8Array(e.target.result);
+        const data = new Uint8Array(e.data);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames.includes('KP') ? 'KP' : workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
-        // Заголовки — там, где колонка A буквально "ИД договора" (в файле
-        // банка это строка 3, но ищем по содержимому, а не по номеру
-        // строки — так переживём небольшие изменения формата выгрузки).
         let headerRowIdx = -1;
         for (let i = 0; i < Math.min(rows.length, 15); i++) {
           if (String(rows[i][0]).trim() === 'ИД договора') { headerRowIdx = i; break; }
         }
         if (headerRowIdx === -1) {
-          reject(new Error('Не найдена строка заголовков "ИД договора" в файле — проверьте, что это правильная выгрузка'));
+          self.postMessage({ error: 'Не найдена строка заголовков "ИД договора" в файле — проверьте, что это правильная выгрузка' });
           return;
         }
 
@@ -4405,30 +4412,80 @@ function parseOverduePortfolioFile(file) {
           const contractId = row[0];
           if (!contractId || isNaN(Number(contractId))) continue;
 
-          const daysOverdue = Number(row[23]) || 0; // col 24: Дни просрочки
-          if (daysOverdue <= 0) continue; // только реально просроченные
+          const daysOverdue = Number(row[23]) || 0;
+          if (daysOverdue <= 0) continue;
 
           loans.push({
             contractId: String(contractId).trim(),
-            clientName: String(row[6] || '').trim(),          // col 7
-            subject: String(row[9] || '').trim().toUpperCase(), // col 10: J/P
-            loanAmount: Number(row[11]) || 0,                   // col 12
-            overdueBalance: Number(row[21]) || 0,               // col 22
-            overdueDate: row[22] || '',                          // col 23
+            clientName: String(row[6] || '').trim(),
+            subject: String(row[9] || '').trim().toUpperCase(),
+            loanAmount: Number(row[11]) || 0,
+            overdueBalance: Number(row[21]) || 0,
+            overdueDate: row[22] || '',
             daysOverdue: daysOverdue,
-            inn: String(row[42] || '').trim(),                   // col 43
-            phone: String(row[43] || row[44] || '').trim(),      // col 44/45
-            product: String(row[59] || '').trim(),                // col 60
-            assignedOfficer: String(row[73] || '').trim()          // col 74
+            inn: String(row[42] || '').trim(),
+            phone: String(row[43] || row[44] || '').trim(),
+            product: String(row[59] || '').trim(),
+            assignedOfficer: String(row[73] || '').trim()
           });
         }
 
         if (!loans.length) {
-          reject(new Error('В файле не найдено просроченных договоров (Дни просрочки > 0)'));
+          self.postMessage({ error: 'В файле не найдено просроченных договоров (Дни просрочки > 0)' });
           return;
         }
 
-        resolve(loans);
+        self.postMessage({ loans: loans });
+      } catch (err) {
+        self.postMessage({ error: err.message || 'Ошибка обработки файла' });
+      }
+    };
+  `;
+
+  const blob = new Blob([workerCode], { type: 'application/javascript' });
+  overdueParserWorker = new Worker(URL.createObjectURL(blob));
+  return overdueParserWorker;
+}
+
+function parseOverduePortfolioFile(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const worker = getOverdueParserWorker();
+        if (onProgress) onProgress('Обрабатываю файл в фоновом потоке (интерфейс не зависнет)...');
+
+        // Защита: если воркер не смог даже запуститься (например, не
+        // получилось загрузить библиотеку внутри него из-за сети) — не
+        // ждём ответа вечно, а сообщаем об ошибке через 45 секунд.
+        const timeoutId = setTimeout(() => {
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+          reject(new Error('Обработка файла заняла слишком много времени. Проверьте интернет-соединение и попробуйте ещё раз.'));
+        }, 45000);
+
+        const handleMessage = (msg) => {
+          clearTimeout(timeoutId);
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+          if (msg.data.error) {
+            reject(new Error(msg.data.error));
+          } else {
+            resolve(msg.data.loans);
+          }
+        };
+        const handleError = (err) => {
+          clearTimeout(timeoutId);
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+          overdueParserWorker = null; // воркер сломан — при следующей попытке создадим заново
+          reject(new Error('Не удалось обработать файл в фоновом потоке: ' + (err.message || 'неизвестная ошибка')));
+        };
+
+        worker.addEventListener('message', handleMessage);
+        worker.addEventListener('error', handleError);
+        worker.postMessage(e.target.result, [e.target.result]); // transferable — без копирования буфера
       } catch (err) {
         reject(err);
       }
@@ -4447,15 +4504,11 @@ async function uploadOverdueFile() {
     statusBox.innerText = 'Выберите файл';
     return;
   }
-  if (typeof XLSX === 'undefined') {
-    statusBox.innerText = 'Библиотека Excel ещё не загрузилась, подождите пару секунд и попробуйте снова';
-    return;
-  }
 
-  statusBox.innerText = 'Обработка файла (может занять немного времени — файл большой)...';
+  statusBox.innerText = 'Читаю файл...';
 
   try {
-    const loans = await parseOverduePortfolioFile(input.files[0]);
+    const loans = await parseOverduePortfolioFile(input.files[0], (msg) => { statusBox.innerText = msg; });
 
     statusBox.innerText = 'Загрузка на сервер (' + loans.length + ' просроченных договоров)...';
 
@@ -8423,4 +8476,3 @@ function parseDateV14(value) {
 
 </body>
 </html>
-
