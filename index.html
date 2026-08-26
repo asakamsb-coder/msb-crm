@@ -1210,11 +1210,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
   <div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <h2 style="margin-bottom:0;">Динамика</h2>
-      <span id="trendChartPeriodLabel" style="font-size:13px;color:var(--muted);font-weight:700;"></span>
+      <h2 style="margin-bottom:0;">План / Факт по выдаче МСБ</h2>
     </div>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Сумма заявок и сумма выдач по дням/месяцам внутри выбранного периода. Наведите на точку, чтобы увидеть значение.</p>
-    <div id="trendChartBox" class="loading">Загрузка графика...</div>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Факт — фактическая выдача юрлицам, берётся из листа «выдача» последнего загруженного баланса (раздел «Бухгалтерия»).</p>
+    <div id="planFactBox" class="loading">Загрузка...</div>
   </div>
 
   <div class="layout">
@@ -1551,10 +1550,15 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
   <section class="kpi" style="margin-top:16px;">
     <div class="card"><div class="card-label">Пассив (обязательства)</div><div class="card-value" id="statsBalanceLiabilities">Нет данных</div></div>
-    <div class="card"><div class="card-label">Прибыль / убыток за месяц</div><div class="card-value" id="statsBalanceProfit">Нет данных</div></div>
-    <div class="card"><div class="card-label">Резерв под потери (расходы)</div><div class="card-value" id="statsBalanceReserve">Нет данных</div></div>
-    <div class="card"><div class="card-label">Портфель физлиц</div><div class="card-value" id="statsPortfolioIndividuals">Нет данных</div></div>
-    <div class="card"><div class="card-label">Портфель юрлиц + ИП</div><div class="card-value" id="statsPortfolioLegal">Нет данных</div></div>
+    <div class="card"><div class="card-label">Прибыль по балансу</div><div class="card-value" id="statsBalanceProfit">Нет данных</div></div>
+    <div class="card"><div class="card-label">Чистая прибыль</div><div class="card-value" id="statsNetProfit">Нет данных</div></div>
+    <div class="card"><div class="card-label">Резерв (счёт 56800)</div><div class="card-value" id="statsBalanceReserve">Нет данных</div></div>
+  </section>
+
+  <section class="kpi" style="margin-top:16px;">
+    <div class="card"><div class="card-label">Юридический портфель</div><div class="card-value" id="statsPortfolioLegal">Нет данных</div></div>
+    <div class="card"><div class="card-label">Физический портфель</div><div class="card-value" id="statsPortfolioIndividuals">Нет данных</div></div>
+    <div class="card"><div class="card-label">Общий портфель</div><div class="card-value" id="statsPortfolioTotal">Нет данных</div></div>
   </section>
 
   <div class="panel" style="margin-top:24px;">
@@ -3189,7 +3193,7 @@ function applyPeriod() {
 
   renderStats(stats);
   renderTrendBadges(stats);
-  renderTrendChart('trendChartBox', periodClients);
+  renderPlanFactBox();
   renderClients(periodClients);
   renderFunnel(funnel, 'funnelBox');
   renderFunnel(funnel, 'salesFunnelBox');
@@ -3321,93 +3325,51 @@ function renderTrendBadges(stats) {
   if (periodLabelEl) periodLabelEl.innerText = 'в сравнении с: ' + prev.label;
 }
 
-// Группирует клиентов периода по дням (или по месяцам, если период очень
-// длинный) для построения графика динамики.
-function buildTrendSeries(clients) {
-  const buckets = {};
+// План жёстко задан в коде (по решению управляющего — меняется редко,
+// раз в год/квартал, а не через интерфейс). Факт — фактическая выдача
+// юрлицам, берётся из листа "выдача" ПОСЛЕДНЕГО загруженного месяца
+// баланса банка (раздел "Бухгалтерия").
+const MSB_PLAN_YEAR_2026 = 539100000000;
+const MSB_PLAN_Q3_2026 = 481400000000;
 
-  clients.forEach(c => {
-    const d = parseClientDate(c.date || c.createdAt);
-    if (!d || isNaN(d.getTime()) || d.getFullYear() === 1900) return;
-
-    const dayKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-    if (!buckets[dayKey]) buckets[dayKey] = { requestAmount: 0, issuedAmount: 0, count: 0 };
-
-    buckets[dayKey].count++;
-    if (normalizeText(c.status) !== 'отказ') buckets[dayKey].requestAmount += Number(c.amount) || 0;
-    if (normalizeText(c.status) === 'выдано') buckets[dayKey].issuedAmount += Number(c.amount) || 0;
-  });
-
-  let days = Object.keys(buckets).sort();
-
-  // Если период длинный (много уникальных дней), группируем по месяцам,
-  // иначе график становится нечитаемым.
-  if (days.length > 45) {
-    const monthBuckets = {};
-    days.forEach(day => {
-      const monthKey = day.slice(0, 7);
-      if (!monthBuckets[monthKey]) monthBuckets[monthKey] = { requestAmount: 0, issuedAmount: 0, count: 0 };
-      monthBuckets[monthKey].requestAmount += buckets[day].requestAmount;
-      monthBuckets[monthKey].issuedAmount += buckets[day].issuedAmount;
-      monthBuckets[monthKey].count += buckets[day].count;
-    });
-    const months = Object.keys(monthBuckets).sort();
-    return { labels: months, buckets: months.map(m => monthBuckets[m]) };
-  }
-
-  return { labels: days, buckets: days.map(d => buckets[d]) };
-}
-
-// Простой линейный график на чистом SVG (без внешних библиотек).
-function renderTrendChart(containerId, clients) {
-  const box = document.getElementById(containerId);
+async function renderPlanFactBox() {
+  const box = document.getElementById('planFactBox');
   if (!box) return;
 
-  const { labels, buckets } = buildTrendSeries(clients);
+  // Баланс банка грузится лениво только на вкладке "Бухгалтерия" — если
+  // ещё не загружен, подгружаем именно для этого блока, не заставляя
+  // человека сначала переходить в другой раздел.
+  if (!bankBalanceDataLoaded) {
+    try { await loadBankBalanceData(); } catch (e) { /* без данных — просто покажем "нет данных" ниже */ }
+  }
 
-  if (!labels.length) {
-    box.innerHTML = '<div class="trend-chart-empty">Недостаточно данных с датами для построения графика</div>';
+  if (!allBankBalances.length) {
+    box.innerHTML = '<div class="loading">Баланс банка ещё не загружен — план/факт появится после первой загрузки в разделе «Бухгалтерия».</div>';
     return;
   }
 
-  const width = 900, height = 240, padding = { top: 16, right: 16, bottom: 28, left: 16 };
-  const innerW = width - padding.left - padding.right;
-  const innerH = height - padding.top - padding.bottom;
+  const latest = allBankBalances[allBankBalances.length - 1];
+  const fact = Number(latest.totals.disbursementFact) || 0;
 
-  const requestValues = buckets.map(b => b.requestAmount);
-  const issuedValues = buckets.map(b => b.issuedAmount);
-  const maxValue = Math.max(1, ...requestValues, ...issuedValues);
+  const bar = (label, plan, factVal) => {
+    const pct = plan ? Math.min(100, Math.round(factVal / plan * 100)) : 0;
+    const color = pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--brand)' : 'var(--orange)';
+    return `
+      <div style="margin-bottom:18px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+          <div style="font-weight:800;font-size:14px;">${label}</div>
+          <div style="font-size:13px;color:var(--muted);">${formatMoney(factVal)} из ${formatMoney(plan)} (${pct}%)</div>
+        </div>
+        <div style="height:14px;background:#EEF0F3;border-radius:999px;overflow:hidden;">
+          <span style="display:block;height:100%;width:${pct}%;background:${color};border-radius:999px;"></span>
+        </div>
+      </div>`;
+  };
 
-  const stepX = labels.length > 1 ? innerW / (labels.length - 1) : 0;
-  const pointX = i => padding.left + stepX * i;
-  const pointY = v => padding.top + innerH - (v / maxValue) * innerH;
-
-  const toPath = values => values.map((v, i) => `${i === 0 ? 'M' : 'L'} ${pointX(i).toFixed(1)} ${pointY(v).toFixed(1)}`).join(' ');
-
-  const labelEvery = Math.max(1, Math.ceil(labels.length / 8));
-  const isMonthly = labels[0] && labels[0].length === 7;
-
-  const axisLabels = labels.map((l, i) => {
-    if (i % labelEvery !== 0 && i !== labels.length - 1) return '';
-    const shortLabel = isMonthly ? l : l.slice(5); // MM-DD
-    return `<text x="${pointX(i).toFixed(1)}" y="${height - 8}" font-size="11" fill="var(--muted)" text-anchor="middle">${shortLabel}</text>`;
-  }).join('');
-
-  const requestDots = requestValues.map((v, i) => `<circle cx="${pointX(i).toFixed(1)}" cy="${pointY(v).toFixed(1)}" r="3.5" fill="var(--brand)"><title>${labels[i]}: заявки ${formatMoney(v)}</title></circle>`).join('');
-  const issuedDots = issuedValues.map((v, i) => `<circle cx="${pointX(i).toFixed(1)}" cy="${pointY(v).toFixed(1)}" r="3.5" fill="var(--blue)"><title>${labels[i]}: выдачи ${formatMoney(v)}</title></circle>`).join('');
-
-  box.innerHTML = `
-    <div class="trend-chart-legend">
-      <span><span class="trend-chart-dot" style="background:var(--brand)"></span>Сумма заявок</span>
-      <span><span class="trend-chart-dot" style="background:var(--blue)"></span>Сумма выдач</span>
-    </div>
-    <svg viewBox="0 0 ${width} ${height}" style="width:100%;height:240px;">
-      <path d="${toPath(requestValues)}" fill="none" stroke="var(--brand)" stroke-width="2.5" />
-      <path d="${toPath(issuedValues)}" fill="none" stroke="var(--blue)" stroke-width="2.5" />
-      ${requestDots}
-      ${issuedDots}
-      ${axisLabels}
-    </svg>`;
+  box.innerHTML =
+    bar('План 2026 год', MSB_PLAN_YEAR_2026, fact) +
+    bar('План III квартал 2026', MSB_PLAN_Q3_2026, fact) +
+    `<div style="font-size:12px;color:var(--muted);margin-top:4px;">Данные по факту на: ${safe(latest.reportDate || latest.period)}</div>`;
 }
 
 function resetPeriod() {
@@ -4776,6 +4738,11 @@ function formatPeriodLabel(period) {
 //     последнее увиденное имя подгруппы с этим кодом
 //   - Строка "ИТОГО <РАЗДЕЛ> - XXXXX": итог всего раздела
 //   - "ПО БАНКУ: ФОЙДА (+), ЗАРАР (-)": финансовый результат
+// Точные коды счетов для юридического и физического портфеля — даны
+// управляющим напрямую (не угадываем по ключевым словам, как раньше).
+const LEGAL_PORTFOLIO_CODES = ['11101','12601','12901','13101','13121','14301','15001','15021','15501','15521'];
+const INDIVIDUAL_PORTFOLIO_CODES = ['12501','12503','12521','12541','14901','14902','14903','14921','14931','14941'];
+
 function parseBankBalanceFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -4801,6 +4768,11 @@ function parseBankBalanceFile(file) {
         let currentSectionKey = null;
         let lastGroupName = {}; // код подгруппы -> название
         let profit = 0;
+
+        // Плоская карта ВСЕХ отдельных счетов (не подгрупп и не итогов) —
+        // код -> сумма. Нужна для точных формул по конкретным счетам
+        // (портфель по заданным кодам, 4592*/568** для чистой прибыли).
+        const accounts = {};
 
         const sectionByPrefix = {
           '10000': 'assets',
@@ -4829,7 +4801,13 @@ function parseBankBalanceFile(file) {
           // Финансовый результат — проверяем ДО фильтра "мы внутри раздела",
           // потому что к этой строке предыдущий раздел (50000) уже закрыт.
           if (a.toUpperCase().includes('ФОЙДА') && a.toUpperCase().includes('ЗАРАР')) {
-            profit = Number(c) || 0;
+            // ВАЖНО: ячейка в файле банка содержит не чистое число, а текст
+            // вида "-24578583732.19 (убыток)" — с пометкой прямо в
+            // ячейке. Number() на такой строке вернёт NaN (а с || 0 —
+            // тихо превратится в 0, что всё это время скрывало реальную
+            // прибыль/убыток на дашборде). parseFloat() правильно
+            // прочитает число до первого нечислового символа.
+            profit = parseFloat(c) || 0;
             return;
           }
 
@@ -4849,6 +4827,14 @@ function parseBankBalanceFile(file) {
           // Заголовок подгруппы: 5-значный код в A, текст в B, C пусто
           if (/^\d{5}$/.test(a) && b && (c === '' || c === undefined || c === null)) {
             lastGroupName[a] = b;
+            return;
+          }
+
+          // Отдельный (листовой) счёт: 5-значный код в A, C — число.
+          // Это НЕ заголовок подгруппы и НЕ итог — реальный счёт внутри
+          // группы (например, 12501 внутри группы 12500).
+          if (/^\d{5}$/.test(a) && typeof c === 'number') {
+            accounts[a] = c;
             return;
           }
 
@@ -4880,6 +4866,40 @@ function parseBankBalanceFile(file) {
           return;
         }
 
+        // Точный портфель по заданным кодам счетов (не по ключевым словам).
+        const sumCodes = (codes) => codes.reduce((s, code) => s + (accounts[code] || 0), 0);
+        const legalPortfolio = sumCodes(LEGAL_PORTFOLIO_CODES);
+        const individualPortfolio = sumCodes(INDIVIDUAL_PORTFOLIO_CODES);
+
+        // Чистая прибыль: ИТОГО ДАРОМАДЛАР - счета 4592* (доходы прошлого
+        // периода) - ИТОГО ХАРАЖАТЛАР + счета 568** (резервы).
+        let incomePriorPeriod = 0;
+        let reserves568 = 0;
+        Object.keys(accounts).forEach(code => {
+          if (code.startsWith('4592')) incomePriorPeriod += accounts[code];
+          if (code.startsWith('568')) reserves568 += accounts[code];
+        });
+        const netProfit = sections.income.total - incomePriorPeriod - sections.expenses.total + reserves568;
+
+        // Резерв — отдельная статья расходов "Итого по 56800".
+        const reserveItem = sections.expenses.items.find(i => i.code === '56800');
+        const reserve56800 = reserveItem ? reserveItem.amount : 0;
+
+        // Лист "выдача" (если есть) — план/факт по выдачам МСБ. Формат:
+        // колонка A "счета" (код), колонка B "Факт" (сумма). Те же коды,
+        // что и юридический портфель.
+        let disbursementFact = 0;
+        const disbursementSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'выдача');
+        if (disbursementSheetName) {
+          const dSheet = workbook.Sheets[disbursementSheetName];
+          const dRows = XLSX.utils.sheet_to_json(dSheet, { header: 1, defval: '' });
+          dRows.forEach(row => {
+            const code = String(row[0] || '').trim();
+            const val = Number(row[1]) || 0;
+            if (LEGAL_PORTFOLIO_CODES.includes(code)) disbursementFact += val;
+          });
+        }
+
         resolve({
           period: period,
           reportDate: reportDate,
@@ -4889,7 +4909,13 @@ function parseBankBalanceFile(file) {
             equity: sections.equity.total,
             income: sections.income.total,
             expenses: sections.expenses.total,
-            profit: profit
+            profit: profit,
+            legalPortfolio: legalPortfolio,
+            individualPortfolio: individualPortfolio,
+            totalPortfolio: legalPortfolio + individualPortfolio,
+            netProfit: netProfit,
+            reserve56800: reserve56800,
+            disbursementFact: disbursementFact
           },
           details: {
             assets: sections.assets.items,
@@ -5059,26 +5085,18 @@ function updateTopBalanceCards(current) {
   const t = current.totals;
 
   document.getElementById('statsBalanceLiabilities').innerText = formatMoney(t.liabilities);
+
   document.getElementById('statsBalanceProfit').innerText = formatMoney(t.profit);
   document.getElementById('statsBalanceProfit').style.color = t.profit < 0 ? 'var(--red)' : 'var(--green)';
 
-  const reserveItem = current.details.expenses.find(e => /захира|резерв/i.test(e.name));
-  document.getElementById('statsBalanceReserve').innerText = reserveItem ? formatMoney(reserveItem.amount) : '—';
+  document.getElementById('statsNetProfit').innerText = formatMoney(t.netProfit);
+  document.getElementById('statsNetProfit').style.color = t.netProfit < 0 ? 'var(--red)' : 'var(--green)';
 
-  const isLoanItem = (name) => /кредит/i.test(name);
-  const isIndividual = (name) => /жисмоний шахс/i.test(name);
-  const isLegalOrIe = (name) => /(якка тартибдаги тадбиркор|хусусий корхона|корхона|ширкат|жамият)/i.test(name);
+  document.getElementById('statsBalanceReserve').innerText = formatMoney(t.reserve56800);
 
-  const portfolioIndividuals = current.details.assets
-    .filter(i => isLoanItem(i.name) && isIndividual(i.name))
-    .reduce((s, i) => s + i.amount, 0);
-
-  const portfolioLegal = current.details.assets
-    .filter(i => isLoanItem(i.name) && isLegalOrIe(i.name))
-    .reduce((s, i) => s + i.amount, 0);
-
-  document.getElementById('statsPortfolioIndividuals').innerText = formatMoney(portfolioIndividuals);
-  document.getElementById('statsPortfolioLegal').innerText = formatMoney(portfolioLegal);
+  document.getElementById('statsPortfolioLegal').innerText = formatMoney(t.legalPortfolio);
+  document.getElementById('statsPortfolioIndividuals').innerText = formatMoney(t.individualPortfolio);
+  document.getElementById('statsPortfolioTotal').innerText = formatMoney(t.totalPortfolio);
 }
 
 function renderBankBalanceTrend() {
