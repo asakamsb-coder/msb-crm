@@ -2861,13 +2861,17 @@ async function loadCRM() {
       return;
     }
 
-    const [stats, clients, funnel, managers, formLists] = await Promise.all([
-      fetchJSON('stats'),
-      fetchJSON('clients'),
-      fetchJSON('funnel'),
-      fetchJSON('managers'),
-      fetchJSON('formLists')
-    ]);
+    // ВАЖНО: запросы идут ПОСЛЕДОВАТЕЛЬНО, а не все разом (Promise.all).
+    // Google Apps Script Web App плохо переносит несколько одновременных
+    // запросов к одному и тому же скрипту — особенно когда сам скрипт
+    // большой (а он у нас сильно вырос) — часть запросов может вернуться
+    // с ошибкой (404/пустой ответ вместо JSON). Последовательные запросы
+    // чуть медленнее, зато надёжно доходят все до конца.
+    const stats = await fetchJSON('stats');
+    const clients = await fetchJSON('clients');
+    const funnel = await fetchJSON('funnel');
+    const managers = await fetchJSON('managers');
+    const formLists = await fetchJSON('formLists');
 
     allStats = stats;
     allClients = clients || [];
@@ -2883,9 +2887,25 @@ async function loadCRM() {
   }
 }
 
-async function fetchJSON(action) {
-  const response = await fetch(API_URL + '?action=' + action);
-  return await response.json();
+// Автоповтор при сбое: Google Apps Script иногда отвечает не JSON, а
+// страницей с ошибкой (частые причины — временная перегрузка скрипта
+// одновременными запросами, только что сделанное развёртывание). Вместо
+// того чтобы сразу показывать ошибку человеку, тихо пробуем ещё раз
+// через секунду — в большинстве случаев вторая попытка проходит успешно.
+async function fetchJSON(action, retriesLeft) {
+  if (retriesLeft === undefined) retriesLeft = 2;
+
+  try {
+    const response = await fetch(API_URL + '?action=' + action);
+    const text = await response.text();
+    return JSON.parse(text);
+  } catch (error) {
+    if (retriesLeft > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return fetchJSON(action, retriesLeft - 1);
+    }
+    throw error;
+  }
 }
 
 function toggleMobileSidebar() {
@@ -4496,7 +4516,9 @@ async function uploadOverdueFile() {
 function groupOverdueByClient(loans) {
   const map = {};
   loans.forEach(l => {
-    const key = (l.inn || l.clientName || '').trim() || l.contractId;
+    // ИНН из таблицы может прийти числом, а не строкой — .trim() на числе
+    // упадёт с ошибкой, поэтому сначала явно приводим к строке.
+    const key = String(l.inn || l.clientName || '').trim() || l.contractId;
     if (!map[key]) {
       map[key] = { inn: l.inn, clientName: l.clientName, subject: l.subject, loans: [], totalOverdue: 0, maxDays: 0 };
     }
@@ -4578,7 +4600,7 @@ function openOverdueClientDetail(innEncoded) {
   const inn = decodeURIComponent(innEncoded);
   currentOverdueClientInn = inn;
 
-  const loans = allOverdueLoans.filter(l => (l.inn || '') === inn);
+  const loans = allOverdueLoans.filter(l => String(l.inn || '').trim() === inn);
   if (!loans.length) return;
 
   document.getElementById('ovDetailClientName').innerText = safe(loans[0].clientName);
