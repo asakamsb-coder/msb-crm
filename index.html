@@ -32,6 +32,8 @@
   --blue:#1857C4;
   --blue-soft:#EAF1FF;
   --red:#D6293C;
+  --green-bright:#34D399;
+  --red-bright:#F87171;
   --red-soft:#FDEAEC;
   --radius-sm:10px;
   --radius-md:14px;
@@ -1637,7 +1639,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 </section>
 
 <section id="statsPage" class="page">
-  <div class="header"><div><h1>БУХГАЛТЕРИЯ</h1><p>Баланс банка — форма 0101BS, за последний загруженный месяц</p></div></div>
+  <div class="header"><div><h1>БУХГАЛТЕРИЯ</h1></div></div>
 
   <div class="panel" style="margin-bottom:20px;">
     <div id="bankBalanceUploadPanel" data-admin="true">
@@ -1653,22 +1655,22 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div id="bankBalanceEmptyState" class="loading">Баланс ещё не загружен — загрузите первый файл выше.</div>
 
   <div id="bankBalanceDashboard" style="display:none;">
-    <section class="kpi">
-      <div class="card"><div class="card-label">Активы</div><div class="card-value" id="statsBalanceAssets">Нет данных</div></div>
-      <div class="card"><div class="card-label">Обязательства (Пассив)</div><div class="card-value" id="statsBalanceLiabilities">Нет данных</div></div>
-      <div class="card"><div class="card-label">Капитал</div><div class="card-value" id="statsBalanceEquity">Нет данных</div></div>
+    <section class="bi-kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="bi-card bi-accent-blue"><div class="bi-card-label">Активы</div><div class="bi-card-value" id="statsBalanceAssets">Нет данных</div></div>
+      <div class="bi-card bi-accent-orange"><div class="bi-card-label">Обязательства (Пассив)</div><div class="bi-card-value" id="statsBalanceLiabilities">Нет данных</div></div>
+      <div class="bi-card bi-accent-brand"><div class="bi-card-label">Капитал</div><div class="bi-card-value" id="statsBalanceEquity">Нет данных</div></div>
     </section>
 
-    <section class="kpi" style="margin-top:16px;">
-      <div class="card"><div class="card-label">Прибыль по балансу</div><div class="card-value" id="statsBalanceProfit">Нет данных</div></div>
-      <div class="card"><div class="card-label">Чистая прибыль</div><div class="card-value" id="statsNetProfit">Нет данных</div></div>
-      <div class="card"><div class="card-label">Резерв (счёт 56800)</div><div class="card-value" id="statsBalanceReserve">Нет данных</div></div>
+    <section class="bi-kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-top:16px;">
+      <div class="bi-card bi-accent-green"><div class="bi-card-label">Прибыль по балансу</div><div class="bi-card-value" id="statsBalanceProfit">Нет данных</div></div>
+      <div class="bi-card bi-card-dark"><div class="bi-card-label">Чистая прибыль</div><div class="bi-card-value" id="statsNetProfit">Нет данных</div></div>
+      <div class="bi-card bi-accent-red"><div class="bi-card-label">Резерв (счёт 56800)</div><div class="bi-card-value" id="statsBalanceReserve">Нет данных</div></div>
     </section>
 
-    <section class="kpi" style="margin-top:16px;">
-      <div class="card"><div class="card-label">Юридический портфель</div><div class="card-value" id="statsPortfolioLegal">Нет данных</div></div>
-      <div class="card"><div class="card-label">Физический портфель</div><div class="card-value" id="statsPortfolioIndividuals">Нет данных</div></div>
-      <div class="card"><div class="card-label">Общий портфель</div><div class="card-value" id="statsPortfolioTotal">Нет данных</div></div>
+    <section class="bi-kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-top:16px;">
+      <div class="bi-card bi-accent-brand"><div class="bi-card-label">Юридический портфель</div><div class="bi-card-value" id="statsPortfolioLegal">Нет данных</div></div>
+      <div class="bi-card bi-accent-blue"><div class="bi-card-label">Физический портфель</div><div class="bi-card-value" id="statsPortfolioIndividuals">Нет данных</div></div>
+      <div class="bi-card bi-accent-green"><div class="bi-card-label">Общий портфель</div><div class="bi-card-value" id="statsPortfolioTotal">Нет данных</div></div>
     </section>
 
     <div id="bankBalanceDetailBox" style="margin-top:24px;"></div>
@@ -5174,7 +5176,7 @@ function updateTopBalanceCards(current, prev) {
   document.getElementById('statsBalanceProfit').style.color = t.profit < 0 ? 'var(--red)' : 'var(--green)';
 
   document.getElementById('statsNetProfit').innerText = formatMoney(t.netProfit);
-  document.getElementById('statsNetProfit').style.color = t.netProfit < 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('statsNetProfit').style.color = t.netProfit < 0 ? 'var(--red-bright)' : 'var(--green-bright)';
 
   document.getElementById('statsBalanceReserve').innerText = formatMoney(t.reserve56800);
 
