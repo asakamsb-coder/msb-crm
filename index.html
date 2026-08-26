@@ -3358,9 +3358,18 @@ async function renderPlanFactBox() {
 
   // Баланс банка грузится лениво только на вкладке "Бухгалтерия" — если
   // ещё не загружен, подгружаем именно для этого блока, не заставляя
-  // человека сначала переходить в другой раздел.
+  // человека сначала переходить в другой раздел. Ограничиваем ожидание
+  // 8 секундами — если что-то пойдёт не так, блок покажет понятное
+  // сообщение вместо вечной "Загрузка...".
   if (!bankBalanceDataLoaded) {
-    try { await loadBankBalanceData(); } catch (e) { /* без данных — просто покажем "нет данных" ниже */ }
+    try {
+      await Promise.race([
+        loadBankBalanceData(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+      ]);
+    } catch (e) {
+      /* без данных — просто покажем "нет данных" ниже */
+    }
   }
 
   if (!allBankBalances.length) {
@@ -6584,7 +6593,14 @@ function getDeviceFingerprint() {
   }
 }
 
-async function postWebAction(body) {
+// Автоповтор при сбое сети/ответа — тот же принцип, что и в fetchJSON.
+// Повторяем ТОЛЬКО если запрос не дошёл или сервер ответил не JSON
+// (реальный сетевой сбой) — если сервер вернул нормальный ответ вида
+// {success:false, message:"..."} (например, "клиент уже существует"),
+// это НЕ повторяем, чтобы не наделать дублей при действиях записи.
+async function postWebAction(body, retriesLeft) {
+  if (retriesLeft === undefined) retriesLeft = 2;
+
   // Заместитель (DEPUTY) — доступ только на просмотр. Блокируем сразу на
   // фронтенде, не дожидаясь ответа сервера (сервер тоже это проверяет —
   // это просто для мгновенной обратной связи, а не единственная защита).
@@ -6592,12 +6608,21 @@ async function postWebAction(body) {
     return { success: false, message: 'У вас доступ только на просмотр. Изменения и удаление недоступны.' };
   }
 
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(body)
-  });
-  return await response.json();
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    });
+    const text = await response.text();
+    return JSON.parse(text);
+  } catch (error) {
+    if (retriesLeft > 0) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return postWebAction(body, retriesLeft - 1);
+    }
+    return { success: false, message: 'Не удалось связаться с сервером после нескольких попыток. Проверьте интернет-соединение и попробуйте ещё раз.' };
+  }
 }
 
 async function submitClientForm() {
