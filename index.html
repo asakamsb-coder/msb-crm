@@ -825,6 +825,117 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .kpi-accent-orange{border-left:4px solid var(--orange);}
 .kpi-accent-green{border-left:4px solid var(--green);}
 .kpi-accent-red{border-left:4px solid var(--red);}
+
+/* ===== BI-стиль карточек (Dashboard МСБ Продажи) ===== */
+.bi-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+  margin-bottom:22px;
+}
+@media(max-width:960px){
+  .bi-kpi-grid{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:640px){
+  .bi-kpi-grid{grid-template-columns:1fr;}
+}
+.bi-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:22px 20px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  position:relative;
+  overflow:hidden;
+  transition:box-shadow .15s ease, transform .15s ease;
+}
+.bi-card.dashboard-kpi-clickable{cursor:pointer;}
+.bi-card.dashboard-kpi-clickable:hover{box-shadow:0 4px 14px rgba(16,24,40,.10);transform:translateY(-1px);}
+.bi-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:3px;
+  background:var(--line);
+}
+.bi-card.bi-accent-brand::before{background:var(--brand);}
+.bi-card.bi-accent-orange::before{background:var(--orange);}
+.bi-card.bi-accent-green::before{background:var(--green);}
+.bi-card.bi-accent-red::before{background:var(--red);}
+.bi-card.bi-accent-blue::before{background:var(--blue);}
+
+.bi-card-label{
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  margin-bottom:12px;
+}
+.bi-card-value{
+  font-size:32px;
+  font-weight:900;
+  letter-spacing:-.02em;
+  line-height:1;
+  margin-bottom:8px;
+}
+.bi-card-unit{
+  font-size:13px;
+  color:var(--muted);
+  font-weight:700;
+  margin-left:4px;
+}
+.bi-card-sub{
+  color:var(--muted);
+  font-size:12.5px;
+  font-weight:600;
+}
+.bi-card-sub b{color:var(--text);font-weight:800;}
+.bi-card-trend{
+  margin-top:8px;
+  font-size:12px;
+  font-weight:800;
+}
+.bi-card-trend.trend-up{color:var(--green);}
+.bi-card-trend.trend-down{color:var(--red);}
+.bi-card-trend.trend-flat{color:var(--muted);}
+
+.bi-card-progress-bar{
+  height:8px;
+  background:#EEF0F3;
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:14px;
+}
+.bi-card-progress-fill{
+  display:block;
+  height:100%;
+  border-radius:999px;
+}
+
+/* Тёмная акцентная карточка — для самой важной метрики блока */
+.bi-card-dark{
+  background:linear-gradient(135deg,#1F2937,#0F172A);
+  color:#fff;
+  border:none;
+}
+.bi-card-dark::before{display:none;}
+.bi-card-dark .bi-card-label{color:rgba(255,255,255,.55);}
+.bi-card-dark .bi-card-value{color:#fff;}
+.bi-card-dark .bi-card-unit{color:rgba(255,255,255,.55);}
+.bi-card-dark .bi-card-sub{color:rgba(255,255,255,.65);}
+.bi-card-dark .bi-card-sub b{color:#fff;}
+.bi-card-dark .bi-card-progress-bar{background:rgba(255,255,255,.14);}
+
+.bi-plan-fact-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+@media(max-width:640px){
+  .bi-plan-fact-grid{grid-template-columns:1fr;}
+}
+
 .client-selection-banner{
   display:none;
   justify-content:space-between;
@@ -1130,7 +1241,6 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1>МСБ ПРОДАЖИ</h1>
-      <p>Объединённый модуль: Dashboard • Клиенты • Продажи</p>
     </div>
   </div>
 
@@ -1152,69 +1262,56 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <input id="dateTo" class="input" type="date" onchange="applyPeriod()">
     <button class="btn btn-secondary" onclick="resetPeriod()">Сбросить</button>
   </div>
-  <div style="margin:-10px 0 22px;color:var(--muted);font-size:13px;line-height:1.5;">
-    Активные клиенты автоматически переходят в следующий месяц. Отказанные клиенты полностью исключены из основных показателей продаж и учитываются только в отдельной карточке «Отказы». Статусы «Выдано» и «Отказ» отражаются только в месяце изменения статуса.
-  </div>
 
-  <section class="kpi dashboard-kpi-five">
-    <div class="card dashboard-kpi-clickable kpi-accent-neutral" onclick="openDashboardClients('all')">
-      <div class="card-label">Клиенты периода</div>
-      <div class="card-value" id="totalClients">...</div>
-      <div class="card-secondary">Сумма заявок: <b id="totalAmount">...</b></div>
-      <div class="card-trend" id="totalClientsTrend"></div>
+  <section class="bi-kpi-grid">
+    <div class="bi-card dashboard-kpi-clickable bi-accent-brand" onclick="openDashboardClients('all')">
+      <div class="bi-card-label">Клиенты периода</div>
+      <div class="bi-card-value" id="totalClients">...</div>
+      <div class="bi-card-sub">Сумма заявок: <b id="totalAmount">...</b></div>
+      <div class="bi-card-trend" id="totalClientsTrend"></div>
       <div class="kpi-click-hint">Открыть список →</div>
     </div>
 
-    <div class="card dashboard-kpi-clickable kpi-accent-orange" onclick="openDashboardClients('potential')">
-      <div class="card-label">В работе (перспективные)</div>
-      <div class="card-value" id="potentialCount">...</div>
-      <div class="card-secondary">Сумма: <b id="potentialAmount">...</b></div>
-      <div class="card-trend" id="potentialAmountTrend"></div>
+    <div class="bi-card dashboard-kpi-clickable bi-accent-orange" onclick="openDashboardClients('potential')">
+      <div class="bi-card-label">В работе (перспективные)</div>
+      <div class="bi-card-value" id="potentialCount">...</div>
+      <div class="bi-card-sub">Сумма: <b id="potentialAmount">...</b></div>
+      <div class="bi-card-trend" id="potentialAmountTrend"></div>
       <div class="kpi-click-hint">Открыть список →</div>
     </div>
 
-    <div class="card dashboard-kpi-clickable kpi-accent-orange" onclick="openDashboardClients('closeToIssue')">
-      <div class="card-label">Ожидается к выдаче</div>
-      <div class="card-value" id="closeToIssueCount">...</div>
-      <div class="card-secondary">Сумма: <b id="closeToIssueAmount">...</b></div>
-      <div class="card-note">Стадии «Одобрено» и «Кредитный комитет»</div>
+    <div class="bi-card dashboard-kpi-clickable bi-accent-orange" onclick="openDashboardClients('closeToIssue')">
+      <div class="bi-card-label">Ожидается к выдаче</div>
+      <div class="bi-card-value" id="closeToIssueCount">...</div>
+      <div class="bi-card-sub">Сумма: <b id="closeToIssueAmount">...</b> · Одобрено / Кредитный комитет</div>
       <div class="kpi-click-hint">Открыть список →</div>
     </div>
 
-    <div class="card dashboard-kpi-clickable kpi-accent-green" onclick="openDashboardClients('issued')">
-      <div class="card-label">Выдано</div>
-      <div class="card-value" id="issuedAmount">...</div>
-      <div class="card-secondary"><b id="issuedCountInline">...</b> сделок • <span id="conversion">конверсия ...</span></div>
-      <div class="card-trend" id="issuedAmountTrend"></div>
+    <div class="bi-card dashboard-kpi-clickable bi-accent-green" onclick="openDashboardClients('issued')">
+      <div class="bi-card-label">Выдано</div>
+      <div class="bi-card-value" id="issuedAmount">...</div>
+      <div class="bi-card-sub"><b id="issuedCountInline">...</b> сделок · <span id="conversion">конверсия ...</span></div>
+      <div class="bi-card-trend" id="issuedAmountTrend"></div>
       <div class="kpi-click-hint">Открыть список →</div>
     </div>
 
-    <div class="card dashboard-kpi-clickable kpi-accent-red" onclick="openDashboardClients('rejected')">
-      <div class="card-label">Отказано</div>
-      <div class="card-value" id="rejectedCount">0</div>
-      <div class="card-secondary refusal-note">Сумма: <b id="rejectedAmount">0</b></div>
-      <div class="card-trend" id="rejectedCountTrend"></div>
+    <div class="bi-card dashboard-kpi-clickable bi-accent-red" onclick="openDashboardClients('rejected')">
+      <div class="bi-card-label">Отказано</div>
+      <div class="bi-card-value" id="rejectedCount">0</div>
+      <div class="bi-card-sub">Сумма: <b id="rejectedAmount">0</b></div>
+      <div class="bi-card-trend" id="rejectedCountTrend"></div>
       <div class="kpi-click-hint">Открыть список →</div>
     </div>
   </section>
 
   <div id="monitorRejectedAlert" data-admin="true" style="display:none;background:#FFF3E3;border:1px solid #F5C67A;border-radius:14px;padding:16px 20px;margin-bottom:22px;cursor:pointer;" onclick="openMonitorRejectedList()">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <div>
-        <div style="font-weight:800;color:var(--orange);font-size:15px;">⚠️ Отклонено юридическим мониторингом: <span id="monitorRejectedCount">0</span></div>
-        <div style="color:var(--muted);font-size:13px;margin-top:4px;">Клиенты, по которым мониторинг нашёл проблему — возвращены на «Кредитный комитет», требуют внимания</div>
-      </div>
+      <div style="font-weight:800;color:var(--orange);font-size:15px;">⚠️ Отклонено юридическим мониторингом: <span id="monitorRejectedCount">0</span></div>
       <div style="color:var(--orange);font-weight:700;">Открыть список →</div>
     </div>
   </div>
 
-  <div class="panel">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-      <h2 style="margin-bottom:0;">План / Факт по выдаче МСБ</h2>
-    </div>
-    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Факт — фактическая выдача юрлицам, берётся из листа «выдача» последнего загруженного баланса (раздел «Бухгалтерия»).</p>
-    <div id="planFactBox" class="loading">Загрузка...</div>
-  </div>
+  <div id="planFactBox" class="loading" style="margin-bottom:24px;">Загрузка...</div>
 
   <div class="layout">
     <div>
@@ -3291,13 +3388,13 @@ function renderTrendBadge(elementId, current, previous, invert) {
 
   if (previous === null || previous === undefined) {
     el.innerHTML = '';
-    el.className = 'card-trend';
+    el.className = 'bi-card-trend';
     return;
   }
 
   if (!previous) {
     el.innerHTML = current > 0 ? 'новое по сравнению с пред. периодом' : 'без изменений';
-    el.className = 'card-trend trend-flat';
+    el.className = 'bi-card-trend trend-flat';
     return;
   }
 
@@ -3309,7 +3406,7 @@ function renderTrendBadge(elementId, current, previous, invert) {
   const arrow = isFlat ? '→' : (isUp ? '↑' : '↓');
   const cls = isFlat ? 'trend-flat' : (goodDirection ? 'trend-up' : 'trend-down');
 
-  el.className = 'card-trend ' + cls;
+  el.className = 'bi-card-trend ' + cls;
   el.innerHTML = `${arrow} ${Math.abs(diffPct)}% к пред. периоду`;
 }
 
@@ -3320,7 +3417,7 @@ function renderTrendBadges(stats) {
   if (!prev) {
     ['totalClientsTrend','totalAmountTrend','issuedAmountTrend','potentialAmountTrend','rejectedCountTrend'].forEach(id => {
       const el = document.getElementById(id);
-      if (el) { el.innerHTML = ''; el.className = 'card-trend'; }
+      if (el) { el.innerHTML = ''; el.className = 'bi-card-trend'; }
     });
     if (periodLabelEl) periodLabelEl.innerText = '';
     return;
@@ -3370,25 +3467,24 @@ async function renderPlanFactBox() {
   const latest = allBankBalances[allBankBalances.length - 1];
   const fact = Number(latest.totals.disbursementFact) || 0;
 
-  const bar = (label, plan, factVal) => {
+  const card = (label, plan, factVal, dark) => {
     const pct = plan ? Math.min(100, Math.round(factVal / plan * 100)) : 0;
-    const color = pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--brand)' : 'var(--orange)';
+    const remaining = Math.max(0, 100 - pct);
+    const fillColor = dark ? '#fff' : (pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--brand)' : 'var(--orange)');
     return `
-      <div style="margin-bottom:18px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
-          <div style="font-weight:800;font-size:14px;">${label}</div>
-          <div style="font-size:13px;color:var(--muted);">${formatMoney(factVal)} из ${formatMoney(plan)} (${pct}%)</div>
-        </div>
-        <div style="height:14px;background:#EEF0F3;border-radius:999px;overflow:hidden;">
-          <span style="display:block;height:100%;width:${pct}%;background:${color};border-radius:999px;"></span>
-        </div>
+      <div class="bi-card${dark ? ' bi-card-dark' : ' bi-accent-brand'}">
+        <div class="bi-card-label">${label}</div>
+        <div class="bi-card-value">${formatMoney(factVal)}</div>
+        <div class="bi-card-sub">из плана <b>${formatMoney(plan)}</b> · выполнено ${pct}%${remaining ? `, осталось ${remaining}%` : ''}</div>
+        <div class="bi-card-progress-bar"><span class="bi-card-progress-fill" style="width:${pct}%;background:${fillColor};"></span></div>
       </div>`;
   };
 
-  box.innerHTML =
-    bar('План 2026 год', MSB_PLAN_YEAR_2026, fact) +
-    bar('План III квартал 2026', MSB_PLAN_Q3_2026, fact) +
-    `<div style="font-size:12px;color:var(--muted);margin-top:4px;">Данные по факту на: ${safe(latest.reportDate || latest.period)}</div>`;
+  box.innerHTML = `
+    <div class="bi-plan-fact-grid">
+      ${card('План 2026 год', MSB_PLAN_YEAR_2026, fact, true)}
+      ${card('План III квартал 2026', MSB_PLAN_Q3_2026, fact, false)}
+    </div>`;
 }
 
 function resetPeriod() {
