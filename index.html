@@ -1540,36 +1540,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 </section>
 
 <section id="statsPage" class="page">
-  <div class="header"><div><h1>БУХГАЛТЕРИЯ</h1><p>Ключевые показатели филиала</p></div></div>
-  <section class="kpi">
-    <div class="card"><div class="card-label">Средний чек заявки</div><div class="card-value" id="statsAvgRequest">...</div></div>
-    <div class="card"><div class="card-label">Средний чек выдачи</div><div class="card-value" id="statsAvgIssued">...</div></div>
-    <div class="card"><div class="card-label">Конверсия</div><div class="card-value" id="statsConversion">...</div></div>
-    <div class="card"><div class="card-label">Выдачи</div><div class="card-value" id="statsIssuedCount">...</div></div>
-  </section>
+  <div class="header"><div><h1>БУХГАЛТЕРИЯ</h1><p>Баланс банка — форма 0101BS, за последний загруженный месяц</p></div></div>
 
-  <section class="kpi" style="margin-top:16px;">
-    <div class="card"><div class="card-label">Пассив (обязательства)</div><div class="card-value" id="statsBalanceLiabilities">Нет данных</div></div>
-    <div class="card"><div class="card-label">Прибыль по балансу</div><div class="card-value" id="statsBalanceProfit">Нет данных</div></div>
-    <div class="card"><div class="card-label">Чистая прибыль</div><div class="card-value" id="statsNetProfit">Нет данных</div></div>
-    <div class="card"><div class="card-label">Резерв (счёт 56800)</div><div class="card-value" id="statsBalanceReserve">Нет данных</div></div>
-  </section>
-
-  <section class="kpi" style="margin-top:16px;">
-    <div class="card"><div class="card-label">Юридический портфель</div><div class="card-value" id="statsPortfolioLegal">Нет данных</div></div>
-    <div class="card"><div class="card-label">Физический портфель</div><div class="card-value" id="statsPortfolioIndividuals">Нет данных</div></div>
-    <div class="card"><div class="card-label">Общий портфель</div><div class="card-value" id="statsPortfolioTotal">Нет данных</div></div>
-  </section>
-
-  <div class="panel" style="margin-top:24px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
-      <div>
-        <h2 style="margin-bottom:4px;">💰 Баланс банка</h2>
-        <p style="color:var(--muted);font-size:13px;">Форма 0101BS, загружается отдельным файлом каждый месяц</p>
-      </div>
-    </div>
-
-    <div id="bankBalanceUploadPanel" data-admin="true" style="margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:var(--radius-sm);">
+  <div class="panel" style="margin-bottom:20px;">
+    <div id="bankBalanceUploadPanel" data-admin="true">
       <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;">Загрузить баланс за месяц (файл формы 0101BS)</label>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
         <input type="file" id="bankBalanceFile" accept=".xlsx,.xls">
@@ -1577,14 +1551,30 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       </div>
       <div id="bankBalanceUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
     </div>
+  </div>
 
-    <div id="bankBalancePeriodSelectorWrap" style="display:none;margin-bottom:20px;">
-      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;">Период</label>
-      <select id="bankBalancePeriodSelect" class="select" style="max-width:220px;" onchange="renderBankBalanceDashboard()"></select>
-    </div>
+  <div id="bankBalanceEmptyState" class="loading">Баланс ещё не загружен — загрузите первый файл выше.</div>
 
-    <div id="bankBalanceEmptyState" class="loading">Баланс ещё не загружен — загрузите первый файл выше.</div>
-    <div id="bankBalanceDashboard" style="display:none;"></div>
+  <div id="bankBalanceDashboard" style="display:none;">
+    <section class="kpi">
+      <div class="card"><div class="card-label">Активы</div><div class="card-value" id="statsBalanceAssets">Нет данных</div></div>
+      <div class="card"><div class="card-label">Обязательства (Пассив)</div><div class="card-value" id="statsBalanceLiabilities">Нет данных</div></div>
+      <div class="card"><div class="card-label">Капитал</div><div class="card-value" id="statsBalanceEquity">Нет данных</div></div>
+    </section>
+
+    <section class="kpi" style="margin-top:16px;">
+      <div class="card"><div class="card-label">Прибыль по балансу</div><div class="card-value" id="statsBalanceProfit">Нет данных</div></div>
+      <div class="card"><div class="card-label">Чистая прибыль</div><div class="card-value" id="statsNetProfit">Нет данных</div></div>
+      <div class="card"><div class="card-label">Резерв (счёт 56800)</div><div class="card-value" id="statsBalanceReserve">Нет данных</div></div>
+    </section>
+
+    <section class="kpi" style="margin-top:16px;">
+      <div class="card"><div class="card-label">Юридический портфель</div><div class="card-value" id="statsPortfolioLegal">Нет данных</div></div>
+      <div class="card"><div class="card-label">Физический портфель</div><div class="card-value" id="statsPortfolioIndividuals">Нет данных</div></div>
+      <div class="card"><div class="card-label">Общий портфель</div><div class="card-value" id="statsPortfolioTotal">Нет данных</div></div>
+    </section>
+
+    <div id="bankBalanceDetailBox" style="margin-top:24px;"></div>
   </div>
 </section>
 
@@ -4325,10 +4315,6 @@ function renderStats(stats) {
   document.getElementById('averageRequest').innerText = formatMoney(stats.averageRequest);
   document.getElementById('averageIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('issuedCount').innerText = stats.issuedCount || 0;
-  document.getElementById('statsAvgRequest').innerText = formatMoney(stats.averageRequest);
-  document.getElementById('statsAvgIssued').innerText = formatMoney(stats.averageIssued);
-  document.getElementById('statsConversion').innerText = (stats.conversion || 0) + '%';
-  document.getElementById('statsIssuedCount').innerText = stats.issuedCount || 0;
   document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.10 • Обновлено: ' + (stats.updatedAt || '');
 }
 
@@ -4734,17 +4720,11 @@ async function loadBankBalanceData() {
     if (!allBankBalances.length) {
       document.getElementById('bankBalanceEmptyState').style.display = 'block';
       document.getElementById('bankBalanceDashboard').style.display = 'none';
-      document.getElementById('bankBalancePeriodSelectorWrap').style.display = 'none';
       return;
     }
 
     document.getElementById('bankBalanceEmptyState').style.display = 'none';
     document.getElementById('bankBalanceDashboard').style.display = 'block';
-
-    const selectorWrap = document.getElementById('bankBalancePeriodSelectorWrap');
-    const select = document.getElementById('bankBalancePeriodSelect');
-    selectorWrap.style.display = allBankBalances.length > 1 ? 'block' : 'none';
-    select.innerHTML = allBankBalances.slice().reverse().map(b => `<option value="${b.period}">${formatPeriodLabel(b.period)}</option>`).join('');
 
     renderBankBalanceDashboard();
   } catch (error) {
@@ -5010,30 +4990,18 @@ async function uploadBankBalanceFile() {
 }
 
 function renderBankBalanceDashboard() {
-  const box = document.getElementById('bankBalanceDashboard');
+  const box = document.getElementById('bankBalanceDetailBox');
   if (!box || !allBankBalances.length) return;
 
-  const select = document.getElementById('bankBalancePeriodSelect');
-  const selectedPeriod = select && select.value ? select.value : allBankBalances[allBankBalances.length - 1].period;
-  const current = allBankBalances.find(b => b.period === selectedPeriod) || allBankBalances[allBankBalances.length - 1];
-
-  const idx = allBankBalances.findIndex(b => b.period === current.period);
+  // Всегда последний загруженный месяц — выбор периода убрали по
+  // просьбе управляющего, чтобы не путать с несколькими наборами цифр.
+  const current = allBankBalances[allBankBalances.length - 1];
+  const idx = allBankBalances.length - 1;
   const prev = idx > 0 ? allBankBalances[idx - 1] : null;
 
-  updateTopBalanceCards(current);
+  updateTopBalanceCards(current, prev);
 
   const t = current.totals;
-  const pctChange = (now, before) => {
-    if (!before) return null;
-    return Math.round((now - before) / Math.abs(before) * 1000) / 10;
-  };
-
-  const trendBadge = (val) => {
-    if (val === null || val === undefined) return '';
-    const arrow = val >= 0 ? '↑' : '↓';
-    const color = val >= 0 ? 'var(--green)' : 'var(--red)';
-    return `<span style="color:${color};font-size:12px;font-weight:800;">${arrow} ${Math.abs(val)}% к пред. месяцу</span>`;
-  };
 
   const barsHtml = (items, colorVar) => {
     const sorted = items.slice().sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount)).slice(0, 12);
@@ -5049,29 +5017,6 @@ function renderBankBalanceDashboard() {
   };
 
   box.innerHTML = `
-    <section class="kpi" style="margin-bottom:20px;">
-      <div class="card">
-        <div class="card-label">Активы</div>
-        <div class="card-value">${formatMoney(t.assets)}</div>
-        <div class="card-secondary">${trendBadge(pctChange(t.assets, prev?.totals.assets))}</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Обязательства</div>
-        <div class="card-value">${formatMoney(t.liabilities)}</div>
-        <div class="card-secondary">${trendBadge(pctChange(t.liabilities, prev?.totals.liabilities))}</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Капитал</div>
-        <div class="card-value" style="${t.equity < 0 ? 'color:var(--red);' : ''}">${formatMoney(t.equity)}</div>
-        <div class="card-secondary">${trendBadge(pctChange(t.equity, prev?.totals.equity))}</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Прибыль / убыток за месяц</div>
-        <div class="card-value" style="${t.profit < 0 ? 'color:var(--red);' : 'color:var(--green);'}">${formatMoney(t.profit)}</div>
-        <div class="card-secondary">${trendBadge(pctChange(t.profit, prev?.totals.profit))}</div>
-      </div>
-    </section>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;" class="bank-balance-grid">
       <div class="panel" style="margin-bottom:0;">
         <h3 style="font-size:15px;margin-bottom:14px;">Состав активов (крупнейшие статьи)</h3>
@@ -5106,16 +5051,16 @@ function renderBankBalanceDashboard() {
   `;
 }
 
-// Обновляет 5 карточек баланса в самом верху "Статистики" (пассив,
-// прибыль, резерв, портфель физлиц, портфель юрлиц+ИП) — на основе
-// последнего загруженного месяца. Классификация физ/юрлиц идёт по
-// ключевым словам в названии статьи, а не по коду счёта — так парсер
-// продолжит работать корректно, даже если коды слегка сместятся в
-// будущих файлах.
-function updateTopBalanceCards(current) {
+// Обновляет единый набор из 9 карточек вверху "Бухгалтерии" — всегда по
+// последнему загруженному месяцу, без выбора периода (упростили по
+// просьбе управляющего — раньше было два пересекающихся набора карточек).
+function updateTopBalanceCards(current, prev) {
   const t = current.totals;
 
+  document.getElementById('statsBalanceAssets').innerText = formatMoney(t.assets);
   document.getElementById('statsBalanceLiabilities').innerText = formatMoney(t.liabilities);
+  document.getElementById('statsBalanceEquity').innerText = formatMoney(t.equity);
+  document.getElementById('statsBalanceEquity').style.color = t.equity < 0 ? 'var(--red)' : '';
 
   document.getElementById('statsBalanceProfit').innerText = formatMoney(t.profit);
   document.getElementById('statsBalanceProfit').style.color = t.profit < 0 ? 'var(--red)' : 'var(--green)';
