@@ -2936,6 +2936,10 @@ let currentDrawerClient = null;
 let cfSelectedPhotoFiles = [];
 let clientFormMode = 'create';
 
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function loadCRM() {
   try {
     // Махалля — отдельный отдел. Банкиру Махалли не нужны и не должны
@@ -2948,17 +2952,25 @@ async function loadCRM() {
       return;
     }
 
-    // ВАЖНО: запросы идут ПОСЛЕДОВАТЕЛЬНО, а не все разом (Promise.all).
-    // Google Apps Script Web App плохо переносит несколько одновременных
-    // запросов к одному и тому же скрипту — особенно когда сам скрипт
-    // большой (а он у нас сильно вырос) — часть запросов может вернуться
-    // с ошибкой (404/пустой ответ вместо JSON). Последовательные запросы
-    // чуть медленнее, зато надёжно доходят все до конца.
-    const stats = await fetchJSON('stats');
-    const clients = await fetchJSON('clients');
-    const funnel = await fetchJSON('funnel');
-    const managers = await fetchJSON('managers');
-    const formLists = await fetchJSON('formLists');
+    // Компромисс между скоростью и надёжностью: запросы стартуют СО
+    // СДВИГОМ в 150мс друг от друга (не строго по очереди — тогда очень
+    // медленно, но и не всей пятёркой одновременно — так Google Apps
+    // Script иногда отвечал ошибкой вместо данных). К моменту старта
+    // последнего запроса первые уже почти готовы, поэтому суммарное время
+    // ожидания заметно меньше, чем при полностью последовательной загрузке.
+    const statsPromise = fetchJSON('stats');
+    await delay(150);
+    const clientsPromise = fetchJSON('clients');
+    await delay(150);
+    const funnelPromise = fetchJSON('funnel');
+    await delay(150);
+    const managersPromise = fetchJSON('managers');
+    await delay(150);
+    const formListsPromise = fetchJSON('formLists');
+
+    const [stats, clients, funnel, managers, formLists] = await Promise.all([
+      statsPromise, clientsPromise, funnelPromise, managersPromise, formListsPromise
+    ]);
 
     allStats = stats;
     allClients = clients || [];
