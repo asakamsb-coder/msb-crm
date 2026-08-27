@@ -2983,7 +2983,8 @@ async function loadCRM() {
     buildPeriodOptions();
     applyPeriod();
   } catch (error) {
-    document.getElementById('aiText').innerText = 'Ошибка загрузки данных. Проверьте API Apps Script.';
+    const el = document.getElementById('aiText');
+    if (el) el.innerHTML = 'Ошибка загрузки данных. <a onclick="loadCRM()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a>';
     console.error(error);
   }
 }
@@ -3048,7 +3049,7 @@ function showPage(id, el) {
   }
 
   if (id === 'statsPage') {
-    loadBankBalanceData();
+    loadBankBalanceData().catch(error => console.error(error));
   }
 
   if (id === 'portfolioPage') {
@@ -3459,17 +3460,22 @@ async function renderPlanFactBox() {
 
   // Баланс банка грузится лениво только на вкладке "Бухгалтерия" — если
   // ещё не загружен, подгружаем именно для этого блока, не заставляя
-  // человека сначала переходить в другой раздел. Ограничиваем ожидание
-  // 8 секундами — если что-то пойдёт не так, блок покажет понятное
-  // сообщение вместо вечной "Загрузка...".
+  // человека сначала переходить в другой раздел.
+  //
+  // ВАЖНО: раньше здесь стоял жёсткий таймаут 8 секунд — если запрос не
+  // успевал (например, слабый интернет), блок "сдавался" и показывал
+  // "баланс не загружен", хотя данные на самом деле были и просто ещё
+  // грузились. Теперь вместо этого ждём столько, сколько нужно, а если
+  // это реально долго — просто показываем статус ожидания и перерисуем
+  // блок автоматически, как только данные придут (не бросаем попытку).
   if (!bankBalanceDataLoaded) {
+    box.innerHTML = '<div class="loading">Загрузка данных баланса...</div>';
     try {
-      await Promise.race([
-        loadBankBalanceData(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
-      ]);
+      await loadBankBalanceData();
     } catch (e) {
-      /* без данных — просто покажем "нет данных" ниже */
+      box.innerHTML = '<div class="loading">Не удалось загрузить баланс банка. <a onclick="renderPlanFactBox()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a></div>';
+      console.error(e);
+      return;
     }
   }
 
@@ -4440,20 +4446,25 @@ let overdueViewMode = 'all';
 let currentOverdueClientInn = null;
 
 async function loadOverdueData() {
+  const emptyState = document.getElementById('overdueEmptyState');
   try {
     allOverdueLoans = await fetchJSON('overdueLoans') || [];
     overdueDataLoaded = true;
 
     if (!allOverdueLoans.length) {
-      document.getElementById('overdueEmptyState').style.display = 'block';
+      emptyState.innerHTML = 'Портфель ещё не загружен — загрузите первый файл выше.';
+      emptyState.style.display = 'block';
       document.getElementById('overdueDashboard').style.display = 'none';
       return;
     }
 
-    document.getElementById('overdueEmptyState').style.display = 'none';
+    emptyState.style.display = 'none';
     document.getElementById('overdueDashboard').style.display = 'block';
     renderOverdueDashboard();
   } catch (error) {
+    emptyState.innerHTML = 'Не удалось загрузить данные. <a onclick="loadOverdueData()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a>';
+    emptyState.style.display = 'block';
+    document.getElementById('overdueDashboard').style.display = 'none';
     console.error(error);
   }
 }
@@ -4819,27 +4830,23 @@ let allBankBalances = [];
 let bankBalanceDataLoaded = false;
 
 async function loadBankBalanceData() {
-  try {
-    allBankBalances = await fetchJSON('bankBalances') || [];
-    bankBalanceDataLoaded = true;
+  allBankBalances = await fetchJSON('bankBalances') || [];
+  bankBalanceDataLoaded = true;
 
-    const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-    const uploadPanel = document.getElementById('bankBalanceUploadPanel');
-    if (uploadPanel) uploadPanel.style.display = isAdmin ? 'block' : 'none';
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const uploadPanel = document.getElementById('bankBalanceUploadPanel');
+  if (uploadPanel) uploadPanel.style.display = isAdmin ? 'block' : 'none';
 
-    if (!allBankBalances.length) {
-      document.getElementById('bankBalanceEmptyState').style.display = 'block';
-      document.getElementById('bankBalanceDashboard').style.display = 'none';
-      return;
-    }
-
-    document.getElementById('bankBalanceEmptyState').style.display = 'none';
-    document.getElementById('bankBalanceDashboard').style.display = 'block';
-
-    renderBankBalanceDashboard();
-  } catch (error) {
-    console.error(error);
+  if (!allBankBalances.length) {
+    document.getElementById('bankBalanceEmptyState').style.display = 'block';
+    document.getElementById('bankBalanceDashboard').style.display = 'none';
+    return;
   }
+
+  document.getElementById('bankBalanceEmptyState').style.display = 'none';
+  document.getElementById('bankBalanceDashboard').style.display = 'block';
+
+  renderBankBalanceDashboard();
 }
 
 function formatPeriodLabel(period) {
@@ -6815,8 +6822,9 @@ async function loadMahallaData() {
     renderMicroprojectsList();
   } catch (error) {
     console.error(error);
-    if (mahallasBox) mahallasBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли</div>';
-    if (microBox) microBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли</div>';
+    const retryLink = ' <a onclick="loadMahallaData()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a>';
+    if (mahallasBox) mahallasBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли.' + retryLink + '</div>';
+    if (microBox) microBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли.' + retryLink + '</div>';
   }
 }
 
