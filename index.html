@@ -5074,36 +5074,58 @@ function parseBankBalanceFile(file) {
         // проводки — считаем неактивным (проводки не было вообще никогда).
         let activeClientsCount = 0;
         let activeClientsBalance = 0;
-        const clientsSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'клиенты и счета');
-        if (clientsSheetName) {
+        const clientsWarnings = [];
+        const clientsSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase().includes('клиенты'));
+
+        if (!clientsSheetName) {
+          clientsWarnings.push('Лист «Клиенты и счета» не найден в файле — активные клиенты не посчитаны.');
+        } else {
           const cSheet = workbook.Sheets[clientsSheetName];
           const cRows = XLSX.utils.sheet_to_json(cSheet, { header: 1, defval: '', raw: true });
 
-          // Дата отчёта этого листа — своя, из заголовка "на DD.MM.YYYY"
+          // Дата отчёта этого листа — своя, из заголовка "на DD.MM.YYYY".
+          // Ищем по ВСЕМ колонкам первых строк, а не по одной конкретной —
+          // формат выгрузки мог немного сместиться.
           let clientsReportDate = null;
-          for (let i = 0; i < Math.min(cRows.length, 6); i++) {
-            const cell = String(cRows[i][5] || cRows[i][0] || '');
-            const m = cell.match(/на\s+(\d{2})\.(\d{2})\.(\d{4})/);
-            if (m) { clientsReportDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])); break; }
+          for (let i = 0; i < Math.min(cRows.length, 8) && !clientsReportDate; i++) {
+            for (let c = 0; c < (cRows[i] || []).length; c++) {
+              const cell = String(cRows[i][c] || '');
+              const m = cell.match(/на\s+(\d{2})\.(\d{2})\.(\d{4})/);
+              if (m) { clientsReportDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])); break; }
+            }
           }
           if (!clientsReportDate) clientsReportDate = new Date(); // подстраховка
 
           const cutoff = new Date(clientsReportDate);
           cutoff.setMonth(cutoff.getMonth() - 9);
 
+          // Ищем строку заголовков по ЛЮБОЙ колонке (не строго 26-й) —
+          // на случай, если формат выгрузки чуть сместился по колонкам.
           let headerRowIdx = -1;
-          for (let i = 0; i < Math.min(cRows.length, 10); i++) {
-            if (String(cRows[i][25]).trim() === 'Дата последней проводки') { headerRowIdx = i; break; }
+          let dateColIdx = -1;
+          let balanceColIdx = -1;
+          let codeColIdx = -1;
+          for (let i = 0; i < Math.min(cRows.length, 12) && headerRowIdx === -1; i++) {
+            for (let c = 0; c < (cRows[i] || []).length; c++) {
+              if (String(cRows[i][c]).trim() === 'Дата последней проводки') {
+                headerRowIdx = i;
+                dateColIdx = c;
+              }
+              if (String(cRows[i][c]).trim() === 'Остаток') balanceColIdx = c;
+              if (String(cRows[i][c]).trim() === 'Код клиента') codeColIdx = c;
+            }
           }
 
-          if (headerRowIdx !== -1) {
+          if (headerRowIdx === -1 || dateColIdx === -1) {
+            clientsWarnings.push('В листе «Клиенты и счета» не найдена колонка «Дата последней проводки» — активные клиенты не посчитаны. Проверьте формат файла.');
+          } else {
             for (let i = headerRowIdx + 1; i < cRows.length; i++) {
               const row = cRows[i];
-              const clientCode = row[1]; // col 2: Код клиента
+              const clientCode = codeColIdx !== -1 ? row[codeColIdx] : row[1];
               if (!clientCode) continue;
 
-              const balance = Number(row[24]) || 0; // col 25: Остаток
-              const lastTxnRaw = row[25]; // col 26: Дата последней проводки
+              const balance = balanceColIdx !== -1 ? (Number(row[balanceColIdx]) || 0) : 0;
+              const lastTxnRaw = row[dateColIdx];
 
               let lastTxnDate = null;
               if (lastTxnRaw instanceof Date) {
@@ -5122,6 +5144,7 @@ function parseBankBalanceFile(file) {
                 activeClientsBalance += balance;
               }
             }
+
           }
         }
 
@@ -5143,6 +5166,7 @@ function parseBankBalanceFile(file) {
           },
           currencyTotals: currencyTotals,
           activeClients: { count: activeClientsCount, balance: activeClientsBalance },
+          clientsWarnings: clientsWarnings,
           details: {
             assets: sections.assets.items,
             liabilities: sections.liabilities.items,
@@ -5196,7 +5220,11 @@ async function uploadBankBalanceFile() {
     statusBox.style.whiteSpace = 'pre-line';
 
     if (result.success) {
-      statusBox.innerText = result.message + ' (' + formatPeriodLabel(parsed.period) + ')';
+      let msg = result.message + ' (' + formatPeriodLabel(parsed.period) + ')';
+      if (parsed.clientsWarnings && parsed.clientsWarnings.length) {
+        msg += '\n\n⚠️ ' + parsed.clientsWarnings.join('\n');
+      }
+      statusBox.innerText = msg;
       input.value = '';
       await loadBankBalanceData();
     } else {
