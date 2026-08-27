@@ -4892,13 +4892,25 @@ function formatPeriodLabel(period) {
 const LEGAL_PORTFOLIO_CODES = ['11101','12601','12901','13101','13121','14301','15001','15021','15501','15521'];
 const INDIVIDUAL_PORTFOLIO_CODES = ['12501','12503','12521','12541','14901','14902','14903','14921','14931','14941'];
 
-function parseBankBalanceFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
+let bankBalanceParserWorker = null;
 
-    reader.onload = function(e) {
+function getBankBalanceParserWorker() {
+  if (bankBalanceParserWorker) return bankBalanceParserWorker;
+
+  // Та же логика, что и в parseBankBalanceFile ниже, но выполняется в
+  // отдельном потоке — файл баланса теперь содержит три листа (баланс +
+  // выдача ~1000 строк + клиенты ~1500 строк), обработка в основном
+  // потоке занимала 6+ секунд и полностью замораживала страницу
+  // (видно в консоли как "load handler took 6295ms").
+  const workerCode = `
+    importScripts('https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js');
+
+    const LEGAL_PORTFOLIO_CODES = ['11101','12601','12901','13101','13121','14301','15001','15021','15501','15521'];
+    const INDIVIDUAL_PORTFOLIO_CODES = ['12501','12503','12521','12541','14901','14902','14903','14921','14931','14941'];
+
+    self.onmessage = function(e) {
       try {
-        const data = new Uint8Array(e.target.result);
+        const data = new Uint8Array(e.data);
         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
@@ -4915,20 +4927,13 @@ function parseBankBalanceFile(file) {
         };
 
         let currentSectionKey = null;
-        let lastGroupName = {}; // код подгруппы -> название
+        let lastGroupName = {};
         let profit = 0;
-
-        // Плоская карта ВСЕХ отдельных счетов (не подгрупп и не итогов) —
-        // код -> сумма. Нужна для точных формул по конкретным счетам
-        // (портфель по заданным кодам, 4592*/568** для чистой прибыли).
         const accounts = {};
 
         const sectionByPrefix = {
-          '10000': 'assets',
-          '20000': 'liabilities',
-          '30000': 'equity',
-          '40000': 'income',
-          '50000': 'expenses'
+          '10000': 'assets', '20000': 'liabilities', '30000': 'equity',
+          '40000': 'income', '50000': 'expenses'
         };
 
         rows.forEach(row => {
@@ -4938,72 +4943,50 @@ function parseBankBalanceFile(file) {
 
           if (!a && !b) return;
 
-          // Дата отчёта
           if (!reportDate) {
-            const m = a.match(/(?:за|as of)?\s*(\d{2})\.(\d{2})\.(\d{4})/i);
+            const m = a.match(/(?:за|as of)?\\s*(\\d{2})\\.(\\d{2})\\.(\\d{4})/i);
             if (a.toUpperCase().includes('БАЛАНСОВЫЙ ОТЧЕТ') && m) {
               reportDate = m[1] + '.' + m[2] + '.' + m[3];
               period = m[3] + '-' + m[2];
             }
           }
 
-          // Финансовый результат — проверяем ДО фильтра "мы внутри раздела",
-          // потому что к этой строке предыдущий раздел (50000) уже закрыт.
           if (a.toUpperCase().includes('ФОЙДА') && a.toUpperCase().includes('ЗАРАР')) {
-            // ВАЖНО: ячейка в файле банка содержит не чистое число, а текст
-            // вида "-24578583732.19 (убыток)" — с пометкой прямо в
-            // ячейке. Number() на такой строке вернёт NaN (а с || 0 —
-            // тихо превратится в 0, что всё это время скрывало реальную
-            // прибыль/убыток на дашборде). parseFloat() правильно
-            // прочитает число до первого нечислового символа.
             profit = parseFloat(c) || 0;
             return;
           }
 
-          // Заголовок раздела: "10000 АКТИВЛАР" и т.п.
-          const sectionMatch = a.match(/^(\d{5})\s+\S/);
+          const sectionMatch = a.match(/^(\\d{5})\\s+\\S/);
           if (sectionMatch && sectionByPrefix[sectionMatch[1]]) {
             currentSectionKey = sectionByPrefix[sectionMatch[1]];
             return;
           }
           if (a.startsWith('90000')) {
-            currentSectionKey = null; // внебаланс не показываем в дашборде
+            currentSectionKey = null;
             return;
           }
-
           if (!currentSectionKey) return;
 
-          // Заголовок подгруппы: 5-значный код в A, текст в B, C пусто
-          if (/^\d{5}$/.test(a) && b && (c === '' || c === undefined || c === null)) {
+          if (/^\\d{5}$/.test(a) && b && (c === '' || c === undefined || c === null)) {
             lastGroupName[a] = b;
             return;
           }
-
-          // Отдельный (листовой) счёт: 5-значный код в A, C — число.
-          // Это НЕ заголовок подгруппы и НЕ итог — реальный счёт внутри
-          // группы (например, 12501 внутри группы 12500).
-          if (/^\d{5}$/.test(a) && typeof c === 'number') {
+          if (/^\\d{5}$/.test(a) && typeof c === 'number') {
             accounts[a] = c;
             return;
           }
 
-          // Промежуточный итог подгруппы
-          const groupTotalMatch = a.match(/^Итого по (\d{5})$/i);
+          const groupTotalMatch = a.match(/^Итого по (\\d{5})$/i);
           if (groupTotalMatch) {
             const code = groupTotalMatch[1];
             const val = Number(c) || 0;
             if (val !== 0) {
-              sections[currentSectionKey].items.push({
-                code: code,
-                name: lastGroupName[code] || code,
-                amount: val
-              });
+              sections[currentSectionKey].items.push({ code: code, name: lastGroupName[code] || code, amount: val });
             }
             return;
           }
 
-          // Итог всего раздела: "ИТОГО АКТИВЛАР - 10000" и т.п.
-          if (/^ИТОГО\s/i.test(a) && typeof c === 'number') {
+          if (/^ИТОГО\\s/i.test(a) && typeof c === 'number') {
             sections[currentSectionKey].total = c;
             currentSectionKey = null;
             return;
@@ -5011,17 +4994,14 @@ function parseBankBalanceFile(file) {
         });
 
         if (!period) {
-          reject(new Error('Не удалось найти дату отчёта в файле — проверьте, что это правильный файл формы 0101BS'));
+          self.postMessage({ error: 'Не удалось найти дату отчёта в файле — проверьте, что это правильный файл формы 0101BS' });
           return;
         }
 
-        // Точный портфель по заданным кодам счетов (не по ключевым словам).
         const sumCodes = (codes) => codes.reduce((s, code) => s + (accounts[code] || 0), 0);
         const legalPortfolio = sumCodes(LEGAL_PORTFOLIO_CODES);
         const individualPortfolio = sumCodes(INDIVIDUAL_PORTFOLIO_CODES);
 
-        // Чистая прибыль: ИТОГО ДАРОМАДЛАР - счета 4592* (доходы прошлого
-        // периода) - ИТОГО ХАРАЖАТЛАР + счета 568** (резервы).
         let incomePriorPeriod = 0;
         let reserves568 = 0;
         Object.keys(accounts).forEach(code => {
@@ -5030,17 +5010,9 @@ function parseBankBalanceFile(file) {
         });
         const netProfit = sections.income.total - incomePriorPeriod - sections.expenses.total + reserves568;
 
-        // Резерв — отдельная статья расходов "Итого по 56800".
         const reserveItem = sections.expenses.items.find(i => i.code === '56800');
         const reserve56800 = reserveItem ? reserveItem.amount : 0;
 
-        // Лист "выдача" — теперь это детальный отчёт "КРЕДИТЫ ВЫДАННЫЕ
-        // БАНКОМ за ПЕРИОД", одна строка = один договор. Нужные колонки:
-        // "ID договора" (по нему находим строку заголовков), "КодВал"
-        // (код валюты, 000 = сум, иначе — нужен пересчёт по курсу ЦБ,
-        // который сделает бэкенд) и "ФактичВыданСумма(ном)".
-        // Складываем суммы ПО КАЖДОЙ ВАЛЮТЕ ОТДЕЛЬНО (не переводим сами —
-        // курс живой, его знает только сервер в момент загрузки).
         const currencyTotals = {};
         const disbursementSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'выдача');
         if (disbursementSheetName) {
@@ -5055,11 +5027,11 @@ function parseBankBalanceFile(file) {
           if (headerRowIdx !== -1) {
             for (let i = headerRowIdx + 1; i < dRows.length; i++) {
               const row = dRows[i];
-              const contractId = row[4]; // col 5: ID договора
-              if (!contractId || isNaN(Number(contractId))) continue; // пропускаем "Итого по валюте..." и пустые строки
+              const contractId = row[4];
+              if (!contractId || isNaN(Number(contractId))) continue;
 
-              const codVal = String(row[7] || '').trim(); // col 8: КодВал
-              const amount = Number(row[11]) || 0; // col 12: ФактичВыданСумма(ном)
+              const codVal = String(row[7] || '').trim();
+              const amount = Number(row[11]) || 0;
               if (!codVal || !amount) continue;
 
               currencyTotals[codVal] = (currencyTotals[codVal] || 0) + amount;
@@ -5067,11 +5039,6 @@ function parseBankBalanceFile(file) {
           }
         }
 
-        // Лист "Клиенты и счета" — отчёт "СВЕДЕНИЯ ИЗ КАРТОЧКИ КЛИЕНТОВ".
-        // Активный клиент — была проводка за последние 9 месяцев от ДАТЫ
-        // ОТЧЁТА (не от сегодняшнего дня — так каждый месяц пересчитывается
-        // корректно относительно даты самой выгрузки). Без даты последней
-        // проводки — считаем неактивным (проводки не было вообще никогда).
         let activeClientsCount = 0;
         let activeClientsBalance = 0;
         const clientsWarnings = [];
@@ -5083,34 +5050,26 @@ function parseBankBalanceFile(file) {
           const cSheet = workbook.Sheets[clientsSheetName];
           const cRows = XLSX.utils.sheet_to_json(cSheet, { header: 1, defval: '', raw: true });
 
-          // Дата отчёта этого листа — своя, из заголовка "на DD.MM.YYYY".
-          // Ищем по ВСЕМ колонкам первых строк, а не по одной конкретной —
-          // формат выгрузки мог немного сместиться.
           let clientsReportDate = null;
           for (let i = 0; i < Math.min(cRows.length, 8) && !clientsReportDate; i++) {
             for (let c = 0; c < (cRows[i] || []).length; c++) {
               const cell = String(cRows[i][c] || '');
-              const m = cell.match(/на\s+(\d{2})\.(\d{2})\.(\d{4})/);
+              const m = cell.match(/на\\s+(\\d{2})\\.(\\d{2})\\.(\\d{4})/);
               if (m) { clientsReportDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])); break; }
             }
           }
-          if (!clientsReportDate) clientsReportDate = new Date(); // подстраховка
+          if (!clientsReportDate) clientsReportDate = new Date();
 
           const cutoff = new Date(clientsReportDate);
           cutoff.setMonth(cutoff.getMonth() - 9);
 
-          // Ищем строку заголовков по ЛЮБОЙ колонке (не строго 26-й) —
-          // на случай, если формат выгрузки чуть сместился по колонкам.
           let headerRowIdx = -1;
           let dateColIdx = -1;
           let balanceColIdx = -1;
           let codeColIdx = -1;
           for (let i = 0; i < Math.min(cRows.length, 12) && headerRowIdx === -1; i++) {
             for (let c = 0; c < (cRows[i] || []).length; c++) {
-              if (String(cRows[i][c]).trim() === 'Дата последней проводки') {
-                headerRowIdx = i;
-                dateColIdx = c;
-              }
+              if (String(cRows[i][c]).trim() === 'Дата последней проводки') { headerRowIdx = i; dateColIdx = c; }
               if (String(cRows[i][c]).trim() === 'Остаток') balanceColIdx = c;
               if (String(cRows[i][c]).trim() === 'Код клиента') codeColIdx = c;
             }
@@ -5131,7 +5090,6 @@ function parseBankBalanceFile(file) {
               if (lastTxnRaw instanceof Date) {
                 lastTxnDate = lastTxnRaw;
               } else if (typeof lastTxnRaw === 'number' && lastTxnRaw > 0) {
-                // Excel-дата пришла числом — переводим через сам XLSX
                 const parsed = XLSX.SSF.parse_date_code(lastTxnRaw);
                 if (parsed) lastTxnDate = new Date(parsed.y, parsed.m - 1, parsed.d);
               } else if (typeof lastTxnRaw === 'string' && lastTxnRaw.trim()) {
@@ -5144,37 +5102,85 @@ function parseBankBalanceFile(file) {
                 activeClientsBalance += balance;
               }
             }
-
           }
         }
 
-        resolve({
-          period: period,
-          reportDate: reportDate,
-          totals: {
-            assets: sections.assets.total,
-            liabilities: sections.liabilities.total,
-            equity: sections.equity.total,
-            income: sections.income.total,
-            expenses: sections.expenses.total,
-            profit: profit,
-            legalPortfolio: legalPortfolio,
-            individualPortfolio: individualPortfolio,
-            totalPortfolio: legalPortfolio + individualPortfolio,
-            netProfit: netProfit,
-            reserve56800: reserve56800
-          },
-          currencyTotals: currencyTotals,
-          activeClients: { count: activeClientsCount, balance: activeClientsBalance },
-          clientsWarnings: clientsWarnings,
-          details: {
-            assets: sections.assets.items,
-            liabilities: sections.liabilities.items,
-            equity: sections.equity.items,
-            income: sections.income.items,
-            expenses: sections.expenses.items
+        self.postMessage({
+          result: {
+            period: period,
+            reportDate: reportDate,
+            totals: {
+              assets: sections.assets.total,
+              liabilities: sections.liabilities.total,
+              equity: sections.equity.total,
+              income: sections.income.total,
+              expenses: sections.expenses.total,
+              profit: profit,
+              legalPortfolio: legalPortfolio,
+              individualPortfolio: individualPortfolio,
+              totalPortfolio: legalPortfolio + individualPortfolio,
+              netProfit: netProfit,
+              reserve56800: reserve56800
+            },
+            currencyTotals: currencyTotals,
+            activeClients: { count: activeClientsCount, balance: activeClientsBalance },
+            clientsWarnings: clientsWarnings,
+            details: {
+              assets: sections.assets.items,
+              liabilities: sections.liabilities.items,
+              equity: sections.equity.items,
+              income: sections.income.items,
+              expenses: sections.expenses.items
+            }
           }
         });
+      } catch (err) {
+        self.postMessage({ error: err.message || 'Ошибка обработки файла' });
+      }
+    };
+  `;
+
+  const blob = new Blob([workerCode], { type: 'application/javascript' });
+  bankBalanceParserWorker = new Worker(URL.createObjectURL(blob));
+  return bankBalanceParserWorker;
+}
+
+function parseBankBalanceFile(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      try {
+        const worker = getBankBalanceParserWorker();
+        if (onProgress) onProgress('Обрабатываю файл в фоновом потоке (интерфейс не зависнет)...');
+
+        const timeoutId = setTimeout(() => {
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+          reject(new Error('Обработка файла заняла слишком много времени. Проверьте интернет-соединение и попробуйте ещё раз.'));
+        }, 45000);
+
+        const handleMessage = (msg) => {
+          clearTimeout(timeoutId);
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+          if (msg.data.error) {
+            reject(new Error(msg.data.error));
+          } else {
+            resolve(msg.data.result);
+          }
+        };
+        const handleError = (err) => {
+          clearTimeout(timeoutId);
+          worker.removeEventListener('message', handleMessage);
+          worker.removeEventListener('error', handleError);
+          bankBalanceParserWorker = null; // воркер сломан — создадим заново при следующей попытке
+          reject(new Error('Не удалось обработать файл в фоновом потоке: ' + (err.message || 'неизвестная ошибка')));
+        };
+
+        worker.addEventListener('message', handleMessage);
+        worker.addEventListener('error', handleError);
+        worker.postMessage(e.target.result, [e.target.result]);
       } catch (err) {
         reject(err);
       }
@@ -5188,21 +5194,21 @@ function parseBankBalanceFile(file) {
 async function uploadBankBalanceFile() {
   const input = document.getElementById('bankBalanceFile');
   const statusBox = document.getElementById('bankBalanceUploadStatus');
+  const uploadBtn = document.querySelector('#bankBalanceUploadPanel button');
 
   if (!input.files || !input.files.length) {
     statusBox.innerText = 'Выберите файл';
     return;
   }
 
-  if (typeof XLSX === 'undefined') {
-    statusBox.innerText = 'Библиотека Excel ещё не загрузилась, подождите пару секунд и попробуйте снова';
-    return;
-  }
-
-  statusBox.innerText = 'Обработка файла...';
+  // Защита от повторного клика, пока идёт обработка — файл большой, без
+  // этого нетерпеливый повторный клик мог запустить вторую обработку
+  // параллельно с первой и всё запутать.
+  if (uploadBtn) uploadBtn.disabled = true;
+  statusBox.innerText = 'Читаю файл...';
 
   try {
-    const parsed = await parseBankBalanceFile(input.files[0]);
+    const parsed = await parseBankBalanceFile(input.files[0], (msg) => { statusBox.innerText = msg; });
 
     statusBox.innerText = 'Загрузка на сервер...';
 
@@ -5233,6 +5239,8 @@ async function uploadBankBalanceFile() {
   } catch (error) {
     statusBox.innerText = 'Ошибка чтения файла: ' + error.message;
     console.error(error);
+  } finally {
+    if (uploadBtn) uploadBtn.disabled = false;
   }
 }
 
