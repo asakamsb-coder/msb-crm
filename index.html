@@ -1685,6 +1685,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div class="bi-card bi-accent-green"><div class="bi-card-label">Общий портфель</div><div class="bi-card-value" id="statsPortfolioTotal">Нет данных</div></div>
     </section>
 
+    <section class="bi-kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-top:16px;">
+      <div class="bi-card bi-accent-brand">
+        <div class="bi-card-label">Активные клиенты (проводка за 9 мес.)</div>
+        <div class="bi-card-value" id="statsActiveClientsCount">Нет данных</div>
+        <div class="bi-card-sub">Остаток: <b id="statsActiveClientsBalance">—</b></div>
+      </div>
+    </section>
+
     <div id="bankBalanceDetailBox" style="margin-top:24px;"></div>
   </div>
 </section>
@@ -5026,19 +5034,95 @@ function parseBankBalanceFile(file) {
         const reserveItem = sections.expenses.items.find(i => i.code === '56800');
         const reserve56800 = reserveItem ? reserveItem.amount : 0;
 
-        // Лист "выдача" (если есть) — план/факт по выдачам МСБ. Формат:
-        // колонка A "счета" (код), колонка B "Факт" (сумма). Те же коды,
-        // что и юридический портфель.
-        let disbursementFact = 0;
+        // Лист "выдача" — теперь это детальный отчёт "КРЕДИТЫ ВЫДАННЫЕ
+        // БАНКОМ за ПЕРИОД", одна строка = один договор. Нужные колонки:
+        // "ID договора" (по нему находим строку заголовков), "КодВал"
+        // (код валюты, 000 = сум, иначе — нужен пересчёт по курсу ЦБ,
+        // который сделает бэкенд) и "ФактичВыданСумма(ном)".
+        // Складываем суммы ПО КАЖДОЙ ВАЛЮТЕ ОТДЕЛЬНО (не переводим сами —
+        // курс живой, его знает только сервер в момент загрузки).
+        const currencyTotals = {};
         const disbursementSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'выдача');
         if (disbursementSheetName) {
           const dSheet = workbook.Sheets[disbursementSheetName];
           const dRows = XLSX.utils.sheet_to_json(dSheet, { header: 1, defval: '' });
-          dRows.forEach(row => {
-            const code = String(row[0] || '').trim();
-            const val = Number(row[1]) || 0;
-            if (LEGAL_PORTFOLIO_CODES.includes(code)) disbursementFact += val;
-          });
+
+          let headerRowIdx = -1;
+          for (let i = 0; i < Math.min(dRows.length, 15); i++) {
+            if (String(dRows[i][4]).trim() === 'ID договора') { headerRowIdx = i; break; }
+          }
+
+          if (headerRowIdx !== -1) {
+            for (let i = headerRowIdx + 1; i < dRows.length; i++) {
+              const row = dRows[i];
+              const contractId = row[4]; // col 5: ID договора
+              if (!contractId || isNaN(Number(contractId))) continue; // пропускаем "Итого по валюте..." и пустые строки
+
+              const codVal = String(row[7] || '').trim(); // col 8: КодВал
+              const amount = Number(row[11]) || 0; // col 12: ФактичВыданСумма(ном)
+              if (!codVal || !amount) continue;
+
+              currencyTotals[codVal] = (currencyTotals[codVal] || 0) + amount;
+            }
+          }
+        }
+
+        // Лист "Клиенты и счета" — отчёт "СВЕДЕНИЯ ИЗ КАРТОЧКИ КЛИЕНТОВ".
+        // Активный клиент — была проводка за последние 9 месяцев от ДАТЫ
+        // ОТЧЁТА (не от сегодняшнего дня — так каждый месяц пересчитывается
+        // корректно относительно даты самой выгрузки). Без даты последней
+        // проводки — считаем неактивным (проводки не было вообще никогда).
+        let activeClientsCount = 0;
+        let activeClientsBalance = 0;
+        const clientsSheetName = workbook.SheetNames.find(n => n.trim().toLowerCase() === 'клиенты и счета');
+        if (clientsSheetName) {
+          const cSheet = workbook.Sheets[clientsSheetName];
+          const cRows = XLSX.utils.sheet_to_json(cSheet, { header: 1, defval: '', raw: true });
+
+          // Дата отчёта этого листа — своя, из заголовка "на DD.MM.YYYY"
+          let clientsReportDate = null;
+          for (let i = 0; i < Math.min(cRows.length, 6); i++) {
+            const cell = String(cRows[i][5] || cRows[i][0] || '');
+            const m = cell.match(/на\s+(\d{2})\.(\d{2})\.(\d{4})/);
+            if (m) { clientsReportDate = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])); break; }
+          }
+          if (!clientsReportDate) clientsReportDate = new Date(); // подстраховка
+
+          const cutoff = new Date(clientsReportDate);
+          cutoff.setMonth(cutoff.getMonth() - 9);
+
+          let headerRowIdx = -1;
+          for (let i = 0; i < Math.min(cRows.length, 10); i++) {
+            if (String(cRows[i][25]).trim() === 'Дата последней проводки') { headerRowIdx = i; break; }
+          }
+
+          if (headerRowIdx !== -1) {
+            for (let i = headerRowIdx + 1; i < cRows.length; i++) {
+              const row = cRows[i];
+              const clientCode = row[1]; // col 2: Код клиента
+              if (!clientCode) continue;
+
+              const balance = Number(row[24]) || 0; // col 25: Остаток
+              const lastTxnRaw = row[25]; // col 26: Дата последней проводки
+
+              let lastTxnDate = null;
+              if (lastTxnRaw instanceof Date) {
+                lastTxnDate = lastTxnRaw;
+              } else if (typeof lastTxnRaw === 'number' && lastTxnRaw > 0) {
+                // Excel-дата пришла числом — переводим через сам XLSX
+                const parsed = XLSX.SSF.parse_date_code(lastTxnRaw);
+                if (parsed) lastTxnDate = new Date(parsed.y, parsed.m - 1, parsed.d);
+              } else if (typeof lastTxnRaw === 'string' && lastTxnRaw.trim()) {
+                const parsed = new Date(lastTxnRaw);
+                if (!isNaN(parsed.getTime())) lastTxnDate = parsed;
+              }
+
+              if (lastTxnDate && lastTxnDate >= cutoff) {
+                activeClientsCount++;
+                activeClientsBalance += balance;
+              }
+            }
+          }
         }
 
         resolve({
@@ -5055,9 +5139,10 @@ function parseBankBalanceFile(file) {
             individualPortfolio: individualPortfolio,
             totalPortfolio: legalPortfolio + individualPortfolio,
             netProfit: netProfit,
-            reserve56800: reserve56800,
-            disbursementFact: disbursementFact
+            reserve56800: reserve56800
           },
+          currencyTotals: currencyTotals,
+          activeClients: { count: activeClientsCount, balance: activeClientsBalance },
           details: {
             assets: sections.assets.items,
             liabilities: sections.liabilities.items,
@@ -5103,8 +5188,12 @@ async function uploadBankBalanceFile() {
       period: parsed.period,
       reportDate: parsed.reportDate,
       totals: parsed.totals,
-      details: parsed.details
+      details: parsed.details,
+      currencyTotals: parsed.currencyTotals,
+      activeClients: parsed.activeClients
     });
+
+    statusBox.style.whiteSpace = 'pre-line';
 
     if (result.success) {
       statusBox.innerText = result.message + ' (' + formatPeriodLabel(parsed.period) + ')';
@@ -5203,6 +5292,9 @@ function updateTopBalanceCards(current, prev) {
   document.getElementById('statsPortfolioLegal').innerText = formatMoney(t.legalPortfolio);
   document.getElementById('statsPortfolioIndividuals').innerText = formatMoney(t.individualPortfolio);
   document.getElementById('statsPortfolioTotal').innerText = formatMoney(t.totalPortfolio);
+
+  document.getElementById('statsActiveClientsCount').innerText = t.activeClientsCount || 0;
+  document.getElementById('statsActiveClientsBalance').innerText = formatMoney(t.activeClientsBalance);
 }
 
 function renderBankBalanceTrend() {
