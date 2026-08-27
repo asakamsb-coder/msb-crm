@@ -828,11 +828,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .kpi-accent-green{border-left:4px solid var(--green);}
 .kpi-accent-red{border-left:4px solid var(--red);}
 
-/* ===== BI-стиль карточек (Dashboard МСБ Продажи) ===== */
+/* ===== BI-стиль карточек (Dashboard МСБ Продажи) — классический корпоративный ===== */
 .bi-kpi-grid{
   display:grid;
   grid-template-columns:repeat(5,1fr);
-  gap:16px;
+  gap:14px;
   margin-bottom:22px;
 }
 @media(max-width:960px){
@@ -844,42 +844,25 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .bi-card{
   background:#fff;
   border:1px solid var(--line);
-  border-radius:16px;
-  padding:22px 20px;
-  box-shadow:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  border-radius:12px;
+  padding:18px;
   position:relative;
-  overflow:hidden;
-  transition:box-shadow .15s ease, transform .15s ease;
 }
-.bi-card.dashboard-kpi-clickable{cursor:pointer;}
-.bi-card.dashboard-kpi-clickable:hover{box-shadow:0 4px 14px rgba(16,24,40,.10);transform:translateY(-1px);}
-.bi-card::before{
-  content:'';
-  position:absolute;
-  top:0;left:0;right:0;
-  height:3px;
-  background:var(--line);
-}
-.bi-card.bi-accent-brand::before{background:var(--brand);}
-.bi-card.bi-accent-orange::before{background:var(--orange);}
-.bi-card.bi-accent-green::before{background:var(--green);}
-.bi-card.bi-accent-red::before{background:var(--red);}
-.bi-card.bi-accent-blue::before{background:var(--blue);}
+.bi-card.dashboard-kpi-clickable{cursor:pointer;transition:border-color .15s ease;}
+.bi-card.dashboard-kpi-clickable:hover{border-color:var(--brand);}
 
 .bi-card-label{
   color:var(--muted);
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:.05em;
-  text-transform:uppercase;
-  margin-bottom:12px;
+  font-size:12px;
+  font-weight:700;
+  margin-bottom:10px;
 }
 .bi-card-value{
-  font-size:32px;
-  font-weight:900;
-  letter-spacing:-.02em;
+  font-size:26px;
+  font-weight:800;
+  letter-spacing:-.01em;
   line-height:1;
-  margin-bottom:8px;
+  margin-bottom:10px;
 }
 .bi-card-unit{
   font-size:13px;
@@ -891,29 +874,31 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   color:var(--muted);
   font-size:12.5px;
   font-weight:600;
+  margin-top:8px;
 }
 .bi-card-sub b{color:var(--text);font-weight:800;}
+
+/* Биржевой индикатор тренда — цветная "пилюля" со стрелкой-треугольником */
 .bi-card-trend{
-  margin-top:8px;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
   font-size:12px;
   font-weight:800;
+  padding:3px 9px 3px 8px;
+  border-radius:6px;
 }
-.bi-card-trend.trend-up{color:var(--green);}
-.bi-card-trend.trend-down{color:var(--red);}
-.bi-card-trend.trend-flat{color:var(--muted);}
-
-.bi-card-progress-bar{
-  height:8px;
-  background:#EEF0F3;
-  border-radius:999px;
-  overflow:hidden;
-  margin-top:14px;
+.bi-card-trend::before{
+  content:'';
+  width:0;height:0;
+  flex-shrink:0;
 }
-.bi-card-progress-fill{
-  display:block;
-  height:100%;
-  border-radius:999px;
-}
+.bi-card-trend.trend-up{background:var(--green-soft);color:var(--green);}
+.bi-card-trend.trend-up::before{border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:6px solid var(--green);}
+.bi-card-trend.trend-down{background:var(--red-soft);color:var(--red);}
+.bi-card-trend.trend-down::before{border-left:4px solid transparent;border-right:4px solid transparent;border-top:6px solid var(--red);}
+.bi-card-trend.trend-flat{background:#F1F2F4;color:var(--muted);}
+.bi-card-trend.trend-flat::before{width:6px;height:2px;background:var(--muted);}
 
 /* Тёмная акцентная карточка — для самой важной метрики блока */
 .bi-card-dark{
@@ -921,21 +906,48 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   color:#fff;
   border:none;
 }
-.bi-card-dark::before{display:none;}
 .bi-card-dark .bi-card-label{color:rgba(255,255,255,.55);}
 .bi-card-dark .bi-card-value{color:#fff;}
 .bi-card-dark .bi-card-unit{color:rgba(255,255,255,.55);}
 .bi-card-dark .bi-card-sub{color:rgba(255,255,255,.65);}
 .bi-card-dark .bi-card-sub b{color:#fff;}
-.bi-card-dark .bi-card-progress-bar{background:rgba(255,255,255,.14);}
 
+/* Круговой индикатор (гейдж) — для план/факт */
 .bi-plan-fact-grid{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:16px;
+  gap:14px;
 }
 @media(max-width:640px){
   .bi-plan-fact-grid{grid-template-columns:1fr;}
+}
+.bi-gauge-card{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:20px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+}
+.bi-gauge-ring{
+  position:relative;
+  width:84px;
+  height:84px;
+  flex-shrink:0;
+  border-radius:50%;
+}
+.bi-gauge-ring-inner{
+  position:absolute;
+  top:9px;left:9px;
+  width:66px;height:66px;
+  border-radius:50%;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  font-weight:800;
 }
 
 .client-selection-banner{
@@ -3408,7 +3420,7 @@ function renderTrendBadge(elementId, current, previous, invert) {
   }
 
   if (!previous) {
-    el.innerHTML = current > 0 ? 'новое по сравнению с пред. периодом' : 'без изменений';
+    el.innerHTML = current > 0 ? 'новое' : 'без изменений';
     el.className = 'bi-card-trend trend-flat';
     return;
   }
@@ -3418,11 +3430,10 @@ function renderTrendBadge(elementId, current, previous, invert) {
   const isFlat = diffPct === 0;
   const goodDirection = invert ? !isUp : isUp;
 
-  const arrow = isFlat ? '→' : (isUp ? '↑' : '↓');
   const cls = isFlat ? 'trend-flat' : (goodDirection ? 'trend-up' : 'trend-down');
 
   el.className = 'bi-card-trend ' + cls;
-  el.innerHTML = `${arrow} ${Math.abs(diffPct)}% к пред. периоду`;
+  el.innerHTML = Math.abs(diffPct) + '%';
 }
 
 function renderTrendBadges(stats) {
@@ -3487,23 +3498,25 @@ async function renderPlanFactBox() {
   const latest = allBankBalances[allBankBalances.length - 1];
   const fact = Number(latest.totals.disbursementFact) || 0;
 
-  const card = (label, plan, factVal, dark) => {
+  const gauge = (label, plan, factVal, color) => {
     const pct = plan ? Math.min(100, Math.round(factVal / plan * 100)) : 0;
-    const remaining = Math.max(0, 100 - pct);
-    const fillColor = dark ? '#fff' : (pct >= 100 ? 'var(--green)' : pct >= 70 ? 'var(--brand)' : 'var(--orange)');
     return `
-      <div class="bi-card${dark ? ' bi-card-dark' : ' bi-accent-brand'}">
-        <div class="bi-card-label">${label}</div>
-        <div class="bi-card-value">${formatMoney(factVal)}</div>
-        <div class="bi-card-sub">из плана <b>${formatMoney(plan)}</b> · выполнено ${pct}%${remaining ? `, осталось ${remaining}%` : ''}</div>
-        <div class="bi-card-progress-bar"><span class="bi-card-progress-fill" style="width:${pct}%;background:${fillColor};"></span></div>
+      <div class="bi-gauge-card">
+        <div class="bi-gauge-ring" style="background:conic-gradient(${color} 0% ${pct}%, var(--line) ${pct}% 100%);">
+          <div class="bi-gauge-ring-inner">${pct}%</div>
+        </div>
+        <div>
+          <div class="bi-card-label" style="margin-bottom:4px;">${label}</div>
+          <div class="bi-card-value" style="margin-bottom:2px;">${formatMoney(factVal)}</div>
+          <div class="bi-card-sub" style="margin-top:0;">из <b>${formatMoney(plan)}</b></div>
+        </div>
       </div>`;
   };
 
   box.innerHTML = `
     <div class="bi-plan-fact-grid">
-      ${card('План 2026 год', MSB_PLAN_YEAR_2026, fact, true)}
-      ${card('План III квартал 2026', MSB_PLAN_Q3_2026, fact, false)}
+      ${gauge('План 2026 год', MSB_PLAN_YEAR_2026, fact, 'var(--brand)')}
+      ${gauge('План III квартал 2026', MSB_PLAN_Q3_2026, fact, 'var(--orange)')}
     </div>`;
 }
 
