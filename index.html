@@ -1557,6 +1557,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="drawer-body" id="ovDetailBody"></div>
 </aside>
 
+<div class="drawer-overlay" id="mahallaDetailOverlay" onclick="closeMahallaDetail()"></div>
+<aside class="client-drawer" id="mahallaDetailDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="mhDetailName">Махалля</div>
+      <div class="drawer-subtitle" id="mhDetailMeta">-</div>
+    </div>
+    <button class="close-btn" onclick="closeMahallaDetail()">×</button>
+  </div>
+  <div class="drawer-body" id="mhDetailBody"></div>
+</aside>
+
 
 <section id="slaPage" class="page">
   <div class="header">
@@ -2024,6 +2036,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <button class="btn" onclick="uploadMahallaPassport()">Загрузить паспорт</button>
       </div>
       <div id="mahallaPassportUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <h2 style="margin-bottom:0;">Общая картина по всем махаллям</h2>
+        <button class="btn btn-secondary" onclick="downloadMahallaInfographic()"><i class="ti ti-download"></i> Скачать как изображение</button>
+      </div>
+      <div id="mahallaInfographicBox" class="loading">Загрузка...</div>
     </div>
 
     <div class="panel">
@@ -2690,6 +2710,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 </aside>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
@@ -6983,41 +7004,89 @@ function parseMahallaPassportFile(file) {
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        // Новый формат (с сентября 2026) — три отдельных листа вместо
+        // одного. Каждый лист содержит свой набор колонок для одних и тех
+        // же махаллей, но порядок строк может отличаться — поэтому
+        // объединяем данные по НАЗВАНИЮ махалли (колонка C на всех трёх
+        // листах), а не по номеру строки.
+        const findSheet = (needle) => workbook.SheetNames.find(n => n.trim().toLowerCase() === needle);
+
+        const statsSheetName = findSheet('статистика');
+        const planSheetName = findSheet('режа');
+        const sevenSheetName = findSheet('7 лик');
+
+        if (!statsSheetName) {
+          reject(new Error('В файле не найден лист «Статистика» — проверьте, что это правильный файл паспорта махаллей'));
+          return;
+        }
+
+        // Собираем строки листа в карту по названию махалли (без учёта
+        // регистра и лишних пробелов), пропуская строки без названия —
+        // это итоговые/районные подытоги, не сами махалли.
+        const sheetToMap = (sheetName) => {
+          const map = {};
+          if (!sheetName) return map;
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+          rows.forEach(row => {
+            const name = String(row[2] || '').trim();
+            if (!name) return;
+            map[name.toLowerCase()] = row;
+          });
+          return map;
+        };
+
+        const statsRows = sheetToMap(statsSheetName);
+        const planRows = sheetToMap(planSheetName);
+        const sevenRows = sheetToMap(sevenSheetName);
 
         const result = [];
-        for (let i = 6; i < rows.length; i++) { // строка 7 = индекс 6
-          const row = rows[i];
-          const name = String(row[2] || '').trim();
-          if (!name) continue; // итоговая/районная строка без названия махалли
+        Object.keys(statsRows).forEach(key => {
+          const s = statsRows[key]; // Статистика
+          const p = planRows[key] || []; // Режа (план/факт по проектам и кредитам)
+          const sv = sevenRows[key] || []; // 7 лик (состав "семёрки")
 
           result.push({
-            district: String(row[1] || '').trim(),
-            name: name,
-            passportBanker: String(row[3] || '').trim(),
-            driver: String(row[4] || '').trim(),
-            streets: row[5] || '',
-            population: row[6] || '',
-            households: row[7] || '',
-            lowIncomeFamilies: row[8] || '',
-            unemployed: row[9] || '',
-            microprojectsPlan: row[10] || '',
-            microprojectsFact: row[11] || '',
-            urgentMicroprojectsPlan: row[13] || '',
-            urgentMicroprojectsFact: row[14] || '',
-            permanentJobsPlan: row[16] || '',
-            permanentJobsFact: row[17] || '',
-            incomeJobsPlan: row[19] || '',
-            incomeJobsFact: row[20] || '',
-            creditFirstStepPlan: row[22] || '',
-            creditFirstStepFact: row[23] || '',
-            creditPQ312Plan: row[25] || '',
-            creditPQ312Fact: row[26] || '',
-            creditMahallaProjectPlan: row[28] || '',
-            creditMahallaProjectFact: row[29] || ''
+            district: String(s[1] || '').trim(),
+            name: String(s[2] || '').trim(),
+            passportBanker: String(s[3] || '').trim(),
+            driver: String(s[4] || '').trim(),
+            totalLandArea: s[5] || '',
+            streets: s[6] || '',
+            population: s[7] || '',
+            households: s[8] || '',
+            families: s[9] || '',
+            lowIncomeFamilies: s[10] || '',
+            migrants: s[11] || '',
+            disabled: s[12] || '',
+            unemployed: s[13] || '',
+            householdsWithLand: s[15] || '',
+            householdLandArea: s[16] || '',
+            entrepreneursTotal: s[17] || '',
+            entrepreneursLLC: s[18] || '',
+            entrepreneursIE: s[19] || '',
+
+            // Лист "Режа" — новый формат даёт ОДНО текущее число на
+            // показатель (без отдельного "плана"), поэтому шлём только
+            // "факт" — бэкенд сам не станет трогать ранее введённый план.
+            microprojectsFact: p[4] || '',
+            urgentMicroprojectsFact: p[5] || '',
+            permanentJobsFact: p[6] || '',
+            incomeJobsFact: p[7] || '',
+            creditFirstStepFact: p[8] || '',
+            creditPQ312Fact: p[9] || '',
+            creditMahallaProjectFact: p[10] || '',
+
+            // Лист "7 лик" — состав ключевой семёрки
+            chairman: String(sv[3] || '').trim(),
+            hokimAssistant: String(sv[4] || '').trim(),
+            socialWorker: String(sv[5] || '').trim(),
+            youthLeader: String(sv[6] || '').trim(),
+            womenActivist: String(sv[7] || '').trim(),
+            taxInspector: String(sv[8] || '').trim(),
+            preventionInspector: String(sv[9] || '').trim()
           });
-        }
+        });
 
         resolve(result);
       } catch (err) {
@@ -7104,6 +7173,8 @@ function fillMahallaFilterSelect() {
 }
 
 function renderMahallasList() {
+  renderMahallaInfographic();
+
   const box = document.getElementById('mahallasBox');
   if (!box) return;
 
@@ -7115,53 +7186,212 @@ function renderMahallasList() {
     return;
   }
 
-  const planFactRow = (label, plan, fact, unit) => {
-    if (!plan && !fact) return '';
-    const pct = plan ? Math.round((Number(fact) || 0) / Number(plan) * 100) : null;
-    return `${label}: ${safe(fact)}${unit || ''} из ${safe(plan)}${unit || ''}${pct !== null ? ' (' + pct + '%)' : ''}`;
+  // Компактная карточка — только самое главное для беглого просмотра.
+  // Весь остальной паспорт (потенциальные клиенты, план, Семёрка) —
+  // по клику, в отдельной панели (см. openMahallaDetail).
+  box.innerHTML = visible.map(m => `
+    <div class="mahalla-row" style="cursor:pointer;" onclick="openMahallaDetail('${encodeURIComponent(m.id)}')">
+      <div class="mahalla-row-top">
+        <div>
+          <div class="mahalla-row-name">${safe(m.name)}</div>
+          <div class="mahalla-row-meta">
+            ${m.district ? safe(m.district) + ' • ' : ''}${m.population ? 'Население: ' + safe(m.population) + ' • ' : ''}${m.entrepreneursTotal ? 'Предпринимателей: ' + safe(m.entrepreneursTotal) + ' • ' : ''}Банкир: ${m.bankers ? safe(m.bankers) : 'не назначен'}
+          </div>
+        </div>
+        ${isAdmin ? `<button class="btn btn-secondary" onclick="event.stopPropagation();openBankerForm('${encodeURIComponent(m.id)}','${encodeURIComponent(m.name)}','${encodeURIComponent(m.bankers || '')}')">Назначить банкира</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+// Сводная инфографика по всем видимым махаллям сразу — общая картина
+// для банкира: сколько людей/семей/земли всего, безработица,
+// предприниматели (потенциальные клиенты), и сравнение по населению.
+function renderMahallaInfographic() {
+  const box = document.getElementById('mahallaInfographicBox');
+  if (!box) return;
+
+  const visible = getVisibleMahallas();
+  if (!visible.length) {
+    box.innerHTML = '<div class="loading">Нет данных — загрузите паспорт махаллей.</div>';
+    return;
+  }
+
+  const sum = (field) => visible.reduce((s, m) => s + (Number(m[field]) || 0), 0);
+  const population = sum('population');
+  const families = sum('families');
+  const landArea = sum('totalLandArea');
+  const migrants = sum('migrants');
+  const disabled = sum('disabled');
+  const unemployed = sum('unemployed');
+  const entrepreneursTotal = sum('entrepreneursTotal');
+  const entrepreneursLLC = sum('entrepreneursLLC');
+  const entrepreneursIE = sum('entrepreneursIE');
+
+  const unemploymentPct = population ? Math.round(unemployed / population * 1000) / 10 : 0;
+  const llcPct = entrepreneursTotal ? Math.round(entrepreneursLLC / entrepreneursTotal * 100) : 0;
+
+  const statCard = (icon, value, label) => `
+    <div style="background:var(--surface-1, #F5F5F0);border-radius:10px;padding:16px;text-align:center;">
+      <i class="ti ${icon}" style="font-size:20px;color:var(--muted);"></i>
+      <div style="font-size:20px;font-weight:800;margin:6px 0 2px;">${formatNumber(value)}</div>
+      <div style="font-size:12px;color:var(--muted);">${label}</div>
+    </div>`;
+
+  const sortedByPopulation = visible.slice().sort((a, b) => (Number(b.population) || 0) - (Number(a.population) || 0)).slice(0, 8);
+  const maxPop = Math.max(1, ...sortedByPopulation.map(m => Number(m.population) || 0));
+
+  const barRow = (m) => {
+    const pop = Number(m.population) || 0;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <div style="width:130px;font-size:12.5px;flex-shrink:0;" title="${safe(m.name)}">${safe(m.name).length > 20 ? safe(m.name).slice(0, 20) + '…' : safe(m.name)}</div>
+        <div style="flex:1;height:8px;background:#EEF0F3;border-radius:999px;overflow:hidden;">
+          <span style="display:block;height:100%;width:${Math.max(2, Math.round(pop / maxPop * 100))}%;background:var(--brand);border-radius:999px;"></span>
+        </div>
+        <div style="width:60px;text-align:right;font-weight:700;font-size:12.5px;flex-shrink:0;">${formatNumber(pop)}</div>
+      </div>`;
   };
 
-  box.innerHTML = visible.map(m => {
-    const projectsCount = allMicroprojects.filter(p => p.mahalla === m.name).length;
+  box.innerHTML = `
+    <div id="mahallaInfographicContent">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:13px;color:var(--muted);">Всего населения по ${visible.length} махалл${visible.length === 1 ? 'е' : visible.length < 5 ? 'ям' : 'ям'}</div>
+        <div style="font-size:40px;font-weight:900;">${formatNumber(population)}</div>
+      </div>
 
-    const passportParts = [];
-    if (m.district) passportParts.push('Район: ' + safe(m.district));
-    if (m.population) passportParts.push('Население: ' + safe(m.population));
-    if (m.households) passportParts.push('Дворов: ' + safe(m.households));
-    if (m.streets) passportParts.push('Улиц: ' + safe(m.streets));
-    if (m.unemployed) passportParts.push('Безработных: ' + safe(m.unemployed));
-    if (m.lowIncomeFamilies) passportParts.push('Малообеспеченных семей: ' + safe(m.lowIncomeFamilies));
-    if (m.activeEntrepreneurs) passportParts.push('Действующих ИП/СХ: ' + safe(m.activeEntrepreneurs));
-    if (m.driver) passportParts.push('Драйвер: ' + safe(m.driver));
-    if (m.passportBanker) passportParts.push('Банкир (паспорт): ' + safe(m.passportBanker));
-    const passportText = passportParts.length ? passportParts.join(' • ') : 'Паспорт ещё не загружен';
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
+        ${statCard('ti-home', families, 'семей')}
+        ${statCard('ti-map-2', landArea, 'га земли')}
+        ${statCard('ti-users-group', migrants, 'мигрантов')}
+        ${statCard('ti-wheelchair', disabled, 'инвалидов')}
+      </div>
 
-    const programLines = [
-      planFactRow('Микропроекты', m.microprojectsPlan, m.microprojectsFact),
-      planFactRow('Срочные микропроекты (40 дн)', m.urgentMicroprojectsPlan, m.urgentMicroprojectsFact),
-      planFactRow('Пост. рабочие места', m.permanentJobsPlan, m.permanentJobsFact),
-      planFactRow('Раб. места (рост дохода)', m.incomeJobsPlan, m.incomeJobsFact),
-      planFactRow('Кредиты "Первый шаг в бизнес"', m.creditFirstStepPlan, m.creditFirstStepFact, ' млн'),
-      planFactRow('Кредиты ПҚ-312', m.creditPQ312Plan, m.creditPQ312Fact, ' млн'),
-      planFactRow('Кредиты "Проект махалли"', m.creditMahallaProjectPlan, m.creditMahallaProjectFact, ' млн')
-    ].filter(Boolean);
-
-    return `
-      <div class="mahalla-row">
-        <div class="mahalla-row-top">
-          <div>
-            <div class="mahalla-row-name">${safe(m.name)}</div>
-            <div class="mahalla-row-meta">
-              Банкир(ы) в CRM: ${m.bankers ? safe(m.bankers) : 'не назначен'}<br>
-              ${passportText}<br>
-              Микропроектов в CRM: ${projectsCount}
-              ${programLines.length ? '<br>' + programLines.join(' • ') : ''}
-            </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;">
+          <div style="position:relative;width:72px;height:72px;flex-shrink:0;">
+            <div style="width:72px;height:72px;border-radius:50%;background:conic-gradient(var(--red) 0% ${Math.min(100, unemploymentPct)}%, #EEF0F3 ${Math.min(100, unemploymentPct)}% 100%);"></div>
+            <div style="position:absolute;top:8px;left:8px;width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">${unemploymentPct}%</div>
           </div>
-          ${isAdmin ? `<button class="btn btn-secondary" onclick="openBankerForm('${encodeURIComponent(m.id)}','${encodeURIComponent(m.name)}','${encodeURIComponent(m.bankers || '')}')">Назначить банкира</button>` : ''}
+          <div>
+            <div style="font-size:12px;color:var(--muted);">Безработица</div>
+            <div style="font-size:17px;font-weight:800;">${formatNumber(unemployed)}</div>
+          </div>
         </div>
-      </div>`;
-  }).join('');
+        <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;">
+          <div style="position:relative;width:72px;height:72px;flex-shrink:0;">
+            <div style="width:72px;height:72px;border-radius:50%;background:conic-gradient(var(--orange) 0% ${llcPct}%, var(--green) ${llcPct}% 100%);"></div>
+            <div style="position:absolute;top:8px;left:8px;width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">${formatNumber(entrepreneursTotal)}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--muted);">Предпринимателей (потенц. клиенты)</div>
+            <div style="font-size:11.5px;"><span style="color:var(--orange);">●</span> МЧЖ/ОК ${formatNumber(entrepreneursLLC)}</div>
+            <div style="font-size:11.5px;"><span style="color:var(--green);">●</span> ИП ${formatNumber(entrepreneursIE)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Население по махаллям (крупнейшие)</div>
+      ${sortedByPopulation.map(barRow).join('')}
+    </div>`;
+}
+
+function formatNumber(n) {
+  return Math.round(Number(n) || 0).toLocaleString('ru-RU');
+}
+
+function downloadMahallaInfographic() {
+  const el = document.getElementById('mahallaInfographicContent');
+  if (!el || typeof html2canvas === 'undefined') {
+    alert('Библиотека для скачивания ещё не загрузилась — подождите пару секунд и попробуйте снова');
+    return;
+  }
+  html2canvas(el, { backgroundColor: '#ffffff', scale: 2 }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'mahalla-infographic-' + new Date().toISOString().slice(0, 10) + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+// Панель деталей одной махалли — всё, что не поместилось в компактную
+// карточку списка: потенциальные клиенты, выполнение плана, Семёрка.
+function openMahallaDetail(idEncoded) {
+  const id = decodeURIComponent(idEncoded);
+  const m = allMahallas.find(x => x.id === id);
+  if (!m) return;
+
+  document.getElementById('mhDetailName').innerText = m.name;
+  document.getElementById('mhDetailMeta').innerText = (m.district ? m.district + ' • ' : '') + 'Банкир: ' + (m.bankers || 'не назначен');
+
+  const kpi = (value, label) => `
+    <div style="background:var(--surface-1, #F5F5F0);border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-size:18px;font-weight:800;">${value !== '' && value !== null && value !== undefined ? formatNumber(value) : '—'}</div>
+      <div style="font-size:11.5px;color:var(--muted);">${label}</div>
+    </div>`;
+
+  const planFactRow = (label, plan, fact, unit) => {
+    if (!plan && !fact) return '';
+    const factText = safe(fact) + (unit || '');
+    return `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>${label}</span><span style="font-weight:700;">${factText}${plan ? ' из ' + safe(plan) + (unit || '') : ''}</span></div>`;
+  };
+
+  const contactRow = (icon, label, name) => !name ? '' : `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);">
+      <i class="ti ${icon}" style="font-size:16px;color:var(--muted);width:18px;"></i>
+      <span style="font-size:12.5px;color:var(--muted);width:140px;flex-shrink:0;">${label}</span>
+      <span style="font-size:13px;">${safe(name)}</span>
+    </div>`;
+
+  const contactsHtml = [
+    contactRow('ti-user-star', 'Председатель', m.chairman),
+    contactRow('ti-briefcase', 'Пом. хокима', m.hokimAssistant),
+    contactRow('ti-heart-handshake', 'Соцработник', m.socialWorker),
+    contactRow('ti-users', 'Лидер молодёжи', m.youthLeader),
+    contactRow('ti-user-heart', 'Активист (жен.)', m.womenActivist),
+    contactRow('ti-receipt-tax', 'Налог. инспектор', m.taxInspector),
+    contactRow('ti-shield-check', 'Инспектор профилактики', m.preventionInspector)
+  ].filter(Boolean).join('');
+
+  const planHtml = [
+    planFactRow('Микропроекты', m.microprojectsPlan, m.microprojectsFact),
+    planFactRow('Срочные (40 дн)', m.urgentMicroprojectsPlan, m.urgentMicroprojectsFact),
+    planFactRow('Пост. рабочие места', m.permanentJobsPlan, m.permanentJobsFact),
+    planFactRow('Раб. места (рост дохода)', m.incomeJobsPlan, m.incomeJobsFact),
+    planFactRow('Кредиты "Первый шаг в бизнес"', m.creditFirstStepPlan, m.creditFirstStepFact, ' млн'),
+    planFactRow('Кредиты ПҚ-312', m.creditPQ312Plan, m.creditPQ312Fact, ' млн'),
+    planFactRow('Кредиты "Проект махалли"', m.creditMahallaProjectPlan, m.creditMahallaProjectFact, ' млн')
+  ].filter(Boolean).join('');
+
+  document.getElementById('mhDetailBody').innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">
+      ${kpi(m.population, 'населения')}
+      ${kpi(m.families, 'семей')}
+      ${kpi(m.unemployed, 'безработных')}
+      ${kpi(m.totalLandArea, 'га земли')}
+    </div>
+
+    <h3 style="font-size:14px;margin-bottom:10px;">Потенциальные клиенты</h3>
+    <div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:20px;display:flex;gap:20px;flex-wrap:wrap;">
+      <div><div style="font-size:19px;font-weight:800;">${formatNumber(m.entrepreneursTotal)}</div><div style="font-size:11.5px;color:var(--muted);">предприним.</div></div>
+      <div><div style="font-size:19px;font-weight:800;">${formatNumber(m.entrepreneursLLC)}</div><div style="font-size:11.5px;color:var(--muted);">МЧЖ / ОК</div></div>
+      <div><div style="font-size:19px;font-weight:800;">${formatNumber(m.entrepreneursIE)}</div><div style="font-size:11.5px;color:var(--muted);">ИП (ЯТТ)</div></div>
+      <div><div style="font-size:19px;font-weight:800;">${formatNumber(m.householdsWithLand)}</div><div style="font-size:11.5px;color:var(--muted);">хоз. с землёй</div></div>
+    </div>
+
+    ${planHtml ? `<h3 style="font-size:14px;margin-bottom:10px;">Выполнение плана</h3><div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:20px;">${planHtml}</div>` : ''}
+
+    ${contactsHtml ? `<h3 style="font-size:14px;margin-bottom:10px;">Семёрка — контакты на месте</h3><div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 14px;">${contactsHtml}</div>` : ''}
+
+    ${m.driver ? `<div style="margin-top:16px;font-size:12.5px;color:var(--muted);">Драйвер махалли: ${safe(m.driver)}</div>` : ''}
+  `;
+
+  document.getElementById('mahallaDetailOverlay').classList.add('active');
+  document.getElementById('mahallaDetailDrawer').classList.add('active');
+}
+
+function closeMahallaDetail() {
+  document.getElementById('mahallaDetailOverlay').classList.remove('active');
+  document.getElementById('mahallaDetailDrawer').classList.remove('active');
 }
 
 const MICROPROJECT_STAGES = [
