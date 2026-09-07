@@ -827,6 +827,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .kpi-accent-orange{border-left:4px solid var(--orange);}
 .kpi-accent-green{border-left:4px solid var(--green);}
 .kpi-accent-red{border-left:4px solid var(--red);}
+.btn-link{background:none;border:none;color:var(--brand);font-weight:700;font-size:13px;cursor:pointer;padding:0;text-decoration:underline;}
 
 /* ===== BI-стиль карточек (Dashboard МСБ Продажи) — классический корпоративный ===== */
 .bi-kpi-grid{
@@ -1569,6 +1570,41 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="drawer-body" id="mhDetailBody"></div>
 </aside>
 
+<div class="drawer-overlay" id="editUserOverlay" onclick="closeEditUserForm()"></div>
+<aside class="client-drawer" id="editUserDrawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title">Редактировать пользователя</div>
+      <div class="drawer-subtitle" id="editUserLoginLabel">-</div>
+    </div>
+    <button class="close-btn" onclick="closeEditUserForm()">×</button>
+  </div>
+  <div class="drawer-body">
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ФИО</label>
+    <input type="text" id="editUserFullName" class="input" style="margin-bottom:16px;">
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Роль</label>
+    <select id="editUserRole" class="select" style="margin-bottom:16px;">
+      <option value="MANAGER">Менеджер</option>
+      <option value="MAHALLA_BANKER">Банкир Махалли</option>
+      <option value="CREDIT_MONITOR">Юридический мониторинг</option>
+      <option value="COLLATERAL_OFFICER">Сотрудник по залогу</option>
+      <option value="DEPUTY">Заместитель (только просмотр)</option>
+      <option value="DIRECTOR">Управляющий</option>
+    </select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Новый пароль (необязательно)</label>
+    <input type="text" id="editUserNewPassword" class="input" placeholder="Оставьте пустым, чтобы не менять" style="margin-bottom:16px;">
+
+    <button class="btn" onclick="saveUserEdit()" id="saveUserEditBtn">Сохранить</button>
+    <div id="editUserMessage" style="margin-top:12px;font-weight:700;"></div>
+
+    <hr style="margin:24px 0;border:none;border-top:1px solid var(--line);">
+
+    <button class="btn btn-secondary" style="color:var(--red);" onclick="deleteUserConfirm()">Удалить пользователя</button>
+  </div>
+</aside>
+
 
 <section id="slaPage" class="page">
   <div class="header">
@@ -1908,7 +1944,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <h2 style="font-size:16px;margin-bottom:12px;">Существующие пользователи</h2>
     <div class="client-table-wrap">
       <table>
-        <thead><tr><th>ФИО</th><th>Логин</th><th>Роль</th></tr></thead>
+        <thead><tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>Действия</th></tr></thead>
         <tbody id="usersListTable">
           <tr><td colspan="3" class="loading">Загрузка...</td></tr>
         </tbody>
@@ -8820,20 +8856,14 @@ async function createUser() {
   if (btn) { btn.disabled = true; btn.innerText = 'Создание...'; }
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        webAction: 'createUser',
-        sessionId: localStorage.getItem('msbSessionId'),
-        fullName: fullName,
-        login: login,
-        password: password,
-        role: role
-      })
+    const result = await postWebAction({
+      webAction: 'createUser',
+      sessionId: localStorage.getItem('msbSessionId'),
+      fullName: fullName,
+      login: login,
+      password: password,
+      role: role
     });
-
-    const result = await response.json();
 
     if (result.success) {
       msg.style.color = '#15803D';
@@ -8855,26 +8885,152 @@ async function createUser() {
   }
 }
 
+const USER_ROLE_LABELS = {
+  ADMIN: 'Управляющий',
+  DIRECTOR: 'Управляющий',
+  MANAGER: 'Менеджер',
+  MAHALLA_BANKER: 'Банкир Махалли',
+  CREDIT_MONITOR: 'Юридический мониторинг',
+  COLLATERAL_OFFICER: 'Сотрудник по залогу',
+  DEPUTY: 'Заместитель (только просмотр)'
+};
+
+let allWebUsers = [];
+
 async function loadUsersList() {
   const tbody = document.getElementById('usersListTable');
   if (!tbody) return;
 
   try {
     const users = await fetchJSON('users');
+    allWebUsers = users || [];
 
-    if (!users || !users.length) {
-      tbody.innerHTML = '<tr><td colspan="3">Список пуст или бэкенд ещё не отдаёт действие "users"</td></tr>';
+    if (!allWebUsers.length) {
+      tbody.innerHTML = '<tr><td colspan="4">Список пуст или бэкенд ещё не отдаёт действие "users"</td></tr>';
       return;
     }
 
-    tbody.innerHTML = users.map(u => `
+    tbody.innerHTML = allWebUsers.map(u => {
+      const isMainAdmin = u.login === 'admin' || u.role === 'ADMIN';
+      return `
       <tr>
         <td>${safe(u.fullName)}</td>
         <td>${safe(u.login)}</td>
-        <td>${(u.role === 'ADMIN' || u.role === 'DIRECTOR') ? 'Управляющий' : 'Менеджер'}</td>
-      </tr>`).join('');
+        <td>${USER_ROLE_LABELS[u.role] || safe(u.role)}</td>
+        <td>${isMainAdmin ? '<span style="color:var(--muted);font-size:13px;">Главная запись</span>' : `<button class="btn-link" onclick="openEditUserForm('${encodeURIComponent(u.id)}')">Изменить</button>`}</td>
+      </tr>`;
+    }).join('');
   } catch (error) {
-    tbody.innerHTML = '<tr><td colspan="3">Не удалось загрузить список пользователей</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4">Не удалось загрузить список пользователей</td></tr>';
+    console.error(error);
+  }
+}
+
+let editingUserId = null;
+
+function openEditUserForm(idEncoded) {
+  const id = decodeURIComponent(idEncoded);
+  const u = allWebUsers.find(x => String(x.id) === id);
+  if (!u) return;
+
+  editingUserId = id;
+  document.getElementById('editUserLoginLabel').innerText = 'Логин: ' + u.login;
+  document.getElementById('editUserFullName').value = u.fullName || '';
+  document.getElementById('editUserRole').value = u.role || 'MANAGER';
+  document.getElementById('editUserNewPassword').value = '';
+  document.getElementById('editUserMessage').innerText = '';
+
+  document.getElementById('editUserOverlay').classList.add('active');
+  document.getElementById('editUserDrawer').classList.add('active');
+}
+
+function closeEditUserForm() {
+  document.getElementById('editUserOverlay').classList.remove('active');
+  document.getElementById('editUserDrawer').classList.remove('active');
+  editingUserId = null;
+}
+
+async function saveUserEdit() {
+  const fullName = document.getElementById('editUserFullName').value.trim();
+  const role = document.getElementById('editUserRole').value;
+  const newPassword = document.getElementById('editUserNewPassword').value.trim();
+  const msg = document.getElementById('editUserMessage');
+  const btn = document.getElementById('saveUserEditBtn');
+
+  msg.innerText = '';
+  msg.style.color = 'var(--text)';
+
+  if (!fullName) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = 'Укажите ФИО';
+    return;
+  }
+  if (newPassword && newPassword.length < 4) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = 'Пароль должен быть не короче 4 символов';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = 'Сохранение...';
+
+  try {
+    const result = await postWebAction({
+      webAction: 'updateUser',
+      sessionId: localStorage.getItem('msbSessionId'),
+      userId: editingUserId,
+      fullName: fullName,
+      role: role,
+      newPassword: newPassword
+    });
+
+    if (result.success) {
+      msg.style.color = 'var(--green)';
+      msg.innerText = result.message;
+      await loadUsersList();
+      setTimeout(closeEditUserForm, 700);
+    } else {
+      msg.style.color = 'var(--red)';
+      msg.innerText = result.message || 'Ошибка сохранения';
+    }
+  } catch (error) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = 'Не удалось связаться с сервером';
+    console.error(error);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Сохранить';
+  }
+}
+
+async function deleteUserConfirm() {
+  if (!editingUserId) return;
+  const u = allWebUsers.find(x => String(x.id) === editingUserId);
+  if (!u) return;
+
+  if (!confirm('Удалить пользователя «' + u.fullName + '» (' + u.login + ')? Это действие необратимо.')) return;
+
+  const msg = document.getElementById('editUserMessage');
+  msg.style.color = 'var(--text)';
+  msg.innerText = 'Удаление...';
+
+  try {
+    const result = await postWebAction({
+      webAction: 'deleteUser',
+      sessionId: localStorage.getItem('msbSessionId'),
+      userId: editingUserId
+    });
+
+    if (result.success) {
+      await loadUsersList();
+      closeEditUserForm();
+    } else {
+      msg.style.color = 'var(--red)';
+      msg.innerText = result.message || 'Ошибка удаления';
+    }
+  } catch (error) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = 'Не удалось связаться с сервером';
     console.error(error);
   }
 }
