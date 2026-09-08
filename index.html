@@ -3158,6 +3158,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
@@ -8673,14 +8674,10 @@ async function loadObhodDashboard() {
     ]);
     allObhodSurveys = surveys || [];
 
-    // Один опрос = один двор — считаем прогресс как количество
-    // опросов, сгруппированное по махалле, относительно "Дворов" из
-    // паспорта той же махалли.
+    // Один опрос = один двор — считаем прогресс как количество опросов,
+    // сгруппированное по махалле, относительно "Дворов" из паспорта.
     const doneByMahalla = {};
-    allObhodSurveys.forEach(s => {
-      const m = s.mahalla || '—';
-      doneByMahalla[m] = (doneByMahalla[m] || 0) + 1;
-    });
+    allObhodSurveys.forEach(s => { doneByMahalla[s.mahalla || '—'] = (doneByMahalla[s.mahalla || '—'] || 0) + 1; });
 
     const rows = (mahallas || []).map(m => ({
       name: m.name,
@@ -8691,42 +8688,209 @@ async function loadObhodDashboard() {
     const totalHouseholds = rows.reduce((s, r) => s + r.total, 0);
     const totalDone = rows.reduce((s, r) => s + r.done, 0);
     const overallPct = totalHouseholds ? Math.round(totalDone / totalHouseholds * 100) : 0;
+    const mahallasWithoutSurveys = rows.filter(r => r.done === 0).length;
 
     const sortedRows = rows.slice().sort((a, b) => {
       const pa = a.total ? a.done / a.total : 0;
       const pb = b.total ? b.done / b.total : 0;
       return pb - pa;
+    }).slice(0, 8);
+
+    // За эту неделю — реальный подсчёт опросов, созданных за последние 7 дней.
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const parseDate = (s) => { const d = new Date(s); return isNaN(d.getTime()) ? null : d; };
+    const thisWeekCount = allObhodSurveys.filter(s => { const d = parseDate(s.createdAt); return d && d >= weekAgo; }).length;
+
+    // Категории населения — группируем, топ-5 + "Остальные".
+    const catCounts = {};
+    allObhodSurveys.forEach(s => {
+      const c = (s.category === 'Другое' ? (s.categoryOther || 'Другое') : s.category) || '';
+      if (!c) return;
+      catCounts[c] = (catCounts[c] || 0) + 1;
+    });
+    const catEntries = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+    const catPalette = ['#2a78d6', '#1baf7a', '#eda100', '#6250d6', '#e87ba4'];
+    const topCats = catEntries.slice(0, 5).map((e, i) => ({ label: e[0], value: e[1], color: catPalette[i] }));
+    const otherCatsSum = catEntries.slice(5).reduce((s, e) => s + e[1], 0);
+    if (otherCatsSum > 0) topCats.push({ label: 'Остальные', value: otherCatsSum, color: '#c3c2b7' });
+    const catTotal = topCats.reduce((s, c) => s + c.value, 0);
+
+    // Нуждаются в кредите — из поля "Нужен кредит".
+    const creditSurveys = allObhodSurveys.filter(s => s.needsCredit === 'Да');
+    const creditCount = creditSurveys.length;
+    const creditPct = allObhodSurveys.length ? Math.round(creditCount / allObhodSurveys.length * 100) : 0;
+    const creditAmounts = creditSurveys.map(s => Number(s.creditAmount) || 0).filter(v => v > 0);
+    const creditTotal = creditAmounts.reduce((s, v) => s + v, 0);
+    const creditAvg = creditAmounts.length ? Math.round(creditTotal / creditAmounts.length) : 0;
+
+    // По банкирам — дворов всего берём как сумму "Дворов" по махаллям, где
+    // этот банкир указан в поле "Банкиры" (может быть закреплено несколько
+    // банкиров на одну махаллю — тогда её дворы считаются каждому, это
+    // осознанное упрощение, а не точное разделение зоны ответственности).
+    const doneByManager = {};
+    const surveysByManager = {};
+    allObhodSurveys.forEach(s => {
+      const who = s.createdBy || '—';
+      doneByManager[who] = (doneByManager[who] || 0) + 1;
+      (surveysByManager[who] = surveysByManager[who] || []).push(s);
+    });
+    const totalByManager = {};
+    (mahallas || []).forEach(m => {
+      String(m.bankers || '').split(/[,;]/).map(x => x.trim()).filter(Boolean).forEach(name => {
+        totalByManager[name] = (totalByManager[name] || 0) + (Number(m.households) || 0);
+      });
     });
 
+    // Первый опрос вообще — точка отсчёта для "среднего в день".
+    const allDates = allObhodSurveys.map(s => parseDate(s.createdAt)).filter(Boolean);
+    const campaignStart = allDates.length ? new Date(Math.min(...allDates.map(d => d.getTime()))) : now;
+    const daysElapsed = Math.max(1, Math.round((now - campaignStart) / (24 * 60 * 60 * 1000)));
+
+    const managerNames = Object.keys(doneByManager);
+    const managerRows = managerNames.map(name => {
+      const done = doneByManager[name];
+      const total = totalByManager[name] || 0;
+      const weekCount = (surveysByManager[name] || []).filter(s => { const d = parseDate(s.createdAt); return d && d >= weekAgo; }).length;
+      return { name, total, done, perDay: (done / daysElapsed).toFixed(1), perWeek: weekCount };
+    }).sort((a, b) => b.done - a.done);
+
     box.innerHTML = `
-      <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:13px;color:var(--muted);">Общий обход по всем махаллям</div>
-        <div style="font-size:32px;font-weight:800;">${formatNumber(totalDone)} <span style="font-size:16px;color:var(--muted);">/ ${formatNumber(totalHouseholds)}</span></div>
-        <div style="height:8px;background:#EEF0F3;border-radius:99px;overflow:hidden;margin-top:8px;max-width:280px;margin-left:auto;margin-right:auto;">
-          <span style="display:block;width:${Math.min(100, overallPct)}%;height:100%;background:var(--brand);"></span>
+      <div style="display:grid;grid-template-columns:200px 1fr;gap:24px;margin-bottom:20px;align-items:center;">
+        <div style="position:relative;width:180px;height:180px;margin:0 auto;">
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r="78" fill="none" stroke="var(--line)" stroke-width="14"/>
+            <circle cx="90" cy="90" r="78" fill="none" stroke="#2a78d6" stroke-width="14" stroke-linecap="round"
+              stroke-dasharray="${2 * Math.PI * 78}" stroke-dashoffset="${2 * Math.PI * 78 * (1 - Math.min(100, overallPct) / 100)}"
+              transform="rotate(-90 90 90)"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-size:32px;font-weight:800;">${overallPct}%</div>
+            <div style="font-size:11px;color:var(--muted);">обойдено</div>
+          </div>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px;">${overallPct}% дворов обойдено</div>
+        <div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Обойдено дворов</div>
+          <div style="font-size:28px;font-weight:800;margin-bottom:12px;">${formatNumber(totalDone)} <span style="font-size:15px;color:var(--muted);font-weight:400;">из ${formatNumber(totalHouseholds)}</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:11px;color:var(--muted);">Осталось махаллей</div>
+              <div style="font-size:17px;font-weight:800;">${mahallasWithoutSurveys} <span style="font-size:11px;color:var(--muted);font-weight:400;">без опросов</span></div>
+            </div>
+            <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:11px;color:var(--muted);">За эту неделю</div>
+              <div style="font-size:17px;font-weight:800;">+${formatNumber(thisWeekCount)} <span style="font-size:11px;color:var(--green);font-weight:400;">дворов</span></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">По махаллям</div>
-      <div style="background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">По категориям населения</div>
+          ${catTotal ? `
+          <div style="display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center;">
+            <div style="position:relative;width:150px;height:150px;">
+              <canvas id="obCatChart"></canvas>
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                <div style="font-size:20px;font-weight:800;">${formatNumber(catTotal)}</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;font-size:11.5px;">
+              ${topCats.map(c => `
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:${c.color};flex-shrink:0;"></span>
+                  <span style="flex:1;">${safe(c.label)}</span>
+                  <span style="font-weight:700;">${Math.round(c.value / catTotal * 100)}%</span>
+                </div>`).join('')}
+            </div>
+          </div>` : '<div style="font-size:12.5px;color:var(--muted);">Пока нет данных</div>'}
+        </div>
+
+        <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Нуждаются в кредите</div>
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:16px;">
+            <span style="font-size:32px;font-weight:800;">${formatNumber(creditCount)}</span>
+            <span style="font-size:13px;color:var(--muted);">из ${formatNumber(allObhodSurveys.length)} · ${creditPct}%</span>
+          </div>
+          <div style="height:8px;background:var(--surface-1,#F5F5F0);border-radius:99px;overflow:hidden;margin-bottom:16px;">
+            <span style="display:block;width:${Math.min(100, creditPct)}%;height:100%;background:var(--orange);"></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:11px;color:var(--muted);">Средняя сумма</div>
+              <div style="font-size:15px;font-weight:800;">${creditAvg ? formatNumber(creditAvg) : '—'}</div>
+            </div>
+            <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
+              <div style="font-size:11px;color:var(--muted);">Всего запрошено</div>
+              <div style="font-size:15px;font-weight:800;">${creditTotal ? formatNumber(creditTotal) : '—'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Махалли по прогрессу обхода</div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:24px;">
         ${sortedRows.map((r, i) => {
           const pct = r.total ? Math.round(r.done / r.total * 100) : 0;
           return `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;${i < sortedRows.length - 1 ? 'border-bottom:1px solid var(--line);' : ''}">
-            <span style="font-size:12.5px;flex:1;">${safe(r.name)}</span>
-            <div style="width:100px;height:6px;background:#EEF0F3;border-radius:99px;overflow:hidden;">
-              <span style="display:block;width:${Math.min(100, pct)}%;height:100%;background:${pct === 0 ? '#C7C7C0' : 'var(--brand)'};"></span>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;${i < sortedRows.length - 1 ? 'border-bottom:1px solid var(--line);' : ''}">
+            <span style="font-size:11px;color:var(--muted);width:16px;">${i + 1}</span>
+            <span style="font-size:13px;flex:1;">${safe(r.name)}</span>
+            <div style="width:120px;height:6px;background:var(--surface-1,#F5F5F0);border-radius:99px;overflow:hidden;">
+              <span style="display:block;width:${Math.min(100, pct)}%;height:100%;background:${pct === 0 ? '#C7C7C0' : '#2a78d6'};"></span>
             </div>
-            <span style="font-size:12px;color:var(--muted);width:80px;text-align:right;">${r.done} / ${r.total}</span>
+            <span style="font-size:12px;font-weight:700;width:36px;text-align:right;">${pct}%</span>
+            <span style="font-size:11.5px;color:var(--muted);width:78px;text-align:right;">${r.done}/${r.total}</span>
           </div>`;
         }).join('')}
+      </div>
+
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Обход по банкирам</div>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;">
+        ${managerRows.length ? `
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+          <thead><tr style="background:var(--surface-1,#F5F5F0);">
+            <th style="text-align:left;padding:10px 14px;font-weight:700;color:var(--muted);">Банкир</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Дворов всего</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Факт</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Обход</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Средн. в день</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">За неделю</th>
+          </tr></thead>
+          <tbody>
+            ${managerRows.map((m, i) => {
+              const pct = m.total ? Math.round(m.done / m.total * 100) : null;
+              const badgeColor = pct === null ? { bg: '#EEF0F3', fg: 'var(--muted)' } : pct >= 25 ? { bg: '#eaf3de', fg: '#173404' } : pct >= 10 ? { bg: '#faeeda', fg: '#412402' } : { bg: '#fcebeb', fg: '#501313' };
+              return `
+              <tr style="${i < managerRows.length - 1 ? 'border-bottom:1px solid var(--line);' : ''}">
+                <td style="padding:10px 14px;">${safe(m.name)}</td>
+                <td style="padding:10px 14px;text-align:right;color:var(--muted);">${m.total ? formatNumber(m.total) : '—'}</td>
+                <td style="padding:10px 14px;text-align:right;font-weight:700;">${formatNumber(m.done)}</td>
+                <td style="padding:10px 14px;text-align:right;">${pct === null ? '—' : `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:700;background:${badgeColor.bg};color:${badgeColor.fg};">${pct}%</span>`}</td>
+                <td style="padding:10px 14px;text-align:right;">${m.perDay}</td>
+                <td style="padding:10px 14px;text-align:right;">${m.perWeek}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>` : '<div style="padding:16px;font-size:12.5px;color:var(--muted);">Пока нет данных</div>'}
       </div>`;
+
+    if (catTotal && typeof Chart !== 'undefined') {
+      const canvas = document.getElementById('obCatChart');
+      if (canvas) {
+        new Chart(canvas, {
+          type: 'doughnut',
+          data: { labels: topCats.map(c => c.label), datasets: [{ data: topCats.map(c => c.value), backgroundColor: topCats.map(c => c.color), borderColor: '#fff', borderWidth: 2, hoverOffset: 4 }] },
+          options: { responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: { legend: { display: false } } }
+        });
+      }
+    }
   } catch (error) {
     box.innerHTML = '<div class="loading">Не удалось загрузить дашборд. <a onclick="loadObhodDashboard()" style="color:var(--brand);cursor:pointer;">Попробовать ещё раз</a></div>';
     console.error(error);
   }
 }
-
 function formatNumber(n) {
   return Math.round(Number(n) || 0).toLocaleString('ru-RU');
 }
