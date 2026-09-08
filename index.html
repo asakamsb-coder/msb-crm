@@ -1246,20 +1246,26 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <nav class="nav">
-    <a class="active" data-msb-only="true" onclick="showMsbSales(this)"><span class="icon"></span>МСБ ПРОДАЖИ</a>
+    <a class="active" data-msb-only="true" onclick="showMsbSales(this)"><span class="icon"></span><span data-i18n="navSales">МСБ ПРОДАЖИ</span></a>
     <a data-msb-only="true" data-hide-for-collateral="true" onclick="showPage('portfolioPage', this)">
     <span class="icon"></span>
-    ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ
+    <span data-i18n="navOverdue">ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ</span>
 </a>
-    <a data-admin="true" data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('slaPage', this)"><span class="icon"></span>SLA КОНТРОЛЬ</a>
-    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('statsPage', this)"><span class="icon"></span>БУХГАЛТЕРИЯ</a>
-    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('regionsPage', this)"><span class="icon"></span>РАЙОНЫ</a>
-    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('scoringPage', this)"><span class="icon"></span>СКОРИНГ</a>
-    <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>МОЙ КАБИНЕТ</a>
-    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('managersPage', this)"><span class="icon"></span>МЕНЕДЖЕРЫ</a>
-    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('aiPage', this)"><span class="icon"></span>AI ЦЕНТР</a>
-    <a id="mahallaNavLink" data-hide-for-monitor="true" onclick="showPage('mahallaPage', this)"><span class="icon"></span>МАХАЛЛЯ</a>
+    <a data-admin="true" data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('slaPage', this)"><span class="icon"></span><span data-i18n="navSla">SLA КОНТРОЛЬ</span></a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('statsPage', this)"><span class="icon"></span><span data-i18n="navAccounting">БУХГАЛТЕРИЯ</span></a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('regionsPage', this)"><span class="icon"></span><span data-i18n="navRegions">РАЙОНЫ</span></a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('scoringPage', this)"><span class="icon"></span><span data-i18n="navScoring">СКОРИНГ</span></a>
+    <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span><span data-i18n="navCabinet">МОЙ КАБИНЕТ</span></a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('managersPage', this)"><span class="icon"></span><span data-i18n="navManagers">МЕНЕДЖЕРЫ</span></a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('aiPage', this)"><span class="icon"></span><span data-i18n="navAi">AI ЦЕНТР</span></a>
+    <a id="mahallaNavLink" data-hide-for-monitor="true" onclick="showPage('mahallaPage', this)"><span class="icon"></span><span data-i18n="navMahalla">МАХАЛЛЯ</span></a>
   </nav>
+  <div style="padding:12px 16px;">
+    <div class="lang-toggle" id="langToggle" style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
+      <button type="button" onclick="setAppLang('ru')" id="langBtnRu" style="flex:1;padding:6px 0;border:none;background:var(--brand);color:#fff;font-weight:700;font-size:12px;cursor:pointer;">RU</button>
+      <button type="button" onclick="setAppLang('uz')" id="langBtnUz" style="flex:1;padding:6px 0;border:none;background:transparent;color:var(--text);font-weight:700;font-size:12px;cursor:pointer;">UZ</button>
+    </div>
+  </div>
 </aside>
 
 <main class="main">
@@ -1272,7 +1278,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="dashboard" class="page active">
   <div class="header">
     <div>
-      <h1>МСБ ПРОДАЖИ</h1>
+      <h1 data-i18n="hMsbSales">МСБ ПРОДАЖИ</h1>
     </div>
   </div>
 
@@ -1394,7 +1400,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="clientsPage" class="page">
   <div class="header">
     <div>
-      <h1>КЛИЕНТЫ PRO</h1>
+      <h1 data-i18n="hClients">КЛИЕНТЫ PRO</h1>
       <p>Поиск, фильтрация и экспорт клиентской базы</p>
     </div>
     <div class="top-actions">
@@ -1463,7 +1469,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 </section>
 
 <section id="salesPage" class="page">
-  <div class="header"><div><h1>ПРОДАЖИ</h1><p>Воронка продаж и потенциальный портфель</p></div></div>
+  <div class="header"><div><h1 data-i18n="hSalesFunnel">ПРОДАЖИ</h1><p data-i18n="pSalesFunnel">Воронка продаж и потенциальный портфель</p></div></div>
 
   <div class="msb-sales-tabs">
     <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 Dashboard</button>
@@ -1503,7 +1509,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="portfolioPage" class="page">
   <div class="header">
     <div>
-      <h1>ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ</h1>
+      <h1 data-i18n="hOverdue">ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ</h1>
       <p>Ежедневная выгрузка, претензионные письма (юрлица), контроль SLA</p>
     </div>
   </div>
@@ -1626,7 +1632,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="slaPage" class="page">
   <div class="header">
     <div>
-      <h1>SLA КОНТРОЛЬ PRO</h1>
+      <h1 data-i18n="hSla">SLA КОНТРОЛЬ PRO</h1>
       <p>Контроль зависших клиентов по дате изменения статуса</p>
     </div>
     <div class="user-box" id="slaCountBox">Зависших: 0</div>
@@ -1716,7 +1722,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 </section>
 
 <section id="statsPage" class="page">
-  <div class="header"><div><h1>БУХГАЛТЕРИЯ</h1></div></div>
+  <div class="header"><div><h1 data-i18n="hAccounting">БУХГАЛТЕРИЯ</h1></div></div>
 
   <div class="panel" style="margin-bottom:20px;">
     <div id="bankBalanceUploadPanel" data-admin="true">
@@ -1766,7 +1772,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="regionsPage" class="page">
   <div class="header">
     <div>
-      <h1>ГЕОГРАФИЯ МСБ</h1>
+      <h1 data-i18n="hRegions">ГЕОГРАФИЯ МСБ</h1>
       <p>Анализ клиентов, заявок и потенциала по городам и районам</p>
     </div>
     <div class="user-box" id="regionsCountBox">Районов: 0</div>
@@ -1822,7 +1828,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="managersPage" class="page">
   <div class="header">
     <div>
-      <h1>МЕНЕДЖЕРЫ</h1>
+      <h1 data-i18n="hManagers">МЕНЕДЖЕРЫ</h1>
       <p id="managersPeriodText">KPI, выдачи и конверсия по менеджерам</p>
     </div>
   </div>
@@ -1862,7 +1868,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <section id="myCabinetPage" class="page">
   <div class="header">
     <div>
-      <h1>МОЙ КАБИНЕТ</h1>
+      <h1 data-i18n="hCabinet">МОЙ КАБИНЕТ</h1>
       <p id="myCabinetSubtitle">Персональные показатели пользователя</p>
     </div>
     <div class="user-box" id="myCabinetRole">-</div>
@@ -2062,7 +2068,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 
 <section id="scoringPage" class="page">
-  <div class="header"><div><h1>СКОРИНГ</h1></div></div>
+  <div class="header"><div><h1 data-i18n="hScoring">СКОРИНГ</h1></div></div>
 
   <div class="panel">
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
@@ -2287,14 +2293,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
 
 <section id="aiPage" class="page">
-  <div class="header"><div><h1>AI ЦЕНТР</h1><p>Управленческие выводы по данным CRM</p></div></div>
+  <div class="header"><div><h1 data-i18n="hAi">AI ЦЕНТР</h1><p data-i18n="pAi">Управленческие выводы по данным CRM</p></div></div>
   <div class="panel ai-box"><h2>AI анализ</h2><p id="aiFullText">Загрузка...</p></div>
 </section>
 
 <section id="mahallaPage" class="page">
   <div class="header">
     <div>
-      <h1>МАХАЛЛЯ</h1>
+      <h1 data-i18n="hMahalla">МАХАЛЛЯ</h1>
       <p>Паспорта махаллей и микропроекты предпринимателей. Отдельный блок, не связан с клиентской базой CRM.</p>
     </div>
   </div>
@@ -3483,6 +3489,74 @@ async function loadCRM() {
 // одновременными запросами, только что сделанное развёртывание). Вместо
 // того чтобы сразу показывать ошибку человеку, тихо пробуем ещё раз
 // через секунду — в большинстве случаев вторая попытка проходит успешно.
+// ==================== ПЕРЕВОД ИНТЕРФЕЙСА (RU/UZ) ====================
+// Словарь: ключ -> {ru, uz}. Применяется к элементам с data-i18n через
+// APP_DICT[key][lang]. Выбор языка сохраняется в localStorage, чтобы
+// оставаться после перезагрузки страницы.
+const APP_DICT = {
+  navSales: { ru: 'МСБ ПРОДАЖИ', uz: 'MB SOTUVLAR' },
+  navOverdue: { ru: 'ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ', uz: "MUDDATI O'TGAN PORTFEL" },
+  navSla: { ru: 'SLA КОНТРОЛЬ', uz: 'SLA NAZORATI' },
+  navAccounting: { ru: 'БУХГАЛТЕРИЯ', uz: 'BUXGALTERIYA' },
+  navRegions: { ru: 'РАЙОНЫ', uz: 'TUMANLAR' },
+  navScoring: { ru: 'СКОРИНГ', uz: 'SKORING' },
+  navCabinet: { ru: 'МОЙ КАБИНЕТ', uz: 'MENING KABINETIM' },
+  navManagers: { ru: 'МЕНЕДЖЕРЫ', uz: 'MENEJERLAR' },
+  navAi: { ru: 'AI ЦЕНТР', uz: 'AI MARKAZ' },
+  navMahalla: { ru: 'МАХАЛЛЯ', uz: 'MAHALLA' },
+
+  hMsbSales: { ru: 'МСБ ПРОДАЖИ', uz: 'MB SOTUVLAR' },
+  hClients: { ru: 'КЛИЕНТЫ PRO', uz: 'MIJOZLAR PRO' },
+  hSalesFunnel: { ru: 'ПРОДАЖИ', uz: 'SOTUVLAR' },
+  pSalesFunnel: { ru: 'Воронка продаж и потенциальный портфель', uz: "Sotuvlar voronkasi va potensial portfel" },
+  hOverdue: { ru: 'ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ', uz: "MUDDATI O'TGAN PORTFEL" },
+  hSla: { ru: 'SLA КОНТРОЛЬ PRO', uz: 'SLA NAZORATI PRO' },
+  hAccounting: { ru: 'БУХГАЛТЕРИЯ', uz: 'BUXGALTERIYA' },
+  hRegions: { ru: 'ГЕОГРАФИЯ МСБ', uz: 'MB GEOGRAFIYASI' },
+  hManagers: { ru: 'МЕНЕДЖЕРЫ', uz: 'MENEJERLAR' },
+  hCabinet: { ru: 'МОЙ КАБИНЕТ', uz: 'MENING KABINETIM' },
+  hScoring: { ru: 'СКОРИНГ', uz: 'SKORING' },
+  hAi: { ru: 'AI ЦЕНТР', uz: 'AI MARKAZ' },
+  pAi: { ru: 'Управленческие выводы по данным CRM', uz: "CRM ma'lumotlari bo'yicha boshqaruv xulosalari" },
+  hMahalla: { ru: 'МАХАЛЛЯ', uz: 'MAHALLA' }
+};
+
+// Перевод текста вне словаря (для мест, где ключа ещё нет) — при
+// отсутствии перевода просто возвращает исходный текст, ничего не ломая.
+function tr(key) {
+  const entry = APP_DICT[key];
+  if (!entry) return key;
+  return entry[currentAppLang] || entry.ru || key;
+}
+
+let currentAppLang = localStorage.getItem('msbAppLang') || 'ru';
+
+function applyAppTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const entry = APP_DICT[key];
+    if (entry) el.textContent = entry[currentAppLang] || entry.ru;
+  });
+  document.documentElement.lang = currentAppLang;
+}
+
+function setAppLang(lang) {
+  currentAppLang = lang;
+  localStorage.setItem('msbAppLang', lang);
+  const btnRu = document.getElementById('langBtnRu');
+  const btnUz = document.getElementById('langBtnUz');
+  if (btnRu && btnUz) {
+    btnRu.style.background = lang === 'ru' ? 'var(--brand)' : 'transparent';
+    btnRu.style.color = lang === 'ru' ? '#fff' : 'var(--text)';
+    btnUz.style.background = lang === 'uz' ? 'var(--brand)' : 'transparent';
+    btnUz.style.color = lang === 'uz' ? '#fff' : 'var(--text)';
+  }
+  applyAppTranslations();
+}
+
+document.addEventListener('DOMContentLoaded', () => { setAppLang(currentAppLang); });
+setAppLang(currentAppLang); // на случай, если этот код выполняется уже после DOMContentLoaded (скрипт расположен после нужной разметки)
+
 async function fetchJSON(action, retriesLeft) {
   if (retriesLeft === undefined) retriesLeft = 2;
 
