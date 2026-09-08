@@ -828,6 +828,15 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .kpi-accent-green{border-left:4px solid var(--green);}
 .kpi-accent-red{border-left:4px solid var(--red);}
 .btn-link{background:none;border:none;color:var(--brand);font-weight:700;font-size:13px;cursor:pointer;padding:0;text-decoration:underline;}
+.sc-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.sc-table th{text-align:left;padding:6px 8px;background:var(--surface-1,#F5F5F0);border-bottom:1px solid var(--line);position:sticky;top:0;}
+.sc-table td{padding:2px 6px;border-bottom:1px solid var(--line);}
+.sc-table .sc-code{color:var(--muted);width:44px;font-size:11.5px;}
+.sc-table .sc-name{min-width:280px;}
+.sc-table .sc-section td{font-weight:800;background:var(--surface-1,#F5F5F0);padding:6px 8px;}
+.sc-table .sc-calc-row{background:#FAFAF7;}
+.sc-input{width:110px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12.5px;}
+.sc-input.sc-calc{background:#EEF0F3;color:var(--text);font-weight:700;border:none;}
 
 /* ===== BI-стиль карточек (Dashboard МСБ Продажи) — классический корпоративный ===== */
 .bi-kpi-grid{
@@ -1238,6 +1247,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <a data-admin="true" data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('slaPage', this)"><span class="icon"></span>SLA КОНТРОЛЬ</a>
     <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('statsPage', this)"><span class="icon"></span>БУХГАЛТЕРИЯ</a>
     <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('regionsPage', this)"><span class="icon"></span>РАЙОНЫ</a>
+    <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('scoringPage', this)"><span class="icon"></span>СКОРИНГ</a>
     <a onclick="showPage('myCabinetPage', this)"><span class="icon"></span>МОЙ КАБИНЕТ</a>
     <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('managersPage', this)"><span class="icon"></span>МЕНЕДЖЕРЫ</a>
     <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('aiPage', this)"><span class="icon"></span>AI ЦЕНТР</a>
@@ -2039,6 +2049,208 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
     <div id="annualPlanBox" class="loading">Загрузка...</div>
   </div>
+  </div>
+</section>
+
+
+
+<section id="scoringPage" class="page">
+  <div class="header"><div><h1>СКОРИНГ</h1></div></div>
+
+  <div class="panel">
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;">
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Наименование заёмщика (ООО)</label>
+        <input type="text" id="scClientName" class="input" placeholder="Например: EKO DIZAIN NUKUS MCHJ">
+      </div>
+      <div>
+        <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ИНН</label>
+        <input type="text" id="scClientInn" class="input">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Период 1 (начало отчётного года)</label>
+        <input type="date" id="scDate1" class="input">
+      </div>
+      <div>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Период 2 (конец предыдущего периода)</label>
+        <input type="date" id="scDate2" class="input">
+      </div>
+      <div>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Период 3 (текущая/последняя дата)</label>
+        <input type="date" id="scDate3" class="input">
+      </div>
+    </div>
+
+    <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Данные вводятся в млн сум. Строки с серым фоном считаются автоматически.</p>
+
+    <h3 style="font-size:15px;margin-bottom:10px;">Ф1 — Баланс</h3>
+    <div class="client-table-wrap" style="margin-bottom:8px;">
+      <table class="sc-table">
+        <thead>
+          <tr><th>Код</th><th>Наименование</th><th>Период 1</th><th>Период 2</th><th>Период 3</th></tr>
+        </thead>
+        <tbody>
+      <tr class="sc-section"><td colspan="5">Qarz oluvchi</td></tr>
+      <tr class="sc-section"><td colspan="5">ФИНАНСОВАЯ ОТЧЕТНОСТЬ</td></tr>
+      <tr class="sc-section"><td colspan="5">Финансовые данные, млн сум</td></tr>
+      <tr class="sc-section"><td colspan="5">Баланс</td></tr>
+      <tr class="sc-section"><td colspan="5">Актив</td></tr>
+      <tr class="sc-section"><td colspan="5">I. Долгосрочные активы</td></tr>
+      <tr class="sc-section"><td colspan="5">Основные средства:</td></tr>
+      <tr class=""><td class="sc-code">10</td><td class="sc-name">Первоначальная (восстановительная) стоимость (0100, 0300)</td><td><input type="number" id="b10_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b10_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b10_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">11</td><td class="sc-name">Сумма износа (0200)</td><td><input type="number" id="b11_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b11_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b11_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">12</td><td class="sc-name">Остаточная (балансовая) стоимость (стр. 010-011)</td><td><input type="text" id="b12_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b12_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b12_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-section"><td colspan="5">Нематериальные активы:</td></tr>
+      <tr class=""><td class="sc-code">20</td><td class="sc-name">Первоначальная стоимость (0400)</td><td><input type="number" id="b20_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b20_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b20_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">21</td><td class="sc-name">Сумма амортизации (0500)</td><td><input type="number" id="b21_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b21_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b21_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">22</td><td class="sc-name">Остаточная (балансовая) стоимость (стр. 020-021)</td><td><input type="text" id="b22_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b22_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b22_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">30</td><td class="sc-name">Долгосрочные инвестиции, всего (стр.040+050+060+070+080), в том числе:</td><td><input type="text" id="b30_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b30_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b30_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">40</td><td class="sc-name">Ценные бумаги (0610)</td><td><input type="number" id="b40_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b40_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b40_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">50</td><td class="sc-name">Инвестиции в дочерние хозяйственные общества (0620)</td><td><input type="number" id="b50_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b50_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b50_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">60</td><td class="sc-name">Инвестиции в зависимые хозяйственные общества (0630)</td><td><input type="number" id="b60_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b60_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b60_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">70</td><td class="sc-name">Инвестиции в предприятие с иностранным капиталом (0640)</td><td><input type="number" id="b70_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b70_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b70_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">80</td><td class="sc-name">Прочие долгосрочные инвестиции (0690)</td><td><input type="number" id="b80_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b80_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b80_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">90</td><td class="sc-name">Оборудование к установке (0700)</td><td><input type="number" id="b90_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b90_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b90_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">100</td><td class="sc-name">Капитальные вложения (0800)</td><td><input type="number" id="b100_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b100_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b100_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">110</td><td class="sc-name">Долгосрочная дебиторская задолженность (0910, 0920, 0930, 0940)</td><td><input type="number" id="b110_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b110_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b110_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">120</td><td class="sc-name">Долгосрочные отсроченные расходы (0950, 0960, 0990)</td><td><input type="number" id="b120_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b120_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b120_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">130</td><td class="sc-name">Итого по разделу I  (стр. 012+022+030+090+100+110+120)</td><td><input type="text" id="b130_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b130_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b130_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-section"><td colspan="5">II. Текущие активы</td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">140</td><td class="sc-name">Товарно-материальные запасы, всего (стр.150+160+170+180), в том числе:</td><td><input type="text" id="b140_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b140_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b140_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">150</td><td class="sc-name">Производственные запасы (1000, 1100, 1500, 1600)</td><td><input type="number" id="b150_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b150_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b150_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">160</td><td class="sc-name">Незавершенное производство (2000, 2100, 2300, 2700)</td><td><input type="number" id="b160_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b160_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b160_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">170</td><td class="sc-name">Готовая продукция (2800)</td><td><input type="number" id="b170_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b170_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b170_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">180</td><td class="sc-name">Товары (2900 за минусом 2980)</td><td><input type="number" id="b180_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b180_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b180_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">190</td><td class="sc-name">Расходы будущих периодов (3100)</td><td><input type="number" id="b190_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b190_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b190_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">200</td><td class="sc-name">Отсроченные расходы (3200)</td><td><input type="number" id="b200_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b200_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b200_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">210</td><td class="sc-name">Дебиторы, всего (стр.220+240+250+260+270+280+290+300+310)</td><td><input type="text" id="b210_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b210_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b210_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">211</td><td class="sc-name">из нее: просроченная</td><td><input type="number" id="b211_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b211_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b211_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">220</td><td class="sc-name">Задолженность покупателей и заказчиков (4000 за минусом 4900)</td><td><input type="number" id="b220_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b220_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b220_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">230</td><td class="sc-name">Задолженность обособленных подразделений (4110)</td><td><input type="number" id="b230_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b230_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b230_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">240</td><td class="sc-name">Задолженность дочерних и зависимых хозяйственных обществ (4120)</td><td><input type="number" id="b240_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b240_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b240_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">250</td><td class="sc-name">Авансы, выданные персоналу (4200)</td><td><input type="number" id="b250_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b250_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b250_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">260</td><td class="sc-name">Авансы, выданные поставщикам и подрядчикам (4300)</td><td><input type="number" id="b260_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b260_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b260_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">270</td><td class="sc-name">Авансовые платежи по налогам и сборам в бюджет (4400)</td><td><input type="number" id="b270_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b270_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b270_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">280</td><td class="sc-name">Авансовые платежи в государственные целевые фонды и по страхованию (4500)</td><td><input type="number" id="b280_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b280_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b280_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">290</td><td class="sc-name">Задолженность учредителей по вкладам в уставный капитал (4600)</td><td><input type="number" id="b290_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b290_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b290_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">300</td><td class="sc-name">Задолженность персонала по прочим операциям (4700)</td><td><input type="number" id="b300_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b300_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b300_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">310</td><td class="sc-name">Прочие дебиторские задолженности (4800)</td><td><input type="number" id="b310_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b310_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b310_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">320</td><td class="sc-name">Денежные средства, всего (стр.330+340+350+360), в том числе:</td><td><input type="text" id="b320_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b320_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b320_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">330</td><td class="sc-name">Денежные средства в кассе (5000)</td><td><input type="number" id="b330_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b330_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b330_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">340</td><td class="sc-name">Денежные средства на расчетном счете (5100)</td><td><input type="number" id="b340_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b340_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b340_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">350</td><td class="sc-name">Денежные средства в иностранной валюте (5200)</td><td><input type="number" id="b350_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b350_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b350_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">360</td><td class="sc-name">Прочие денежные средства и эквиваленты (5500, 5600, 5700)</td><td><input type="number" id="b360_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b360_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b360_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">370</td><td class="sc-name">Краткосрочные инвестиции (5800)</td><td><input type="number" id="b370_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b370_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b370_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">380</td><td class="sc-name">Прочие текущие активы (5900)</td><td><input type="number" id="b380_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b380_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b380_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">390</td><td class="sc-name">Итого по разделу II  (стр. 140+190+200+210+320+370+380)</td><td><input type="text" id="b390_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b390_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b390_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">400</td><td class="sc-name">Всего по активу баланса (стр.130+стр.390)</td><td><input type="text" id="b400_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b400_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b400_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-section"><td colspan="5">Пассив</td></tr>
+      <tr class="sc-section"><td colspan="5">I. Источники собственных средств</td></tr>
+      <tr class=""><td class="sc-code">410</td><td class="sc-name">Уставный капитал (8300)</td><td><input type="number" id="b410_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b410_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b410_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">420</td><td class="sc-name">Добавленный капитал (8400)</td><td><input type="number" id="b420_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b420_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b420_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">430</td><td class="sc-name">Резервный капитал (8500)</td><td><input type="number" id="b430_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b430_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b430_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">440</td><td class="sc-name">Выкупленные собственные акции (8600)</td><td><input type="number" id="b440_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b440_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b440_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">450</td><td class="sc-name">Нераспределенная прибыль (непокрытый убыток) (8700)</td><td><input type="number" id="b450_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b450_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b450_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">460</td><td class="sc-name">Целевые поступления (8800)</td><td><input type="number" id="b460_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b460_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b460_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">470</td><td class="sc-name">Резервы предстоящих расходов и платежей (8900)</td><td><input type="number" id="b470_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b470_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b470_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">480</td><td class="sc-name">Итого по разделу I  (стр.410+420+430-440+450+460+470)</td><td><input type="text" id="b480_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b480_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b480_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-section"><td colspan="5">II. Обязательства</td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">490</td><td class="sc-name">Долгосрочные обязательства, всего (стр.500+510+520+530+540+550+560+570+580+590)</td><td><input type="text" id="b490_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b490_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b490_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">491</td><td class="sc-name">в том числе: долгосрочная кредиторская задолженность (стр.500+520+540+560+590)</td><td><input type="text" id="b491_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b491_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b491_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">500</td><td class="sc-name">Долгосрочная задолженость поставщикам и подрядчикам (7000)</td><td><input type="number" id="b500_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b500_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b500_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">510</td><td class="sc-name">Долгосрочная задолженность обособленным подразделениям (7110)</td><td><input type="number" id="b510_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b510_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b510_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">520</td><td class="sc-name">Долгосрочная задолженность дочерним и зависимым хозяйственным обществам (7120)</td><td><input type="number" id="b520_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b520_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b520_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">530</td><td class="sc-name">Долгосрочные отсроченные  доходы  (7210, 7220, 7230)</td><td><input type="number" id="b530_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b530_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b530_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">540</td><td class="sc-name">Долгосрочные отсроченные  обязательства по налогам и обязательным платежам (7240)</td><td><input type="number" id="b540_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b540_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b540_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">550</td><td class="sc-name">Прочие долгосрочные отсроченные обязательства (7250, 7290)</td><td><input type="number" id="b550_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b550_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b550_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">560</td><td class="sc-name">Авансы, полученные от покупателей и заказчиков (7300)</td><td><input type="number" id="b560_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b560_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b560_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">570</td><td class="sc-name">Долгосрочные банковские кредиты (7810)</td><td><input type="number" id="b570_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b570_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b570_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">580</td><td class="sc-name">Долгосрочные займы  (7820, 7830, 7840)</td><td><input type="number" id="b580_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b580_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b580_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">590</td><td class="sc-name">Прочие долгосрочные кредиторские задолженности (7900)</td><td><input type="number" id="b590_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b590_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b590_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">600</td><td class="sc-name">Текущие обязательства, всего (стр.610+630+640+650+660+670+680+690+700+ +710+720+730+740+750+760)</td><td><input type="text" id="b600_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b600_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b600_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">601</td><td class="sc-name">в том числе: текущая кредиторская задолженность (стр.610+630+650+670+680+690+700+710+720+760)</td><td><input type="text" id="b601_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b601_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b601_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">602</td><td class="sc-name">из нее: просроченная текущая кредиторская задолженность</td><td><input type="number" id="b602_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b602_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b602_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">610</td><td class="sc-name">Задолженность поставщикам и подрядчикам  (6000)</td><td><input type="number" id="b610_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b610_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b610_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">620</td><td class="sc-name">Задолженность обособленным подразделениям (6110)</td><td><input type="number" id="b620_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b620_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b620_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">630</td><td class="sc-name">Задолженность дочерним и зависимым хозяйственным обществам (6120)</td><td><input type="number" id="b630_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b630_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b630_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">640</td><td class="sc-name">Отсроченные доходы (6210, 6220, 6230)</td><td><input type="number" id="b640_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b640_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b640_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">650</td><td class="sc-name">Отсроченные  обязательства по налогам и обязательным платежам (6240)</td><td><input type="number" id="b650_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b650_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b650_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">660</td><td class="sc-name">Прочие отсроченные обязательства (6250, 6290)</td><td><input type="number" id="b660_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b660_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b660_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">670</td><td class="sc-name">Полученные авансы (6300)</td><td><input type="number" id="b670_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b670_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b670_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">680</td><td class="sc-name">Задолженность по платежам в бюджет (6400)</td><td><input type="number" id="b680_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b680_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b680_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">690</td><td class="sc-name">Задолженность по страхованию (6510)</td><td><input type="number" id="b690_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b690_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b690_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">700</td><td class="sc-name">Задолженность по платежам в государственные целевые фонды (6520)</td><td><input type="number" id="b700_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b700_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b700_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">710</td><td class="sc-name">Задолженность учредителям (6600)</td><td><input type="number" id="b710_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b710_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b710_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">720</td><td class="sc-name">Задолженность по оплате труда (6700)</td><td><input type="number" id="b720_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b720_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b720_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">730</td><td class="sc-name">Краткосрочные банковские кредиты (6810)</td><td><input type="number" id="b730_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b730_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b730_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">740</td><td class="sc-name">Краткосрочные займы (6820, 6830, 6840)</td><td><input type="number" id="b740_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b740_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b740_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">750</td><td class="sc-name">Текущая часть долгосрочных банковских обязательств (6950)</td><td><input type="number" id="b750_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b750_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b750_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">760</td><td class="sc-name">Прочие кредиторские задолженности (6900 кроме 6950)</td><td><input type="number" id="b760_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b760_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="b760_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">770</td><td class="sc-name">Итого по разделу II  (стр.490+600)</td><td><input type="text" id="b770_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b770_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b770_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">780</td><td class="sc-name">Всего по пассиву баланса (стр.480+770)</td><td><input type="text" id="b780_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b780_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="b780_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div id="sc_balance_check_p1" style="font-size:13px;font-weight:700;"></div>
+      <div id="sc_balance_check_p2" style="font-size:13px;font-weight:700;"></div>
+      <div id="sc_balance_check_p3" style="font-size:13px;font-weight:700;"></div>
+    </div>
+
+    <h3 style="font-size:15px;margin-bottom:10px;">Ф2 — Отчёт о прибылях и убытках</h3>
+    <div class="client-table-wrap" style="margin-bottom:24px;">
+      <table class="sc-table">
+        <thead>
+          <tr><th>Код</th><th>Наименование</th><th>Период 1</th><th>Период 2</th><th>Период 3</th></tr>
+        </thead>
+        <tbody>
+      <tr class="sc-section"><td colspan="5">Отчет о прибылях и убытках</td></tr>
+      <tr class=""><td class="sc-code">10</td><td class="sc-name">Чистая выручка от реализации продукции (товаров, работ и услуг)</td><td><input type="number" id="p10_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p10_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p10_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">20</td><td class="sc-name">Себестоимость реализованной продукции (товаров, работ и услуг)</td><td><input type="number" id="p20_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p20_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p20_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">30</td><td class="sc-name">Валовая прибыль (убыток) от реализации продукции (товаров, работ и услуг)  (стр.010-020)</td><td><input type="text" id="p30_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p30_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p30_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">40</td><td class="sc-name">Расходы периода, всего  (стр.050+060+070+080), в том числе:</td><td><input type="text" id="p40_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p40_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p40_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">50</td><td class="sc-name">Расходы по реализации</td><td><input type="number" id="p50_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p50_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p50_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">60</td><td class="sc-name">Административные расходы</td><td><input type="number" id="p60_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p60_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p60_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">70</td><td class="sc-name">Прочие расходы</td><td><input type="number" id="p70_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p70_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p70_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">80</td><td class="sc-name">Расходы отчетного периода, исключаемые из налогооблагаемой базы в будущем</td><td><input type="number" id="p80_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p80_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p80_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">90</td><td class="sc-name">Прочие доходы от основной деятельности</td><td><input type="number" id="p90_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p90_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p90_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">100</td><td class="sc-name">Прибыль (убыток) от основной деятельности  (стр.030-040+090)</td><td><input type="text" id="p100_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p100_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p100_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">110</td><td class="sc-name">Доходы от финансовой деятельности, всего (стр.120+130+140+150+160), в том числе:</td><td><input type="text" id="p110_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p110_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p110_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">120</td><td class="sc-name">Доходы в виде дивидендов</td><td><input type="number" id="p120_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p120_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p120_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">130</td><td class="sc-name">Доходы в виде процентов</td><td><input type="number" id="p130_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p130_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p130_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">140</td><td class="sc-name">Доходы от долгосрочной аренды (финансовый лизинг)</td><td><input type="number" id="p140_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p140_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p140_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">150</td><td class="sc-name">Доходы от валютных курсовых разниц</td><td><input type="number" id="p150_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p150_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p150_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">160</td><td class="sc-name">Прочие доходы от финансовой деятельности</td><td><input type="number" id="p160_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p160_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p160_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">170</td><td class="sc-name">Расходы по финансовой деятельности (стр.180+190+200+210),  в том числе:</td><td><input type="text" id="p170_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p170_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p170_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">180</td><td class="sc-name">Расходы в виде процентов</td><td><input type="number" id="p180_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p180_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p180_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">190</td><td class="sc-name">Расходы в виде процентов по долгосрочной аренде (финансовому лизингу)</td><td><input type="number" id="p190_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p190_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p190_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">200</td><td class="sc-name">Убытки от валютных курсовых разниц</td><td><input type="number" id="p200_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p200_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p200_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">210</td><td class="sc-name">Прочие расходы по финансовой деятельности</td><td><input type="number" id="p210_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p210_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p210_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">220</td><td class="sc-name">Прибыль (убыток) от общехозяйственной деятельности (стр.100+110-170)</td><td><input type="text" id="p220_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p220_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p220_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">230</td><td class="sc-name">Чрезвычайные прибыли и убытки, (+/-)</td><td><input type="number" id="p230_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p230_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p230_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">240</td><td class="sc-name">Прибыль (убыток) до уплаты налога на доходы (прибыль) (стр.220+/-230)</td><td><input type="text" id="p240_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p240_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p240_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">250</td><td class="sc-name">Налог на доходы (прибыль)</td><td><input type="number" id="p250_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p250_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p250_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">260</td><td class="sc-name">Прочие налоги и сборы от прибыли</td><td><input type="number" id="p260_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p260_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p260_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class="sc-calc-row"><td class="sc-code">270</td><td class="sc-name">Чистая прибыль (убыток) отчетного периода (стр.240-250-260)</td><td><input type="text" id="p270_p1" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p270_p2" class="sc-input sc-calc" readonly tabindex="-1"></td><td><input type="text" id="p270_p3" class="sc-input sc-calc" readonly tabindex="-1"></td></tr>
+      <tr class=""><td class="sc-code">91</td><td class="sc-name">Прочие операционные доходы (опционально)</td><td><input type="number" id="p91_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p91_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p91_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">92</td><td class="sc-name">Прочие операционные расходы (опционально)</td><td><input type="number" id="p92_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p92_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p92_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">93</td><td class="sc-name">Амортизация (опционально)</td><td><input type="number" id="p93_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p93_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p93_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">94</td><td class="sc-name">Корректировка (опционально), (+/-)</td><td><input type="number" id="p94_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p94_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p94_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+      <tr class=""><td class="sc-code">95</td><td class="sc-name">Доля меньшинства (опционально), (+/-)</td><td><input type="number" id="p95_p1" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p95_p2" class="sc-input" step="any" oninput="calcScoring()"></td><td><input type="number" id="p95_p3" class="sc-input" step="any" oninput="calcScoring()"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <button class="btn" onclick="saveScoring()" id="saveScoringBtn">Сохранить данные Ф1/Ф2</button>
+    <div id="scoringSaveMessage" style="margin-top:12px;font-weight:700;"></div>
+  </div>
+
+  <div class="panel">
+    <h2 style="margin-bottom:12px;">Сохранённые скоринги</h2>
+    <div id="scoringListBox" class="loading">Загрузка...</div>
   </div>
 </section>
 
@@ -3138,6 +3350,10 @@ function showPage(id, el) {
 
   if (id === 'portfolioPage') {
     loadOverdueData();
+  }
+
+  if (id === 'scoringPage') {
+    loadScoringList();
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -7353,6 +7569,195 @@ function renderMahallaInfographic() {
       ${sortedByPopulation.map(barRow).join('')}
     </div>`;
 }
+
+// Автоматический пересчёт всех "РАСЧЁТ"-строк листов Ф1 (баланс) и Ф2
+// (отчёт о прибылях и убытках) — формулы точно по официальным кодам
+// строк из методики (1_1_Tartib_ilova.xlsm).
+function calcScoring() {
+  const v = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    const n = parseFloat(el.value);
+    return isNaN(n) ? 0 : n;
+  };
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = Math.round(value * 100) / 100;
+  };
+
+  [1, 2, 3].forEach(p => {
+    const b = (code) => v(`b${code}_p${p}`);
+
+    // Ф1 — Баланс
+    set(`b12_p${p}`, b(10) - b(11));                    // Остаточная ст-ть ОС
+    set(`b22_p${p}`, b(20) - b(21));                    // Остаточная ст-ть НМА
+    set(`b30_p${p}`, b(40)+b(50)+b(60)+b(70)+b(80));     // Долгоср. инвестиции
+    set(`b130_p${p}`, b(12)+b(22)+b(30)+b(90)+b(100)+b(110)+b(120)); // Итого разд.I
+
+    set(`b140_p${p}`, b(150)+b(160)+b(170)+b(180));      // ТМЗ всего
+    set(`b210_p${p}`, b(220)+b(240)+b(250)+b(260)+b(270)+b(280)+b(290)+b(300)+b(310)); // Дебиторы
+    set(`b320_p${p}`, b(330)+b(340)+b(350)+b(360));      // Денежные средства
+    set(`b390_p${p}`, b(140)+b(190)+b(200)+b(210)+b(320)+b(370)+b(380)); // Итого разд.II
+    set(`b400_p${p}`, b(130)+b(390));                    // Всего актив
+
+    set(`b480_p${p}`, b(410)+b(420)+b(430)-b(440)+b(450)+b(460)+b(470)); // Итого СК
+    set(`b490_p${p}`, b(500)+b(510)+b(520)+b(530)+b(540)+b(550)+b(560)+b(570)+b(580)+b(590)); // Долгоср. обяз-ва
+    set(`b491_p${p}`, b(500)+b(520)+b(540)+b(560)+b(590));
+    set(`b600_p${p}`, b(610)+b(630)+b(640)+b(650)+b(660)+b(670)+b(680)+b(690)+b(700)+b(710)+b(720)+b(730)+b(740)+b(750)+b(760)); // Текущие обяз-ва
+    set(`b601_p${p}`, b(610)+b(630)+b(650)+b(670)+b(680)+b(690)+b(700)+b(710)+b(720)+b(760));
+    set(`b770_p${p}`, b(490)+b(600));                    // Итого разд.II (обяз-ва)
+    set(`b780_p${p}`, b(480)+b(770));                    // Всего пассив
+
+    // Ф2 — Отчёт о прибылях и убытках
+    const pf = (code) => v(`p${code}_p${p}`);
+    set(`p30_p${p}`, pf(10) - pf(20));                   // Валовая прибыль
+    set(`p40_p${p}`, pf(50)+pf(60)+pf(70)+pf(80));       // Расходы периода
+    set(`p100_p${p}`, pf(30)-pf(40)+pf(90));             // Прибыль от осн. деят-ти
+    set(`p110_p${p}`, pf(120)+pf(130)+pf(140)+pf(150)+pf(160)); // Доходы от фин. деят.
+    set(`p170_p${p}`, pf(180)+pf(190)+pf(200)+pf(210));  // Расходы по фин. деят.
+    set(`p220_p${p}`, pf(100)+pf(110)-pf(170));          // Прибыль от общехоз. деят.
+    set(`p240_p${p}`, pf(220)+pf(230));                  // Прибыль до налога
+    set(`p270_p${p}`, pf(240)-pf(250)-pf(260));          // Чистая прибыль
+  });
+
+  // Контроль баланса: Актив должен равняться Пассиву — подсветим,
+  // если не сходится (частая причина ошибки при вводе данных).
+  [1, 2, 3].forEach(p => {
+    const asset = v(`b400_p${p}`);
+    const liab = v(`b780_p${p}`);
+    const warnEl = document.getElementById(`sc_balance_check_p${p}`);
+    if (warnEl) {
+      const diff = Math.round((asset - liab) * 100) / 100;
+      if (asset === 0 && liab === 0) {
+        warnEl.innerText = '';
+      } else if (diff === 0) {
+        warnEl.innerText = '✓ Баланс сходится';
+        warnEl.style.color = 'var(--green)';
+      } else {
+        warnEl.innerText = '⚠ Актив ≠ Пассив, разница: ' + diff.toLocaleString('ru-RU');
+        warnEl.style.color = 'var(--red)';
+      }
+    }
+  });
+}
+
+// Собирает все поля Ф1/Ф2 (b*/p*) в один объект — так проще хранить одной
+// JSON-строкой на сервере, чем городить сотни колонок в таблице.
+function collectScoringFields() {
+  const data = {};
+  document.querySelectorAll('.sc-input').forEach(el => {
+    if (el.value !== '') data[el.id] = el.value;
+  });
+  return data;
+}
+
+function fillScoringFields(data) {
+  document.querySelectorAll('.sc-input').forEach(el => { el.value = ''; });
+  Object.keys(data || {}).forEach(key => {
+    const el = document.getElementById(key);
+    if (el) el.value = data[key];
+  });
+  calcScoring();
+}
+
+let editingScoringId = null;
+
+async function saveScoring() {
+  const clientName = document.getElementById('scClientName').value.trim();
+  const clientInn = document.getElementById('scClientInn').value.trim();
+  const date1 = document.getElementById('scDate1').value;
+  const date2 = document.getElementById('scDate2').value;
+  const date3 = document.getElementById('scDate3').value;
+  const msg = document.getElementById('scoringSaveMessage');
+  const btn = document.getElementById('saveScoringBtn');
+
+  msg.innerText = '';
+
+  if (!clientName) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = 'Укажите наименование заёмщика';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = 'Сохранение...';
+
+  try {
+    const result = await postWebAction({
+      webAction: 'saveScoring',
+      sessionId: localStorage.getItem('msbSessionId'),
+      scoringId: editingScoringId,
+      clientName: clientName,
+      clientInn: clientInn,
+      date1: date1, date2: date2, date3: date3,
+      fields: collectScoringFields()
+    });
+
+    if (result.success) {
+      msg.style.color = 'var(--green)';
+      msg.innerText = result.message;
+      editingScoringId = result.scoringId || editingScoringId;
+      loadScoringList();
+    } else {
+      msg.style.color = 'var(--red)';
+      msg.innerText = result.message || 'Ошибка сохранения';
+    }
+  } catch (error) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = 'Не удалось связаться с сервером';
+    console.error(error);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Сохранить данные Ф1/Ф2';
+  }
+}
+
+let allScorings = [];
+
+async function loadScoringList() {
+  const box = document.getElementById('scoringListBox');
+  if (!box) return;
+
+  try {
+    allScorings = await fetchJSON('scoringList') || [];
+
+    if (!allScorings.length) {
+      box.innerHTML = '<div class="loading">Пока нет сохранённых скорингов</div>';
+      return;
+    }
+
+    box.innerHTML = allScorings.map(s => `
+      <div class="mahalla-row" style="cursor:pointer;" onclick="openScoringForEdit('${encodeURIComponent(s.id)}')">
+        <div class="mahalla-row-top">
+          <div>
+            <div class="mahalla-row-name">${safe(s.clientName)}${s.clientInn ? ' · ИНН ' + safe(s.clientInn) : ''}</div>
+            <div class="mahalla-row-meta">Периоды: ${safe(s.date1)} / ${safe(s.date2)} / ${safe(s.date3)} · Загрузил: ${safe(s.createdBy)} · ${safe(s.updatedAt)}</div>
+          </div>
+        </div>
+      </div>`).join('');
+  } catch (error) {
+    box.innerHTML = '<div class="loading">Не удалось загрузить список. <a onclick="loadScoringList()" style="color:var(--brand);cursor:pointer;">Попробовать ещё раз</a></div>';
+    console.error(error);
+  }
+}
+
+function openScoringForEdit(idEncoded) {
+  const id = decodeURIComponent(idEncoded);
+  const s = allScorings.find(x => String(x.id) === id);
+  if (!s) return;
+
+  editingScoringId = id;
+  document.getElementById('scClientName').value = s.clientName || '';
+  document.getElementById('scClientInn').value = s.clientInn || '';
+  document.getElementById('scDate1').value = s.date1 || '';
+  document.getElementById('scDate2').value = s.date2 || '';
+  document.getElementById('scDate3').value = s.date3 || '';
+  fillScoringFields(s.fields || {});
+  document.getElementById('scoringSaveMessage').innerText = 'Открыт для редактирования: ' + s.clientName;
+  document.getElementById('scoringSaveMessage').style.color = 'var(--muted)';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 
 function formatNumber(n) {
   return Math.round(Number(n) || 0).toLocaleString('ru-RU');
