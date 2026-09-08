@@ -7273,31 +7273,56 @@ async function loadMahallaData() {
   }
 }
 
-// Парсит официальный Excel-отчёт "Асака Бириктирилган МФЙ Статистика".
-// Формат фиксированный (гос. отчёт), поэтому колонки берём по позициям,
-// а не по названию заголовка — заголовок в файле трёхуровневый (слитые
-// ячейки Режа/Факт/%), гибкий поиск здесь не подходит.
-// Данные начинаются с 7-й строки; итоговые/районные строки пропускаем —
-// у них пустая колонка C (название махалли).
-// Парсер официального файла "Бухгалтерия баланси №1-сонли шакл" (Ф1) —
-// лист list02, колонка "Сатр коди" содержит официальные коды строк
-// ('010','011'...), которые СОВПАДАЮТ с кодами нашей методики напрямую
-// (просто с ведущими нулями). Берём "Ҳисобот даври бошига" (начало
-// периода) и "Ҳисобот даври охирига" (конец периода) — заполняем ими
-// период 1 и период 2 формы (период 3 остаётся для более свежего
-// отчёта, если он есть, — вводится вручную или отдельной загрузкой).
-// Ищет среди ВСЕХ листов книги тот, где встречается указанный текст
-// (например, "Бухгалтерия баланси" или "Сатр коди") — так парсер не
-// зависит от того, как называется лист (list01, list02, Sheet1...) и
-// сколько лишних листов в файле. Возвращает {sheet, sheetName} первого
-// найденного совпадения или null.
-function findSheetByMarker(workbook, markerText) {
+
+// Ищет среди ВСЕХ листов книги таблицу с колонкой кодов строк (узб.
+// "Сатр коди" или рус. "Код стр." — в разных файлах по-разному) и САМА
+// определяет, в каких колонках реально лежат значения — по опорным
+// кодам (anchorCodes), которые почти всегда заполнены числом в любом
+// настоящем отчёте (например, 400/780 — итоговые строки баланса). Это
+// надёжнее, чем полагаться на фиксированную позицию колонки: разные
+// банки/шаблоны кладут код и значения в разные места (где-то код в
+// колонке A, где-то в C), и жёсткая позиция на реальных файлах уже
+// один раз подвела.
+function findCodeTable(workbook, markers, anchorCodes) {
+  const markerList = Array.isArray(markers) ? markers : [markers];
+  for (const name of workbook.SheetNames) {
+    const sheet = workbook.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    for (let r = 0; r < rows.length; r++) {
+      for (let c = 0; c < rows[r].length; c++) {
+        const cell = rows[r][c];
+        if (typeof cell !== 'string' || !markerList.some(m => cell.includes(m))) continue;
+
+        const codeCol = c;
+        const dataRows = rows.slice(r + 1).filter(row => /^\d+$/.test(String(row[codeCol] || '').trim()));
+        if (dataRows.length < 5) continue;
+
+        const colVotes = {};
+        dataRows.forEach(row => {
+          const code = parseInt(String(row[codeCol]).trim(), 10);
+          if (!anchorCodes.includes(code)) return;
+          row.forEach((v, idx) => {
+            if (idx !== codeCol && typeof v === 'number') colVotes[idx] = (colVotes[idx] || 0) + 1;
+          });
+        });
+        const valueCols = Object.keys(colVotes).map(Number).sort((a, b) => a - b);
+        if (!valueCols.length) continue;
+
+        return { sheetName: name, rows, codeCol, dataRows, valueCols };
+      }
+    }
+  }
+  return null;
+}
+
+function findSheetByMarker(workbook, markers) {
+  const markerList = Array.isArray(markers) ? markers : [markers];
   for (const name of workbook.SheetNames) {
     const sheet = workbook.Sheets[name];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
     for (const row of rows) {
       for (const cell of row) {
-        if (typeof cell === 'string' && cell.includes(markerText)) {
+        if (typeof cell === 'string' && markerList.some(m => cell.includes(m))) {
           return { sheet, sheetName: name, rows };
         }
       }
@@ -7307,15 +7332,12 @@ function findSheetByMarker(workbook, markerText) {
 }
 
 // Парсер официального файла "Бухгалтерия баланси №1-сонли шакл" (Ф1).
-// Ищет нужный лист СТРОГО ПО СОДЕРЖИМОМУ (заголовок "Сатр коди" —
-// колонка с официальными кодами строк), а не по имени листа — в файле
-// может быть несколько листов (лишние справки, приложения и т.п.),
-// имя листа с балансом может отличаться от файла к файлу. Найденные
-// коды ('010','011'...) СОВПАДАЮТ с кодами нашей методики напрямую
-// (просто с ведущими нулями). Берём "Ҳисобот даври бошига" (начало
-// периода) и "Ҳисобот даври охирига" (конец периода) — заполняем ими
-// период 1 и период 2 формы (период 3 остаётся для более свежего
-// отчёта, если он есть, — вводится вручную или отдельной загрузкой).
+// Коды строк ('010','011'...) СОВПАДАЮТ с кодами нашей методики
+// напрямую (просто с ведущими нулями). Опорные коды 400 (Всего актив)
+// и 780 (Всего пассив) есть в любом настоящем балансе — по ним же
+// проверяем, что это действительно Ф1, а не другой отчёт. Заполняем
+// период 1 (начало) и период 2 (конец) — период 3 остаётся для более
+// свежего отчёта, если он есть (вводится вручную или второй загрузкой).
 function parseForma1File(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -7324,40 +7346,28 @@ function parseForma1File(file) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
 
-        // Название компании и ИНН могут быть на том же листе, что и
-        // баланс, или на отдельном — ищем по всей книге, не по имени.
         let companyName = '', inn = '';
-        const infoFound = findSheetByMarker(workbook, 'Корхона, ташкилот');
+        const infoFound = findSheetByMarker(workbook, ['Корхона, ташкилот', 'Наименование предприятия']);
         if (infoFound) {
           infoFound.rows.forEach(row => {
-            if (String(row[1] || '').trim() === 'Корхона, ташкилот') companyName = String(row[2] || '').trim();
+            if (String(row[1] || '').trim() === 'Корхона, ташкилот' || String(row[0] || '').trim() === 'Наименование предприятия :') {
+              companyName = String(row[2] || '').trim();
+            }
             if (String(row[1] || '').trim() === 'Солиқ тўловчининг идентификацион рақами') inn = String(row[8] || '').trim();
           });
         }
 
-        const found = findSheetByMarker(workbook, 'Сатр коди');
-        if (!found) { reject(new Error('В файле не найдена таблица с колонкой "Сатр коди" — проверьте, что это правильный файл формы №1')); return; }
+        const found = findCodeTable(workbook, ['Сатр коди', 'Код стр.'], [400, 780]);
+        if (!found) { reject(new Error('Не удалось найти в файле таблицу баланса с итоговыми строками (коды 400 и 780) — проверьте, что это правильный файл формы №1')); return; }
+        if (found.valueCols.length < 2) { reject(new Error('Нашлась только одна колонка со значениями вместо двух (начало/конец периода) — проверьте формат файла')); return; }
 
-        // Убеждаемся, что это именно БАЛАНС (Ф1), а не другой отчёт с
-        // такой же колонкой кодов (например, Ф2 использует те же коды
-        // 010,020... для СВОИХ строк — их нельзя перепутать).
-        const isBalance = found.rows.some(row => row.some(cell =>
-          typeof cell === 'string' && (cell.includes('Бухгалтерия баланси') || cell.includes('Ҳисобот даври бошига'))
-        ));
-        if (!isBalance) { reject(new Error('Найденная таблица не похожа на баланс (Форма №1) — проверьте файл')); return; }
-
+        const [startCol, endCol] = found.valueCols;
         const fields = {};
-        found.rows.forEach(row => {
-          const codeRaw = String(row[2] || '').trim();
-          if (!/^\d+$/.test(codeRaw)) return; // пропускаем заголовки/пустые строки
-          const code = parseInt(codeRaw, 10);
-          const start = row[3];
-          const end = row[4];
-          if (typeof start === 'number') fields[`b${code}_p1`] = start;
-          if (typeof end === 'number') fields[`b${code}_p2`] = end;
+        found.dataRows.forEach(row => {
+          const code = parseInt(String(row[found.codeCol]).trim(), 10);
+          if (typeof row[startCol] === 'number') fields[`b${code}_p1`] = row[startCol];
+          if (typeof row[endCol] === 'number') fields[`b${code}_p2`] = row[endCol];
         });
-
-        if (!Object.keys(fields).length) { reject(new Error('Не удалось извлечь ни одной строки с кодом — проверьте формат файла')); return; }
 
         resolve({ companyName, inn, fields });
       } catch (err) {
@@ -7370,10 +7380,11 @@ function parseForma1File(file) {
 }
 
 // Парсер "Молиявий натижалар тўғрисида ҳисобот №2-сонли шакл" (Ф2).
-// Тоже ищет лист по содержимому ("Сатр коди" + характерный для Ф2
-// заголовок), не по имени. В каждой строке значение стоит либо в
-// колонке "Доходы", либо в колонке "Расходы" (вторая при этом содержит
-// "x") — берём то из двух, что оказалось числом.
+// Опорные коды 10 (выручка), 20 (себестоимость) и 270 (чистая прибыль)
+// почти всегда заполнены в любом реальном отчёте — по ним определяем
+// 4 колонки значений (доходы/расходы × прошлый/отчётный период) и
+// заодно проверяем, что это точно Ф2 (а не случайно попавшийся баланс
+// с такими же кодами строк).
 function parseForma2File(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -7382,27 +7393,26 @@ function parseForma2File(file) {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
 
-        const found = findSheetByMarker(workbook, 'Сатр коди');
-        if (!found) { reject(new Error('В файле не найдена таблица с колонкой "Сатр коди" — проверьте, что это правильный файл формы №2')); return; }
+        const found = findCodeTable(workbook, ['Сатр коди', 'Код стр.'], [10, 20, 270]);
+        if (!found) { reject(new Error('Не удалось найти в файле таблицу отчёта о прибылях (коды 010, 020, 270) — проверьте, что это правильный файл формы №2')); return; }
 
-        const isIncomeStatement = found.rows.some(row => row.some(cell =>
-          typeof cell === 'string' && (cell.includes('Молиявий натижалар') || cell.includes('Даромадлар'))
-        ));
-        if (!isIncomeStatement) { reject(new Error('Найденная таблица не похожа на отчёт о прибылях и убытках (Форма №2) — проверьте файл')); return; }
+        const hasBalanceCodes = found.dataRows.some(row => {
+          const code = parseInt(String(row[found.codeCol]).trim(), 10);
+          return code === 400 || code === 780;
+        });
+        if (hasBalanceCodes) { reject(new Error('Найденная таблица похожа на баланс (Форма №1), а не на отчёт о прибылях — проверьте, тот ли файл выбран')); return; }
+
+        const cols = found.valueCols;
+        const [priorInc, priorExp, curInc, curExp] = [cols[0], cols[1], cols[2], cols[3]];
 
         const fields = {};
-        found.rows.forEach(row => {
-          const codeRaw = String(row[2] || '').trim();
-          if (!/^\d+$/.test(codeRaw)) return;
-          const code = parseInt(codeRaw, 10);
-          // колонки: 3,4 = прошлый год (доходы/расходы), 5,6 = отчётный период
-          const priorVal = [row[3], row[4]].find(v => typeof v === 'number');
-          const currentVal = [row[5], row[6]].find(v => typeof v === 'number');
+        found.dataRows.forEach(row => {
+          const code = parseInt(String(row[found.codeCol]).trim(), 10);
+          const priorVal = [row[priorInc], row[priorExp]].find(v => typeof v === 'number');
+          const currentVal = [row[curInc], row[curExp]].find(v => typeof v === 'number');
           if (priorVal !== undefined) fields[`p${code}_p1`] = priorVal;
           if (currentVal !== undefined) fields[`p${code}_p2`] = currentVal;
         });
-
-        if (!Object.keys(fields).length) { reject(new Error('Не удалось извлечь ни одной строки с кодом — проверьте формат файла')); return; }
 
         resolve({ fields });
       } catch (err) {
@@ -7414,10 +7424,16 @@ function parseForma2File(file) {
   });
 }
 
-// Парсер выписки по счёту ("Сведения о работе счета") — банк уже сам
-// считает итоговый оборот в последней строке файла ("Итоговый оборот за
-// период:"), берём готовую сумму, не пересчитываем по тысячам строк
-// вручную. ВАЖНО: это "сырой" итог по всем операциям — методика
+
+// Парсер выписки по счёту. Разные банки оформляют выписки по-разному
+// (разные подписи периода, разные позиции колонок Дебет/Кредит, разные
+// подписи итоговой строки) — поэтому НЕ полагаемся на фиксированные
+// позиции: ищем колонки Дебет/Кредит по заголовку таблицы (там, где
+// слова "дебет" и "кредит" стоят в РАЗНЫХ колонках — если в одной
+// ячейке, это просто описание, а не заголовок), и итоговую сумму берём
+// из строки с одной из нескольких известных подписей ("Итоговый
+// оборот", "Итого документов" и т.п.), а не пересчитываем сами по
+// тысячам строк. ВАЖНО: это "сырой" итог по всем операциям — методика
 // требует исключать переводы между своими счетами, кредитные средства,
 // депозиты и т.п., поэтому финальную цифру для расчёта коэффициентов
 // сотрудник должен проверить и при необходимости скорректировать вручную.
@@ -7431,31 +7447,63 @@ function parseTurnoverFile(file) {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
+        // Название банка — первая непустая текстовая строка файла (в
+        // некоторых выписках сверху есть пустые строки).
         let bankName = '';
-        let periodFrom = '', periodTo = '';
-        let accountInfo = '';
-
-        if (rows[0]) bankName = String(rows[0][0] || '').split('/').pop().trim();
-        if (rows[1]) {
-          const m = String(rows[1][0] || '').match(/c\s+(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})/);
-          if (m) { periodFrom = m[1]; periodTo = m[2]; }
-        }
-        if (rows[2]) accountInfo = String(rows[2][0] || '').replace(/\s+/g, ' ').trim();
-
-        // Итоговая строка — последняя непустая строка файла, начинается с
-        // "Итоговый оборот"
-        let totalDebit = 0, totalCredit = 0;
-        for (let i = rows.length - 1; i >= 0; i--) {
-          const cell0 = String(rows[i][0] || '');
-          if (cell0.includes('Итоговый оборот')) {
-            totalDebit = Number(rows[i][5]) || 0;
-            totalCredit = Number(rows[i][6]) || 0;
+        for (let i = 0; i < Math.min(10, rows.length); i++) {
+          const text = String(rows[i][0] || '').trim();
+          if (text && !/^\d+(\.\d+)?$/.test(text)) {
+            bankName = text.includes('/') ? text.split('/').pop().trim() : text.replace(/^\d+\s*/, '').trim();
             break;
           }
         }
 
+        // Период — пробуем оба известных формата подписи.
+        let periodFrom = '', periodTo = '';
+        for (let i = 0; i < Math.min(12, rows.length); i++) {
+          const text = String(rows[i][0] || '');
+          let m = text.match(/c\s+(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})/i);
+          if (!m) m = text.match(/За\s+(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})/i);
+          if (m) { periodFrom = m[1]; periodTo = m[2]; break; }
+        }
         if (!periodFrom || !periodTo) {
           reject(new Error('Не удалось определить период выписки — проверьте формат файла'));
+          return;
+        }
+
+        // Заголовок таблицы — строка, где "дебет" и "кредит" встретились
+        // в РАЗНЫХ колонках (не как часть одной фразы в одной ячейке).
+        let debitCol = -1, creditCol = -1;
+        for (let i = 0; i < Math.min(15, rows.length); i++) {
+          const row = rows[i];
+          let d = -1, c = -1;
+          row.forEach((cell, idx) => {
+            const t = String(cell || '').toLowerCase();
+            if (t.includes('дебет') && d === -1) d = idx;
+            if (t.includes('кредит') && c === -1) c = idx;
+          });
+          if (d >= 0 && c >= 0 && d !== c) { debitCol = d; creditCol = c; break; }
+        }
+        if (debitCol === -1) {
+          reject(new Error('Не удалось найти колонки "Дебет"/"Кредит" в файле — проверьте формат выписки'));
+          return;
+        }
+
+        // Итоговая строка — ищем по нескольким известным подписям, а не
+        // по одному жёсткому тексту.
+        const totalMarkers = ['Итоговый оборот', 'Итого документов', 'Итого:'];
+        let totalDebit = 0, totalCredit = 0, foundTotal = false;
+        for (let i = rows.length - 1; i >= 0; i--) {
+          const cell0 = String(rows[i][0] || '');
+          if (totalMarkers.some(m => cell0.includes(m))) {
+            totalDebit = Number(rows[i][debitCol]) || 0;
+            totalCredit = Number(rows[i][creditCol]) || 0;
+            foundTotal = true;
+            break;
+          }
+        }
+        if (!foundTotal) {
+          reject(new Error('Не найдена итоговая строка с суммами оборота — проверьте формат файла'));
           return;
         }
 
@@ -7468,7 +7516,7 @@ function parseTurnoverFile(file) {
         const months = Math.max(1, (dateTo - dateFrom) / (1000 * 60 * 60 * 24 * 30.44));
 
         resolve({
-          bankName, periodFrom, periodTo, accountInfo,
+          bankName, periodFrom, periodTo,
           totalDebit, totalCredit, months,
           avgMonthlyCredit: totalCredit / months
         });
@@ -7481,6 +7529,30 @@ function parseTurnoverFile(file) {
   });
 }
 
+// Проверяет, заполнен ли уже период (1/2/3) для полей с данным
+// префиксом (b — баланс, p — прибыли/убытки) — чтобы понять, первый
+// это файл или уже второй (например, отдельно за 2025 и за 2026 год).
+function isPeriodFilled(prefix, period) {
+  return Array.from(document.querySelectorAll(`.sc-input[id^="${prefix}"]`))
+    .some(el => el.id.endsWith(`_p${period}`) && el.value !== '');
+}
+
+// Если периоды 1 и 2 уже заполнены (значит, это ВТОРОЙ загружаемый файл
+// того же типа — например, сначала загрузили отчёт за 2025 год, теперь
+// грузим за 2026) — переносим "конец периода" из нового файла в
+// период 3, не трогая уже введённые периоды 1 и 2. "Начало периода"
+// нового файла отбрасываем — оно, как правило, совпадает с уже
+// имеющимся периодом 2 (конец предыдущего отчёта = начало следующего).
+function remapToPeriod3(fields) {
+  const remapped = {};
+  Object.keys(fields).forEach(key => {
+    if (key.endsWith('_p2')) {
+      remapped[key.replace('_p2', '_p3')] = fields[key];
+    }
+  });
+  return remapped;
+}
+
 async function uploadForma1() {
   const input = document.getElementById('scForma1File');
   const status = document.getElementById('scUploadStatus');
@@ -7489,7 +7561,16 @@ async function uploadForma1() {
   status.innerText = 'Читаю Форму №1...';
   try {
     const result = await parseForma1File(input.files[0]);
-    fillScoringFieldsPartial(result.fields);
+    const isSecondFile = isPeriodFilled('b', 1) && isPeriodFilled('b', 2);
+
+    if (isSecondFile) {
+      fillScoringFieldsPartial(remapToPeriod3(result.fields));
+      status.innerText = '✓ Второй файл Формы №1 загружен — данные добавлены в период 3 (периоды 1 и 2 не тронуты)';
+    } else {
+      fillScoringFieldsPartial(result.fields);
+      status.innerText = '✓ Форма №1 загружена — заполнены периоды 1 и 2 (начало/конец периода из файла)';
+    }
+
     if (result.companyName && !document.getElementById('scClientName').value) {
       document.getElementById('scClientName').value = result.companyName;
     }
@@ -7497,7 +7578,6 @@ async function uploadForma1() {
       document.getElementById('scClientInn').value = result.inn;
     }
     calcScoring();
-    status.innerText = '✓ Форма №1 загружена — заполнены периоды 1 и 2 (начало/конец периода из файла)';
   } catch (error) {
     status.innerText = 'Ошибка чтения Формы №1: ' + error.message;
     console.error(error);
@@ -7512,9 +7592,17 @@ async function uploadForma2() {
   status.innerText = 'Читаю Форму №2...';
   try {
     const result = await parseForma2File(input.files[0]);
-    fillScoringFieldsPartial(result.fields);
+    const isSecondFile = isPeriodFilled('p', 1) && isPeriodFilled('p', 2);
+
+    if (isSecondFile) {
+      fillScoringFieldsPartial(remapToPeriod3(result.fields));
+      status.innerText = '✓ Второй файл Формы №2 загружен — данные добавлены в период 3 (периоды 1 и 2 не тронуты)';
+    } else {
+      fillScoringFieldsPartial(result.fields);
+      status.innerText = '✓ Форма №2 загружена — заполнены периоды 1 и 2';
+    }
+
     calcScoring();
-    status.innerText = '✓ Форма №2 загружена — заполнены периоды 1 и 2';
   } catch (error) {
     status.innerText = 'Ошибка чтения Формы №2: ' + error.message;
     console.error(error);
