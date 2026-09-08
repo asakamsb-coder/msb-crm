@@ -2301,47 +2301,47 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header">
     <div>
       <h1 data-i18n="hMahalla">МАХАЛЛЯ</h1>
-      <p>Паспорта махаллей и микропроекты предпринимателей. Отдельный блок, не связан с клиентской базой CRM.</p>
+      <p data-i18n="pMahalla">Паспорта махаллей и микропроекты предпринимателей. Отдельный блок, не связан с клиентской базой CRM.</p>
     </div>
   </div>
 
   <div class="msb-sales-tabs">
-    <button class="msb-sales-tab active" data-mahalla-tab="mahallaList" onclick="showMahallaTab('mahallaList')">🏘️ Махалли</button>
-    <button class="msb-sales-tab" data-mahalla-tab="microprojectsList" onclick="showMahallaTab('microprojectsList')">💡 Микропроекты</button>
-    <button class="msb-sales-tab" data-mahalla-tab="mahallaPortal" onclick="showMahallaTab('mahallaPortal')">🌐 Портал</button>
-    <button class="msb-sales-tab" data-mahalla-tab="obhodTab" onclick="showMahallaTab('obhodTab')">📋 Опрос и обход</button>
+    <button class="msb-sales-tab active" data-mahalla-tab="mahallaList" onclick="showMahallaTab('mahallaList')">🏘️ <span data-i18n="tabMahallaList">Махалли</span></button>
+    <button class="msb-sales-tab" data-mahalla-tab="microprojectsList" onclick="showMahallaTab('microprojectsList')">💡 <span data-i18n="tabMicroprojects">Микропроекты</span></button>
+    <button class="msb-sales-tab" data-mahalla-tab="mahallaPortal" onclick="showMahallaTab('mahallaPortal')">🌐 <span data-i18n="tabPortal">Портал</span></button>
+    <button class="msb-sales-tab" data-mahalla-tab="obhodTab" onclick="showMahallaTab('obhodTab')">📋 <span data-i18n="tabObhod">Опрос и обход</span></button>
   </div>
 
   <div id="mahallaListSection" class="mahalla-tab-section active">
     <div class="panel" id="mahallaPassportUploadPanel" style="display:none;">
-      <h2>Импорт паспорта махаллей</h2>
-      <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">
+      <h2 data-i18n="hPassportImport">Импорт паспорта махаллей</h2>
+      <p style="color:var(--muted);font-size:13px;margin-bottom:14px;" data-i18n="pPassportImport">
         Загрузите официальный Excel-файл (население, дворы, безработные, малообеспеченные семьи, план/факт по микропроектам, рабочим местам и кредитам). Махалли из файла, которых ещё нет в списке, будут созданы автоматически; существующие — обновлены по названию.
       </p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <input type="file" id="mahallaPassportFile" accept=".xlsx,.xls">
-        <button class="btn" onclick="uploadMahallaPassport()">Загрузить паспорт</button>
+        <button class="btn" onclick="uploadMahallaPassport()" data-i18n="btnUploadPassport">Загрузить паспорт</button>
       </div>
       <div id="mahallaPassportUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
     </div>
 
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-        <h2 style="margin-bottom:0;">Общая картина по всем махаллям</h2>
-        <button class="btn btn-secondary" onclick="downloadMahallaInfographic()"><i class="ti ti-download"></i> Скачать как изображение</button>
+        <h2 style="margin-bottom:0;" data-i18n="hOverallPicture">Общая картина по всем махаллям</h2>
+        <button class="btn btn-secondary" onclick="downloadMahallaInfographic()"><i class="ti ti-download"></i> <span data-i18n="btnDownloadImage">Скачать как изображение</span></button>
       </div>
-      <div id="mahallaInfographicBox" class="loading">Загрузка...</div>
+      <div id="mahallaInfographicBox" class="loading" data-i18n="loading">Загрузка...</div>
     </div>
 
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <div>
-          <h2 style="margin-bottom:4px;">Список махаллей</h2>
-          <p style="color:var(--muted);font-size:13px;">Показатели заполняются импортом файла-паспорта — пока могут быть пустыми, если файл ещё не загружен.</p>
+          <h2 style="margin-bottom:4px;" data-i18n="hMahallaList">Список махаллей</h2>
+          <p style="color:var(--muted);font-size:13px;" data-i18n="pMahallaList">Показатели заполняются импортом файла-паспорта — пока могут быть пустыми, если файл ещё не загружен.</p>
         </div>
-        <button class="btn" id="addMahallaBtn" style="display:none;" onclick="openMahallaForm()">+ Добавить махаллю</button>
+        <button class="btn" id="addMahallaBtn" style="display:none;" onclick="openMahallaForm()" data-i18n="btnAddMahalla">+ Добавить махаллю</button>
       </div>
-      <div id="mahallasBox" class="loading">Загрузка...</div>
+      <div id="mahallasBox" class="loading" data-i18n="loading">Загрузка...</div>
     </div>
   </div>
 
@@ -2349,33 +2349,33 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <div>
-          <h2 style="margin-bottom:4px;">Микропроекты</h2>
-          <p style="color:var(--muted);font-size:13px;">Проекты предпринимателей из махаллей, которые ведёт закреплённый банкир.</p>
+          <h2 style="margin-bottom:4px;" data-i18n="hMicroprojects">Микропроекты</h2>
+          <p style="color:var(--muted);font-size:13px;" data-i18n="pMicroprojects">Проекты предпринимателей из махаллей, которые ведёт закреплённый банкир.</p>
         </div>
-        <button class="btn" onclick="openMicroprojectForm('create')">+ Добавить микропроект</button>
+        <button class="btn" onclick="openMicroprojectForm('create')" data-i18n="btnAddMicroproject">+ Добавить микропроект</button>
       </div>
 
       <div style="display:flex;gap:10px;margin-bottom:16px;">
-        <button class="msb-sales-tab active" id="mpViewActiveBtn" onclick="setMicroprojectViewMode('active')">Активные</button>
-        <button class="msb-sales-tab" id="mpViewRejectedBtn" onclick="setMicroprojectViewMode('rejected')">⚠ Неперспективные</button>
+        <button class="msb-sales-tab active" id="mpViewActiveBtn" onclick="setMicroprojectViewMode('active')" data-i18n="btnActive">Активные</button>
+        <button class="msb-sales-tab" id="mpViewRejectedBtn" onclick="setMicroprojectViewMode('rejected')">⚠ <span data-i18n="btnUnpromising">Неперспективные</span></button>
       </div>
 
       <div id="microprojectStatsBox"></div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 16px;">
-        <input id="microprojectSearchInput" class="input" placeholder="Поиск по проекту, инициатору, ПИНФЛ/ИНН" style="max-width:280px;flex:1 1 200px;" oninput="renderMicroprojectsList()">
-        <select id="microprojectMahallaFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()"><option value="">Все махалли</option></select>
+        <input id="microprojectSearchInput" class="input" data-i18n-placeholder="phMicroprojectSearch" placeholder="Поиск по проекту, инициатору, ПИНФЛ/ИНН" style="max-width:280px;flex:1 1 200px;" oninput="renderMicroprojectsList()">
+        <select id="microprojectMahallaFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()"><option value="" data-i18n="optAllMahallas">Все махалли</option></select>
         <select id="microprojectStatusFilter" class="select" style="max-width:220px;" onchange="renderMicroprojectsList()">
-          <option value="">Все статусы</option>
-          <option>Выявлен</option>
-          <option>Изучается</option>
-          <option>Бизнес-план</option>
-          <option>Финансирование</option>
-          <option>Одобрен</option>
-          <option>Профинансирован</option>
-          <option>Запущен</option>
-          <option>Работает</option>
-          <option>Проблемный/закрыт</option>
+          <option value="" data-i18n="optAllStatuses">Все статусы</option>
+          <option value="Выявлен" data-i18n="statusIdentified">Выявлен</option>
+          <option value="Изучается" data-i18n="statusStudying">Изучается</option>
+          <option value="Бизнес-план" data-i18n="statusBizPlan">Бизнес-план</option>
+          <option value="Финансирование" data-i18n="statusFinancing">Финансирование</option>
+          <option value="Одобрен" data-i18n="statusApproved">Одобрен</option>
+          <option value="Профинансирован" data-i18n="statusFinanced">Профинансирован</option>
+          <option value="Запущен" data-i18n="statusLaunched">Запущен</option>
+          <option value="Работает" data-i18n="statusWorking">Работает</option>
+          <option value="Проблемный/закрыт" data-i18n="statusClosed">Проблемный/закрыт</option>
         </select>
       </div>
 
@@ -2384,19 +2384,19 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           <thead>
             <tr>
               <th>№</th>
-              <th>Дата</th>
-              <th>Махалля</th>
-              <th>Проект</th>
-              <th>Инициатор</th>
-              <th>Отрасль</th>
-              <th>Стоимость</th>
-              <th>Статус</th>
-              <th>Оценка</th>
-              <th>Банкир</th>
+              <th data-i18n="thDate">Дата</th>
+              <th data-i18n="thMahalla">Махалля</th>
+              <th data-i18n="thProject">Проект</th>
+              <th data-i18n="thInitiator">Инициатор</th>
+              <th data-i18n="thIndustry">Отрасль</th>
+              <th data-i18n="thCost">Стоимость</th>
+              <th data-i18n="thStatus">Статус</th>
+              <th data-i18n="thRating">Оценка</th>
+              <th data-i18n="thBanker">Банкир</th>
             </tr>
           </thead>
           <tbody id="microprojectsBox">
-            <tr><td colspan="10" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="10" class="loading" data-i18n="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
@@ -2411,16 +2411,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
   <div id="obhodTabSection" class="mahalla-tab-section">
     <div class="panel">
-      <h2 style="margin-bottom:16px;">Прогресс обхода</h2>
-      <div id="obhodDashboardBox" class="loading">Загрузка...</div>
+      <h2 style="margin-bottom:16px;" data-i18n="hObhodProgress">Прогресс обхода</h2>
+      <div id="obhodDashboardBox" class="loading" data-i18n="loading">Загрузка...</div>
     </div>
 
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-        <h2 style="margin-bottom:0;">Опросы дворов</h2>
-        <button class="btn" onclick="openObhodForm()">+ Новый опрос</button>
+        <h2 style="margin-bottom:0;" data-i18n="hObhodSurveys">Опросы дворов</h2>
+        <button class="btn" onclick="openObhodForm()" data-i18n="btnNewSurvey">+ Новый опрос</button>
       </div>
-      <div id="obhodListBox" class="loading">Загрузка...</div>
+      <div id="obhodListBox" class="loading" data-i18n="loading">Загрузка...</div>
     </div>
   </div>
 </section>
@@ -2429,143 +2429,143 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <aside class="client-drawer" id="obhodFormDrawer">
   <div class="drawer-header">
     <div>
-      <div class="drawer-title" id="obhodFormTitle">Новый опрос двора</div>
-      <div class="drawer-subtitle">Опрос и обход граждан махалли</div>
+      <div class="drawer-title" id="obhodFormTitle" data-i18n="titleNewSurvey">Новый опрос двора</div>
+      <div class="drawer-subtitle" data-i18n="subtitleObhod">Опрос и обход граждан махалли</div>
     </div>
     <button class="close-btn" onclick="closeObhodForm()">×</button>
   </div>
   <div class="drawer-body">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Махалля *</label>
-    <select id="obMahalla" class="select" style="margin-bottom:14px;"><option value="">Выберите махаллю</option></select>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblMahallaReq">Махалля *</label>
+    <select id="obMahalla" class="select" style="margin-bottom:14px;"><option value="" data-i18n="optChooseMahalla">Выберите махаллю</option></select>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ФИО главы двора *</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblHeadName">ФИО главы двора *</label>
     <input type="text" id="obHeadName" class="input" placeholder="Usmanov Alisher Jurayevich" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ПИНФЛ</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblPinfl">ПИНФЛ</label>
     <input type="text" id="obPinfl" class="input" placeholder="12345678901234" maxlength="14" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Телефон</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblPhone">Телефон</label>
     <input type="text" id="obPhone" class="input" placeholder="998971700404" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Состав семьи (чел.)</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblFamilySize">Состав семьи (чел.)</label>
     <input type="number" id="obFamilySize" class="input" placeholder="5" style="margin-bottom:14px;width:100px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Категория населения</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblCategory">Категория населения</label>
     <select id="obCategory" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obCategory','obCategoryOtherWrap')">
-      <option value="">Не выбрано</option>
-      <option>Нуждается в социальной защите</option>
-      <option>Есть желание заняться бизнесом, трудоспособные</option>
-      <option>Низкое желание работать</option>
-      <option>Требуется работа, есть ремесло/профессия</option>
-      <option>Желание заработка за рубежом</option>
-      <option>Пенсионер, нетрудоспособный по возрасту</option>
-      <option>Инвалид, не может работать по здоровью</option>
-      <option>Студент/учащийся</option>
-      <option>Есть работа, но нужна дополнительная</option>
-      <option>Домохозяйка</option>
-      <option>Мигрант, вернулся, ищет работу</option>
-      <option>Уже получает поддержку/участвует в микропроекте</option>
-      <option value="Другое">Другое</option>
+      <option value="" data-i18n="optNotSelected">Не выбрано</option>
+      <option value="Нуждается в социальной защите" data-i18n="catSocial">Нуждается в социальной защите</option>
+      <option value="Есть желание заняться бизнесом, трудоспособные" data-i18n="catBusiness">Есть желание заняться бизнесом, трудоспособные</option>
+      <option value="Низкое желание работать" data-i18n="catLowWill">Низкое желание работать</option>
+      <option value="Требуется работа, есть ремесло/профессия" data-i18n="catCraft">Требуется работа, есть ремесло/профессия</option>
+      <option value="Желание заработка за рубежом" data-i18n="catAbroad">Желание заработка за рубежом</option>
+      <option value="Пенсионер, нетрудоспособный по возрасту" data-i18n="catPensioner">Пенсионер, нетрудоспособный по возрасту</option>
+      <option value="Инвалид, не может работать по здоровью" data-i18n="catDisabled">Инвалид, не может работать по здоровью</option>
+      <option value="Студент/учащийся" data-i18n="catStudent">Студент/учащийся</option>
+      <option value="Есть работа, но нужна дополнительная" data-i18n="catNeedsExtra">Есть работа, но нужна дополнительная</option>
+      <option value="Домохозяйка" data-i18n="catHousewife">Домохозяйка</option>
+      <option value="Мигрант, вернулся, ищет работу" data-i18n="catMigrant">Мигрант, вернулся, ищет работу</option>
+      <option value="Уже получает поддержку/участвует в микропроекте" data-i18n="catSupported">Уже получает поддержку/участвует в микропроекте</option>
+      <option value="Другое" data-i18n="optOther">Другое</option>
     </select>
     <div id="obCategoryOtherWrap" style="display:none;margin-bottom:14px;">
-      <input type="text" id="obCategoryOther" class="input" placeholder="Уточните категорию...">
+      <input type="text" id="obCategoryOther" class="input" data-i18n-placeholder="phSpecifyCategory" placeholder="Уточните категорию...">
     </div>
 
     <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
-    <h3 style="font-size:14px;margin-bottom:14px;">Бизнес</h3>
+    <h3 style="font-size:14px;margin-bottom:14px;" data-i18n="hBusiness">Бизнес</h3>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Интерес к предпринимательству</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBusinessInterest">Интерес к предпринимательству</label>
     <select id="obBusinessInterest" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obBusinessInterest','obBusinessInterestOtherWrap')">
-      <option value="">Не выбрано</option>
-      <option>Да</option>
-      <option>Нет</option>
-      <option>Уже есть бизнес</option>
-      <option value="Другое">Другое</option>
+      <option value="" data-i18n="optNotSelected">Не выбрано</option>
+      <option value="Да" data-i18n="optYes">Да</option>
+      <option value="Нет" data-i18n="optNo">Нет</option>
+      <option value="Уже есть бизнес" data-i18n="optHasBusiness">Уже есть бизнес</option>
+      <option value="Другое" data-i18n="optOther">Другое</option>
     </select>
     <div id="obBusinessInterestOtherWrap" style="display:none;margin-bottom:14px;">
-      <input type="text" id="obBusinessInterestOther" class="input" placeholder="Уточните...">
+      <input type="text" id="obBusinessInterestOther" class="input" data-i18n-placeholder="phSpecify" placeholder="Уточните...">
     </div>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Какой бизнес хотел(а) бы начать</label>
-    <input type="text" id="obBusinessIdea" class="input" placeholder="Например: пошив одежды" style="margin-bottom:14px;">
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBusinessIdea">Какой бизнес хотел(а) бы начать</label>
+    <input type="text" id="obBusinessIdea" class="input" data-i18n-placeholder="phBusinessIdea" placeholder="Например: пошив одежды" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Сфера</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblSector">Сфера</label>
     <select id="obSector" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obSector','obSectorOtherWrap')">
-      <option value="">Не выбрано</option>
-      <option>Торговля</option>
-      <option>Сельское хозяйство</option>
-      <option>Услуги</option>
-      <option>Производство/ремесло</option>
-      <option>Общепит</option>
-      <option>Строительство</option>
-      <option value="Другое">Другое</option>
+      <option value="" data-i18n="optNotSelected">Не выбрано</option>
+      <option value="Торговля" data-i18n="sectorTrade">Торговля</option>
+      <option value="Сельское хозяйство" data-i18n="sectorAgri">Сельское хозяйство</option>
+      <option value="Услуги" data-i18n="sectorServices">Услуги</option>
+      <option value="Производство/ремесло" data-i18n="sectorProduction">Производство/ремесло</option>
+      <option value="Общепит" data-i18n="sectorCatering">Общепит</option>
+      <option value="Строительство" data-i18n="sectorConstruction">Строительство</option>
+      <option value="Другое" data-i18n="optOther">Другое</option>
     </select>
     <div id="obSectorOtherWrap" style="display:none;margin-bottom:14px;">
-      <input type="text" id="obSectorOther" class="input" placeholder="Уточните сферу...">
+      <input type="text" id="obSectorOther" class="input" data-i18n-placeholder="phSpecifySector" placeholder="Уточните сферу...">
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
       <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Есть помещение/земля</label>
-        <select id="obHasLand" class="select"><option value="">-</option><option>Да</option><option>Нет</option></select>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblHasLand">Есть помещение/земля</label>
+        <select id="obHasLand" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
       </div>
       <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Свободная земля (соток)</label>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblFreeLand">Свободная земля (соток)</label>
         <input type="number" id="obFreeLand" class="input" placeholder="0">
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
       <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Нужен кредит</label>
-        <select id="obNeedsCredit" class="select"><option value="">-</option><option>Да</option><option>Нет</option></select>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblNeedsCredit">Нужен кредит</label>
+        <select id="obNeedsCredit" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
       </div>
       <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Сумма (сум)</label>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblAmount">Сумма (сум)</label>
         <input type="text" id="obCreditAmount" class="input" placeholder="30 000 000">
       </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
       <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Рабочих мест создаст</label>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblJobsCreated">Рабочих мест создаст</label>
         <input type="number" id="obJobs" class="input" placeholder="2">
       </div>
       <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Готов к обучению</label>
-        <select id="obTraining" class="select"><option value="">-</option><option>Да</option><option>Нет</option></select>
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblReadyTraining">Готов к обучению</label>
+        <select id="obTraining" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
       </div>
     </div>
 
     <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
-    <h3 style="font-size:14px;margin-bottom:10px;">Проблемы</h3>
+    <h3 style="font-size:14px;margin-bottom:10px;" data-i18n="hProblems">Проблемы</h3>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;" id="obProblemsBox">
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет капитала" onclick="toggleObhodProblem(this)">Нет капитала</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет знаний" onclick="toggleObhodProblem(this)">Нет знаний</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет рынка сбыта" onclick="toggleObhodProblem(this)">Нет рынка сбыта</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Не подходит залог" onclick="toggleObhodProblem(this)">Не подходит залог</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет документов" onclick="toggleObhodProblem(this)">Нет документов</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Здоровье" onclick="toggleObhodProblem(this)">Здоровье</button>
+      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет капитала" onclick="toggleObhodProblem(this)" data-i18n="probNoCapital">Нет капитала</button>
+      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет знаний" onclick="toggleObhodProblem(this)" data-i18n="probNoKnowledge">Нет знаний</button>
+      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет рынка сбыта" onclick="toggleObhodProblem(this)" data-i18n="probNoMarket">Нет рынка сбыта</button>
+      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Не подходит залог" onclick="toggleObhodProblem(this)" data-i18n="probNoCollateral">Не подходит залог</button>
+      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет документов" onclick="toggleObhodProblem(this)" data-i18n="probNoDocs">Нет документов</button>
+      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Здоровье" onclick="toggleObhodProblem(this)" data-i18n="probHealth">Здоровье</button>
     </div>
-    <input type="text" id="obProblemsOther" class="input" placeholder="Другое..." style="margin-bottom:20px;">
+    <input type="text" id="obProblemsOther" class="input" data-i18n-placeholder="optOtherDots" placeholder="Другое..." style="margin-bottom:20px;">
 
     <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
 
     <div style="display:flex;gap:10px;margin-bottom:6px;">
-      <button type="button" class="btn btn-secondary" style="flex:1;" onclick="captureObhodGeolocation()"><i class="ti ti-map-pin"></i> Локация</button>
-      <button type="button" class="btn btn-secondary" id="obPhotosBtn" style="flex:1;" onclick="document.getElementById('obPhotos').click()"><i class="ti ti-camera"></i> Фото</button>
+      <button type="button" class="btn btn-secondary" style="flex:1;" onclick="captureObhodGeolocation()"><i class="ti ti-map-pin"></i> <span data-i18n="btnLocation">Локация</span></button>
+      <button type="button" class="btn btn-secondary" id="obPhotosBtn" style="flex:1;" onclick="document.getElementById('obPhotos').click()"><i class="ti ti-camera"></i> <span data-i18n="btnPhoto">Фото</span></button>
     </div>
     <input type="file" id="obPhotos" accept="image/*" multiple style="display:none;">
-    <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;">Можно нажать несколько раз подряд, чтобы добавить ещё фото (до 5) — или выбрать сразу несколько из галереи.</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;" data-i18n="hintPhotos">Можно нажать несколько раз подряд, чтобы добавить ещё фото (до 5) — или выбрать сразу несколько из галереи.</div>
     <div id="obGeoStatus" style="font-size:12.5px;color:var(--muted);margin-bottom:10px;"></div>
     <div id="obPhotoPreviewWrap" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
     <div id="obExistingPhotosWrap" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Комментарий банкира</label>
-    <textarea id="obComment" class="input" placeholder="Заметки по итогам визита" style="margin-bottom:20px;min-height:60px;"></textarea>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBankerComment">Комментарий банкира</label>
+    <textarea id="obComment" class="input" data-i18n-placeholder="phComment" placeholder="Заметки по итогам визита" style="margin-bottom:20px;min-height:60px;"></textarea>
 
-    <button class="btn" id="obSaveBtn" onclick="saveObhodSurveyForm()" style="width:100%;">Сохранить опрос</button>
+    <button class="btn" id="obSaveBtn" onclick="saveObhodSurveyForm()" style="width:100%;" data-i18n="btnSaveSurvey">Сохранить опрос</button>
     <div id="obSaveMessage" style="margin-top:12px;font-weight:700;text-align:center;"></div>
   </div>
 </aside>
@@ -2574,18 +2574,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <aside class="client-drawer" id="mahallaFormDrawer">
   <div class="drawer-header">
     <div>
-      <div class="drawer-title">Добавить махаллю</div>
-      <div class="drawer-subtitle">Название и (опционально) банкиры</div>
+      <div class="drawer-title" data-i18n="titleAddMahalla">Добавить махаллю</div>
+      <div class="drawer-subtitle" data-i18n="subtitleAddMahalla">Название и (опционально) банкиры</div>
     </div>
     <button class="close-btn" onclick="closeMahallaForm()">×</button>
   </div>
   <div class="drawer-body">
     <div id="mahallaFormError" style="display:none;background:#FEE2E2;color:#991B1B;padding:11px 12px;border-radius:12px;font-size:13px;margin-bottom:14px;"></div>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Название махалли *</label>
-    <input id="mfName" class="input" style="margin-bottom:18px;" placeholder="Например: Дустлик">
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblMahallaNameReq">Название махалли *</label>
+    <input id="mfName" class="input" style="margin-bottom:18px;" data-i18n-placeholder="phMahallaName" placeholder="Например: Дустлик">
 
-    <button class="btn" style="width:100%;" onclick="submitMahallaForm()">Сохранить</button>
+    <button class="btn" style="width:100%;" onclick="submitMahallaForm()" data-i18n="btnSave">Сохранить</button>
   </div>
 </aside>
 
@@ -2593,14 +2593,14 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <aside class="client-drawer" id="bankerFormDrawer">
   <div class="drawer-header">
     <div>
-      <div class="drawer-title" id="bankerFormTitle">Назначить банкира</div>
-      <div class="drawer-subtitle">Можно выбрать несколько менеджеров</div>
+      <div class="drawer-title" id="bankerFormTitle" data-i18n="titleAssignBanker">Назначить банкира</div>
+      <div class="drawer-subtitle" data-i18n="subtitleAssignBanker">Можно выбрать несколько менеджеров</div>
     </div>
     <button class="close-btn" onclick="closeBankerForm()">×</button>
   </div>
   <div class="drawer-body">
     <div id="bankerFormList"></div>
-    <button class="btn" style="width:100%;margin-top:18px;" onclick="submitBankerForm()">Сохранить</button>
+    <button class="btn" style="width:100%;margin-top:18px;" onclick="submitBankerForm()" data-i18n="btnSave">Сохранить</button>
   </div>
 </aside>
 
@@ -3518,7 +3518,121 @@ const APP_DICT = {
   hScoring: { ru: 'СКОРИНГ', uz: 'SKORING' },
   hAi: { ru: 'AI ЦЕНТР', uz: 'AI MARKAZ' },
   pAi: { ru: 'Управленческие выводы по данным CRM', uz: "CRM ma'lumotlari bo'yicha boshqaruv xulosalari" },
-  hMahalla: { ru: 'МАХАЛЛЯ', uz: 'MAHALLA' }
+  hMahalla: { ru: 'МАХАЛЛЯ', uz: 'MAHALLA' },
+
+  // Раздел "Махалля"
+  pMahalla: { ru: 'Паспорта махаллей и микропроекты предпринимателей. Отдельный блок, не связан с клиентской базой CRM.', uz: "Mahalla pasportlari va tadbirkorlar mikroloyihalari. Alohida blok, CRM mijozlar bazasi bilan bog'liq emas." },
+  tabMahallaList: { ru: 'Махалли', uz: 'Mahallalar' },
+  tabMicroprojects: { ru: 'Микропроекты', uz: 'Mikroloyihalar' },
+  tabPortal: { ru: 'Портал', uz: 'Portal' },
+  tabObhod: { ru: 'Опрос и обход', uz: "So'rov va aylanish" },
+  hPassportImport: { ru: 'Импорт паспорта махаллей', uz: 'Mahalla pasportini import qilish' },
+  pPassportImport: { ru: 'Загрузите официальный Excel-файл (население, дворы, безработные, малообеспеченные семьи, план/факт по микропроектам, рабочим местам и кредитам). Махалли из файла, которых ещё нет в списке, будут созданы автоматически; существующие — обновлены по названию.', uz: "Rasmiy Excel-faylni yuklang (aholi, xonadonlar, ishsizlar, kam ta'minlangan oilalar, mikroloyihalar/ish o'rinlari/kreditlar bo'yicha reja/fakt). Faylda ro'yxatda yo'q mahallalar avtomatik yaratiladi; mavjudlari — nomi bo'yicha yangilanadi." },
+  btnUploadPassport: { ru: 'Загрузить паспорт', uz: 'Pasportni yuklash' },
+  hOverallPicture: { ru: 'Общая картина по всем махаллям', uz: "Barcha mahallalar bo'yicha umumiy manzara" },
+  btnDownloadImage: { ru: 'Скачать как изображение', uz: "Rasm sifatida yuklab olish" },
+  loading: { ru: 'Загрузка...', uz: 'Yuklanmoqda...' },
+  hMahallaList: { ru: 'Список махаллей', uz: "Mahallalar ro'yxati" },
+  pMahallaList: { ru: 'Показатели заполняются импортом файла-паспорта — пока могут быть пустыми, если файл ещё не загружен.', uz: "Ko'rsatkichlar pasport faylini import qilish orqali to'ldiriladi — fayl hali yuklanmagan bo'lsa, bo'sh bo'lishi mumkin." },
+  btnAddMahalla: { ru: '+ Добавить махаллю', uz: "+ Mahalla qo'shish" },
+  hMicroprojects: { ru: 'Микропроекты', uz: 'Mikroloyihalar' },
+  pMicroprojects: { ru: 'Проекты предпринимателей из махаллей, которые ведёт закреплённый банкир.', uz: "Biriktirilgan bankir yuritayotgan mahalla tadbirkorlarining loyihalari." },
+  btnAddMicroproject: { ru: '+ Добавить микропроект', uz: "+ Mikroloyiha qo'shish" },
+  btnActive: { ru: 'Активные', uz: 'Faol' },
+  btnUnpromising: { ru: 'Неперспективные', uz: 'Istiqbolsiz' },
+  phMicroprojectSearch: { ru: 'Поиск по проекту, инициатору, ПИНФЛ/ИНН', uz: "Loyiha, tashabbuskor, PINFL/STIR bo'yicha qidiruv" },
+  optAllMahallas: { ru: 'Все махалли', uz: 'Barcha mahallalar' },
+  optAllStatuses: { ru: 'Все статусы', uz: 'Barcha holatlar' },
+  statusIdentified: { ru: 'Выявлен', uz: 'Aniqlangan' },
+  statusStudying: { ru: 'Изучается', uz: "O'rganilmoqda" },
+  statusBizPlan: { ru: 'Бизнес-план', uz: 'Biznes-reja' },
+  statusFinancing: { ru: 'Финансирование', uz: 'Moliyalashtirish' },
+  statusApproved: { ru: 'Одобрен', uz: 'Tasdiqlangan' },
+  statusFinanced: { ru: 'Профинансирован', uz: 'Moliyalashtirilgan' },
+  statusLaunched: { ru: 'Запущен', uz: 'Ishga tushirilgan' },
+  statusWorking: { ru: 'Работает', uz: 'Ishlamoqda' },
+  statusClosed: { ru: 'Проблемный/закрыт', uz: 'Muammoli/yopilgan' },
+  thDate: { ru: 'Дата', uz: 'Sana' },
+  thMahalla: { ru: 'Махалля', uz: 'Mahalla' },
+  thProject: { ru: 'Проект', uz: 'Loyiha' },
+  thInitiator: { ru: 'Инициатор', uz: 'Tashabbuskor' },
+  thIndustry: { ru: 'Отрасль', uz: 'Soha' },
+  thCost: { ru: 'Стоимость', uz: 'Qiymati' },
+  thStatus: { ru: 'Статус', uz: 'Holat' },
+  thRating: { ru: 'Оценка', uz: 'Baho' },
+  thBanker: { ru: 'Банкир', uz: 'Bankir' },
+
+  // Форма "Опрос и обход"
+  hObhodProgress: { ru: 'Прогресс обхода', uz: 'Aylanish jarayoni' },
+  hObhodSurveys: { ru: 'Опросы дворов', uz: "Xonadonlar so'rovlari" },
+  btnNewSurvey: { ru: '+ Новый опрос', uz: "+ Yangi so'rov" },
+  titleNewSurvey: { ru: 'Новый опрос двора', uz: "Yangi xonadon so'rovi" },
+  subtitleObhod: { ru: 'Опрос и обход граждан махалли', uz: "Mahalla fuqarolarini so'rov va aylanish" },
+  lblMahallaReq: { ru: 'Махалля *', uz: 'Mahalla *' },
+  optChooseMahalla: { ru: 'Выберите махаллю', uz: 'Mahallani tanlang' },
+  lblHeadName: { ru: 'ФИО главы двора *', uz: "Xonadon boshlig'ining F.I.SH. *" },
+  lblPinfl: { ru: 'ПИНФЛ', uz: 'PINFL' },
+  lblPhone: { ru: 'Телефон', uz: 'Telefon' },
+  lblFamilySize: { ru: 'Состав семьи (чел.)', uz: "Oila tarkibi (kishi)" },
+  lblCategory: { ru: 'Категория населения', uz: 'Aholi toifasi' },
+  optNotSelected: { ru: 'Не выбрано', uz: 'Tanlanmagan' },
+  catSocial: { ru: 'Нуждается в социальной защите', uz: 'Ijtimoiy himoyaga muhtoj' },
+  catBusiness: { ru: 'Есть желание заняться бизнесом, трудоспособные', uz: "Biznes bilan shug'ullanish istagi bor, mehnatga layoqatli" },
+  catLowWill: { ru: 'Низкое желание работать', uz: 'Ishlash istagi past' },
+  catCraft: { ru: 'Требуется работа, есть ремесло/профессия', uz: 'Ish kerak, hunar/kasbi bor' },
+  catAbroad: { ru: 'Желание заработка за рубежом', uz: "Chet elda ishlash istagi" },
+  catPensioner: { ru: 'Пенсионер, нетрудоспособный по возрасту', uz: "Pensioner, yoshi bo'yicha mehnatga layoqatsiz" },
+  catDisabled: { ru: 'Инвалид, не может работать по здоровью', uz: "Nogiron, sog'lig'i sababli ishlay olmaydi" },
+  catStudent: { ru: 'Студент/учащийся', uz: "Talaba/o'quvchi" },
+  catNeedsExtra: { ru: 'Есть работа, но нужна дополнительная', uz: "Ishi bor, lekin qo'shimcha kerak" },
+  catHousewife: { ru: 'Домохозяйка', uz: 'Uy bekasi' },
+  catMigrant: { ru: 'Мигрант, вернулся, ищет работу', uz: 'Migrant, qaytgan, ish qidirmoqda' },
+  catSupported: { ru: 'Уже получает поддержку/участвует в микропроекте', uz: "Allaqachon yordam olmoqda/mikroloyihada ishtirok etmoqda" },
+  optOther: { ru: 'Другое', uz: 'Boshqa' },
+  phSpecifyCategory: { ru: 'Уточните категорию...', uz: 'Toifani aniqlashtiring...' },
+  hBusiness: { ru: 'Бизнес', uz: 'Biznes' },
+  lblBusinessInterest: { ru: 'Интерес к предпринимательству', uz: 'Tadbirkorlikka qiziqish' },
+  optYes: { ru: 'Да', uz: 'Ha' },
+  optNo: { ru: 'Нет', uz: "Yo'q" },
+  optHasBusiness: { ru: 'Уже есть бизнес', uz: 'Biznesi allaqachon bor' },
+  phSpecify: { ru: 'Уточните...', uz: 'Aniqlashtiring...' },
+  lblBusinessIdea: { ru: 'Какой бизнес хотел(а) бы начать', uz: 'Qanday biznes boshlashni istaydi' },
+  phBusinessIdea: { ru: 'Например: пошив одежды', uz: 'Masalan: kiyim tikish' },
+  lblSector: { ru: 'Сфера', uz: 'Soha' },
+  sectorTrade: { ru: 'Торговля', uz: 'Savdo' },
+  sectorAgri: { ru: 'Сельское хозяйство', uz: "Qishloq xo'jaligi" },
+  sectorServices: { ru: 'Услуги', uz: 'Xizmatlar' },
+  sectorProduction: { ru: 'Производство/ремесло', uz: "Ishlab chiqarish/hunarmandchilik" },
+  sectorCatering: { ru: 'Общепит', uz: 'Umumiy ovqatlanish' },
+  sectorConstruction: { ru: 'Строительство', uz: 'Qurilish' },
+  phSpecifySector: { ru: 'Уточните сферу...', uz: 'Sohani aniqlashtiring...' },
+  lblHasLand: { ru: 'Есть помещение/земля', uz: "Bino/yer bor" },
+  lblFreeLand: { ru: 'Свободная земля (соток)', uz: "Bo'sh yer (sotix)" },
+  lblNeedsCredit: { ru: 'Нужен кредит', uz: 'Kredit kerak' },
+  lblAmount: { ru: 'Сумма (сум)', uz: "Summa (so'm)" },
+  lblJobsCreated: { ru: 'Рабочих мест создаст', uz: "Ish o'rni yaratadi" },
+  lblReadyTraining: { ru: 'Готов к обучению', uz: "O'qishga tayyor" },
+  hProblems: { ru: 'Проблемы', uz: 'Muammolar' },
+  probNoCapital: { ru: 'Нет капитала', uz: "Kapital yo'q" },
+  probNoKnowledge: { ru: 'Нет знаний', uz: "Bilim yo'q" },
+  probNoMarket: { ru: 'Нет рынка сбыта', uz: "Sotish bozori yo'q" },
+  probNoCollateral: { ru: 'Не подходит залог', uz: "Garov mos kelmaydi" },
+  probNoDocs: { ru: 'Нет документов', uz: "Hujjatlar yo'q" },
+  probHealth: { ru: 'Здоровье', uz: "Sog'liq" },
+  optOtherDots: { ru: 'Другое...', uz: 'Boshqa...' },
+  btnLocation: { ru: 'Локация', uz: 'Joylashuv' },
+  btnPhoto: { ru: 'Фото', uz: 'Foto' },
+  hintPhotos: { ru: 'Можно нажать несколько раз подряд, чтобы добавить ещё фото (до 5) — или выбрать сразу несколько из галереи.', uz: "Yana foto qo'shish uchun bir necha marta bosishingiz mumkin (5 tagacha) — yoki galereyadan bir nechtasini birdaniga tanlang." },
+  lblBankerComment: { ru: 'Комментарий банкира', uz: 'Bankir izohi' },
+  phComment: { ru: 'Заметки по итогам визита', uz: 'Tashrif natijalari bo\'yicha eslatmalar' },
+  btnSaveSurvey: { ru: 'Сохранить опрос', uz: "So'rovni saqlash" },
+  titleAddMahalla: { ru: 'Добавить махаллю', uz: "Mahalla qo'shish" },
+  subtitleAddMahalla: { ru: 'Название и (опционально) банкиры', uz: 'Nomi va (ixtiyoriy) bankirlar' },
+  lblMahallaNameReq: { ru: 'Название махалли *', uz: 'Mahalla nomi *' },
+  phMahallaName: { ru: 'Например: Дустлик', uz: 'Masalan: Do\'stlik' },
+  btnSave: { ru: 'Сохранить', uz: 'Saqlash' },
+  titleAssignBanker: { ru: 'Назначить банкира', uz: 'Bankir tayinlash' },
+  subtitleAssignBanker: { ru: 'Можно выбрать несколько менеджеров', uz: "Bir nechta menejer tanlash mumkin" }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -3536,6 +3650,11 @@ function applyAppTranslations() {
     const key = el.getAttribute('data-i18n');
     const entry = APP_DICT[key];
     if (entry) el.textContent = entry[currentAppLang] || entry.ru;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const entry = APP_DICT[key];
+    if (entry) el.placeholder = entry[currentAppLang] || entry.ru;
   });
   document.documentElement.lang = currentAppLang;
 }
