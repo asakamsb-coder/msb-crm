@@ -2069,6 +2069,30 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       </div>
     </div>
 
+    <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:16px;margin-bottom:20px;">
+      <p style="font-weight:700;font-size:13px;margin-bottom:12px;">Автозаполнение из файлов (необязательно — можно и вручную)</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;">Форма №1 (баланс)</label>
+          <input type="file" id="scForma1File" accept=".xlsx,.xls" style="font-size:12px;">
+          <button class="btn btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 10px;" onclick="uploadForma1()">Загрузить Ф1</button>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;">Форма №2 (прибыли/убытки)</label>
+          <input type="file" id="scForma2File" accept=".xlsx,.xls" style="font-size:12px;">
+          <button class="btn btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 10px;" onclick="uploadForma2()">Загрузить Ф2</button>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px;">Выписка по счёту (оборот)</label>
+          <input type="file" id="scTurnoverFile" accept=".xlsx,.xls" style="font-size:12px;">
+          <button class="btn btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 10px;" onclick="uploadTurnover()">Добавить выписку</button>
+        </div>
+      </div>
+      <div id="scUploadStatus" style="margin-top:10px;font-size:12.5px;white-space:pre-line;"></div>
+    </div>
+
+    <div id="scTurnoverListBox"></div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
       <div>
         <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;">Период 1 (начало отчётного года)</label>
@@ -7255,6 +7279,312 @@ async function loadMahallaData() {
 // ячейки Режа/Факт/%), гибкий поиск здесь не подходит.
 // Данные начинаются с 7-й строки; итоговые/районные строки пропускаем —
 // у них пустая колонка C (название махалли).
+// Парсер официального файла "Бухгалтерия баланси №1-сонли шакл" (Ф1) —
+// лист list02, колонка "Сатр коди" содержит официальные коды строк
+// ('010','011'...), которые СОВПАДАЮТ с кодами нашей методики напрямую
+// (просто с ведущими нулями). Берём "Ҳисобот даври бошига" (начало
+// периода) и "Ҳисобот даври охирига" (конец периода) — заполняем ими
+// период 1 и период 2 формы (период 3 остаётся для более свежего
+// отчёта, если он есть, — вводится вручную или отдельной загрузкой).
+// Ищет среди ВСЕХ листов книги тот, где встречается указанный текст
+// (например, "Бухгалтерия баланси" или "Сатр коди") — так парсер не
+// зависит от того, как называется лист (list01, list02, Sheet1...) и
+// сколько лишних листов в файле. Возвращает {sheet, sheetName} первого
+// найденного совпадения или null.
+function findSheetByMarker(workbook, markerText) {
+  for (const name of workbook.SheetNames) {
+    const sheet = workbook.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    for (const row of rows) {
+      for (const cell of row) {
+        if (typeof cell === 'string' && cell.includes(markerText)) {
+          return { sheet, sheetName: name, rows };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+// Парсер официального файла "Бухгалтерия баланси №1-сонли шакл" (Ф1).
+// Ищет нужный лист СТРОГО ПО СОДЕРЖИМОМУ (заголовок "Сатр коди" —
+// колонка с официальными кодами строк), а не по имени листа — в файле
+// может быть несколько листов (лишние справки, приложения и т.п.),
+// имя листа с балансом может отличаться от файла к файлу. Найденные
+// коды ('010','011'...) СОВПАДАЮТ с кодами нашей методики напрямую
+// (просто с ведущими нулями). Берём "Ҳисобот даври бошига" (начало
+// периода) и "Ҳисобот даври охирига" (конец периода) — заполняем ими
+// период 1 и период 2 формы (период 3 остаётся для более свежего
+// отчёта, если он есть, — вводится вручную или отдельной загрузкой).
+function parseForma1File(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        // Название компании и ИНН могут быть на том же листе, что и
+        // баланс, или на отдельном — ищем по всей книге, не по имени.
+        let companyName = '', inn = '';
+        const infoFound = findSheetByMarker(workbook, 'Корхона, ташкилот');
+        if (infoFound) {
+          infoFound.rows.forEach(row => {
+            if (String(row[1] || '').trim() === 'Корхона, ташкилот') companyName = String(row[2] || '').trim();
+            if (String(row[1] || '').trim() === 'Солиқ тўловчининг идентификацион рақами') inn = String(row[8] || '').trim();
+          });
+        }
+
+        const found = findSheetByMarker(workbook, 'Сатр коди');
+        if (!found) { reject(new Error('В файле не найдена таблица с колонкой "Сатр коди" — проверьте, что это правильный файл формы №1')); return; }
+
+        // Убеждаемся, что это именно БАЛАНС (Ф1), а не другой отчёт с
+        // такой же колонкой кодов (например, Ф2 использует те же коды
+        // 010,020... для СВОИХ строк — их нельзя перепутать).
+        const isBalance = found.rows.some(row => row.some(cell =>
+          typeof cell === 'string' && (cell.includes('Бухгалтерия баланси') || cell.includes('Ҳисобот даври бошига'))
+        ));
+        if (!isBalance) { reject(new Error('Найденная таблица не похожа на баланс (Форма №1) — проверьте файл')); return; }
+
+        const fields = {};
+        found.rows.forEach(row => {
+          const codeRaw = String(row[2] || '').trim();
+          if (!/^\d+$/.test(codeRaw)) return; // пропускаем заголовки/пустые строки
+          const code = parseInt(codeRaw, 10);
+          const start = row[3];
+          const end = row[4];
+          if (typeof start === 'number') fields[`b${code}_p1`] = start;
+          if (typeof end === 'number') fields[`b${code}_p2`] = end;
+        });
+
+        if (!Object.keys(fields).length) { reject(new Error('Не удалось извлечь ни одной строки с кодом — проверьте формат файла')); return; }
+
+        resolve({ companyName, inn, fields });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Не удалось открыть файл'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// Парсер "Молиявий натижалар тўғрисида ҳисобот №2-сонли шакл" (Ф2).
+// Тоже ищет лист по содержимому ("Сатр коди" + характерный для Ф2
+// заголовок), не по имени. В каждой строке значение стоит либо в
+// колонке "Доходы", либо в колонке "Расходы" (вторая при этом содержит
+// "x") — берём то из двух, что оказалось числом.
+function parseForma2File(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        const found = findSheetByMarker(workbook, 'Сатр коди');
+        if (!found) { reject(new Error('В файле не найдена таблица с колонкой "Сатр коди" — проверьте, что это правильный файл формы №2')); return; }
+
+        const isIncomeStatement = found.rows.some(row => row.some(cell =>
+          typeof cell === 'string' && (cell.includes('Молиявий натижалар') || cell.includes('Даромадлар'))
+        ));
+        if (!isIncomeStatement) { reject(new Error('Найденная таблица не похожа на отчёт о прибылях и убытках (Форма №2) — проверьте файл')); return; }
+
+        const fields = {};
+        found.rows.forEach(row => {
+          const codeRaw = String(row[2] || '').trim();
+          if (!/^\d+$/.test(codeRaw)) return;
+          const code = parseInt(codeRaw, 10);
+          // колонки: 3,4 = прошлый год (доходы/расходы), 5,6 = отчётный период
+          const priorVal = [row[3], row[4]].find(v => typeof v === 'number');
+          const currentVal = [row[5], row[6]].find(v => typeof v === 'number');
+          if (priorVal !== undefined) fields[`p${code}_p1`] = priorVal;
+          if (currentVal !== undefined) fields[`p${code}_p2`] = currentVal;
+        });
+
+        if (!Object.keys(fields).length) { reject(new Error('Не удалось извлечь ни одной строки с кодом — проверьте формат файла')); return; }
+
+        resolve({ fields });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Не удалось открыть файл'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// Парсер выписки по счёту ("Сведения о работе счета") — банк уже сам
+// считает итоговый оборот в последней строке файла ("Итоговый оборот за
+// период:"), берём готовую сумму, не пересчитываем по тысячам строк
+// вручную. ВАЖНО: это "сырой" итог по всем операциям — методика
+// требует исключать переводы между своими счетами, кредитные средства,
+// депозиты и т.п., поэтому финальную цифру для расчёта коэффициентов
+// сотрудник должен проверить и при необходимости скорректировать вручную.
+function parseTurnoverFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        let bankName = '';
+        let periodFrom = '', periodTo = '';
+        let accountInfo = '';
+
+        if (rows[0]) bankName = String(rows[0][0] || '').split('/').pop().trim();
+        if (rows[1]) {
+          const m = String(rows[1][0] || '').match(/c\s+(\d{2}\.\d{2}\.\d{4})\s+по\s+(\d{2}\.\d{2}\.\d{4})/);
+          if (m) { periodFrom = m[1]; periodTo = m[2]; }
+        }
+        if (rows[2]) accountInfo = String(rows[2][0] || '').replace(/\s+/g, ' ').trim();
+
+        // Итоговая строка — последняя непустая строка файла, начинается с
+        // "Итоговый оборот"
+        let totalDebit = 0, totalCredit = 0;
+        for (let i = rows.length - 1; i >= 0; i--) {
+          const cell0 = String(rows[i][0] || '');
+          if (cell0.includes('Итоговый оборот')) {
+            totalDebit = Number(rows[i][5]) || 0;
+            totalCredit = Number(rows[i][6]) || 0;
+            break;
+          }
+        }
+
+        if (!periodFrom || !periodTo) {
+          reject(new Error('Не удалось определить период выписки — проверьте формат файла'));
+          return;
+        }
+
+        // Считаем длительность периода в месяцах — для среднемесячного
+        // оборота.
+        const [d1, m1, y1] = periodFrom.split('.').map(Number);
+        const [d2, m2, y2] = periodTo.split('.').map(Number);
+        const dateFrom = new Date(y1, m1 - 1, d1);
+        const dateTo = new Date(y2, m2 - 1, d2);
+        const months = Math.max(1, (dateTo - dateFrom) / (1000 * 60 * 60 * 24 * 30.44));
+
+        resolve({
+          bankName, periodFrom, periodTo, accountInfo,
+          totalDebit, totalCredit, months,
+          avgMonthlyCredit: totalCredit / months
+        });
+      } catch (err) {
+        reject(err);
+      }
+    };
+    reader.onerror = () => reject(new Error('Не удалось открыть файл'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function uploadForma1() {
+  const input = document.getElementById('scForma1File');
+  const status = document.getElementById('scUploadStatus');
+  if (!input.files.length) { status.innerText = 'Выберите файл Формы №1'; return; }
+
+  status.innerText = 'Читаю Форму №1...';
+  try {
+    const result = await parseForma1File(input.files[0]);
+    fillScoringFieldsPartial(result.fields);
+    if (result.companyName && !document.getElementById('scClientName').value) {
+      document.getElementById('scClientName').value = result.companyName;
+    }
+    if (result.inn && !document.getElementById('scClientInn').value) {
+      document.getElementById('scClientInn').value = result.inn;
+    }
+    calcScoring();
+    status.innerText = '✓ Форма №1 загружена — заполнены периоды 1 и 2 (начало/конец периода из файла)';
+  } catch (error) {
+    status.innerText = 'Ошибка чтения Формы №1: ' + error.message;
+    console.error(error);
+  }
+}
+
+async function uploadForma2() {
+  const input = document.getElementById('scForma2File');
+  const status = document.getElementById('scUploadStatus');
+  if (!input.files.length) { status.innerText = 'Выберите файл Формы №2'; return; }
+
+  status.innerText = 'Читаю Форму №2...';
+  try {
+    const result = await parseForma2File(input.files[0]);
+    fillScoringFieldsPartial(result.fields);
+    calcScoring();
+    status.innerText = '✓ Форма №2 загружена — заполнены периоды 1 и 2';
+  } catch (error) {
+    status.innerText = 'Ошибка чтения Формы №2: ' + error.message;
+    console.error(error);
+  }
+}
+
+// В отличие от Ф1/Ф2 (которые заполняют жёсткую сетку полей), обороты
+// по счетам — список: можно загрузить НЕСКОЛЬКО выписок (например,
+// 2025 год отдельно + 2026 год отдельно) — складываем их в общий список.
+let scTurnoverEntries = [];
+
+async function uploadTurnover() {
+  const input = document.getElementById('scTurnoverFile');
+  const status = document.getElementById('scUploadStatus');
+  if (!input.files.length) { status.innerText = 'Выберите файл выписки'; return; }
+
+  status.innerText = 'Читаю выписку...';
+  try {
+    const result = await parseTurnoverFile(input.files[0]);
+    scTurnoverEntries.push(result);
+    renderTurnoverList();
+    status.innerText = '✓ Выписка добавлена: ' + result.periodFrom + ' — ' + result.periodTo;
+    input.value = '';
+  } catch (error) {
+    status.innerText = 'Ошибка чтения выписки: ' + error.message;
+    console.error(error);
+  }
+}
+
+function removeTurnoverEntry(idx) {
+  scTurnoverEntries.splice(idx, 1);
+  renderTurnoverList();
+}
+
+function renderTurnoverList() {
+  const box = document.getElementById('scTurnoverListBox');
+  if (!box) return;
+
+  if (!scTurnoverEntries.length) { box.innerHTML = ''; return; }
+
+  const totalDebit = scTurnoverEntries.reduce((s, e) => s + e.totalDebit, 0);
+  const totalCredit = scTurnoverEntries.reduce((s, e) => s + e.totalCredit, 0);
+  const totalMonths = scTurnoverEntries.reduce((s, e) => s + e.months, 0);
+  const avgMonthly = totalMonths ? totalCredit / totalMonths : 0;
+
+  box.innerHTML = `
+    <div style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:20px;">
+      <p style="font-weight:700;font-size:13px;margin-bottom:10px;">Обороты по счетам (${scTurnoverEntries.length})</p>
+      ${scTurnoverEntries.map((e, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px;">
+          <div>${safe(e.bankName)} · ${safe(e.periodFrom)} — ${safe(e.periodTo)}<br>
+            <span style="color:var(--muted);">Дебет: ${formatNumber(e.totalDebit)} · Кредит: ${formatNumber(e.totalCredit)}</span></div>
+          <button class="btn-link" onclick="removeTurnoverEntry(${i})">Убрать</button>
+        </div>`).join('')}
+      <p style="margin-top:10px;font-size:13px;font-weight:700;">Среднемесячный оборот (кредит): ${formatNumber(avgMonthly)}</p>
+      <p style="font-size:11.5px;color:var(--muted);margin-top:4px;">⚠ Это сырая сумма всех операций по выписке. Методика требует исключить переводы между своими счетами, кредитные средства, депозиты и разовые нетипичные поступления — проверьте и скорректируйте итог вручную при необходимости.</p>
+    </div>`;
+}
+
+// В отличие от fillScoringFields (которая сначала ОЧИЩАЕТ все поля),
+// эта версия только ДОБАВЛЯЕТ/обновляет переданные поля, не трогая
+// остальное — так можно последовательно загрузить сначала Ф1, потом Ф2,
+// не теряя данные друг друга.
+function fillScoringFieldsPartial(data) {
+  Object.keys(data || {}).forEach(key => {
+    const el = document.getElementById(key);
+    if (el) el.value = data[key];
+  });
+}
+
 function parseMahallaPassportFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
