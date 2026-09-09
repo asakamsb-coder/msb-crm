@@ -2416,6 +2416,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <div id="obhodTabSection" class="mahalla-tab-section">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+      <button class="btn" onclick="openObhodForm()" style="font-size:15px;padding:12px 20px;" data-i18n="btnNewSurvey">+ Новый опрос</button>
+    </div>
+
     <div class="panel">
       <h2 style="margin-bottom:16px;" data-i18n="hObhodProgress">Прогресс обхода</h2>
       <div id="obhodDashboardBox" class="loading" data-i18n="loading">Загрузка...</div>
@@ -2435,7 +2439,6 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <h2 style="margin-bottom:0;" data-i18n="hObhodSurveys">Опросы дворов</h2>
-        <button class="btn" onclick="openObhodForm()" data-i18n="btnNewSurvey">+ Новый опрос</button>
       </div>
       <div id="obhodListBox" class="loading" data-i18n="loading">Загрузка...</div>
     </div>
@@ -9068,14 +9071,24 @@ function resetObhodForm() {
   if (photosBtn) { photosBtn.innerHTML = '<i class="ti ti-camera"></i> Фото *'; photosBtn.disabled = false; }
 }
 
-function openObhodForm(idEncoded) {
+async function openObhodForm(idEncoded) {
   resetObhodForm();
 
-  // Список махаллей в выпадающем списке — берём из уже загруженного
-  // allMahallas (тот же источник, что и остальная часть раздела
-  // "Махалля").
+  // Список махаллей в выпадающем списке. Раньше рассчитывали, что
+  // allMahallas уже загружен другой вкладкой ("Махалли") — но если
+  // банкир открывает "Опрос и обход" напрямую, минуя эту вкладку,
+  // allMahallas оставался пустым, и список в форме не появлялся.
+  // Теперь при необходимости подгружаем его здесь же, самостоятельно.
+  if (typeof allMahallas === 'undefined' || !allMahallas.length) {
+    try {
+      allMahallas = await fetchJSON('mahallas') || [];
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   const select = document.getElementById('obMahalla');
-  if (select.options.length <= 1 && typeof allMahallas !== 'undefined') {
+  if (select.options.length <= 1) {
     allMahallas.forEach(m => {
       const opt = document.createElement('option');
       opt.value = m.name;
