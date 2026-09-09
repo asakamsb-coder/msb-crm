@@ -2565,10 +2565,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
     <div style="display:flex;gap:10px;margin-bottom:6px;">
       <button type="button" class="btn btn-secondary" style="flex:1;" onclick="captureObhodGeolocation()"><i class="ti ti-map-pin"></i> <span data-i18n="btnLocation">Локация</span></button>
-      <button type="button" class="btn btn-secondary" id="obPhotosBtn" style="flex:1;" onclick="document.getElementById('obPhotos').click()"><i class="ti ti-camera"></i> <span data-i18n="btnPhoto">Фото</span></button>
+      <button type="button" class="btn btn-secondary" id="obPhotosBtn" style="flex:1;" onclick="document.getElementById('obPhotos').click()"><i class="ti ti-camera"></i> <span data-i18n="btnPhoto">Фото</span> *</button>
     </div>
     <input type="file" id="obPhotos" accept="image/*" multiple style="display:none;">
-    <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;" data-i18n="hintPhotos">Можно нажать несколько раз подряд, чтобы добавить ещё фото (до 5) — или выбрать сразу несколько из галереи.</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;"><b data-i18n="lblPhotoRequired">Фото обязательно</b> — <span data-i18n="hintPhotos">Можно нажать несколько раз подряд, чтобы добавить ещё фото (до 5) — или выбрать сразу несколько из галереи.</span></div>
     <div id="obGeoStatus" style="font-size:12.5px;color:var(--muted);margin-bottom:10px;"></div>
     <div id="obPhotoPreviewWrap" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
     <div id="obExistingPhotosWrap" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
@@ -3173,6 +3173,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 </aside>
 
+<div class="drawer-overlay" id="obhodPinOverlay" onclick="closeObhodSurveyLocation()" style="z-index:2000;"></div>
+<div id="obhodPinModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2001;background:#fff;border-radius:16px;width:min(520px, 92vw);max-height:80vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+  <div class="drawer-header" style="padding:16px 20px;border-bottom:1px solid var(--line);">
+    <div>
+      <div class="drawer-title" id="obhodPinTitle" data-i18n="hObhodMap">Карта визитов</div>
+      <div class="drawer-subtitle" id="obhodPinSubtitle">-</div>
+    </div>
+    <button class="close-btn" onclick="closeObhodSurveyLocation()">×</button>
+  </div>
+  <div id="obhodPinMap" style="height:360px;"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
@@ -3669,7 +3681,11 @@ const APP_DICT = {
   thAvgDay: { ru: 'Средн. в день', uz: "Kuniga o'rtacha" },
   thPerWeek: { ru: 'За неделю', uz: 'Hafta uchun' },
   hObhodMap: { ru: 'Карта визитов', uz: 'Tashriflar xaritasi' },
-  pObhodMap: { ru: 'Точки — дворы, где банкир зафиксировал местоположение при опросе.', uz: "Nuqtalar — bankir so'rov paytida joylashuvni belgilagan xonadonlar." }
+  pObhodMap: { ru: 'Точки — дворы, где банкир зафиксировал местоположение при опросе.', uz: "Nuqtalar — bankir so'rov paytida joylashuvni belgilagan xonadonlar." },
+  lblPhotoRequired: { ru: 'Фото обязательно', uz: 'Foto majburiy' },
+  errChooseMahalla: { ru: 'Выберите махаллю — это обязательное поле', uz: 'Mahallani tanlang — bu majburiy maydon' },
+  errHeadName: { ru: 'Укажите ФИО главы двора — это обязательное поле', uz: "Xonadon boshlig'ining F.I.SH.ni kiriting — bu majburiy maydon" },
+  errPhotoRequired: { ru: 'Прикрепите хотя бы одно фото — это обязательное подтверждение визита', uz: "Kamida bitta foto biriktiring — bu tashrifning majburiy tasdig'i" }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -8683,7 +8699,7 @@ function renderObhodPhotoPreviews() {
   const btn = document.getElementById('obPhotosBtn');
   if (btn) {
     const count = obhodSelectedPhotoFiles.length;
-    btn.innerHTML = '<i class="ti ti-camera"></i> Фото' + (count ? ' (' + count + '/5)' : '');
+    btn.innerHTML = '<i class="ti ti-camera"></i> Фото *' + (count ? ' (' + count + '/5)' : '');
     btn.disabled = count >= 5;
   }
 
@@ -8719,7 +8735,11 @@ function resetObhodForm() {
   document.getElementById('obhodFormTitle').innerText = 'Новый опрос двора';
   ['obMahalla','obHeadName','obPinfl','obPhone','obFamilySize','obCategory','obBusinessInterest',
    'obBusinessIdea','obSector','obHasLand','obFreeLand','obNeedsCredit','obCreditAmount','obJobs',
-   'obTraining','obProblemsOther','obComment'].forEach(id => { document.getElementById(id).value = ''; });
+   'obTraining','obProblemsOther','obComment'].forEach(id => {
+     const el = document.getElementById(id);
+     el.value = '';
+     el.style.borderColor = ''; // сброс красной рамки от прошлой ошибки валидации
+   });
   document.getElementById('obCategoryOtherWrap').style.display = 'none';
   document.getElementById('obBusinessInterestOtherWrap').style.display = 'none';
   document.getElementById('obSectorOtherWrap').style.display = 'none';
@@ -8735,7 +8755,7 @@ function resetObhodForm() {
   document.getElementById('obExistingPhotosWrap').style.display = 'none';
   document.getElementById('obSaveMessage').innerHTML = '';
   const photosBtn = document.getElementById('obPhotosBtn');
-  if (photosBtn) { photosBtn.innerHTML = '<i class="ti ti-camera"></i> Фото'; photosBtn.disabled = false; }
+  if (photosBtn) { photosBtn.innerHTML = '<i class="ti ti-camera"></i> Фото *'; photosBtn.disabled = false; }
 }
 
 function openObhodForm(idEncoded) {
@@ -8812,15 +8832,36 @@ function closeObhodForm() {
 }
 
 async function saveObhodSurveyForm() {
-  const mahalla = document.getElementById('obMahalla').value;
-  const headName = document.getElementById('obHeadName').value.trim();
+  const mahallaEl = document.getElementById('obMahalla');
+  const headNameEl = document.getElementById('obHeadName');
+  const mahalla = mahallaEl.value;
+  const headName = headNameEl.value.trim();
   const msg = document.getElementById('obSaveMessage');
   const btn = document.getElementById('obSaveBtn');
 
   msg.innerHTML = '';
+  // Сбрасываем подсветку с прошлой попытки — иначе старая красная рамка
+  // может остаться на уже исправленном поле.
+  [mahallaEl, headNameEl].forEach(el => { el.style.borderColor = ''; });
 
-  if (!mahalla) { msg.style.color = 'var(--red)'; msg.innerText = 'Выберите махаллю'; return; }
-  if (!headName) { msg.style.color = 'var(--red)'; msg.innerText = 'Укажите ФИО главы двора'; return; }
+  const showFieldError = (el, text) => {
+    el.style.borderColor = 'var(--red)';
+    msg.style.color = 'var(--red)';
+    msg.innerText = text;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  if (!mahalla) { showFieldError(mahallaEl, tr('errChooseMahalla')); return; }
+  if (!headName) { showFieldError(headNameEl, tr('errHeadName')); return; }
+
+  const hasNewPhotos = obhodSelectedPhotoFiles.length > 0;
+  const hasExistingPhotos = !!obhodExistingPhotoUrls;
+  if (!hasNewPhotos && !hasExistingPhotos) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = tr('errPhotoRequired');
+    document.getElementById('obPhotosBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   btn.disabled = true;
   btn.innerText = 'Сохранение...';
@@ -8905,15 +8946,26 @@ async function loadObhodList() {
 
     const sorted = allObhodSurveys.slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
 
-    box.innerHTML = sorted.map(s => `
+    // Кнопка "На карте" — тот же круг ролей, что и общая карта визитов:
+    // это инструмент проверки банкира, а не рабочий для рядового опроса.
+    const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+
+    box.innerHTML = sorted.map(s => {
+      const hasLocation = s.lat && s.lng && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng));
+      const locationBtn = (canSeeLocation && hasLocation)
+        ? `<button class="btn btn-secondary" onclick="event.stopPropagation();showObhodSurveyLocation('${encodeURIComponent(s.id)}')"><i class="ti ti-map-pin"></i> На карте</button>`
+        : '';
+      return `
       <div class="mahalla-row" style="cursor:pointer;" onclick="openObhodForm('${encodeURIComponent(s.id)}')">
         <div class="mahalla-row-top">
           <div>
             <div class="mahalla-row-name">${safe(s.headName)}</div>
             <div class="mahalla-row-meta">${safe(s.mahalla)} · Семья: ${safe(s.familySize) || '—'} чел. · ${s.businessInterest ? safe(s.businessInterest) + ' к бизнесу' : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}</div>
           </div>
+          ${locationBtn}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } catch (error) {
     box.innerHTML = '<div class="loading">Не удалось загрузить список. <a onclick="loadObhodList()" style="color:var(--brand);cursor:pointer;">Попробовать ещё раз</a></div>';
     console.error(error);
@@ -9217,6 +9269,43 @@ async function loadObhodMap() {
   } catch (error) {
     console.error(error);
   }
+}
+
+let obhodPinLeafletMap = null;
+
+// Показывает координаты ОДНОГО конкретного опроса на отдельной карте —
+// быстрая проверка, действительно ли банкир был на месте (без
+// необходимости открывать общую карту визитов и искать нужную точку
+// среди всех).
+function showObhodSurveyLocation(idEncoded) {
+  const id = decodeURIComponent(idEncoded);
+  const s = allObhodSurveys.find(x => String(x.id) === id);
+  if (!s || !s.lat || !s.lng) return;
+
+  document.getElementById('obhodPinTitle').innerText = safe(s.headName);
+  document.getElementById('obhodPinSubtitle').innerText = safe(s.mahalla) + (s.locationTime ? ' · ' + safe(s.locationTime) : '');
+
+  document.getElementById('obhodPinOverlay').classList.add('active');
+  document.getElementById('obhodPinModal').style.display = 'block';
+
+  const showMap = () => {
+    if (typeof L === 'undefined') { setTimeout(showMap, 200); return; }
+    const lat = Number(s.lat), lng = Number(s.lng);
+    if (!obhodPinLeafletMap) {
+      obhodPinLeafletMap = L.map('obhodPinMap');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(obhodPinLeafletMap);
+    }
+    obhodPinLeafletMap.setView([lat, lng], 16);
+    obhodPinLeafletMap.eachLayer(layer => { if (layer instanceof L.Marker) obhodPinLeafletMap.removeLayer(layer); });
+    L.marker([lat, lng]).addTo(obhodPinLeafletMap);
+    setTimeout(() => { if (obhodPinLeafletMap) obhodPinLeafletMap.invalidateSize(); }, 50);
+  };
+  showMap();
+}
+
+function closeObhodSurveyLocation() {
+  document.getElementById('obhodPinOverlay').classList.remove('active');
+  document.getElementById('obhodPinModal').style.display = 'none';
 }
 
 function downloadMahallaInfographic() {
