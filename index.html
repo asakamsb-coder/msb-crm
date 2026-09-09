@@ -3923,7 +3923,9 @@ const APP_DICT = {
   purposeConstruction: { ru: 'Строительство/ремонт', uz: "Qurilish/ta'mirlash" },
   errInterlocutorName: { ru: 'Укажите ФИО собеседника — это обязательное поле', uz: "Suhbatdosh F.I.SH.ni kiriting — bu majburiy maydon" },
   errInnRequired: { ru: 'Укажите ИНН — это обязательное поле', uz: 'STIRni kiriting — bu majburiy maydon' },
-  errLegalNameRequired: { ru: 'Укажите юридическое название — это обязательное поле', uz: 'Yuridik nomini kiriting — bu majburiy maydon' }
+  errLegalNameRequired: { ru: 'Укажите юридическое название — это обязательное поле', uz: 'Yuridik nomini kiriting — bu majburiy maydon' },
+  errLocationRequired: { ru: 'Определите локацию — это обязательное подтверждение визита', uz: "Joylashuvni aniqlang — bu tashrifning majburiy tasdig'i" },
+  errPhotoStale: { ru: 'Похоже, фото сделано давно — прикрепите свежий снимок прямо с места визита', uz: "Foto eskiroq ko'rinadi — tashrif joyidan yangi rasm biriktiring" }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -9216,6 +9218,17 @@ async function saveObhodSurveyForm() {
     if (!legalNameEl.value.trim()) { showFieldError(legalNameEl, tr('errLegalNameRequired')); return; }
   }
 
+  // Локация обязательна — без неё нельзя проверить, что банкир реально
+  // был на месте. При редактировании уже сохранённого опроса с ранее
+  // зафиксированной локацией — obhodLocation уже заполнен из данных
+  // опроса (см. openObhodForm), повторно нажимать кнопку не требуется.
+  if (!obhodLocation) {
+    msg.style.color = 'var(--red)';
+    msg.innerText = tr('errLocationRequired');
+    document.querySelector('button[onclick="captureObhodGeolocation()"]').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
   const hasNewPhotos = obhodSelectedPhotoFiles.length > 0;
   const hasExistingPhotos = !!obhodExistingPhotoUrls;
   if (!hasNewPhotos && !hasExistingPhotos) {
@@ -9223,6 +9236,25 @@ async function saveObhodSurveyForm() {
     msg.innerText = tr('errPhotoRequired');
     document.getElementById('obPhotosBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
+  }
+
+  // Проверка "свежести" фото — если это НОВЫЙ файл (не выбранный из уже
+  // сохранённых при редактировании), его дата изменения (lastModified)
+  // не должна быть намного старше текущего момента. Снятое прямо сейчас
+  // фото имеет lastModified = "только что"; фото, взятое из старой
+  // галереи/скачанное заранее, будет иметь дату в прошлом — это не
+  // стопроцентная защита (дату файла тоже можно подделать), но отсекает
+  // самый простой и частый способ обмана — переиспользование старого
+  // снимка вместо реального похода на место.
+  if (hasNewPhotos) {
+    const now = Date.now();
+    const staleFile = obhodSelectedPhotoFiles.find(f => f.lastModified && (now - f.lastModified) > 24 * 60 * 60 * 1000);
+    if (staleFile) {
+      msg.style.color = 'var(--red)';
+      msg.innerText = tr('errPhotoStale');
+      document.getElementById('obPhotosBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
   }
 
   btn.disabled = true;
@@ -9999,13 +10031,17 @@ function openBankerForm(encodedId, encodedName, encodedCurrentBankers) {
 
   document.getElementById('bankerFormTitle').innerText = 'Банкиры: ' + name;
 
-  const managers = (webFormLists && webFormLists.managers) || [];
+  const bankers = (webFormLists && webFormLists.mahallaBankers) || [];
   const listBox = document.getElementById('bankerFormList');
-  listBox.innerHTML = managers.map(m => `
-      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-weight:600;font-size:14px;">
-        <input type="checkbox" value="${safe(m)}" ${currentBankers.includes(m) ? 'checked' : ''} style="width:18px;height:18px;">
-        ${safe(m)}
-      </label>`).join('');
+  if (!bankers.length) {
+    listBox.innerHTML = '<p style="color:var(--muted);font-size:13px;">Нет пользователей с ролью «Банкир Махалли». Создайте их в «Мой кабинет» → «Существующие пользователи».</p>';
+  } else {
+    listBox.innerHTML = bankers.map(m => `
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-weight:600;font-size:14px;">
+          <input type="checkbox" value="${safe(m)}" ${currentBankers.includes(m) ? 'checked' : ''} style="width:18px;height:18px;">
+          ${safe(m)}
+        </label>`).join('');
+  }
 
   document.getElementById('bankerFormOverlay').classList.add('active');
   document.getElementById('bankerFormDrawer').classList.add('active');
