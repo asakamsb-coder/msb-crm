@@ -838,6 +838,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .sc-input{width:110px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12.5px;}
 .sc-input.sc-calc{background:#EEF0F3;color:var(--text);font-weight:700;border:none;}
 .ob-problem-btn{font-size:12.5px;padding:6px 12px;}
+.ob-devplan-btn{font-size:12.5px;padding:6px 12px;}
+.ob-devplan-btn.selected{background:var(--brand);color:#fff;border-color:var(--brand);}
+.ob-type-btn{flex:1;padding:10px;font-size:13.5px;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--text);}
+.ob-type-btn.active{background:var(--brand);color:#fff;}
+.ob-type-btn:not(:first-child){border-left:1px solid var(--line);}
+.ob-type-btn.active:not(:first-child){border-left:1px solid var(--brand);}
 .ob-problem-btn.selected{background:var(--brand);color:#fff;border-color:var(--brand);}
 .ob-photo-thumb{width:60px;height:60px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
 .ob-photo-thumb-wrap{position:relative;display:inline-block;}
@@ -2447,124 +2453,286 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
   <div class="drawer-body">
 
+    <div style="display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
+      <button type="button" id="obTypePhysicalBtn" class="ob-type-btn active" onclick="setObhodSurveyType('Физический')" data-i18n="typePhysical">Физический</button>
+      <button type="button" id="obTypeLegalBtn" class="ob-type-btn" onclick="setObhodSurveyType('Юридический')" data-i18n="typeLegal">Юридический</button>
+    </div>
+
     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblMahallaReq">Махалля *</label>
     <select id="obMahalla" class="select" style="margin-bottom:14px;"><option value="" data-i18n="optChooseMahalla">Выберите махаллю</option></select>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblHeadName">ФИО главы двора *</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" id="obHeadNameLabel" data-i18n="lblHeadName">ФИО главы двора *</label>
     <input type="text" id="obHeadName" class="input" placeholder="Usmanov Alisher Jurayevich" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblPinfl">ПИНФЛ</label>
-    <input type="text" id="obPinfl" class="input" placeholder="12345678901234" maxlength="14" style="margin-bottom:14px;">
+    <!-- ==================== ФИЗИЧЕСКИЙ ОПРОС ==================== -->
+    <div id="obPhysicalFields">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblPinfl">ПИНФЛ</label>
+      <input type="text" id="obPinfl" class="input" placeholder="12345678901234" maxlength="14" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblPhone">Телефон</label>
-    <input type="text" id="obPhone" class="input" placeholder="998971700404" style="margin-bottom:14px;">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblPhone">Телефон</label>
+      <input type="text" id="obPhone" class="input" placeholder="998971700404" style="margin-bottom:14px;">
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblFamilySize">Состав семьи (чел.)</label>
-    <input type="number" id="obFamilySize" class="input" placeholder="5" style="margin-bottom:14px;width:100px;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer;">
+        <input type="checkbox" id="obSocialRegistry" style="width:16px;height:16px;">
+        <span data-i18n="lblSocialRegistry">Двор в социальном реестре</span>
+      </label>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblCategory">Категория населения</label>
-    <select id="obCategory" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obCategory','obCategoryOtherWrap')">
-      <option value="" data-i18n="optNotSelected">Не выбрано</option>
-      <option value="Нуждается в социальной защите" data-i18n="catSocial">Нуждается в социальной защите</option>
-      <option value="Есть желание заняться бизнесом, трудоспособные" data-i18n="catBusiness">Есть желание заняться бизнесом, трудоспособные</option>
-      <option value="Низкое желание работать" data-i18n="catLowWill">Низкое желание работать</option>
-      <option value="Требуется работа, есть ремесло/профессия" data-i18n="catCraft">Требуется работа, есть ремесло/профессия</option>
-      <option value="Желание заработка за рубежом" data-i18n="catAbroad">Желание заработка за рубежом</option>
-      <option value="Пенсионер, нетрудоспособный по возрасту" data-i18n="catPensioner">Пенсионер, нетрудоспособный по возрасту</option>
-      <option value="Инвалид, не может работать по здоровью" data-i18n="catDisabled">Инвалид, не может работать по здоровью</option>
-      <option value="Студент/учащийся" data-i18n="catStudent">Студент/учащийся</option>
-      <option value="Есть работа, но нужна дополнительная" data-i18n="catNeedsExtra">Есть работа, но нужна дополнительная</option>
-      <option value="Домохозяйка" data-i18n="catHousewife">Домохозяйка</option>
-      <option value="Мигрант, вернулся, ищет работу" data-i18n="catMigrant">Мигрант, вернулся, ищет работу</option>
-      <option value="Уже получает поддержку/участвует в микропроекте" data-i18n="catSupported">Уже получает поддержку/участвует в микропроекте</option>
-      <option value="Другое" data-i18n="optOther">Другое</option>
-    </select>
-    <div id="obCategoryOtherWrap" style="display:none;margin-bottom:14px;">
-      <input type="text" id="obCategoryOther" class="input" data-i18n-placeholder="phSpecifyCategory" placeholder="Уточните категорию...">
-    </div>
-
-    <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
-    <h3 style="font-size:14px;margin-bottom:14px;" data-i18n="hBusiness">Бизнес</h3>
-
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBusinessInterest">Интерес к предпринимательству</label>
-    <select id="obBusinessInterest" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obBusinessInterest','obBusinessInterestOtherWrap')">
-      <option value="" data-i18n="optNotSelected">Не выбрано</option>
-      <option value="Да" data-i18n="optYes">Да</option>
-      <option value="Нет" data-i18n="optNo">Нет</option>
-      <option value="Уже есть бизнес" data-i18n="optHasBusiness">Уже есть бизнес</option>
-      <option value="Другое" data-i18n="optOther">Другое</option>
-    </select>
-    <div id="obBusinessInterestOtherWrap" style="display:none;margin-bottom:14px;">
-      <input type="text" id="obBusinessInterestOther" class="input" data-i18n-placeholder="phSpecify" placeholder="Уточните...">
-    </div>
-
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBusinessIdea">Какой бизнес хотел(а) бы начать</label>
-    <input type="text" id="obBusinessIdea" class="input" data-i18n-placeholder="phBusinessIdea" placeholder="Например: пошив одежды" style="margin-bottom:14px;">
-
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblSector">Сфера</label>
-    <select id="obSector" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obSector','obSectorOtherWrap')">
-      <option value="" data-i18n="optNotSelected">Не выбрано</option>
-      <option value="Торговля" data-i18n="sectorTrade">Торговля</option>
-      <option value="Сельское хозяйство" data-i18n="sectorAgri">Сельское хозяйство</option>
-      <option value="Услуги" data-i18n="sectorServices">Услуги</option>
-      <option value="Производство/ремесло" data-i18n="sectorProduction">Производство/ремесло</option>
-      <option value="Общепит" data-i18n="sectorCatering">Общепит</option>
-      <option value="Строительство" data-i18n="sectorConstruction">Строительство</option>
-      <option value="Другое" data-i18n="optOther">Другое</option>
-    </select>
-    <div id="obSectorOtherWrap" style="display:none;margin-bottom:14px;">
-      <input type="text" id="obSectorOther" class="input" data-i18n-placeholder="phSpecifySector" placeholder="Уточните сферу...">
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-      <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblHasLand">Есть помещение/земля</label>
-        <select id="obHasLand" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblFamilySize">Состав семьи (чел.)</label>
+          <input type="number" id="obFamilySize" class="input" placeholder="5">
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblUnemployed18">Безработных 18+</label>
+          <input type="number" id="obUnemployed18" class="input" placeholder="2">
+        </div>
       </div>
-      <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblFreeLand">Свободная земля (соток)</label>
-        <input type="number" id="obFreeLand" class="input" placeholder="0">
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblCategory">Категория населения</label>
+      <select id="obCategory" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obCategory','obCategoryOtherWrap')">
+        <option value="" data-i18n="optNotSelected">Не выбрано</option>
+        <option value="Нуждается в социальной защите" data-i18n="catSocial">Нуждается в социальной защите</option>
+        <option value="Есть желание заняться бизнесом, трудоспособные" data-i18n="catBusiness">Есть желание заняться бизнесом, трудоспособные</option>
+        <option value="Низкое желание работать" data-i18n="catLowWill">Низкое желание работать</option>
+        <option value="Требуется работа, есть ремесло/профессия" data-i18n="catCraft">Требуется работа, есть ремесло/профессия</option>
+        <option value="Желание заработка за рубежом" data-i18n="catAbroad">Желание заработка за рубежом</option>
+        <option value="Пенсионер, нетрудоспособный по возрасту" data-i18n="catPensioner">Пенсионер, нетрудоспособный по возрасту</option>
+        <option value="Инвалид, не может работать по здоровью" data-i18n="catDisabled">Инвалид, не может работать по здоровью</option>
+        <option value="Студент/учащийся" data-i18n="catStudent">Студент/учащийся</option>
+        <option value="Есть работа, но нужна дополнительная" data-i18n="catNeedsExtra">Есть работа, но нужна дополнительная</option>
+        <option value="Домохозяйка" data-i18n="catHousewife">Домохозяйка</option>
+        <option value="Мигрант, вернулся, ищет работу" data-i18n="catMigrant">Мигрант, вернулся, ищет работу</option>
+        <option value="Уже получает поддержку/участвует в микропроекте" data-i18n="catSupported">Уже получает поддержку/участвует в микропроекте</option>
+        <option value="Другое" data-i18n="optOther">Другое</option>
+      </select>
+      <div id="obCategoryOtherWrap" style="display:none;margin-bottom:14px;">
+        <input type="text" id="obCategoryOther" class="input" data-i18n-placeholder="phSpecifyCategory" placeholder="Уточните категорию...">
+      </div>
+
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
+      <h3 style="font-size:14px;margin-bottom:14px;" data-i18n="hBusiness">Бизнес</h3>
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBusinessInterest">Интерес к предпринимательству</label>
+      <select id="obBusinessInterest" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obBusinessInterest','obBusinessInterestOtherWrap')">
+        <option value="" data-i18n="optNotSelected">Не выбрано</option>
+        <option value="Да" data-i18n="optYes">Да</option>
+        <option value="Нет" data-i18n="optNo">Нет</option>
+        <option value="Уже есть бизнес" data-i18n="optHasBusiness">Уже есть бизнес</option>
+        <option value="Другое" data-i18n="optOther">Другое</option>
+      </select>
+      <div id="obBusinessInterestOtherWrap" style="display:none;margin-bottom:14px;">
+        <input type="text" id="obBusinessInterestOther" class="input" data-i18n-placeholder="phSpecify" placeholder="Уточните...">
+      </div>
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBusinessIdea">Какой бизнес хотел(а) бы начать</label>
+      <input type="text" id="obBusinessIdea" class="input" data-i18n-placeholder="phBusinessIdea" placeholder="Например: пошив одежды" style="margin-bottom:14px;">
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblSector">Сфера</label>
+      <select id="obSector" class="select" style="margin-bottom:8px;" onchange="toggleObhodOther('obSector','obSectorOtherWrap')">
+        <option value="" data-i18n="optNotSelected">Не выбрано</option>
+        <option value="Торговля" data-i18n="sectorTrade">Торговля</option>
+        <option value="Сельское хозяйство" data-i18n="sectorAgri">Сельское хозяйство</option>
+        <option value="Услуги" data-i18n="sectorServices">Услуги</option>
+        <option value="Производство/ремесло" data-i18n="sectorProduction">Производство/ремесло</option>
+        <option value="Общепит" data-i18n="sectorCatering">Общепит</option>
+        <option value="Строительство" data-i18n="sectorConstruction">Строительство</option>
+        <option value="Другое" data-i18n="optOther">Другое</option>
+      </select>
+      <div id="obSectorOtherWrap" style="display:none;margin-bottom:14px;">
+        <input type="text" id="obSectorOther" class="input" data-i18n-placeholder="phSpecifySector" placeholder="Уточните сферу...">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblHasLand">Есть помещение/земля</label>
+          <select id="obHasLand" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblFreeLand">Свободная земля (соток)</label>
+          <input type="number" id="obFreeLand" class="input" placeholder="0">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblJobsCreated">Рабочих мест создаст</label>
+          <input type="number" id="obJobs" class="input" placeholder="2">
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblReadyTraining">Готов к обучению</label>
+          <select id="obTraining" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
+        </div>
+      </div>
+
+      <h3 style="font-size:14px;margin-bottom:10px;" data-i18n="hProblems">Проблемы</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;" id="obProblemsBoxPhysical">
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет капитала" onclick="toggleObhodProblem(this)" data-i18n="probNoCapital">Нет капитала</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет знаний" onclick="toggleObhodProblem(this)" data-i18n="probNoKnowledge">Нет знаний</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет рынка сбыта" onclick="toggleObhodProblem(this)" data-i18n="probNoMarket">Нет рынка сбыта</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Не подходит залог" onclick="toggleObhodProblem(this)" data-i18n="probNoCollateral">Не подходит залог</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет документов" onclick="toggleObhodProblem(this)" data-i18n="probNoDocs">Нет документов</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Здоровье" onclick="toggleObhodProblem(this)" data-i18n="probHealth">Здоровье</button>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-      <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblNeedsCredit">Нужен кредит</label>
-        <select id="obNeedsCredit" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
+    <!-- ==================== ЮРИДИЧЕСКИЙ ОПРОС ==================== -->
+    <div id="obLegalFields" style="display:none;">
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblInn">ИНН *</label>
+      <input type="text" id="obInn" class="input" placeholder="301234567" style="margin-bottom:14px;">
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblLegalName">Юридическое название *</label>
+      <input type="text" id="obLegalName" class="input" data-i18n-placeholder="phLegalName" placeholder="ООО «Nurli Savdo»" style="margin-bottom:14px;">
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBrandName">Название бренда</label>
+      <input type="text" id="obBrandName" class="input" data-i18n-placeholder="phBrandName" placeholder="Например: Nurli Market" style="margin-bottom:14px;">
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblNegotiatedWith">Переговоры с кем</label>
+      <select id="obNegotiatedWith" class="select" style="margin-bottom:14px;">
+        <option value="" data-i18n="optNotSelected">Не выбрано</option>
+        <option value="Учредитель" data-i18n="negFounder">Учредитель</option>
+        <option value="Директор" data-i18n="negDirector">Директор</option>
+        <option value="Управляющий магазином" data-i18n="negStoreManager">Управляющий магазином</option>
+        <option value="Продавец" data-i18n="negSeller">Продавец</option>
+        <option value="Бухгалтер" data-i18n="negAccountant">Бухгалтер</option>
+        <option value="Другое" data-i18n="optOther">Другое</option>
+      </select>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblSectorLegal">Отрасль</label>
+          <select id="obSectorLegal" class="select" onchange="toggleObhodOther('obSectorLegal','obSectorLegalOtherWrap')">
+            <option value="" data-i18n="optNotSelected">Не выбрано</option>
+            <option value="Торговля" data-i18n="legalSectorTrade">Торговля</option>
+            <option value="Услуги населению" data-i18n="legalSectorServices">Услуги населению</option>
+            <option value="Производство" data-i18n="legalSectorProduction">Производство</option>
+            <option value="Строительство" data-i18n="legalSectorConstruction">Строительство</option>
+            <option value="Сельское хозяйство" data-i18n="legalSectorAgri">Сельское хозяйство</option>
+            <option value="Транспорт и логистика" data-i18n="legalSectorTransport">Транспорт и логистика</option>
+            <option value="Здравоохранение/аптеки" data-i18n="legalSectorHealth">Здравоохранение/аптеки</option>
+            <option value="Другое" data-i18n="optOther">Другое</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblBusinessOpened">Бизнес открыт</label>
+          <select id="obBusinessOpened" class="select">
+            <option value="" data-i18n="optNotSelected">Не выбрано</option>
+            <option value="Новый (2026)" data-i18n="opened2026">Новый (2026)</option>
+            <option value="Старый бизнес" data-i18n="openedOld">Старый бизнес</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblAmount">Сумма (сум)</label>
-        <input type="text" id="obCreditAmount" class="input" placeholder="30 000 000">
+      <div id="obSectorLegalOtherWrap" style="display:none;margin-bottom:14px;">
+        <input type="text" id="obSectorLegalOther" class="input" data-i18n-placeholder="phSpecifySector" placeholder="Уточните сферу...">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblAvgSales">Средн. продажи/день</label>
+          <input type="text" id="obAvgSales" class="input" placeholder="5 000 000">
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblEmployees">Сотрудников</label>
+          <input type="number" id="obEmployees" class="input" placeholder="4">
+        </div>
+      </div>
+
+      <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblServicingBank">Обслуживающий банк</label>
+      <select id="obServicingBank" class="select" style="margin-bottom:16px;">
+        <option value="" data-i18n="optNotSelected">Не выбрано</option>
+        <option>Agrobank</option>
+        <option>Asaka bank</option>
+        <option>Aloqa bank</option>
+        <option>Ipoteka bank</option>
+        <option>Kapital bank</option>
+        <option>Turon bank</option>
+        <option>Sanoatqurilish bank</option>
+        <option>Mikrokreditbank</option>
+        <option>Milliy bank</option>
+        <option>Savdogar bank</option>
+        <option>Invest Finans bank</option>
+        <option>Hamkor Bank</option>
+        <option>Xalq bank</option>
+        <option>Qishloq qurilish bank</option>
+        <option value="Другое" data-i18n="optOther">Другое</option>
+      </select>
+
+      <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
+      <h3 style="font-size:14px;margin-bottom:10px;" data-i18n="hDevPlans">Планы развития</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;" id="obDevPlansBox">
+        <button type="button" class="btn btn-secondary ob-devplan-btn" data-value="Расширить текущую точку" onclick="toggleObhodDevPlan(this)" data-i18n="devExpandCurrent">Расширить текущую точку</button>
+        <button type="button" class="btn btn-secondary ob-devplan-btn" data-value="Открыть новый филиал" onclick="toggleObhodDevPlan(this)" data-i18n="devNewBranch">Открыть новый филиал</button>
+        <button type="button" class="btn btn-secondary ob-devplan-btn" data-value="Обновить оборудование" onclick="toggleObhodDevPlan(this)" data-i18n="devUpdateEquip">Обновить оборудование</button>
+        <button type="button" class="btn btn-secondary ob-devplan-btn" data-value="Увеличить штат" onclick="toggleObhodDevPlan(this)" data-i18n="devMoreStaff">Увеличить штат</button>
+        <button type="button" class="btn btn-secondary ob-devplan-btn" data-value="Новое направление бизнеса" onclick="toggleObhodDevPlan(this)" data-i18n="devNewDirection">Новое направление бизнеса</button>
+        <button type="button" class="btn btn-secondary ob-devplan-btn" data-value="Пока нет планов" onclick="toggleObhodDevPlan(this)" data-i18n="devNoPlans">Пока нет планов</button>
+      </div>
+
+      <h3 style="font-size:14px;margin-bottom:10px;" data-i18n="hProblems">Проблемы</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;" id="obProblemsBoxLegal">
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нехватка оборотных средств" onclick="toggleObhodProblem(this)" data-i18n="probNoWorkingCapital">Нехватка оборотных средств</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Дефицит квалифицированных кадров" onclick="toggleObhodProblem(this)" data-i18n="probNoStaff">Дефицит квалифицированных кадров</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Высокая конкуренция" onclick="toggleObhodProblem(this)" data-i18n="probCompetition">Высокая конкуренция</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Проблемы с поставками/логистикой" onclick="toggleObhodProblem(this)" data-i18n="probLogistics">Проблемы с поставками/логистикой</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет подходящего помещения" onclick="toggleObhodProblem(this)" data-i18n="probNoPremises">Нет подходящего помещения</button>
+        <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Административные барьеры" onclick="toggleObhodProblem(this)" data-i18n="probAdminBarriers">Административные барьеры</button>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
-      <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblJobsCreated">Рабочих мест создаст</label>
-        <input type="number" id="obJobs" class="input" placeholder="2">
-      </div>
-      <div>
-        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblReadyTraining">Готов к обучению</label>
-        <select id="obTraining" class="select"><option value="">-</option><option value="Да" data-i18n="optYes">Да</option><option value="Нет" data-i18n="optNo">Нет</option></select>
-      </div>
-    </div>
-
-    <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
-    <h3 style="font-size:14px;margin-bottom:10px;" data-i18n="hProblems">Проблемы</h3>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;" id="obProblemsBox">
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет капитала" onclick="toggleObhodProblem(this)" data-i18n="probNoCapital">Нет капитала</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет знаний" onclick="toggleObhodProblem(this)" data-i18n="probNoKnowledge">Нет знаний</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет рынка сбыта" onclick="toggleObhodProblem(this)" data-i18n="probNoMarket">Нет рынка сбыта</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Не подходит залог" onclick="toggleObhodProblem(this)" data-i18n="probNoCollateral">Не подходит залог</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Нет документов" onclick="toggleObhodProblem(this)" data-i18n="probNoDocs">Нет документов</button>
-      <button type="button" class="btn btn-secondary ob-problem-btn" data-value="Здоровье" onclick="toggleObhodProblem(this)" data-i18n="probHealth">Здоровье</button>
-    </div>
     <input type="text" id="obProblemsOther" class="input" data-i18n-placeholder="optOtherDots" placeholder="Другое..." style="margin-bottom:20px;">
+
+    <!-- ==================== ОБЩИЙ БЛОК КРЕДИТА ==================== -->
+    <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
+    <h3 style="font-size:14px;margin-bottom:12px;" data-i18n="hCreditNeed">Потребность в кредите</h3>
+
+    <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer;">
+      <input type="checkbox" id="obCreditNotNeeded" style="width:16px;height:16px;" onchange="toggleObhodCreditBlock()">
+      <span data-i18n="lblCreditNotNeeded">Кредит не нужен</span>
+    </label>
+
+    <div id="obCreditFieldsWrap">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblCreditTerm">Срок кредита</label>
+          <select id="obCreditTerm" class="select">
+            <option value="" data-i18n="optNotSelected">Не выбрано</option>
+            <option value="6 месяцев" data-i18n="term6">6 месяцев</option>
+            <option value="12 месяцев" data-i18n="term12">12 месяцев</option>
+            <option value="24 месяца" data-i18n="term24">24 месяца</option>
+            <option value="36 месяцев" data-i18n="term36">36 месяцев</option>
+            <option value="48 месяцев" data-i18n="term48">48 месяцев</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblCreditPurpose">Цель кредита</label>
+          <select id="obCreditPurpose" class="select" onchange="toggleObhodOther('obCreditPurpose','obCreditPurposeOtherWrap')">
+            <option value="" data-i18n="optNotSelected">Не выбрано</option>
+            <option value="На оборотные средства" data-i18n="purposeWorkingCapital">На оборотные средства</option>
+            <option value="Покупка недвижимости" data-i18n="purposeRealEstate">Покупка недвижимости</option>
+            <option value="Покупка транспорта" data-i18n="purposeVehicle">Покупка транспорта</option>
+            <option value="Покупка оборудования" data-i18n="purposeEquipment">Покупка оборудования</option>
+            <option value="Строительство/ремонт" data-i18n="purposeConstruction">Строительство/ремонт</option>
+            <option value="Другое" data-i18n="optOther">Другое</option>
+          </select>
+        </div>
+      </div>
+      <div id="obCreditPurposeOtherWrap" style="display:none;margin-bottom:12px;">
+        <input type="text" id="obCreditPurposeOther" class="input" data-i18n-placeholder="phSpecify" placeholder="Уточните...">
+      </div>
+
+      <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;" data-i18n="lblAmount">Сумма кредита</label>
+      <div style="display:flex;gap:6px;margin-bottom:14px;">
+        <input type="text" id="obCreditAmount" class="input" placeholder="30 000 000" style="flex:2;">
+        <select id="obCreditCurrency" class="select" style="flex:1;">
+          <option value="UZS" selected>UZS</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+    </div>
 
     <hr style="margin:20px 0;border:none;border-top:1px solid var(--line);">
 
     <div style="display:flex;gap:10px;margin-bottom:6px;">
-      <button type="button" class="btn btn-secondary" style="flex:1;" onclick="captureObhodGeolocation()"><i class="ti ti-map-pin"></i> <span data-i18n="btnLocation">Локация</span></button>
+      <button type="button" class="btn btn-secondary" style="flex:1;" onclick="captureObhodGeolocation()"><i class="ti ti-map-pin"></i> <span data-i18n="btnLocation">Локация</span> *</button>
       <button type="button" class="btn btn-secondary" id="obPhotosBtn" style="flex:1;" onclick="document.getElementById('obPhotos').click()"><i class="ti ti-camera"></i> <span data-i18n="btnPhoto">Фото</span> *</button>
     </div>
     <input type="file" id="obPhotos" accept="image/*" multiple style="display:none;">
@@ -2573,7 +2741,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <div id="obPhotoPreviewWrap" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
     <div id="obExistingPhotosWrap" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
 
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" data-i18n="lblBankerComment">Комментарий банкира</label>
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;" id="obCommentLabel" data-i18n="lblBankerComment">Комментарий банкира</label>
     <textarea id="obComment" class="input" data-i18n-placeholder="phComment" placeholder="Заметки по итогам визита" style="margin-bottom:20px;min-height:60px;"></textarea>
 
     <button class="btn" id="obSaveBtn" onclick="saveObhodSurveyForm()" style="width:100%;" data-i18n="btnSaveSurvey">Сохранить опрос</button>
@@ -3685,7 +3853,74 @@ const APP_DICT = {
   lblPhotoRequired: { ru: 'Фото обязательно', uz: 'Foto majburiy' },
   errChooseMahalla: { ru: 'Выберите махаллю — это обязательное поле', uz: 'Mahallani tanlang — bu majburiy maydon' },
   errHeadName: { ru: 'Укажите ФИО главы двора — это обязательное поле', uz: "Xonadon boshlig'ining F.I.SH.ni kiriting — bu majburiy maydon" },
-  errPhotoRequired: { ru: 'Прикрепите хотя бы одно фото — это обязательное подтверждение визита', uz: "Kamida bitta foto biriktiring — bu tashrifning majburiy tasdig'i" }
+  errPhotoRequired: { ru: 'Прикрепите хотя бы одно фото — это обязательное подтверждение визита', uz: "Kamida bitta foto biriktiring — bu tashrifning majburiy tasdig'i" },
+
+  // Переключатель типа опроса и новые поля физического
+  typePhysical: { ru: 'Физический', uz: 'Jismoniy' },
+  typeLegal: { ru: 'Юридический', uz: 'Yuridik' },
+  lblHeadNameLegal: { ru: 'ФИО собеседника *', uz: "Suhbatdosh F.I.SH. *" },
+  lblSocialRegistry: { ru: 'Двор в социальном реестре', uz: "Xonadon ijtimoiy reestrda" },
+  lblUnemployed18: { ru: 'Безработных 18+', uz: '18+ ishsizlar' },
+  lblManagerComment: { ru: 'Комментарий менеджера', uz: 'Menejer izohi' },
+
+  // Юридический опрос
+  lblInn: { ru: 'ИНН *', uz: 'STIR *' },
+  lblLegalName: { ru: 'Юридическое название *', uz: 'Yuridik nomi *' },
+  phLegalName: { ru: 'ООО «Nurli Savdo»', uz: 'MCHJ «Nurli Savdo»' },
+  lblBrandName: { ru: 'Название бренда', uz: 'Brend nomi' },
+  phBrandName: { ru: 'Например: Nurli Market', uz: 'Masalan: Nurli Market' },
+  lblNegotiatedWith: { ru: 'Переговоры с кем', uz: 'Kim bilan suhbat' },
+  negFounder: { ru: 'Учредитель', uz: 'Muassis' },
+  negDirector: { ru: 'Директор', uz: 'Direktor' },
+  negStoreManager: { ru: 'Управляющий магазином', uz: "Do'kon boshqaruvchisi" },
+  negSeller: { ru: 'Продавец', uz: 'Sotuvchi' },
+  negAccountant: { ru: 'Бухгалтер', uz: 'Buxgalter' },
+  lblSectorLegal: { ru: 'Отрасль', uz: 'Soha' },
+  legalSectorTrade: { ru: 'Торговля', uz: 'Savdo' },
+  legalSectorServices: { ru: 'Услуги населению', uz: "Aholiga xizmat ko'rsatish" },
+  legalSectorProduction: { ru: 'Производство', uz: "Ishlab chiqarish" },
+  legalSectorConstruction: { ru: 'Строительство', uz: 'Qurilish' },
+  legalSectorAgri: { ru: 'Сельское хозяйство', uz: "Qishloq xo'jaligi" },
+  legalSectorTransport: { ru: 'Транспорт и логистика', uz: 'Transport va logistika' },
+  legalSectorHealth: { ru: 'Здравоохранение/аптеки', uz: "Sog'liqni saqlash/dorixonalar" },
+  lblBusinessOpened: { ru: 'Бизнес открыт', uz: 'Biznes ochilgan' },
+  opened2026: { ru: 'Новый (2026)', uz: 'Yangi (2026)' },
+  openedOld: { ru: 'Старый бизнес', uz: 'Eski biznes' },
+  lblAvgSales: { ru: 'Средн. продажи/день', uz: "O'rtacha savdo/kun" },
+  lblEmployees: { ru: 'Сотрудников', uz: 'Xodimlar' },
+  lblServicingBank: { ru: 'Обслуживающий банк', uz: 'Xizmat ko\'rsatuvchi bank' },
+  hDevPlans: { ru: 'Планы развития', uz: 'Rivojlanish rejalari' },
+  devExpandCurrent: { ru: 'Расширить текущую точку', uz: "Joriy nuqtani kengaytirish" },
+  devNewBranch: { ru: 'Открыть новый филиал', uz: 'Yangi filial ochish' },
+  devUpdateEquip: { ru: 'Обновить оборудование', uz: 'Jihozlarni yangilash' },
+  devMoreStaff: { ru: 'Увеличить штат', uz: 'Xodimlar sonini oshirish' },
+  devNewDirection: { ru: 'Новое направление бизнеса', uz: "Yangi biznes yo'nalishi" },
+  devNoPlans: { ru: 'Пока нет планов', uz: "Hozircha reja yo'q" },
+  probNoWorkingCapital: { ru: 'Нехватка оборотных средств', uz: "Aylanma mablag' yetishmasligi" },
+  probNoStaff: { ru: 'Дефицит квалифицированных кадров', uz: "Malakali kadrlar yetishmasligi" },
+  probCompetition: { ru: 'Высокая конкуренция', uz: 'Yuqori raqobat' },
+  probLogistics: { ru: 'Проблемы с поставками/логистикой', uz: "Yetkazib berish/logistika muammolari" },
+  probNoPremises: { ru: 'Нет подходящего помещения', uz: "Mos bino yo'q" },
+  probAdminBarriers: { ru: 'Административные барьеры', uz: "Ma'muriy to'siqlar" },
+
+  // Общий блок кредита
+  hCreditNeed: { ru: 'Потребность в кредите', uz: 'Kredit ehtiyoji' },
+  lblCreditNotNeeded: { ru: 'Кредит не нужен', uz: "Kredit kerak emas" },
+  lblCreditTerm: { ru: 'Срок кредита', uz: 'Kredit muddati' },
+  term6: { ru: '6 месяцев', uz: '6 oy' },
+  term12: { ru: '12 месяцев', uz: '12 oy' },
+  term24: { ru: '24 месяца', uz: '24 oy' },
+  term36: { ru: '36 месяцев', uz: '36 oy' },
+  term48: { ru: '48 месяцев', uz: '48 oy' },
+  lblCreditPurpose: { ru: 'Цель кредита', uz: 'Kredit maqsadi' },
+  purposeWorkingCapital: { ru: 'На оборотные средства', uz: "Aylanma mablag' uchun" },
+  purposeRealEstate: { ru: 'Покупка недвижимости', uz: "Ko'chmas mulk sotib olish" },
+  purposeVehicle: { ru: 'Покупка транспорта', uz: 'Transport sotib olish' },
+  purposeEquipment: { ru: 'Покупка оборудования', uz: 'Jihoz sotib olish' },
+  purposeConstruction: { ru: 'Строительство/ремонт', uz: "Qurilish/ta'mirlash" },
+  errInterlocutorName: { ru: 'Укажите ФИО собеседника — это обязательное поле', uz: "Suhbatdosh F.I.SH.ni kiriting — bu majburiy maydon" },
+  errInnRequired: { ru: 'Укажите ИНН — это обязательное поле', uz: 'STIRni kiriting — bu majburiy maydon' },
+  errLegalNameRequired: { ru: 'Укажите юридическое название — это обязательное поле', uz: 'Yuridik nomini kiriting — bu majburiy maydon' }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -8645,6 +8880,61 @@ function toggleObhodProblem(btn) {
   }
 }
 
+let obhodSelectedDevPlans = [];
+
+function toggleObhodDevPlan(btn) {
+  const value = btn.dataset.value;
+  const idx = obhodSelectedDevPlans.indexOf(value);
+  if (idx === -1) {
+    obhodSelectedDevPlans.push(value);
+    btn.classList.add('selected');
+  } else {
+    obhodSelectedDevPlans.splice(idx, 1);
+    btn.classList.remove('selected');
+  }
+}
+
+// Кредит не нужен — прячем поля срока/суммы/цели, но НЕ очищаем их
+// значения сразу (на случай, если банкир случайно нажал галочку и сейчас
+// её снимет обратно — данные должны остаться).
+function toggleObhodCreditBlock() {
+  const notNeeded = document.getElementById('obCreditNotNeeded').checked;
+  document.getElementById('obCreditFieldsWrap').style.display = notNeeded ? 'none' : 'block';
+}
+
+let currentObhodSurveyType = 'Физический';
+
+// Переключение между физическим и юридическим опросом — показывает
+// нужный набор полей, меняет подпись поля "ФИО" (глава двора / кто
+// собеседник) и список проблем (у физлиц и юрлиц разные причины).
+function setObhodSurveyType(type) {
+  currentObhodSurveyType = type;
+
+  document.getElementById('obTypePhysicalBtn').classList.toggle('active', type === 'Физический');
+  document.getElementById('obTypeLegalBtn').classList.toggle('active', type === 'Юридический');
+
+  document.getElementById('obPhysicalFields').style.display = type === 'Физический' ? 'block' : 'none';
+  document.getElementById('obLegalFields').style.display = type === 'Юридический' ? 'block' : 'none';
+  document.getElementById('obProblemsBoxPhysical').style.display = type === 'Физический' ? 'flex' : 'none';
+  document.getElementById('obProblemsBoxLegal').style.display = type === 'Юридический' ? 'flex' : 'none';
+
+  const headLabel = document.getElementById('obHeadNameLabel');
+  const headInput = document.getElementById('obHeadName');
+  if (type === 'Юридический') {
+    headLabel.innerText = tr('lblHeadNameLegal');
+    headInput.placeholder = 'Usmanov Alisher Jurayevich';
+  } else {
+    headLabel.innerText = tr('lblHeadName');
+  }
+
+  document.getElementById('obCommentLabel').innerText = type === 'Юридический' ? tr('lblManagerComment') : tr('lblBankerComment');
+
+  // При смене типа сбрасываем выбранные проблемы — списки разные,
+  // оставлять "чужие" выбранные значения было бы ошибкой.
+  document.querySelectorAll('.ob-problem-btn').forEach(b => b.classList.remove('selected'));
+  obhodSelectedProblems = [];
+}
+
 let obhodLocation = null; // { lat, lng, time }
 
 function captureObhodGeolocation() {
@@ -8733,18 +9023,38 @@ let allObhodSurveys = [];
 function resetObhodForm() {
   editingObhodSurveyId = null;
   document.getElementById('obhodFormTitle').innerText = 'Новый опрос двора';
-  ['obMahalla','obHeadName','obPinfl','obPhone','obFamilySize','obCategory','obBusinessInterest',
-   'obBusinessIdea','obSector','obHasLand','obFreeLand','obNeedsCredit','obCreditAmount','obJobs',
-   'obTraining','obProblemsOther','obComment'].forEach(id => {
-     const el = document.getElementById(id);
-     el.value = '';
-     el.style.borderColor = ''; // сброс красной рамки от прошлой ошибки валидации
-   });
+  setObhodSurveyType('Физический');
+
+  [
+    'obMahalla', 'obHeadName', 'obPinfl', 'obPhone', 'obFamilySize', 'obUnemployed18',
+    'obCategory', 'obCategoryOther', 'obBusinessInterest', 'obBusinessInterestOther',
+    'obBusinessIdea', 'obSector', 'obSectorOther', 'obHasLand', 'obFreeLand', 'obJobs', 'obTraining',
+    'obInn', 'obLegalName', 'obBrandName', 'obNegotiatedWith', 'obSectorLegal', 'obSectorLegalOther',
+    'obBusinessOpened', 'obAvgSales', 'obEmployees', 'obServicingBank',
+    'obCreditTerm', 'obCreditPurpose', 'obCreditPurposeOther', 'obCreditAmount',
+    'obProblemsOther', 'obComment'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return; // на случай будущих изменений формы — не падаем, если поле отсутствует
+    el.value = '';
+    el.style.borderColor = '';
+  });
+
+  document.getElementById('obSocialRegistry').checked = false;
+  document.getElementById('obCreditNotNeeded').checked = false;
+  document.getElementById('obCreditCurrency').value = 'UZS';
+  toggleObhodCreditBlock();
+
   document.getElementById('obCategoryOtherWrap').style.display = 'none';
   document.getElementById('obBusinessInterestOtherWrap').style.display = 'none';
   document.getElementById('obSectorOtherWrap').style.display = 'none';
+  document.getElementById('obSectorLegalOtherWrap').style.display = 'none';
+  document.getElementById('obCreditPurposeOtherWrap').style.display = 'none';
+
   document.querySelectorAll('.ob-problem-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.ob-devplan-btn').forEach(b => b.classList.remove('selected'));
   obhodSelectedProblems = [];
+  obhodSelectedDevPlans = [];
   obhodLocation = null;
   obhodSelectedPhotoFiles = [];
   obhodExistingPhotoUrls = '';
@@ -8780,11 +9090,18 @@ function openObhodForm(idEncoded) {
     if (s) {
       editingObhodSurveyId = id;
       document.getElementById('obhodFormTitle').innerText = 'Редактирование опроса';
+
+      setObhodSurveyType(s.surveyType === 'Юридический' ? 'Юридический' : 'Физический');
+
       document.getElementById('obMahalla').value = s.mahalla || '';
       document.getElementById('obHeadName').value = s.headName || '';
+
+      // Физический
       document.getElementById('obPinfl').value = s.pinfl || '';
       document.getElementById('obPhone').value = s.phone || '';
+      document.getElementById('obSocialRegistry').checked = s.socialRegistry === 'Да';
       document.getElementById('obFamilySize').value = s.familySize || '';
+      document.getElementById('obUnemployed18').value = s.unemployed18plus || '';
       document.getElementById('obCategory').value = s.category || '';
       if (s.category === 'Другое') { document.getElementById('obCategoryOtherWrap').style.display = 'block'; document.getElementById('obCategoryOther').value = s.categoryOther || ''; }
       document.getElementById('obBusinessInterest').value = s.businessInterest || '';
@@ -8794,10 +9111,35 @@ function openObhodForm(idEncoded) {
       if (s.sector === 'Другое') { document.getElementById('obSectorOtherWrap').style.display = 'block'; document.getElementById('obSectorOther').value = s.sectorOther || ''; }
       document.getElementById('obHasLand').value = s.hasLand || '';
       document.getElementById('obFreeLand').value = s.freeLandSotka || '';
-      document.getElementById('obNeedsCredit').value = s.needsCredit || '';
-      document.getElementById('obCreditAmount').value = s.creditAmount || '';
       document.getElementById('obJobs').value = s.jobsCreated || '';
       document.getElementById('obTraining').value = s.readyForTraining || '';
+
+      // Юридический
+      document.getElementById('obInn').value = s.inn || '';
+      document.getElementById('obLegalName').value = s.legalName || '';
+      document.getElementById('obBrandName').value = s.brandName || '';
+      document.getElementById('obNegotiatedWith').value = s.negotiatedWith || '';
+      document.getElementById('obSectorLegal').value = s.sectorLegal || '';
+      if (s.sectorLegal === 'Другое') { document.getElementById('obSectorLegalOtherWrap').style.display = 'block'; document.getElementById('obSectorLegalOther').value = s.sectorLegalOther || ''; }
+      document.getElementById('obBusinessOpened').value = s.businessOpened || '';
+      document.getElementById('obAvgSales').value = s.avgDailySales || '';
+      document.getElementById('obEmployees').value = s.employeesCount || '';
+      document.getElementById('obServicingBank').value = s.servicingBank || '';
+
+      obhodSelectedDevPlans = Array.isArray(s.developmentPlans) ? s.developmentPlans.slice() : [];
+      document.querySelectorAll('.ob-devplan-btn').forEach(b => {
+        b.classList.toggle('selected', obhodSelectedDevPlans.includes(b.dataset.value));
+      });
+
+      // Общий блок кредита
+      document.getElementById('obCreditNotNeeded').checked = s.creditNotNeeded === 'Да';
+      document.getElementById('obCreditTerm').value = s.creditTerm || '';
+      document.getElementById('obCreditCurrency').value = s.creditCurrency || 'UZS';
+      document.getElementById('obCreditAmount').value = s.creditAmount || '';
+      document.getElementById('obCreditPurpose').value = s.creditPurpose || '';
+      if (s.creditPurpose === 'Другое') { document.getElementById('obCreditPurposeOtherWrap').style.display = 'block'; document.getElementById('obCreditPurposeOther').value = s.creditPurposeOther || ''; }
+      toggleObhodCreditBlock();
+
       document.getElementById('obProblemsOther').value = s.problemsOther || '';
       document.getElementById('obComment').value = s.comment || '';
 
@@ -8834,15 +9176,18 @@ function closeObhodForm() {
 async function saveObhodSurveyForm() {
   const mahallaEl = document.getElementById('obMahalla');
   const headNameEl = document.getElementById('obHeadName');
+  const innEl = document.getElementById('obInn');
+  const legalNameEl = document.getElementById('obLegalName');
   const mahalla = mahallaEl.value;
   const headName = headNameEl.value.trim();
   const msg = document.getElementById('obSaveMessage');
   const btn = document.getElementById('obSaveBtn');
+  const isLegal = currentObhodSurveyType === 'Юридический';
 
   msg.innerHTML = '';
   // Сбрасываем подсветку с прошлой попытки — иначе старая красная рамка
   // может остаться на уже исправленном поле.
-  [mahallaEl, headNameEl].forEach(el => { el.style.borderColor = ''; });
+  [mahallaEl, headNameEl, innEl, legalNameEl].forEach(el => { el.style.borderColor = ''; });
 
   const showFieldError = (el, text) => {
     el.style.borderColor = 'var(--red)';
@@ -8852,7 +9197,11 @@ async function saveObhodSurveyForm() {
   };
 
   if (!mahalla) { showFieldError(mahallaEl, tr('errChooseMahalla')); return; }
-  if (!headName) { showFieldError(headNameEl, tr('errHeadName')); return; }
+  if (!headName) { showFieldError(headNameEl, isLegal ? tr('errInterlocutorName') : tr('errHeadName')); return; }
+  if (isLegal) {
+    if (!innEl.value.trim()) { showFieldError(innEl, tr('errInnRequired')); return; }
+    if (!legalNameEl.value.trim()) { showFieldError(legalNameEl, tr('errLegalNameRequired')); return; }
+  }
 
   const hasNewPhotos = obhodSelectedPhotoFiles.length > 0;
   const hasExistingPhotos = !!obhodExistingPhotoUrls;
@@ -8881,11 +9230,16 @@ async function saveObhodSurveyForm() {
       webAction: 'saveObhodSurvey',
       sessionId: localStorage.getItem('msbSessionId'),
       surveyId: editingObhodSurveyId,
+      surveyType: currentObhodSurveyType,
       mahalla: mahalla,
       headName: headName,
+
+      // Физический
       pinfl: document.getElementById('obPinfl').value.trim(),
       phone: document.getElementById('obPhone').value.trim(),
+      socialRegistry: document.getElementById('obSocialRegistry').checked,
       familySize: document.getElementById('obFamilySize').value,
+      unemployed18plus: document.getElementById('obUnemployed18').value,
       category: document.getElementById('obCategory').value,
       categoryOther: document.getElementById('obCategoryOther').value.trim(),
       businessInterest: document.getElementById('obBusinessInterest').value,
@@ -8895,10 +9249,30 @@ async function saveObhodSurveyForm() {
       sectorOther: document.getElementById('obSectorOther').value.trim(),
       hasLand: document.getElementById('obHasLand').value,
       freeLandSotka: document.getElementById('obFreeLand').value,
-      needsCredit: document.getElementById('obNeedsCredit').value,
-      creditAmount: document.getElementById('obCreditAmount').value,
       jobsCreated: document.getElementById('obJobs').value,
       readyForTraining: document.getElementById('obTraining').value,
+
+      // Юридический
+      inn: innEl.value.trim(),
+      legalName: legalNameEl.value.trim(),
+      brandName: document.getElementById('obBrandName').value.trim(),
+      negotiatedWith: document.getElementById('obNegotiatedWith').value,
+      sectorLegal: document.getElementById('obSectorLegal').value,
+      sectorLegalOther: document.getElementById('obSectorLegalOther').value.trim(),
+      businessOpened: document.getElementById('obBusinessOpened').value,
+      avgDailySales: document.getElementById('obAvgSales').value,
+      employeesCount: document.getElementById('obEmployees').value,
+      servicingBank: document.getElementById('obServicingBank').value,
+      developmentPlans: obhodSelectedDevPlans,
+
+      // Общий блок кредита
+      creditNotNeeded: document.getElementById('obCreditNotNeeded').checked,
+      creditTerm: document.getElementById('obCreditTerm').value,
+      creditCurrency: document.getElementById('obCreditCurrency').value,
+      creditAmount: document.getElementById('obCreditAmount').value,
+      creditPurpose: document.getElementById('obCreditPurpose').value,
+      creditPurposeOther: document.getElementById('obCreditPurposeOther').value.trim(),
+
       problems: obhodSelectedProblems,
       problemsOther: document.getElementById('obProblemsOther').value.trim(),
       lat: obhodLocation ? obhodLocation.lat : '',
@@ -8955,12 +9329,17 @@ async function loadObhodList() {
       const locationBtn = (canSeeLocation && hasLocation)
         ? `<button class="btn btn-secondary" onclick="event.stopPropagation();showObhodSurveyLocation('${encodeURIComponent(s.id)}')"><i class="ti ti-map-pin"></i> На карте</button>`
         : '';
+      const isLegal = s.surveyType === 'Юридический';
+      const typeBadge = `<span style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:${isLegal ? '#E6F1FB' : '#EAF3DE'};color:${isLegal ? '#0C447C' : '#173404'};margin-right:6px;">${isLegal ? 'Юр.' : 'Физ.'}</span>`;
+      const metaText = isLegal
+        ? `${safe(s.mahalla)} · ${safe(s.legalName) || '—'}${s.avgDailySales ? ' · Продажи/день: ' + formatNumber(s.avgDailySales) : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`
+        : `${safe(s.mahalla)} · Семья: ${safe(s.familySize) || '—'} чел. · ${s.businessInterest ? safe(s.businessInterest) + ' к бизнесу' : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`;
       return `
       <div class="mahalla-row" style="cursor:pointer;" onclick="openObhodForm('${encodeURIComponent(s.id)}')">
         <div class="mahalla-row-top">
           <div>
-            <div class="mahalla-row-name">${safe(s.headName)}</div>
-            <div class="mahalla-row-meta">${safe(s.mahalla)} · Семья: ${safe(s.familySize) || '—'} чел. · ${s.businessInterest ? safe(s.businessInterest) + ' к бизнесу' : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}</div>
+            <div class="mahalla-row-name">${typeBadge}${safe(s.headName)}</div>
+            <div class="mahalla-row-meta">${metaText}</div>
           </div>
           ${locationBtn}
         </div>
