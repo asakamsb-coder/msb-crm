@@ -2415,6 +2415,17 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <div id="obhodDashboardBox" class="loading" data-i18n="loading">Загрузка...</div>
     </div>
 
+    <div class="panel" id="obhodMapPanel" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div>
+          <h2 style="margin-bottom:4px;" data-i18n="hObhodMap">Карта визитов</h2>
+          <p style="color:var(--muted);font-size:13px;" data-i18n="pObhodMap">Точки — дворы, где банкир зафиксировал местоположение при опросе.</p>
+        </div>
+        <span id="obhodMapCount" style="font-size:12.5px;color:var(--muted);"></span>
+      </div>
+      <div id="obhodMap" style="height:420px;border-radius:12px;overflow:hidden;background:var(--surface-1,#F5F5F0);"></div>
+    </div>
+
     <div class="panel">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
         <h2 style="margin-bottom:0;" data-i18n="hObhodSurveys">Опросы дворов</h2>
@@ -3165,6 +3176,8 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js" defer></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxS6j4D4aDUCa-1j9mmlD4GWbKiPlU2D55jhyGEfMDj45yT26guTEmOhLFaPq5jY_PZ/exec';
@@ -3632,7 +3645,31 @@ const APP_DICT = {
   phMahallaName: { ru: 'Например: Дустлик', uz: 'Masalan: Do\'stlik' },
   btnSave: { ru: 'Сохранить', uz: 'Saqlash' },
   titleAssignBanker: { ru: 'Назначить банкира', uz: 'Bankir tayinlash' },
-  subtitleAssignBanker: { ru: 'Можно выбрать несколько менеджеров', uz: "Bir nechta menejer tanlash mumkin" }
+  subtitleAssignBanker: { ru: 'Можно выбрать несколько менеджеров', uz: "Bir nechta menejer tanlash mumkin" },
+
+  // Дашборд "Опрос и обход" (динамический)
+  dashObhodDone: { ru: 'обойдено', uz: 'aylanib chiqilgan' },
+  dashHouseholdsDone: { ru: 'Обойдено дворов', uz: "Aylanib chiqilgan xonadonlar" },
+  wordOf: { ru: 'из', uz: '/' },
+  dashMahallasLeft: { ru: 'Осталось махаллей', uz: 'Qolgan mahallalar' },
+  dashNoSurveys: { ru: "без опросов", uz: "so'rovsiz" },
+  dashThisWeek: { ru: 'За эту неделю', uz: 'Shu hafta' },
+  wordHouseholds: { ru: 'дворов', uz: 'xonadon' },
+  dashByCategory: { ru: 'По категориям населения', uz: 'Aholi toifalari bo\'yicha' },
+  catOther: { ru: 'Остальные', uz: 'Boshqalar' },
+  dashNoData: { ru: 'Пока нет данных', uz: "Hozircha ma'lumot yo'q" },
+  dashNeedCredit: { ru: 'Нуждаются в кредите', uz: 'Kredit kerak' },
+  dashAvgAmount: { ru: 'Средняя сумма', uz: "O'rtacha summa" },
+  dashTotalRequested: { ru: 'Всего запрошено', uz: "Jami so'ralgan" },
+  dashMahallaProgress: { ru: 'Махалли по прогрессу обхода', uz: "Aylanish jarayoni bo'yicha mahallalar" },
+  dashByBanker: { ru: 'Обход по банкирам', uz: 'Bankirlar bo\'yicha aylanish' },
+  thTotalHouseholds: { ru: 'Дворов всего', uz: 'Jami xonadon' },
+  thFact: { ru: 'Факт', uz: 'Fakt' },
+  dashObhodDone2: { ru: 'Обход', uz: 'Aylanish' },
+  thAvgDay: { ru: 'Средн. в день', uz: "Kuniga o'rtacha" },
+  thPerWeek: { ru: 'За неделю', uz: 'Hafta uchun' },
+  hObhodMap: { ru: 'Карта визитов', uz: 'Tashriflar xaritasi' },
+  pObhodMap: { ru: 'Точки — дворы, где банкир зафиксировал местоположение при опросе.', uz: "Nuqtalar — bankir so'rov paytida joylashuvni belgilagan xonadonlar." }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -3641,6 +3678,23 @@ function tr(key) {
   const entry = APP_DICT[key];
   if (!entry) return key;
   return entry[currentAppLang] || entry.ru || key;
+}
+
+// Обратный перевод: если значение ХРАНИТСЯ в таблице по-русски (например,
+// категория из уже заполненного опроса, статус микропроекта), но нужно
+// ПОКАЗАТЬ его на текущем языке интерфейса — ищем, у какого ключа словаря
+// .ru совпадает с этим текстом, и берём перевод оттуда. Строится один раз
+// и кешируется — иначе пришлось бы перебирать весь словарь на каждой
+// строке таблицы.
+let RU_TO_KEY_CACHE = null;
+function trValue(ruText) {
+  if (!ruText) return ruText;
+  if (!RU_TO_KEY_CACHE) {
+    RU_TO_KEY_CACHE = {};
+    Object.keys(APP_DICT).forEach(k => { RU_TO_KEY_CACHE[APP_DICT[k].ru] = k; });
+  }
+  const key = RU_TO_KEY_CACHE[ruText];
+  return key ? tr(key) : ruText;
 }
 
 let currentAppLang = localStorage.getItem('msbAppLang') || 'ru';
@@ -3671,6 +3725,15 @@ function setAppLang(lang) {
     btnUz.style.color = lang === 'uz' ? '#fff' : 'var(--text)';
   }
   applyAppTranslations();
+
+  // Статичная разметка (data-i18n) переводится сама через
+  // applyAppTranslations() выше. Но списки/дашборды, которые строит сам
+  // JS (innerHTML с текстом внутри), от неё не зависят — их нужно
+  // перерисовать заново, если сейчас открыта соответствующая вкладка.
+  // Проверяем каждый раз на существование функции — не все страницы
+  // ещё переведены, со временем список будет расти.
+  const obhodSection = document.getElementById('obhodTabSection');
+  if (obhodSection && obhodSection.classList.contains('active') && typeof loadObhodDashboard === 'function') loadObhodDashboard();
 }
 
 document.addEventListener('DOMContentLoaded', () => { setAppLang(currentAppLang); });
@@ -8209,6 +8272,7 @@ function showMahallaTab(tab) {
   if (tab === 'obhodTab') {
     loadObhodDashboard();
     loadObhodList();
+    loadObhodMap();
   }
 }
 
@@ -8959,20 +9023,20 @@ async function loadObhodDashboard() {
           </svg>
           <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
             <div style="font-size:32px;font-weight:800;">${overallPct}%</div>
-            <div style="font-size:11px;color:var(--muted);">обойдено</div>
+            <div style="font-size:11px;color:var(--muted);">${tr('dashObhodDone')}</div>
           </div>
         </div>
         <div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Обойдено дворов</div>
-          <div style="font-size:28px;font-weight:800;margin-bottom:12px;">${formatNumber(totalDone)} <span style="font-size:15px;color:var(--muted);font-weight:400;">из ${formatNumber(totalHouseholds)}</span></div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">${tr('dashHouseholdsDone')}</div>
+          <div style="font-size:28px;font-weight:800;margin-bottom:12px;">${formatNumber(totalDone)} <span style="font-size:15px;color:var(--muted);font-weight:400;">${tr('wordOf')} ${formatNumber(totalHouseholds)}</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:var(--muted);">Осталось махаллей</div>
-              <div style="font-size:17px;font-weight:800;">${mahallasWithoutSurveys} <span style="font-size:11px;color:var(--muted);font-weight:400;">без опросов</span></div>
+              <div style="font-size:11px;color:var(--muted);">${tr('dashMahallasLeft')}</div>
+              <div style="font-size:17px;font-weight:800;">${mahallasWithoutSurveys} <span style="font-size:11px;color:var(--muted);font-weight:400;">${tr('dashNoSurveys')}</span></div>
             </div>
             <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:var(--muted);">За эту неделю</div>
-              <div style="font-size:17px;font-weight:800;">+${formatNumber(thisWeekCount)} <span style="font-size:11px;color:var(--green);font-weight:400;">дворов</span></div>
+              <div style="font-size:11px;color:var(--muted);">${tr('dashThisWeek')}</div>
+              <div style="font-size:17px;font-weight:800;">+${formatNumber(thisWeekCount)} <span style="font-size:11px;color:var(--green);font-weight:400;">${tr('wordHouseholds')}</span></div>
             </div>
           </div>
         </div>
@@ -8980,7 +9044,7 @@ async function loadObhodDashboard() {
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
         <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;">
-          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">По категориям населения</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">${tr('dashByCategory')}</div>
           ${catTotal ? `
           <div style="display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center;">
             <div style="position:relative;width:150px;height:150px;">
@@ -8993,36 +9057,36 @@ async function loadObhodDashboard() {
               ${topCats.map(c => `
                 <div style="display:flex;align-items:center;gap:6px;">
                   <span style="width:7px;height:7px;border-radius:50%;background:${c.color};flex-shrink:0;"></span>
-                  <span style="flex:1;">${safe(c.label)}</span>
+                  <span style="flex:1;">${safe(trValue(c.label))}</span>
                   <span style="font-weight:700;">${Math.round(c.value / catTotal * 100)}%</span>
                 </div>`).join('')}
             </div>
-          </div>` : '<div style="font-size:12.5px;color:var(--muted);">Пока нет данных</div>'}
+          </div>` : `<div style="font-size:12.5px;color:var(--muted);">${tr('dashNoData')}</div>`}
         </div>
 
         <div style="background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;">
-          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">Нуждаются в кредите</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px;">${tr('dashNeedCredit')}</div>
           <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:16px;">
             <span style="font-size:32px;font-weight:800;">${formatNumber(creditCount)}</span>
-            <span style="font-size:13px;color:var(--muted);">из ${formatNumber(allObhodSurveys.length)} · ${creditPct}%</span>
+            <span style="font-size:13px;color:var(--muted);">${tr('wordOf')} ${formatNumber(allObhodSurveys.length)} · ${creditPct}%</span>
           </div>
           <div style="height:8px;background:var(--surface-1,#F5F5F0);border-radius:99px;overflow:hidden;margin-bottom:16px;">
             <span style="display:block;width:${Math.min(100, creditPct)}%;height:100%;background:var(--orange);"></span>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:var(--muted);">Средняя сумма</div>
+              <div style="font-size:11px;color:var(--muted);">${tr('dashAvgAmount')}</div>
               <div style="font-size:15px;font-weight:800;">${creditAvg ? formatNumber(creditAvg) : '—'}</div>
             </div>
             <div style="background:var(--surface-1,#F5F5F0);border-radius:10px;padding:10px 12px;">
-              <div style="font-size:11px;color:var(--muted);">Всего запрошено</div>
+              <div style="font-size:11px;color:var(--muted);">${tr('dashTotalRequested')}</div>
               <div style="font-size:15px;font-weight:800;">${creditTotal ? formatNumber(creditTotal) : '—'}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Махалли по прогрессу обхода</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">${tr('dashMahallaProgress')}</div>
       <div style="background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:24px;">
         ${sortedRows.map((r, i) => {
           const pct = r.total ? Math.round(r.done / r.total * 100) : 0;
@@ -9039,17 +9103,17 @@ async function loadObhodDashboard() {
         }).join('')}
       </div>
 
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Обход по банкирам</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">${tr('dashByBanker')}</div>
       <div style="background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;">
         ${managerRows.length ? `
         <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
           <thead><tr style="background:var(--surface-1,#F5F5F0);">
-            <th style="text-align:left;padding:10px 14px;font-weight:700;color:var(--muted);">Банкир</th>
-            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Дворов всего</th>
-            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Факт</th>
-            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Обход</th>
-            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">Средн. в день</th>
-            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">За неделю</th>
+            <th style="text-align:left;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thBanker')}</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thTotalHouseholds')}</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thFact')}</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('dashObhodDone2')}</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thAvgDay')}</th>
+            <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thPerWeek')}</th>
           </tr></thead>
           <tbody>
             ${managerRows.map((m, i) => {
@@ -9086,6 +9150,73 @@ async function loadObhodDashboard() {
 }
 function formatNumber(n) {
   return Math.round(Number(n) || 0).toLocaleString('ru-RU');
+}
+
+let obhodLeafletMap = null;
+let obhodMapMarkersLayer = null;
+
+// Карта визитов — видна только управляющему (ADMIN/DIRECTOR) и
+// заместителю (DEPUTY). Обычный банкир видит только свой список опросов
+// (без карты по всем сотрудникам сразу) — это управленческий инструмент
+// контроля, а не рабочий для рядового обхода.
+async function loadObhodMap() {
+  const panel = document.getElementById('obhodMapPanel');
+  if (!panel) return;
+
+  const allowed = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+  if (!allowed) {
+    panel.style.display = 'none';
+    return;
+  }
+  panel.style.display = 'block';
+
+  if (typeof L === 'undefined') {
+    // Leaflet подключён с defer — если карта открылась раньше, чем он
+    // успел загрузиться, пробуем ещё раз чуть позже вместо ошибки.
+    setTimeout(loadObhodMap, 300);
+    return;
+  }
+
+  try {
+    const surveys = await fetchJSON('obhodList');
+    const withLocation = (surveys || []).filter(s => s.lat && s.lng && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng)));
+
+    const countEl = document.getElementById('obhodMapCount');
+    if (countEl) countEl.innerText = withLocation.length + ' ' + tr('wordHouseholds');
+
+    if (!obhodLeafletMap) {
+      obhodLeafletMap = L.map('obhodMap');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 19
+      }).addTo(obhodLeafletMap);
+      obhodMapMarkersLayer = L.layerGroup().addTo(obhodLeafletMap);
+    } else {
+      obhodMapMarkersLayer.clearLayers();
+    }
+
+    if (withLocation.length) {
+      const bounds = [];
+      withLocation.forEach(s => {
+        const lat = Number(s.lat), lng = Number(s.lng);
+        bounds.push([lat, lng]);
+        L.marker([lat, lng]).addTo(obhodMapMarkersLayer).bindPopup(
+          `<b>${safe(s.headName)}</b><br>${safe(s.mahalla)}<br><span style="color:#666;font-size:12px;">${safe(s.locationTime || s.createdAt)}</span>`
+        );
+      });
+      obhodLeafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+    } else {
+      // Нукус по умолчанию, если пока ни одной точки нет.
+      obhodLeafletMap.setView([42.4600, 59.6100], 12);
+    }
+
+    // Leaflet иногда неправильно считает размер контейнера, если карта
+    // создавалась, пока вкладка была скрыта (display:none) — пересчитываем
+    // размер сразу после того, как панель точно видна.
+    setTimeout(() => { if (obhodLeafletMap) obhodLeafletMap.invalidateSize(); }, 100);
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function downloadMahallaInfographic() {
