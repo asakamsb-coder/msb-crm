@@ -2287,7 +2287,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       </table>
     </div>
 
-    <button class="btn" onclick="saveScoring()" id="saveScoringBtn">Сохранить данные Ф1/Ф2</button>
+    <button class="btn" onclick="saveScoring()" id="saveScoringBtn" data-i18n="btnSaveF1F2">Сохранить данные Ф1/Ф2</button>
     <div id="scoringSaveMessage" style="margin-top:12px;font-weight:700;"></div>
   </div>
 
@@ -3932,7 +3932,82 @@ const APP_DICT = {
   errLocationRequired: { ru: 'Определите локацию — это обязательное подтверждение визита', uz: "Joylashuvni aniqlang — bu tashrifning majburiy tasdig'i" },
   errPhotoStale: { ru: 'Похоже, фото сделано давно — прикрепите свежий снимок прямо с места визита', uz: "Foto eskiroq ko'rinadi — tashrif joyidan yangi rasm biriktiring" },
   btnShowMap: { ru: 'Показать карту', uz: 'Xaritani ko\'rsatish' },
-  btnHideMap: { ru: 'Скрыть карту', uz: 'Xaritani yashirish' }
+  btnHideMap: { ru: 'Скрыть карту', uz: 'Xaritani yashirish' },
+
+  // Список махаллей / инфографика / паспорт / обход — раньше собирались
+  // сырыми русскими строками в шаблонах, из-за чего не переключались на UZ.
+  mahallaLoadFailed: { ru: 'Не удалось загрузить данные Махалли.', uz: "Mahalla ma'lumotlarini yuklab bo'lmadi." },
+  retryAgain: { ru: 'Попробовать ещё раз', uz: "Qayta urinib ko'ring" },
+  mahallaEmptyAdmin: { ru: 'Махаллей пока нет — добавьте первую или загрузите паспорт.', uz: "Hozircha mahalla yo'q — birinchisini qo'shing yoki pasportni yuklang." },
+  mahallaEmptyUser: { ru: 'За вами пока не закреплена ни одна махалля.', uz: "Sizga hali birorta ham mahalla biriktirilmagan." },
+  lblPopulationShort: { ru: 'Население', uz: "Aholi" },
+  lblEntrepreneursShort: { ru: 'Предпринимателей', uz: "Tadbirkorlar" },
+  lblBankerShort: { ru: 'Банкир', uz: "Bankir" },
+  valNotAssigned: { ru: 'не назначен', uz: "tayinlanmagan" },
+  infographicNoData: { ru: 'Нет данных — загрузите паспорт махаллей.', uz: "Ma'lumot yo'q — mahalla pasportini yuklang." },
+  infographicTotalPop: { ru: 'Всего населения по', uz: "ta mahalla bo'yicha jami aholi" },
+  statFamilies: { ru: 'семей', uz: "oila" },
+  statLand: { ru: 'га земли', uz: "gektar yer" },
+  statMigrants: { ru: 'мигрантов', uz: "migrant" },
+  statDisabled: { ru: 'инвалидов', uz: "nogiron" },
+  statUnemployment: { ru: 'Безработица', uz: "Ishsizlik" },
+  statEntrepreneursPotential: { ru: 'Предпринимателей (потенц. клиенты)', uz: "Tadbirkorlar (potensial mijozlar)" },
+  labelLLC: { ru: 'МЧЖ/ОК', uz: "MCHJ" },
+  labelIE: { ru: 'ИП', uz: "YaTT" },
+  chartTopPopulation: { ru: 'Население по махаллям (крупнейшие)', uz: "Mahallalar bo'yicha aholi (eng yiriklari)" },
+  passportSelectFile: { ru: 'Выберите файл', uz: "Faylni tanlang" },
+  passportExcelLoading: { ru: 'Библиотека Excel ещё не загрузилась, подождите пару секунд и попробуйте снова', uz: "Excel kutubxonasi hali yuklanmadi, bir necha soniya kutib qayta urinib ko'ring" },
+  passportProcessing: { ru: 'Обработка файла...', uz: "Fayl qayta ishlanmoqda..." },
+  passportNoRows: { ru: 'В файле не найдено ни одной строки с названием махалли', uz: "Faylda mahalla nomi bilan bironta ham qator topilmadi" },
+  passportImportError: { ru: 'Ошибка импорта', uz: "Import xatosi" },
+  passportReadError: { ru: 'Ошибка чтения файла:', uz: "Faylni o'qishda xatolik:" },
+  geoNotSupported: { ru: 'Геолокация не поддерживается этим браузером', uz: "Ushbu brauzer geolokatsiyani qo'llab-quvvatlamaydi" },
+  geoDetecting: { ru: 'Определение местоположения...', uz: "Joylashuv aniqlanmoqda..." },
+  geoCoordsLabel: { ru: 'Координаты:', uz: "Koordinatalar:" },
+  geoFailed: { ru: 'Не удалось определить местоположение:', uz: "Joylashuvni aniqlab bo'lmadi:" },
+  alertMaxPhotos: { ru: 'Можно приложить максимум 5 фото. Лишние не будут добавлены.', uz: "Ko'pi bilan 5 ta foto biriktirish mumkin. Ortiqchalari qo'shilmaydi." },
+  btnPhotoStar: { ru: 'Фото *', uz: "Foto *" },
+  obhodNewTitle: { ru: 'Новый опрос двора', uz: "Yangi xonadon so'rovi" },
+  obhodEditTitle: { ru: 'Редактирование опроса', uz: "So'rovni tahrirlash" },
+  obhodEmpty: { ru: 'Опросов пока нет — нажмите «+ Новый опрос»', uz: "Hozircha so'rov yo'q — «+ Yangi so'rov» tugmasini bosing" },
+  obhodListLoadFailed: { ru: 'Не удалось загрузить список.', uz: "Ro'yxatni yuklab bo'lmadi." },
+  savingEllipsis: { ru: 'Сохранение...', uz: "Saqlanmoqda..." },
+  processingPhoto: { ru: 'Обработка фото...', uz: "Foto qayta ishlanmoqda..." },
+  errSaveGeneric: { ru: 'Ошибка сохранения', uz: "Saqlashda xatolik" },
+  errServerConnect: { ru: 'Не удалось связаться с сервером', uz: "Server bilan bog'lanib bo'lmadi" },
+  suspSameLocation: { ru: 'Совпадает с другим опросом', uz: "Boshqa so'rov bilan mos keladi" },
+  suspTooFast: { ru: 'Слишком быстро после другого опроса', uz: "Boshqa so'rovdan keyin juda tez" },
+  btnOnMap: { ru: 'На карте', uz: "Xaritada" },
+  badgeSuspicious: { ru: 'Подозрительно', uz: "Shubhali" },
+  typeLegalShort: { ru: 'Юр.', uz: "Yur." },
+  typePhysicalShort: { ru: 'Физ.', uz: "Jism." },
+  lblFamilyShort: { ru: 'Семья', uz: "Oila" },
+  unitPeople: { ru: 'чел.', uz: "kishi" },
+  lblSalesPerDay: { ru: 'Продажи/день', uz: "Savdo/kun" },
+  suffixInterestInBusiness: { ru: 'к бизнесу', uz: "tadbirkorlikka qiziqish" },
+
+  // Скоринг — загрузка Формы №1/№2 и банковской выписки
+  selectFormFile1: { ru: 'Выберите файл Формы №1', uz: "1-shakl faylini tanlang" },
+  readingForm1: { ru: 'Читаю Форму №1...', uz: "1-shakl o'qilmoqda..." },
+  form1SecondLoaded: { ru: '✓ Второй файл Формы №1 загружен — данные добавлены в период 3 (периоды 1 и 2 не тронуты)', uz: "✓ 1-shaklning ikkinchi fayli yuklandi — ma'lumotlar 3-davrga qo'shildi (1 va 2-davrlar o'zgarmadi)" },
+  form1Loaded: { ru: '✓ Форма №1 загружена — заполнены периоды 1 и 2 (начало/конец периода из файла)', uz: "✓ 1-shakl yuklandi — 1 va 2-davrlar to'ldirildi (fayldagi davr boshi/oxiri)" },
+  errReadForm1: { ru: 'Ошибка чтения Формы №1:', uz: "1-shaklni o'qishda xatolik:" },
+  selectFormFile2: { ru: 'Выберите файл Формы №2', uz: "2-shakl faylini tanlang" },
+  readingForm2: { ru: 'Читаю Форму №2...', uz: "2-shakl o'qilmoqda..." },
+  form2SecondLoaded: { ru: '✓ Второй файл Формы №2 загружен — данные добавлены в период 3 (периоды 1 и 2 не тронуты)', uz: "✓ 2-shaklning ikkinchi fayli yuklandi — ma'lumotlar 3-davrga qo'shildi (1 va 2-davrlar o'zgarmadi)" },
+  form2Loaded: { ru: '✓ Форма №2 загружена — заполнены периоды 1 и 2', uz: "✓ 2-shakl yuklandi — 1 va 2-davrlar to'ldirildi" },
+  errReadForm2: { ru: 'Ошибка чтения Формы №2:', uz: "2-shaklni o'qishda xatolik:" },
+  selectStatementFile: { ru: 'Выберите файл выписки', uz: "Ko'chirma faylini tanlang" },
+  readingStatement: { ru: 'Читаю выписку...', uz: "Ko'chirma o'qilmoqda..." },
+  statementAdded: { ru: '✓ Выписка добавлена:', uz: "✓ Ko'chirma qo'shildi:" },
+  errReadStatement: { ru: 'Ошибка чтения выписки:', uz: "Ko'chirmani o'qishda xatolik:" },
+  balanceOk: { ru: '✓ Баланс сходится', uz: "✓ Balans mos keladi" },
+  balanceMismatch: { ru: '⚠ Актив ≠ Пассив, разница:', uz: "⚠ Aktiv ≠ Passiv, farq:" },
+  errBorrowerName: { ru: 'Укажите наименование заёмщика', uz: "Qarz oluvchi nomini kiriting" },
+  btnSaveF1F2: { ru: 'Сохранить данные Ф1/Ф2', uz: "F1/F2 ma'lumotlarini saqlash" },
+  scoringEmpty: { ru: 'Пока нет сохранённых скорингов', uz: "Hozircha saqlangan skoring yo'q" },
+  scoringLoadFailed: { ru: 'Не удалось загрузить список.', uz: "Ro'yxatni yuklab bo'lmadi." },
+  scoringEditingOpened: { ru: 'Открыт для редактирования:', uz: "Tahrirlash uchun ochildi:" }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -7955,9 +8030,9 @@ async function loadMahallaData() {
     renderMicroprojectsList();
   } catch (error) {
     console.error(error);
-    const retryLink = ' <a onclick="loadMahallaData()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a>';
-    if (mahallasBox) mahallasBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли.' + retryLink + '</div>';
-    if (microBox) microBox.innerHTML = '<div class="loading">Не удалось загрузить данные Махалли.' + retryLink + '</div>';
+    const retryLink = ' <a onclick="loadMahallaData()" style="color:var(--brand);font-weight:700;cursor:pointer;">' + tr('retryAgain') + '</a>';
+    if (mahallasBox) mahallasBox.innerHTML = '<div class="loading">' + tr('mahallaLoadFailed') + retryLink + '</div>';
+    if (microBox) microBox.innerHTML = '<div class="loading">' + tr('mahallaLoadFailed') + retryLink + '</div>';
   }
 }
 
@@ -8244,19 +8319,19 @@ function remapToPeriod3(fields) {
 async function uploadForma1() {
   const input = document.getElementById('scForma1File');
   const status = document.getElementById('scUploadStatus');
-  if (!input.files.length) { status.innerText = 'Выберите файл Формы №1'; return; }
+  if (!input.files.length) { status.innerText = tr('selectFormFile1'); return; }
 
-  status.innerText = 'Читаю Форму №1...';
+  status.innerText = tr('readingForm1');
   try {
     const result = await parseForma1File(input.files[0]);
     const isSecondFile = isPeriodFilled('b', 1) && isPeriodFilled('b', 2);
 
     if (isSecondFile) {
       fillScoringFieldsPartial(remapToPeriod3(result.fields));
-      status.innerText = '✓ Второй файл Формы №1 загружен — данные добавлены в период 3 (периоды 1 и 2 не тронуты)';
+      status.innerText = tr('form1SecondLoaded');
     } else {
       fillScoringFieldsPartial(result.fields);
-      status.innerText = '✓ Форма №1 загружена — заполнены периоды 1 и 2 (начало/конец периода из файла)';
+      status.innerText = tr('form1Loaded');
     }
 
     if (result.companyName && !document.getElementById('scClientName').value) {
@@ -8267,7 +8342,7 @@ async function uploadForma1() {
     }
     calcScoring();
   } catch (error) {
-    status.innerText = 'Ошибка чтения Формы №1: ' + error.message;
+    status.innerText = tr('errReadForm1') + ' ' + error.message;
     console.error(error);
   }
 }
@@ -8275,24 +8350,24 @@ async function uploadForma1() {
 async function uploadForma2() {
   const input = document.getElementById('scForma2File');
   const status = document.getElementById('scUploadStatus');
-  if (!input.files.length) { status.innerText = 'Выберите файл Формы №2'; return; }
+  if (!input.files.length) { status.innerText = tr('selectFormFile2'); return; }
 
-  status.innerText = 'Читаю Форму №2...';
+  status.innerText = tr('readingForm2');
   try {
     const result = await parseForma2File(input.files[0]);
     const isSecondFile = isPeriodFilled('p', 1) && isPeriodFilled('p', 2);
 
     if (isSecondFile) {
       fillScoringFieldsPartial(remapToPeriod3(result.fields));
-      status.innerText = '✓ Второй файл Формы №2 загружен — данные добавлены в период 3 (периоды 1 и 2 не тронуты)';
+      status.innerText = tr('form2SecondLoaded');
     } else {
       fillScoringFieldsPartial(result.fields);
-      status.innerText = '✓ Форма №2 загружена — заполнены периоды 1 и 2';
+      status.innerText = tr('form2Loaded');
     }
 
     calcScoring();
   } catch (error) {
-    status.innerText = 'Ошибка чтения Формы №2: ' + error.message;
+    status.innerText = tr('errReadForm2') + ' ' + error.message;
     console.error(error);
   }
 }
@@ -8305,17 +8380,17 @@ let scTurnoverEntries = [];
 async function uploadTurnover() {
   const input = document.getElementById('scTurnoverFile');
   const status = document.getElementById('scUploadStatus');
-  if (!input.files.length) { status.innerText = 'Выберите файл выписки'; return; }
+  if (!input.files.length) { status.innerText = tr('selectStatementFile'); return; }
 
-  status.innerText = 'Читаю выписку...';
+  status.innerText = tr('readingStatement');
   try {
     const result = await parseTurnoverFile(input.files[0]);
     scTurnoverEntries.push(result);
     renderTurnoverList();
-    status.innerText = '✓ Выписка добавлена: ' + result.periodFrom + ' — ' + result.periodTo;
+    status.innerText = tr('statementAdded') + ' ' + result.periodFrom + ' — ' + result.periodTo;
     input.value = '';
   } catch (error) {
-    status.innerText = 'Ошибка чтения выписки: ' + error.message;
+    status.innerText = tr('errReadStatement') + ' ' + error.message;
     console.error(error);
   }
 }
@@ -8472,22 +8547,22 @@ async function uploadMahallaPassport() {
   const statusBox = document.getElementById('mahallaPassportUploadStatus');
 
   if (!input || !input.files || !input.files.length) {
-    if (statusBox) statusBox.innerText = 'Выберите файл';
+    if (statusBox) statusBox.innerText = tr('passportSelectFile');
     return;
   }
 
   if (typeof XLSX === 'undefined') {
-    if (statusBox) statusBox.innerText = 'Библиотека Excel ещё не загрузилась, подождите пару секунд и попробуйте снова';
+    if (statusBox) statusBox.innerText = tr('passportExcelLoading');
     return;
   }
 
-  if (statusBox) statusBox.innerText = 'Обработка файла...';
+  if (statusBox) statusBox.innerText = tr('passportProcessing');
 
   try {
     const rows = await parseMahallaPassportFile(input.files[0]);
 
     if (!rows.length) {
-      if (statusBox) statusBox.innerText = 'В файле не найдено ни одной строки с названием махалли';
+      if (statusBox) statusBox.innerText = tr('passportNoRows');
       return;
     }
 
@@ -8502,10 +8577,10 @@ async function uploadMahallaPassport() {
       input.value = '';
       await loadMahallaData();
     } else {
-      if (statusBox) statusBox.innerText = result.message || 'Ошибка импорта';
+      if (statusBox) statusBox.innerText = result.message || tr('passportImportError');
     }
   } catch (error) {
-    if (statusBox) statusBox.innerText = 'Ошибка чтения файла: ' + error.message;
+    if (statusBox) statusBox.innerText = tr('passportReadError') + ' ' + error.message;
     console.error(error);
   }
 }
@@ -8556,7 +8631,7 @@ function fillMahallaFilterSelect() {
   const select = document.getElementById('microprojectMahallaFilter');
   if (!select) return;
   const visible = getVisibleMahallas();
-  select.innerHTML = '<option value="">Все махалли</option>' + visible.map(m => `<option value="${safe(m.name)}">${safe(m.name)}</option>`).join('');
+  select.innerHTML = `<option value="">${tr('optAllMahallas')}</option>` + visible.map(m => `<option value="${safe(m.name)}">${safe(m.name)}</option>`).join('');
 }
 
 function renderMahallasList() {
@@ -8569,7 +8644,7 @@ function renderMahallasList() {
   const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
 
   if (!visible.length) {
-    box.innerHTML = '<div class="loading">' + (isAdmin ? 'Махаллей пока нет — добавьте первую или загрузите паспорт.' : 'За вами пока не закреплена ни одна махалля.') + '</div>';
+    box.innerHTML = '<div class="loading">' + (isAdmin ? tr('mahallaEmptyAdmin') : tr('mahallaEmptyUser')) + '</div>';
     return;
   }
 
@@ -8582,10 +8657,10 @@ function renderMahallasList() {
         <div>
           <div class="mahalla-row-name">${safe(m.name)}</div>
           <div class="mahalla-row-meta">
-            ${m.district ? safe(m.district) + ' • ' : ''}${m.population ? 'Население: ' + safe(m.population) + ' • ' : ''}${m.entrepreneursTotal ? 'Предпринимателей: ' + safe(m.entrepreneursTotal) + ' • ' : ''}Банкир: ${m.bankers ? safe(m.bankers) : 'не назначен'}
+            ${m.district ? safe(m.district) + ' • ' : ''}${m.population ? tr('lblPopulationShort') + ': ' + safe(m.population) + ' • ' : ''}${m.entrepreneursTotal ? tr('lblEntrepreneursShort') + ': ' + safe(m.entrepreneursTotal) + ' • ' : ''}${tr('lblBankerShort')}: ${m.bankers ? safe(m.bankers) : tr('valNotAssigned')}
           </div>
         </div>
-        ${isAdmin ? `<button class="btn btn-secondary" onclick="event.stopPropagation();openBankerForm('${encodeURIComponent(m.id)}','${encodeURIComponent(m.name)}','${encodeURIComponent(m.bankers || '')}')">Назначить банкира</button>` : ''}
+        ${isAdmin ? `<button class="btn btn-secondary" onclick="event.stopPropagation();openBankerForm('${encodeURIComponent(m.id)}','${encodeURIComponent(m.name)}','${encodeURIComponent(m.bankers || '')}')">${tr('titleAssignBanker')}</button>` : ''}
       </div>
     </div>`).join('');
 }
@@ -8599,7 +8674,7 @@ function renderMahallaInfographic() {
 
   const visible = getVisibleMahallas();
   if (!visible.length) {
-    box.innerHTML = '<div class="loading">Нет данных — загрузите паспорт махаллей.</div>';
+    box.innerHTML = '<div class="loading">' + tr('infographicNoData') + '</div>';
     return;
   }
 
@@ -8642,15 +8717,15 @@ function renderMahallaInfographic() {
   box.innerHTML = `
     <div id="mahallaInfographicContent">
       <div style="text-align:center;margin-bottom:20px;">
-        <div style="font-size:13px;color:var(--muted);">Всего населения по ${visible.length} махалл${visible.length === 1 ? 'е' : visible.length < 5 ? 'ям' : 'ям'}</div>
+        <div style="font-size:13px;color:var(--muted);">${currentAppLang === 'uz' ? visible.length + ' ' + tr('infographicTotalPop') : tr('infographicTotalPop') + ' ' + visible.length + ' махалл' + (visible.length === 1 ? 'е' : 'ям')}</div>
         <div style="font-size:40px;font-weight:900;">${formatNumber(population)}</div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;">
-        ${statCard('ti-home', families, 'семей')}
-        ${statCard('ti-map-2', landArea, 'га земли')}
-        ${statCard('ti-users-group', migrants, 'мигрантов')}
-        ${statCard('ti-wheelchair', disabled, 'инвалидов')}
+        ${statCard('ti-home', families, tr('statFamilies'))}
+        ${statCard('ti-map-2', landArea, tr('statLand'))}
+        ${statCard('ti-users-group', migrants, tr('statMigrants'))}
+        ${statCard('ti-wheelchair', disabled, tr('statDisabled'))}
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
@@ -8660,7 +8735,7 @@ function renderMahallaInfographic() {
             <div style="position:absolute;top:8px;left:8px;width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">${unemploymentPct}%</div>
           </div>
           <div>
-            <div style="font-size:12px;color:var(--muted);">Безработица</div>
+            <div style="font-size:12px;color:var(--muted);">${tr('statUnemployment')}</div>
             <div style="font-size:17px;font-weight:800;">${formatNumber(unemployed)}</div>
           </div>
         </div>
@@ -8670,14 +8745,14 @@ function renderMahallaInfographic() {
             <div style="position:absolute;top:8px;left:8px;width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;">${formatNumber(entrepreneursTotal)}</div>
           </div>
           <div>
-            <div style="font-size:12px;color:var(--muted);">Предпринимателей (потенц. клиенты)</div>
-            <div style="font-size:11.5px;"><span style="color:var(--orange);">●</span> МЧЖ/ОК ${formatNumber(entrepreneursLLC)}</div>
-            <div style="font-size:11.5px;"><span style="color:var(--green);">●</span> ИП ${formatNumber(entrepreneursIE)}</div>
+            <div style="font-size:12px;color:var(--muted);">${tr('statEntrepreneursPotential')}</div>
+            <div style="font-size:11.5px;"><span style="color:var(--orange);">●</span> ${tr('labelLLC')} ${formatNumber(entrepreneursLLC)}</div>
+            <div style="font-size:11.5px;"><span style="color:var(--green);">●</span> ${tr('labelIE')} ${formatNumber(entrepreneursIE)}</div>
           </div>
         </div>
       </div>
 
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Население по махаллям (крупнейшие)</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">${tr('chartTopPopulation')}</div>
       ${sortedByPopulation.map(barRow).join('')}
     </div>`;
 }
@@ -8743,10 +8818,10 @@ function calcScoring() {
       if (asset === 0 && liab === 0) {
         warnEl.innerText = '';
       } else if (diff === 0) {
-        warnEl.innerText = '✓ Баланс сходится';
+        warnEl.innerText = tr('balanceOk');
         warnEl.style.color = 'var(--green)';
       } else {
-        warnEl.innerText = '⚠ Актив ≠ Пассив, разница: ' + diff.toLocaleString('ru-RU');
+        warnEl.innerText = tr('balanceMismatch') + ' ' + diff.toLocaleString('ru-RU');
         warnEl.style.color = 'var(--red)';
       }
     }
@@ -8787,12 +8862,12 @@ async function saveScoring() {
 
   if (!clientName) {
     msg.style.color = 'var(--red)';
-    msg.innerText = 'Укажите наименование заёмщика';
+    msg.innerText = tr('errBorrowerName');
     return;
   }
 
   btn.disabled = true;
-  btn.innerText = 'Сохранение...';
+  btn.innerText = tr('savingEllipsis');
 
   try {
     const result = await postWebAction({
@@ -8812,15 +8887,15 @@ async function saveScoring() {
       loadScoringList();
     } else {
       msg.style.color = 'var(--red)';
-      msg.innerText = result.message || 'Ошибка сохранения';
+      msg.innerText = result.message || tr('errSaveGeneric');
     }
   } catch (error) {
     msg.style.color = 'var(--red)';
-    msg.innerText = 'Не удалось связаться с сервером';
+    msg.innerText = tr('errServerConnect');
     console.error(error);
   } finally {
     btn.disabled = false;
-    btn.innerText = 'Сохранить данные Ф1/Ф2';
+    btn.innerText = tr('btnSaveF1F2');
   }
 }
 
@@ -8834,7 +8909,7 @@ async function loadScoringList() {
     allScorings = await fetchJSON('scoringList') || [];
 
     if (!allScorings.length) {
-      box.innerHTML = '<div class="loading">Пока нет сохранённых скорингов</div>';
+      box.innerHTML = '<div class="loading">' + tr('scoringEmpty') + '</div>';
       return;
     }
 
@@ -8848,7 +8923,7 @@ async function loadScoringList() {
         </div>
       </div>`).join('');
   } catch (error) {
-    box.innerHTML = '<div class="loading">Не удалось загрузить список. <a onclick="loadScoringList()" style="color:var(--brand);cursor:pointer;">Попробовать ещё раз</a></div>';
+    box.innerHTML = '<div class="loading">' + tr('scoringLoadFailed') + ' <a onclick="loadScoringList()" style="color:var(--brand);cursor:pointer;">' + tr('retryAgain') + '</a></div>';
     console.error(error);
   }
 }
@@ -8865,7 +8940,7 @@ function openScoringForEdit(idEncoded) {
   document.getElementById('scDate2').value = s.date2 || '';
   document.getElementById('scDate3').value = s.date3 || '';
   fillScoringFields(s.fields || {});
-  document.getElementById('scoringSaveMessage').innerText = 'Открыт для редактирования: ' + s.clientName;
+  document.getElementById('scoringSaveMessage').innerText = tr('scoringEditingOpened') + ' ' + s.clientName;
   document.getElementById('scoringSaveMessage').style.color = 'var(--muted)';
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -8952,11 +9027,11 @@ let obhodLocation = null; // { lat, lng, time }
 function captureObhodGeolocation() {
   const status = document.getElementById('obGeoStatus');
   if (!navigator.geolocation) {
-    status.innerText = 'Геолокация не поддерживается этим браузером';
+    status.innerText = tr('geoNotSupported');
     return;
   }
 
-  status.innerText = 'Определение местоположения...';
+  status.innerText = tr('geoDetecting');
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
@@ -8968,10 +9043,10 @@ function captureObhodGeolocation() {
       // указал координаты задним числом.
       const timeStr = now.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       obhodLocation = { lat, lng, time: timeStr };
-      status.innerText = '✓ Координаты: ' + lat + ', ' + lng + ' · ' + timeStr;
+      status.innerText = '✓ ' + tr('geoCoordsLabel') + ' ' + lat + ', ' + lng + ' · ' + timeStr;
     },
     (err) => {
-      status.innerText = 'Не удалось определить местоположение: ' + err.message;
+      status.innerText = tr('geoFailed') + ' ' + err.message;
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
@@ -8985,7 +9060,7 @@ document.addEventListener('change', function(e) {
     const newFiles = Array.from(e.target.files);
     const combined = obhodSelectedPhotoFiles.concat(newFiles);
     if (combined.length > 5) {
-      alert('Можно приложить максимум 5 фото. Лишние не будут добавлены.');
+      alert(tr('alertMaxPhotos'));
     }
     obhodSelectedPhotoFiles = combined.slice(0, 5);
     e.target.value = '';
@@ -9034,7 +9109,7 @@ let allObhodSurveys = [];
 
 function resetObhodForm() {
   editingObhodSurveyId = null;
-  document.getElementById('obhodFormTitle').innerText = 'Новый опрос двора';
+  document.getElementById('obhodFormTitle').innerText = tr('obhodNewTitle');
   setObhodSurveyType('Физический');
 
   [
@@ -9111,7 +9186,7 @@ async function openObhodForm(idEncoded) {
     const s = allObhodSurveys.find(x => String(x.id) === id);
     if (s) {
       editingObhodSurveyId = id;
-      document.getElementById('obhodFormTitle').innerText = 'Редактирование опроса';
+      document.getElementById('obhodFormTitle').innerText = tr('obhodEditTitle');
 
       setObhodSurveyType(s.surveyType === 'Юридический' ? 'Юридический' : 'Физический');
 
@@ -9172,7 +9247,7 @@ async function openObhodForm(idEncoded) {
 
       if (s.lat && s.lng) {
         obhodLocation = { lat: s.lat, lng: s.lng, time: s.locationTime || '' };
-        document.getElementById('obGeoStatus').innerText = '✓ Координаты: ' + s.lat + ', ' + s.lng + (s.locationTime ? ' · ' + s.locationTime : '');
+        document.getElementById('obGeoStatus').innerText = '✓ ' + tr('geoCoordsLabel') + ' ' + s.lat + ', ' + s.lng + (s.locationTime ? ' · ' + s.locationTime : '');
       }
 
       if (s.photos) {
@@ -9265,17 +9340,17 @@ async function saveObhodSurveyForm() {
   }
 
   btn.disabled = true;
-  btn.innerText = 'Сохранение...';
+  btn.innerText = tr('savingEllipsis');
 
   try {
     let photos = [];
     if (obhodSelectedPhotoFiles.length) {
-      btn.innerText = 'Обработка фото...';
+      btn.innerText = tr('processingPhoto');
       for (const file of obhodSelectedPhotoFiles) {
         const resized = await resizeImageFile(file, 1280);
         photos.push({ base64: resized.base64, mimeType: resized.mimeType, fileName: 'photo_' + (photos.length + 1) + '.jpg' });
       }
-      btn.innerText = 'Сохранение...';
+      btn.innerText = tr('savingEllipsis');
     }
 
     const result = await postWebAction({
@@ -9346,15 +9421,15 @@ async function saveObhodSurveyForm() {
       setTimeout(closeObhodForm, 1200);
     } else {
       msg.style.color = 'var(--red)';
-      msg.innerText = result.message || 'Ошибка сохранения';
+      msg.innerText = result.message || tr('errSaveGeneric');
     }
   } catch (error) {
     msg.style.color = 'var(--red)';
-    msg.innerText = 'Не удалось связаться с сервером';
+    msg.innerText = tr('errServerConnect');
     console.error(error);
   } finally {
     btn.disabled = false;
-    btn.innerText = 'Сохранить опрос';
+    btn.innerText = tr('btnSaveSurvey');
   }
 }
 
@@ -9431,7 +9506,7 @@ async function loadObhodList() {
     allObhodSurveys = await fetchJSON('obhodList') || [];
 
     if (!allObhodSurveys.length) {
-      box.innerHTML = '<div class="loading">Опросов пока нет — нажмите «+ Новый опрос»</div>';
+      box.innerHTML = '<div class="loading">' + tr('obhodEmpty') + '</div>';
       return;
     }
 
@@ -9442,22 +9517,22 @@ async function loadObhodList() {
     // рабочий для рядового опроса.
     const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
     const suspiciousFlags = canSeeLocation ? findObhodSuspiciousPairs(allObhodSurveys) : new Map();
-    const suspiciousLabels = { sameLocation: 'Совпадает с другим опросом', tooFast: 'Слишком быстро после другого опроса' };
+    const suspiciousLabels = { sameLocation: tr('suspSameLocation'), tooFast: tr('suspTooFast') };
 
     box.innerHTML = sorted.map(s => {
       const hasLocation = s.lat && s.lng && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng));
       const locationBtn = (canSeeLocation && hasLocation)
-        ? `<button class="btn btn-secondary" onclick="event.stopPropagation();showObhodSurveyLocation('${encodeURIComponent(s.id)}')"><i class="ti ti-map-pin"></i> На карте</button>`
+        ? `<button class="btn btn-secondary" onclick="event.stopPropagation();showObhodSurveyLocation('${encodeURIComponent(s.id)}')"><i class="ti ti-map-pin"></i> ${tr('btnOnMap')}</button>`
         : '';
       const isLegal = s.surveyType === 'Юридический';
-      const typeBadge = `<span style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:${isLegal ? '#E6F1FB' : '#EAF3DE'};color:${isLegal ? '#0C447C' : '#173404'};margin-right:6px;">${isLegal ? 'Юр.' : 'Физ.'}</span>`;
+      const typeBadge = `<span style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:${isLegal ? '#E6F1FB' : '#EAF3DE'};color:${isLegal ? '#0C447C' : '#173404'};margin-right:6px;">${isLegal ? tr('typeLegalShort') : tr('typePhysicalShort')}</span>`;
       const reasons = suspiciousFlags.get(s.id) || [];
       const suspiciousBadge = reasons.length
-        ? `<span title="${reasons.map(r => suspiciousLabels[r]).join('; ')}" style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#FCEBEB;color:#7A1F1F;margin-right:6px;">⚠ Подозрительно</span>`
+        ? `<span title="${reasons.map(r => suspiciousLabels[r]).join('; ')}" style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#FCEBEB;color:#7A1F1F;margin-right:6px;">⚠ ${tr('badgeSuspicious')}</span>`
         : '';
       const metaText = isLegal
-        ? `${safe(s.mahalla)} · ${safe(s.legalName) || '—'}${s.avgDailySales ? ' · Продажи/день: ' + formatNumber(s.avgDailySales) : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`
-        : `${safe(s.mahalla)} · Семья: ${safe(s.familySize) || '—'} чел. · ${s.businessInterest ? safe(s.businessInterest) + ' к бизнесу' : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`;
+        ? `${safe(s.mahalla)} · ${safe(s.legalName) || '—'}${s.avgDailySales ? ' · ' + tr('lblSalesPerDay') + ': ' + formatNumber(s.avgDailySales) : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`
+        : `${safe(s.mahalla)} · ${tr('lblFamilyShort')}: ${safe(s.familySize) || '—'} ${tr('unitPeople')} · ${s.businessInterest ? safe(s.businessInterest) + ' ' + tr('suffixInterestInBusiness') : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`;
       return `
       <div class="mahalla-row" style="cursor:pointer;" onclick="openObhodForm('${encodeURIComponent(s.id)}')">
         <div class="mahalla-row-top">
@@ -9470,7 +9545,7 @@ async function loadObhodList() {
       </div>`;
     }).join('');
   } catch (error) {
-    box.innerHTML = '<div class="loading">Не удалось загрузить список. <a onclick="loadObhodList()" style="color:var(--brand);cursor:pointer;">Попробовать ещё раз</a></div>';
+    box.innerHTML = '<div class="loading">' + tr('obhodListLoadFailed') + ' <a onclick="loadObhodList()" style="color:var(--brand);cursor:pointer;">' + tr('retryAgain') + '</a></div>';
     console.error(error);
   }
 }
@@ -9854,7 +9929,7 @@ function openMahallaDetail(idEncoded) {
   if (!m) return;
 
   document.getElementById('mhDetailName').innerText = m.name;
-  document.getElementById('mhDetailMeta').innerText = (m.district ? m.district + ' • ' : '') + 'Банкир: ' + (m.bankers || 'не назначен');
+  document.getElementById('mhDetailMeta').innerText = (m.district ? m.district + ' • ' : '') + tr('lblBankerShort') + ': ' + (m.bankers || tr('valNotAssigned'));
 
   const kpi = (value, label) => `
     <div style="background:var(--surface-1, #F5F5F0);border-radius:10px;padding:14px;text-align:center;">
@@ -10480,7 +10555,7 @@ document.addEventListener('change', function(e) {
     const combined = mpSelectedPhotoFiles.concat(newFiles);
 
     if (combined.length > 5) {
-      alert('Можно приложить максимум 5 фото. Лишние не будут добавлены.');
+      alert(tr('alertMaxPhotos'));
     }
 
     mpSelectedPhotoFiles = combined.slice(0, 5);
