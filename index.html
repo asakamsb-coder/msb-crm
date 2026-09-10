@@ -9351,6 +9351,71 @@ async function saveObhodSurveyForm() {
   }
 }
 
+// Ищет подозрительные пары опросов ОДНОГО И ТОГО ЖЕ банкира:
+// 1) координаты почти совпадают (в пределах ~30 метров) в один день —
+//    похоже, что банкир не переходил от двора к двору, а заполнил
+//    несколько анкет с одного места;
+// 2) между сохранением двух РАЗНЫХ опросов прошло подозрительно мало
+//    времени (меньше 2 минут) — физически маловероятно дойти до
+//    следующего двора и провести опрос так быстро.
+// Возвращает Map: id опроса -> массив причин (может быть пустым).
+// Работает по ВСЕМ опросам сразу, включая уже давно сохранённые —
+// не только новые, начиная с этой проверки.
+function findObhodSuspiciousPairs(surveys) {
+  const flags = new Map();
+  const addFlag = (id, reason) => {
+    if (!flags.has(id)) flags.set(id, []);
+    if (!flags.get(id).includes(reason)) flags.get(id).push(reason);
+  };
+
+  const byBanker = {};
+  surveys.forEach(s => {
+    const who = s.createdBy || '—';
+    (byBanker[who] = byBanker[who] || []).push(s);
+  });
+
+  const parseDate = (v) => { const d = new Date(v); return isNaN(d.getTime()) ? null : d; };
+  // ~30 метров в градусах широты/долготы (грубое приближение, для
+  // Узбекистана этой точности достаточно).
+  const CLOSE_DISTANCE_DEG = 0.0003;
+  const TOO_FAST_MS = 2 * 60 * 1000;
+
+  Object.values(byBanker).forEach(list => {
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const a = list[i], b = list[j];
+        if (a.id === b.id) continue;
+
+        // Совпадающие координаты в один день
+        if (a.lat && a.lng && b.lat && b.lng) {
+          const latDiff = Math.abs(Number(a.lat) - Number(b.lat));
+          const lngDiff = Math.abs(Number(a.lng) - Number(b.lng));
+          const dateA = parseDate(a.createdAt);
+          const dateB = parseDate(b.createdAt);
+          const sameDay = dateA && dateB && dateA.toDateString() === dateB.toDateString();
+          if (sameDay && latDiff < CLOSE_DISTANCE_DEG && lngDiff < CLOSE_DISTANCE_DEG) {
+            addFlag(a.id, 'sameLocation');
+            addFlag(b.id, 'sameLocation');
+          }
+        }
+
+        // Слишком маленький промежуток между сохранениями
+        const createdA = parseDate(a.createdAt);
+        const createdB = parseDate(b.createdAt);
+        if (createdA && createdB) {
+          const gap = Math.abs(createdA.getTime() - createdB.getTime());
+          if (gap > 0 && gap < TOO_FAST_MS) {
+            addFlag(a.id, 'tooFast');
+            addFlag(b.id, 'tooFast');
+          }
+        }
+      }
+    }
+  });
+
+  return flags;
+}
+
 async function loadObhodList() {
   const box = document.getElementById('obhodListBox');
   if (!box) return;
@@ -9365,9 +9430,12 @@ async function loadObhodList() {
 
     const sorted = allObhodSurveys.slice().sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
 
-    // Кнопка "На карте" — тот же круг ролей, что и общая карта визитов:
-    // это инструмент проверки банкира, а не рабочий для рядового опроса.
+    // Кнопка "На карте" и пометки "подозрительно" — тот же круг ролей,
+    // что и общая карта визитов: это инструмент проверки банкира, а не
+    // рабочий для рядового опроса.
     const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+    const suspiciousFlags = canSeeLocation ? findObhodSuspiciousPairs(allObhodSurveys) : new Map();
+    const suspiciousLabels = { sameLocation: 'Совпадает с другим опросом', tooFast: 'Слишком быстро после другого опроса' };
 
     box.innerHTML = sorted.map(s => {
       const hasLocation = s.lat && s.lng && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng));
@@ -9376,6 +9444,10 @@ async function loadObhodList() {
         : '';
       const isLegal = s.surveyType === 'Юридический';
       const typeBadge = `<span style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:${isLegal ? '#E6F1FB' : '#EAF3DE'};color:${isLegal ? '#0C447C' : '#173404'};margin-right:6px;">${isLegal ? 'Юр.' : 'Физ.'}</span>`;
+      const reasons = suspiciousFlags.get(s.id) || [];
+      const suspiciousBadge = reasons.length
+        ? `<span title="${reasons.map(r => suspiciousLabels[r]).join('; ')}" style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#FCEBEB;color:#7A1F1F;margin-right:6px;">⚠ Подозрительно</span>`
+        : '';
       const metaText = isLegal
         ? `${safe(s.mahalla)} · ${safe(s.legalName) || '—'}${s.avgDailySales ? ' · Продажи/день: ' + formatNumber(s.avgDailySales) : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`
         : `${safe(s.mahalla)} · Семья: ${safe(s.familySize) || '—'} чел. · ${s.businessInterest ? safe(s.businessInterest) + ' к бизнесу' : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`;
@@ -9383,7 +9455,7 @@ async function loadObhodList() {
       <div class="mahalla-row" style="cursor:pointer;" onclick="openObhodForm('${encodeURIComponent(s.id)}')">
         <div class="mahalla-row-top">
           <div>
-            <div class="mahalla-row-name">${typeBadge}${safe(s.headName)}</div>
+            <div class="mahalla-row-name">${typeBadge}${suspiciousBadge}${safe(s.headName)}</div>
             <div class="mahalla-row-meta">${metaText}</div>
           </div>
           ${locationBtn}
