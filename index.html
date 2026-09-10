@@ -2426,14 +2426,19 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <div class="panel" id="obhodMapPanel" style="display:none;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;cursor:pointer;" onclick="toggleObhodMapVisibility()">
         <div>
           <h2 style="margin-bottom:4px;" data-i18n="hObhodMap">Карта визитов</h2>
-          <p style="color:var(--muted);font-size:13px;" data-i18n="pObhodMap">Точки — дворы, где банкир зафиксировал местоположение при опросе.</p>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:0;" data-i18n="pObhodMap">Точки — дворы, где банкир зафиксировал местоположение при опросе.</p>
         </div>
-        <span id="obhodMapCount" style="font-size:12.5px;color:var(--muted);"></span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="obhodMapCount" style="font-size:12.5px;color:var(--muted);"></span>
+          <button type="button" class="btn btn-secondary" id="obhodMapToggleBtn" onclick="event.stopPropagation();toggleObhodMapVisibility()"><span data-i18n="btnShowMap">Показать карту</span> <i class="ti ti-chevron-down" id="obhodMapToggleIcon"></i></button>
+        </div>
       </div>
-      <div id="obhodMap" style="height:420px;border-radius:12px;overflow:hidden;background:var(--surface-1,#F5F5F0);"></div>
+      <div id="obhodMapWrap" style="display:none;margin-top:16px;">
+        <div id="obhodMap" style="height:420px;border-radius:12px;overflow:hidden;background:var(--surface-1,#F5F5F0);"></div>
+      </div>
     </div>
 
     <div class="panel">
@@ -3925,7 +3930,9 @@ const APP_DICT = {
   errInnRequired: { ru: 'Укажите ИНН — это обязательное поле', uz: 'STIRni kiriting — bu majburiy maydon' },
   errLegalNameRequired: { ru: 'Укажите юридическое название — это обязательное поле', uz: 'Yuridik nomini kiriting — bu majburiy maydon' },
   errLocationRequired: { ru: 'Определите локацию — это обязательное подтверждение визита', uz: "Joylashuvni aniqlang — bu tashrifning majburiy tasdig'i" },
-  errPhotoStale: { ru: 'Похоже, фото сделано давно — прикрепите свежий снимок прямо с места визита', uz: "Foto eskiroq ko'rinadi — tashrif joyidan yangi rasm biriktiring" }
+  errPhotoStale: { ru: 'Похоже, фото сделано давно — прикрепите свежий снимок прямо с места визита', uz: "Foto eskiroq ko'rinadi — tashrif joyidan yangi rasm biriktiring" },
+  btnShowMap: { ru: 'Показать карту', uz: 'Xaritani ko\'rsatish' },
+  btnHideMap: { ru: 'Скрыть карту', uz: 'Xaritani yashirish' }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -8528,7 +8535,7 @@ function showMahallaTab(tab) {
   if (tab === 'obhodTab') {
     loadObhodDashboard();
     loadObhodList();
-    loadObhodMap();
+    checkObhodMapAccess();
   }
 }
 
@@ -9707,17 +9714,39 @@ let obhodMapMarkersLayer = null;
 // заместителю (DEPUTY). Обычный банкир видит только свой список опросов
 // (без карты по всем сотрудникам сразу) — это управленческий инструмент
 // контроля, а не рабочий для рядового обхода.
-async function loadObhodMap() {
+let obhodMapAlreadyLoaded = false;
+
+// Показывает/прячет саму панель карты (только заголовок с кнопкой) в
+// зависимости от роли — вызывается сразу при открытии вкладки. Саму
+// карту (Leaflet, точки) не строим здесь — только когда пользователь
+// реально развернёт блок кнопкой (см. toggleObhodMapVisibility).
+function checkObhodMapAccess() {
   const panel = document.getElementById('obhodMapPanel');
   if (!panel) return;
-
   const allowed = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
-  if (!allowed) {
-    panel.style.display = 'none';
-    return;
-  }
-  panel.style.display = 'block';
+  panel.style.display = allowed ? 'block' : 'none';
+}
 
+// Разворачивает/сворачивает карту. Строить саму карту Leaflet, пока
+// контейнер скрыт (display:none), нельзя — библиотека неправильно
+// считает размеры и показывает серые тайлы — поэтому реальная отрисовка
+// запускается ТОЛЬКО при первом разворачивании, не раньше.
+function toggleObhodMapVisibility() {
+  const wrap = document.getElementById('obhodMapWrap');
+  const btn = document.getElementById('obhodMapToggleBtn');
+  const icon = document.getElementById('obhodMapToggleIcon');
+  const isHidden = wrap.style.display === 'none';
+
+  wrap.style.display = isHidden ? 'block' : 'none';
+  if (btn) btn.querySelector('span').innerText = isHidden ? tr('btnHideMap') : tr('btnShowMap');
+  if (icon) icon.className = isHidden ? 'ti ti-chevron-up' : 'ti ti-chevron-down';
+
+  if (isHidden) {
+    loadObhodMap();
+  }
+}
+
+async function loadObhodMap() {
   if (typeof L === 'undefined') {
     // Leaflet подключён с defer — если карта открылась раньше, чем он
     // успел загрузиться, пробуем ещё раз чуть позже вместо ошибки.
@@ -9758,10 +9787,9 @@ async function loadObhodMap() {
       obhodLeafletMap.setView([42.4600, 59.6100], 12);
     }
 
-    // Leaflet иногда неправильно считает размер контейнера, если карта
-    // создавалась, пока вкладка была скрыта (display:none) — пересчитываем
-    // размер сразу после того, как панель точно видна.
-    setTimeout(() => { if (obhodLeafletMap) obhodLeafletMap.invalidateSize(); }, 100);
+    // Контейнер только что стал видимым — пересчитываем размер, иначе
+    // Leaflet может отрисовать карту с неверными пропорциями.
+    setTimeout(() => { if (obhodLeafletMap) obhodLeafletMap.invalidateSize(); }, 50);
   } catch (error) {
     console.error(error);
   }
