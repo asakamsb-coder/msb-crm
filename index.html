@@ -1289,93 +1289,93 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <div class="msb-sales-tabs">
-    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 Dashboard</button>
-    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 Клиенты</button>
-    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 Продажи</button>
+    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 <span data-i18n="tabDashboard">Dashboard</span></button>
+    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 <span data-i18n="tabClients">Клиенты</span></button>
+    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 <span data-i18n="tabSales">Продажи</span></button>
     <div class="msb-sales-export">
-      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ Скачать всё в Excel</button>
+      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ <span data-i18n="btnExportExcel">Скачать всё в Excel</span></button>
     </div>
   </div>
 
   <div class="period-controls">
-    <span class="period-label">Период анализа</span>
+    <span class="period-label" data-i18n="lblPeriodAnalysis">Период анализа</span>
     <select id="periodMonth" class="select" onchange="applyPeriod()">
       <option value="all">Все данные</option>
     </select>
     <input id="dateFrom" class="input" type="date" onchange="applyPeriod()">
     <input id="dateTo" class="input" type="date" onchange="applyPeriod()">
-    <button class="btn btn-secondary" onclick="resetPeriod()">Сбросить</button>
+    <button class="btn btn-secondary" onclick="resetPeriod()" data-i18n="btnReset">Сбросить</button>
   </div>
 
   <section class="bi-kpi-grid">
     <div class="bi-card dashboard-kpi-clickable bi-accent-brand" onclick="openDashboardClients('all')">
-      <div class="bi-card-label">Клиенты периода</div>
+      <div class="bi-card-label" data-i18n="kpiClientsPeriod">Клиенты периода</div>
       <div class="bi-card-value" id="totalClients">...</div>
-      <div class="bi-card-sub">Сумма заявок: <b id="totalAmount">...</b></div>
+      <div class="bi-card-sub"><span data-i18n="lblRequestAmount">Сумма заявок</span>: <b id="totalAmount">...</b></div>
       <div class="bi-card-trend" id="totalClientsTrend"></div>
-      <div class="kpi-click-hint">Открыть список →</div>
+      <div class="kpi-click-hint" data-i18n="hintOpenList">Открыть список →</div>
     </div>
 
     <div class="bi-card dashboard-kpi-clickable bi-accent-orange" onclick="openDashboardClients('potential')">
-      <div class="bi-card-label">В работе (перспективные)</div>
+      <div class="bi-card-label" data-i18n="kpiInProgress">В работе (перспективные)</div>
       <div class="bi-card-value" id="potentialCount">...</div>
-      <div class="bi-card-sub">Сумма: <b id="potentialAmount">...</b></div>
+      <div class="bi-card-sub"><span data-i18n="lblAmount">Сумма</span>: <b id="potentialAmount">...</b></div>
       <div class="bi-card-trend" id="potentialAmountTrend"></div>
-      <div class="kpi-click-hint">Открыть список →</div>
+      <div class="kpi-click-hint" data-i18n="hintOpenList">Открыть список →</div>
     </div>
 
     <div class="bi-card dashboard-kpi-clickable bi-accent-orange" onclick="openDashboardClients('closeToIssue')">
-      <div class="bi-card-label">Ожидается к выдаче</div>
+      <div class="bi-card-label" data-i18n="kpiExpectedIssue">Ожидается к выдаче</div>
       <div class="bi-card-value" id="closeToIssueCount">...</div>
-      <div class="bi-card-sub">Сумма: <b id="closeToIssueAmount">...</b> · Одобрено / Кредитный комитет</div>
-      <div class="kpi-click-hint">Открыть список →</div>
+      <div class="bi-card-sub"><span data-i18n="lblAmount">Сумма</span>: <b id="closeToIssueAmount">...</b> · <span data-i18n="lblApprovedCreditCommittee">Одобрено / Кредитный комитет</span></div>
+      <div class="kpi-click-hint" data-i18n="hintOpenList">Открыть список →</div>
     </div>
 
     <div class="bi-card dashboard-kpi-clickable bi-accent-green" onclick="openDashboardClients('issued')">
-      <div class="bi-card-label">Выдано</div>
+      <div class="bi-card-label" data-i18n="kpiIssued">Выдано</div>
       <div class="bi-card-value" id="issuedAmount">...</div>
-      <div class="bi-card-sub"><b id="issuedCountInline">...</b> сделок · <span id="conversion">конверсия ...</span></div>
+      <div class="bi-card-sub"><b id="issuedCountInline">...</b> <span data-i18n="lblDeals">сделок</span> · <span id="conversion">конверсия ...</span></div>
       <div class="bi-card-trend" id="issuedAmountTrend"></div>
-      <div class="kpi-click-hint">Открыть список →</div>
+      <div class="kpi-click-hint" data-i18n="hintOpenList">Открыть список →</div>
     </div>
 
     <div class="bi-card dashboard-kpi-clickable bi-accent-red" onclick="openDashboardClients('rejected')">
-      <div class="bi-card-label">Отказано</div>
+      <div class="bi-card-label" data-i18n="kpiRejected">Отказано</div>
       <div class="bi-card-value" id="rejectedCount">0</div>
-      <div class="bi-card-sub">Сумма: <b id="rejectedAmount">0</b></div>
+      <div class="bi-card-sub"><span data-i18n="lblAmount">Сумма</span>: <b id="rejectedAmount">0</b></div>
       <div class="bi-card-trend" id="rejectedCountTrend"></div>
-      <div class="kpi-click-hint">Открыть список →</div>
+      <div class="kpi-click-hint" data-i18n="hintOpenList">Открыть список →</div>
     </div>
   </section>
 
   <div id="monitorRejectedAlert" data-admin="true" style="display:none;background:#FFF3E3;border:1px solid #F5C67A;border-radius:14px;padding:16px 20px;margin-bottom:22px;cursor:pointer;" onclick="openMonitorRejectedList()">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <div style="font-weight:800;color:var(--orange);font-size:15px;">⚠️ Отклонено юридическим мониторингом: <span id="monitorRejectedCount">0</span></div>
-      <div style="color:var(--orange);font-weight:700;">Открыть список →</div>
+      <div style="font-weight:800;color:var(--orange);font-size:15px;">⚠️ <span data-i18n="lblRejectedByMonitoring">Отклонено юридическим мониторингом</span>: <span id="monitorRejectedCount">0</span></div>
+      <div style="color:var(--orange);font-weight:700;" data-i18n="hintOpenList">Открыть список →</div>
     </div>
   </div>
 
-  <div id="planFactBox" class="loading" style="margin-bottom:24px;">Загрузка...</div>
+  <div id="planFactBox" class="loading" style="margin-bottom:24px;" data-i18n="loading">Загрузка...</div>
 
   <div class="layout">
     <div>
       <div class="panel">
-        <h2>Воронка продаж МСБ</h2>
-        <div id="funnelBox" class="loading">Загрузка воронки...</div>
+        <h2 data-i18n="hSalesFunnelPanel">Воронка продаж МСБ</h2>
+        <div id="funnelBox" class="loading" data-i18n="loadingFunnel">Загрузка воронки...</div>
       </div>
 
       <div class="panel">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-          <h2 style="margin-bottom:0;">Последние клиенты</h2>
-          <a onclick="openDashboardClients('all')" style="font-size:13px;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;">Показать всех →</a>
+          <h2 style="margin-bottom:0;" data-i18n="hLatestClients">Последние клиенты</h2>
+          <a onclick="openDashboardClients('all')" style="font-size:13px;font-weight:700;color:var(--brand);cursor:pointer;text-decoration:none;" data-i18n="linkShowAll">Показать всех →</a>
         </div>
         <div class="client-table-wrap">
           <table class="mtbl-latest">
             <thead>
-              <tr><th>Дата</th><th>Клиент</th><th>Продукт</th><th>Сумма</th><th>Статус</th><th>Менеджер</th></tr>
+              <tr><th data-i18n="thDate">Дата</th><th data-i18n="thClient">Клиент</th><th data-i18n="thProduct">Продукт</th><th data-i18n="thAmount">Сумма</th><th data-i18n="thStatus">Статус</th><th data-i18n="thManager">Менеджер</th></tr>
             </thead>
             <tbody id="latestClientsTable">
-              <tr><td colspan="6" class="loading">Загрузка клиентов...</td></tr>
+              <tr><td colspan="6" class="loading" data-i18n="loadingClients">Загрузка клиентов...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1384,20 +1384,20 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
     <div>
       <div class="panel">
-        <h2>Рейтинг менеджеров</h2>
-        <div id="managersBox" class="loading">Загрузка рейтинга...</div>
+        <h2 data-i18n="hManagerRating">Рейтинг менеджеров</h2>
+        <div id="managersBox" class="loading" data-i18n="loadingRating">Загрузка рейтинга...</div>
       </div>
 
       <div class="panel">
-        <h2>Средние показатели</h2>
-        <p>Средний чек заявки: <b id="averageRequest">...</b></p>
-        <p style="margin-top:10px;">Средний чек выдачи: <b id="averageIssued">...</b></p>
-        <p style="margin-top:10px;">Количество выдач: <b id="issuedCount">...</b></p>
+        <h2 data-i18n="hAvgIndicators">Средние показатели</h2>
+        <p><span data-i18n="lblAvgRequestCheck">Средний чек заявки</span>: <b id="averageRequest">...</b></p>
+        <p style="margin-top:10px;"><span data-i18n="lblAvgIssuedCheck">Средний чек выдачи</span>: <b id="averageIssued">...</b></p>
+        <p style="margin-top:10px;"><span data-i18n="lblIssuedCount">Количество выдач</span>: <b id="issuedCount">...</b></p>
       </div>
 
       <div class="panel ai-box">
-        <h2>Управленческий вывод</h2>
-        <p id="aiText">Загрузка управленческого вывода...</p>
+        <h2 data-i18n="hManagementInsight">Управленческий вывод</h2>
+        <p id="aiText" data-i18n="loadingInsight">Загрузка управленческого вывода...</p>
       </div>
     </div>
   </div>
@@ -1416,11 +1416,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 
   <div class="msb-sales-tabs">
-    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 Dashboard</button>
-    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 Клиенты</button>
-    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 Продажи</button>
+    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 <span data-i18n="tabDashboard">Dashboard</span></button>
+    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 <span data-i18n="tabClients">Клиенты</span></button>
+    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 <span data-i18n="tabSales">Продажи</span></button>
     <div class="msb-sales-export">
-      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ Скачать всё в Excel</button>
+      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ <span data-i18n="btnExportExcel">Скачать всё в Excel</span></button>
     </div>
   </div>
 
@@ -1478,11 +1478,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="header"><div><h1 data-i18n="hSalesFunnel">ПРОДАЖИ</h1><p data-i18n="pSalesFunnel">Воронка продаж и потенциальный портфель</p></div></div>
 
   <div class="msb-sales-tabs">
-    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 Dashboard</button>
-    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 Клиенты</button>
-    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 Продажи</button>
+    <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 <span data-i18n="tabDashboard">Dashboard</span></button>
+    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 <span data-i18n="tabClients">Клиенты</span></button>
+    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 <span data-i18n="tabSales">Продажи</span></button>
     <div class="msb-sales-export">
-      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ Скачать всё в Excel</button>
+      <button class="btn" onclick="exportMsbSalesExcel()">⬇️ <span data-i18n="btnExportExcel">Скачать всё в Excel</span></button>
     </div>
   </div>
 
@@ -4007,7 +4007,81 @@ const APP_DICT = {
   btnSaveF1F2: { ru: 'Сохранить данные Ф1/Ф2', uz: "F1/F2 ma'lumotlarini saqlash" },
   scoringEmpty: { ru: 'Пока нет сохранённых скорингов', uz: "Hozircha saqlangan skoring yo'q" },
   scoringLoadFailed: { ru: 'Не удалось загрузить список.', uz: "Ro'yxatni yuklab bo'lmadi." },
-  scoringEditingOpened: { ru: 'Открыт для редактирования:', uz: "Tahrirlash uchun ochildi:" }
+  scoringEditingOpened: { ru: 'Открыт для редактирования:', uz: "Tahrirlash uchun ochildi:" },
+
+  // Dashboard МСБ Продажи (главная страница) — раньше эти строки были в
+  // сыром HTML без data-i18n, поэтому не переключались на UZ.
+  tabDashboard: { ru: 'Dashboard', uz: 'Dashboard' },
+  tabClients: { ru: 'Клиенты', uz: 'Mijozlar' },
+  tabSales: { ru: 'Продажи', uz: 'Sotuvlar' },
+  btnExportExcel: { ru: 'Скачать всё в Excel', uz: "Excelga barchasini yuklash" },
+  lblPeriodAnalysis: { ru: 'Период анализа', uz: "Tahlil davri" },
+  btnReset: { ru: 'Сбросить', uz: "Bekor qilish" },
+  kpiClientsPeriod: { ru: 'Клиенты периода', uz: "Davr mijozlari" },
+  lblRequestAmount: { ru: 'Сумма заявок', uz: "Arizalar summasi" },
+  kpiInProgress: { ru: 'В работе (перспективные)', uz: "Ishda (istiqbolli)" },
+  lblAmount: { ru: 'Сумма', uz: "Summa" },
+  kpiExpectedIssue: { ru: 'Ожидается к выдаче', uz: "Berilishi kutilmoqda" },
+  lblApprovedCreditCommittee: { ru: 'Одобрено / Кредитный комитет', uz: "Tasdiqlangan / Kredit qo'mitasi" },
+  kpiIssued: { ru: 'Выдано', uz: "Berildi" },
+  lblDeals: { ru: 'сделок', uz: "bitim" },
+  kpiRejected: { ru: 'Отказано', uz: "Rad etildi" },
+  hintOpenList: { ru: 'Открыть список →', uz: "Ro'yxatni ochish →" },
+  lblRejectedByMonitoring: { ru: 'Отклонено юридическим мониторингом', uz: "Yuridik monitoring tomonidan rad etildi" },
+  hSalesFunnelPanel: { ru: 'Воронка продаж МСБ', uz: "MB sotuvlar voronkasi" },
+  loadingFunnel: { ru: 'Загрузка воронки...', uz: "Voronka yuklanmoqda..." },
+  hLatestClients: { ru: 'Последние клиенты', uz: "So'nggi mijozlar" },
+  linkShowAll: { ru: 'Показать всех →', uz: "Barchasini ko'rsatish →" },
+  thDate: { ru: 'Дата', uz: "Sana" },
+  thClient: { ru: 'Клиент', uz: "Mijoz" },
+  thProduct: { ru: 'Продукт', uz: "Mahsulot" },
+  thAmount: { ru: 'Сумма', uz: "Summa" },
+  thStatus: { ru: 'Статус', uz: "Holat" },
+  thManager: { ru: 'Менеджер', uz: "Menejer" },
+  loadingClients: { ru: 'Загрузка клиентов...', uz: "Mijozlar yuklanmoqda..." },
+  hManagerRating: { ru: 'Рейтинг менеджеров', uz: "Menejerlar reytingi" },
+  loadingRating: { ru: 'Загрузка рейтинга...', uz: "Reyting yuklanmoqda..." },
+  hAvgIndicators: { ru: 'Средние показатели', uz: "O'rtacha ko'rsatkichlar" },
+  lblAvgRequestCheck: { ru: 'Средний чек заявки', uz: "O'rtacha ariza cheki" },
+  lblAvgIssuedCheck: { ru: 'Средний чек выдачи', uz: "O'rtacha berilgan kredit cheki" },
+  lblIssuedCount: { ru: 'Количество выдач', uz: "Berilganlar soni" },
+  hManagementInsight: { ru: 'Управленческий вывод', uz: "Boshqaruv xulosasi" },
+  loadingInsight: { ru: 'Загрузка управленческого вывода...', uz: "Boshqaruv xulosasi yuklanmoqda..." },
+  planYear2026: { ru: 'План 2026 год', uz: "2026-yil rejasi" },
+  planQuarter: { ru: 'План', uz: "Reja" },
+  wordOfPlan: { ru: 'из', uz: "/" },
+  conversionLabel: { ru: 'конверсия', uz: "konversiya" },
+  startOfFunnel: { ru: 'старт воронки', uz: "voronka boshi" },
+  fromPrevStage: { ru: 'от пред. этапа', uz: "oldingi bosqichdan" },
+  fromStart: { ru: 'от старта', uz: "boshidan" },
+  wordClients: { ru: 'клиентов', uz: "mijoz" },
+  loadingBalanceData: { ru: 'Загрузка данных баланса...', uz: "Balans ma'lumotlari yuklanmoqda..." },
+  balanceLoadFailed: { ru: 'Не удалось загрузить баланс банка.', uz: "Bank balansini yuklab bo'lmadi." },
+  balanceNotLoadedYet: { ru: 'Баланс банка ещё не загружен — план/факт появится после первой загрузки в разделе «Бухгалтерия».', uz: "Bank balansi hali yuklanmagan — reja/fakt «Buxgalteriya» bo'limiga birinchi marta yuklangandan so'ng paydo bo'ladi." },
+  planQ3_2026: { ru: 'План III квартал 2026', uz: "2026-yil III chorak rejasi" },
+  comparedWith: { ru: 'в сравнении с:', uz: "solishtirganda:" },
+
+  // Статусы клиента (воронка/таблицы) — переводятся через trValue() по
+  // хранимому русскому значению, само значение в данных не меняется.
+  statusNewClient: { ru: 'Новый клиент', uz: "Yangi mijoz" },
+  statusNegotiation: { ru: 'Переговоры', uz: "Muzokaralar" },
+  statusDocsCollecting: { ru: 'Документы собираются', uz: "Hujjatlar yig'ilmoqda" },
+  statusFinAnalysis: { ru: 'Финанализ', uz: "Moliyaviy tahlil" },
+  statusCollateral: { ru: 'Залоговик', uz: "Garov mutaxassisi" },
+  statusCreditCommittee: { ru: 'Кредитный комитет', uz: "Kredit qo'mitasi" },
+  statusApproved: { ru: 'Одобрено', uz: "Tasdiqlangan" },
+  statusMonitoringReview: { ru: 'На проверке в мониторинге', uz: "Monitoringda tekshiruvda" },
+  statusMonitoringPassed: { ru: 'Мониторинг пройден', uz: "Monitoring o'tildi" },
+  statusIssued: { ru: 'Выдано', uz: "Berildi" },
+  statusRejected: { ru: 'Отказ', uz: "Rad etildi" },
+  statusPostponed: { ru: 'Отложено', uz: "Kechiktirildi" },
+  statusUnderReview: { ru: 'На рассмотрении', uz: "Ko'rib chiqilmoqda" },
+  lblClients: { ru: 'Клиентов', uz: "Mijozlar" },
+  noClientsYet: { ru: 'Клиентов пока нет', uz: "Hozircha mijozlar yo'q" },
+  ratingAllData: { ru: 'Рейтинг за все данные', uz: "Barcha ma'lumotlar bo'yicha reyting" },
+  ratingForPeriod: { ru: 'Рейтинг за период:', uz: "Davr bo'yicha reyting:" },
+  hintManagerAdmin: { ru: 'Нажмите на менеджера, чтобы увидеть его клиентов. Кнопка «План на месяц» под строкой — задать план по количеству и сумме.', uz: "Mijozlarini ko'rish uchun menejerni bosing. Qator ostidagi «Oylik reja» tugmasi — soni va summasi bo'yicha reja belgilash uchun." },
+  hintManagerSelf: { ru: 'Здесь видно место в команде. Открыть список клиентов можно только по своей строке.', uz: "Bu yerda jamoadagi o'rningiz ko'rinadi. Mijozlar ro'yxatini faqat o'z qatoringiz bo'yicha ochish mumkin." }
 };
 
 // Перевод текста вне словаря (для мест, где ключа ещё нет) — при
@@ -4530,7 +4604,7 @@ function renderTrendBadges(stats) {
   renderTrendBadge('potentialAmountTrend', stats.potentialAmount, prev.stats.potentialAmount, false);
   renderTrendBadge('rejectedCountTrend', stats.rejectedCount, prev.stats.rejectedCount, true);
 
-  if (periodLabelEl) periodLabelEl.innerText = 'в сравнении с: ' + prev.label;
+  if (periodLabelEl) periodLabelEl.innerText = tr('comparedWith') + ' ' + prev.label;
 }
 
 // План жёстко задан в коде (по решению управляющего — меняется редко,
@@ -4555,18 +4629,18 @@ async function renderPlanFactBox() {
   // это реально долго — просто показываем статус ожидания и перерисуем
   // блок автоматически, как только данные придут (не бросаем попытку).
   if (!bankBalanceDataLoaded) {
-    box.innerHTML = '<div class="loading">Загрузка данных баланса...</div>';
+    box.innerHTML = '<div class="loading">' + tr('loadingBalanceData') + '</div>';
     try {
       await loadBankBalanceData();
     } catch (e) {
-      box.innerHTML = '<div class="loading">Не удалось загрузить баланс банка. <a onclick="renderPlanFactBox()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a></div>';
+      box.innerHTML = '<div class="loading">' + tr('balanceLoadFailed') + ' <a onclick="renderPlanFactBox()" style="color:var(--brand);font-weight:700;cursor:pointer;">' + tr('retryAgain') + '</a></div>';
       console.error(e);
       return;
     }
   }
 
   if (!allBankBalances.length) {
-    box.innerHTML = '<div class="loading">Баланс банка ещё не загружен — план/факт появится после первой загрузки в разделе «Бухгалтерия».</div>';
+    box.innerHTML = '<div class="loading">' + tr('balanceNotLoadedYet') + '</div>';
     return;
   }
 
@@ -4583,15 +4657,15 @@ async function renderPlanFactBox() {
         <div>
           <div class="bi-card-label" style="margin-bottom:4px;">${label}</div>
           <div class="bi-card-value" style="margin-bottom:2px;">${formatMoney(factVal)}</div>
-          <div class="bi-card-sub" style="margin-top:0;">из <b>${formatMoney(plan)}</b></div>
+          <div class="bi-card-sub" style="margin-top:0;">${tr('wordOfPlan')} <b>${formatMoney(plan)}</b></div>
         </div>
       </div>`;
   };
 
   box.innerHTML = `
     <div class="bi-plan-fact-grid">
-      ${gauge('План 2026 год', MSB_PLAN_YEAR_2026, fact, 'var(--brand)')}
-      ${gauge('План III квартал 2026', MSB_PLAN_Q3_2026, fact, 'var(--orange)')}
+      ${gauge(tr('planYear2026'), MSB_PLAN_YEAR_2026, fact, 'var(--brand)')}
+      ${gauge(tr('planQ3_2026'), MSB_PLAN_Q3_2026, fact, 'var(--orange)')}
     </div>`;
 }
 
@@ -5515,7 +5589,7 @@ function renderStats(stats) {
   if (rejectedCountBox) rejectedCountBox.innerText = stats.rejectedCount || 0;
   if (rejectedAmountBox) rejectedAmountBox.innerText = formatMoney(stats.rejectedAmount);
 
-  document.getElementById('conversion').innerText = 'конверсия ' + (stats.conversion || 0) + '%';
+  document.getElementById('conversion').innerText = tr('conversionLabel') + ' ' + (stats.conversion || 0) + '%';
   document.getElementById('averageRequest').innerText = formatMoney(stats.averageRequest);
   document.getElementById('averageIssued').innerText = formatMoney(stats.averageIssued);
   document.getElementById('issuedCount').innerText = stats.issuedCount || 0;
@@ -6489,7 +6563,7 @@ function renderLatestClients(clients) {
   registerClientRows('latest', latest);
 
   if (!latest.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">Клиентов пока нет</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">' + tr('noClientsYet') + '</td></tr>';
     return;
   }
 
@@ -6499,7 +6573,7 @@ function renderLatestClients(clients) {
         <td>${safe(c.name)}</td>
         <td>${safe(c.product)}</td>
         <td>${formatMoney(c.amount)}</td>
-        <td><span class="status ${statusClass(c.status)}">${safe(c.status)}</span></td>
+        <td><span class="status ${statusClass(c.status)}">${safe(trValue(c.status))}</span></td>
         <td>${safe(c.manager)}</td>
       </tr>`).join('');
 }
@@ -6866,11 +6940,11 @@ function renderFunnel(funnel, boxId) {
     let conversionBadge = '';
     if (isPipelineStep) {
       if (status === pipelineStatuses[0]) {
-        conversionBadge = '<span class="funnel-conversion funnel-conversion-base">старт воронки</span>';
+        conversionBadge = '<span class="funnel-conversion funnel-conversion-base">' + tr('startOfFunnel') + '</span>';
       } else {
         const stepPct = prevCount ? Math.round((item.count / prevCount) * 100) : 0;
         const totalPct = firstCount ? Math.round((item.count / firstCount) * 100) : 0;
-        conversionBadge = `<span class="funnel-conversion">${stepPct}% от пред. этапа • ${totalPct}% от старта</span>`;
+        conversionBadge = `<span class="funnel-conversion">${stepPct}% ${tr('fromPrevStage')} • ${totalPct}% ${tr('fromStart')}</span>`;
       }
       prevCount = item.count;
     }
@@ -6878,8 +6952,8 @@ function renderFunnel(funnel, boxId) {
     box.innerHTML += `
       <div class="funnel-item">
         <div>
-          <div class="funnel-title">${status}</div>
-          <div class="funnel-meta">${item.count} клиентов ${conversionBadge}</div>
+          <div class="funnel-title">${safe(trValue(status))}</div>
+          <div class="funnel-meta">${item.count} ${tr('wordClients')} ${conversionBadge}</div>
           <div class="bar"><span style="width:${width}%"></span></div>
         </div>
         <div class="amount">${formatMoney(item.amount)}</div>
@@ -6896,7 +6970,7 @@ function renderManagers(managers) {
       <div class="rank-row">
         <div>
           <div class="rank-name">${index + 1}. ${safe(m.manager)}</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:4px;">Клиентов: ${m.totalClients || 0} • Выдано: ${formatMoney(m.issuedAmount)}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px;">${tr('lblClients')}: ${m.totalClients || 0} • ${tr('kpiIssued')}: ${formatMoney(m.issuedAmount)}</div>
         </div>
         <div class="rank-score">${score}</div>
       </div>`;
@@ -6914,8 +6988,8 @@ function renderManagersFull(managers, teamClientsForPeriod, monthOverride) {
   const periodText = document.getElementById('managersPeriodText');
   if (periodText) {
     periodText.innerText = period === 'all'
-      ? 'Рейтинг за все данные'
-      : 'Рейтинг за период: ' + period;
+      ? tr('ratingAllData')
+      : tr('ratingForPeriod') + ' ' + period;
   }
 
   managersPageMonthKey = period;
@@ -6924,8 +6998,8 @@ function renderManagersFull(managers, teamClientsForPeriod, monthOverride) {
   if (hintText) {
     const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
     hintText.innerText = isAdmin
-      ? 'Нажмите на менеджера, чтобы увидеть его клиентов. Кнопка «План на месяц» под строкой — задать план по количеству и сумме.'
-      : 'Здесь видно место в команде. Открыть список клиентов можно только по своей строке.';
+      ? tr('hintManagerAdmin')
+      : tr('hintManagerSelf');
   }
 
   const teamClients = teamClientsForPeriod || periodClients;
