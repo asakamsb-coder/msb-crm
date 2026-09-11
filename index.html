@@ -2459,6 +2459,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
     <button class="close-btn" onclick="closeObhodForm()">×</button>
   </div>
+  <div id="obhodSuspiciousBanner"></div>
   <div class="drawer-body">
 
     <div style="display:flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:16px;">
@@ -3977,6 +3978,9 @@ const APP_DICT = {
   errServerConnect: { ru: 'Не удалось связаться с сервером', uz: "Server bilan bog'lanib bo'lmadi" },
   suspSameLocation: { ru: 'Совпадает с другим опросом', uz: "Boshqa so'rov bilan mos keladi" },
   suspTooFast: { ru: 'Слишком быстро после другого опроса', uz: "Boshqa so'rovdan keyin juda tez" },
+  suspReusedPhoto: { ru: 'Похоже на повторно приложенное фото', uz: "Qayta ilova qilingan fotoga o'xshaydi" },
+  suspiciousReasonPrefix: { ru: 'Причина:', uz: "Sababi:" },
+  thSuspiciousCount: { ru: 'Подозрительных', uz: "Shubhali" },
   btnOnMap: { ru: 'На карте', uz: "Xaritada" },
   badgeSuspicious: { ru: 'Подозрительно', uz: "Shubhali" },
   typeLegalShort: { ru: 'Юр.', uz: "Yur." },
@@ -9184,6 +9188,8 @@ let allObhodSurveys = [];
 function resetObhodForm() {
   editingObhodSurveyId = null;
   document.getElementById('obhodFormTitle').innerText = tr('obhodNewTitle');
+  const banner = document.getElementById('obhodSuspiciousBanner');
+  if (banner) banner.innerHTML = '';
   setObhodSurveyType('Физический');
 
   [
@@ -9261,6 +9267,27 @@ async function openObhodForm(idEncoded) {
     if (s) {
       editingObhodSurveyId = id;
       document.getElementById('obhodFormTitle').innerText = tr('obhodEditTitle');
+
+      // Баннер с причиной — виден тем же ролям, что видят пометки в
+      // списке (ADMIN/DIRECTOR/DEPUTY). Флаги берём из кэша последнего
+      // расчёта списка; если форму открыли напрямую (без захода в
+      // список), считаем на месте.
+      const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+      const banner = document.getElementById('obhodSuspiciousBanner');
+      if (banner) {
+        if (canSeeLocation) {
+          const flagsMap = (window.obhodSuspiciousFlagsCache && window.obhodSuspiciousFlagsCache.size)
+            ? window.obhodSuspiciousFlagsCache
+            : findObhodSuspiciousPairs(allObhodSurveys);
+          const reasons = flagsMap.get(id) || [];
+          const suspiciousLabels = { sameLocation: tr('suspSameLocation'), tooFast: tr('suspTooFast'), reusedPhoto: tr('suspReusedPhoto') };
+          banner.innerHTML = reasons.length
+            ? `<div style="margin:0 24px 16px;padding:10px 14px;border-radius:10px;background:#FCEBEB;color:#7A1F1F;font-size:13px;font-weight:700;">⚠ ${tr('badgeSuspicious')}. ${tr('suspiciousReasonPrefix')} ${safe(reasons.map(r => suspiciousLabels[r]).join('; '))}</div>`
+            : '';
+        } else {
+          banner.innerHTML = '';
+        }
+      }
 
       setObhodSurveyType(s.surveyType === 'Юридический' ? 'Юридический' : 'Физический');
 
@@ -9418,11 +9445,13 @@ async function saveObhodSurveyForm() {
 
   try {
     let photos = [];
+    let photoHashes = [];
     if (obhodSelectedPhotoFiles.length) {
       btn.innerText = tr('processingPhoto');
       for (const file of obhodSelectedPhotoFiles) {
         const resized = await resizeImageFile(file, 1280);
         photos.push({ base64: resized.base64, mimeType: resized.mimeType, fileName: 'photo_' + (photos.length + 1) + '.jpg' });
+        photoHashes.push(resized.aHash);
       }
       btn.innerText = tr('savingEllipsis');
     }
@@ -9434,6 +9463,7 @@ async function saveObhodSurveyForm() {
       surveyType: currentObhodSurveyType,
       mahalla: mahalla,
       headName: headName,
+      photoHashes: photoHashes,
 
       // Физический
       pinfl: document.getElementById('obPinfl').value.trim(),
@@ -9534,7 +9564,7 @@ function findObhodSuspiciousPairs(surveys) {
   // ~30 метров в градусах широты/долготы (грубое приближение, для
   // Узбекистана этой точности достаточно).
   const CLOSE_DISTANCE_DEG = 0.0003;
-  const TOO_FAST_MS = 2 * 60 * 1000;
+  const TOO_FAST_MS = 3 * 60 * 1000;
 
   Object.values(byBanker).forEach(list => {
     for (let i = 0; i < list.length; i++) {
@@ -9565,6 +9595,24 @@ function findObhodSuspiciousPairs(surveys) {
             addFlag(b.id, 'tooFast');
           }
         }
+
+        // Повторно приложенное/пересжатое фото — сравниваем отпечатки
+        // каждого фото одного опроса с каждым фото другого.
+        const hashesA = String(a.photoHashes || '').split(',').map(h => h.trim()).filter(Boolean);
+        const hashesB = String(b.photoHashes || '').split(',').map(h => h.trim()).filter(Boolean);
+        if (hashesA.length && hashesB.length) {
+          let matched = false;
+          for (const ha of hashesA) {
+            for (const hb of hashesB) {
+              if (hammingDistanceHex(ha, hb) <= PHOTO_HASH_SUSPICIOUS_DISTANCE) { matched = true; break; }
+            }
+            if (matched) break;
+          }
+          if (matched) {
+            addFlag(a.id, 'reusedPhoto');
+            addFlag(b.id, 'reusedPhoto');
+          }
+        }
       }
     }
   });
@@ -9589,9 +9637,11 @@ async function loadObhodList() {
     // Кнопка "На карте" и пометки "подозрительно" — тот же круг ролей,
     // что и общая карта визитов: это инструмент проверки банкира, а не
     // рабочий для рядового опроса.
+    let obhodSuspiciousFlagsCache = new Map();
     const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
     const suspiciousFlags = canSeeLocation ? findObhodSuspiciousPairs(allObhodSurveys) : new Map();
-    const suspiciousLabels = { sameLocation: tr('suspSameLocation'), tooFast: tr('suspTooFast') };
+    obhodSuspiciousFlagsCache = suspiciousFlags;
+    const suspiciousLabels = { sameLocation: tr('suspSameLocation'), tooFast: tr('suspTooFast'), reusedPhoto: tr('suspReusedPhoto') };
 
     box.innerHTML = sorted.map(s => {
       const hasLocation = s.lat && s.lng && !isNaN(Number(s.lat)) && !isNaN(Number(s.lng));
@@ -9601,8 +9651,16 @@ async function loadObhodList() {
       const isLegal = s.surveyType === 'Юридический';
       const typeBadge = `<span style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:${isLegal ? '#E6F1FB' : '#EAF3DE'};color:${isLegal ? '#0C447C' : '#173404'};margin-right:6px;">${isLegal ? tr('typeLegalShort') : tr('typePhysicalShort')}</span>`;
       const reasons = suspiciousFlags.get(s.id) || [];
+      const reasonText = reasons.map(r => suspiciousLabels[r]).join('; ');
+      const suspBoxId = 'susp_' + s.id.replace(/[^a-zA-Z0-9]/g, '');
+      // Заголовок (title) — подсказка по наведению на десктопе. onclick —
+      // раскрывает ту же причину текстом под карточкой по тапу (на
+      // мобильных наведения не бывает).
       const suspiciousBadge = reasons.length
-        ? `<span title="${reasons.map(r => suspiciousLabels[r]).join('; ')}" style="display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#FCEBEB;color:#7A1F1F;margin-right:6px;">⚠ ${tr('badgeSuspicious')}</span>`
+        ? `<span title="${reasonText}" onclick="event.stopPropagation();var el=document.getElementById('${suspBoxId}');if(el)el.style.display=el.style.display==='block'?'none':'block';" style="cursor:pointer;display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;font-weight:700;background:#FCEBEB;color:#7A1F1F;margin-right:6px;">⚠ ${tr('badgeSuspicious')}</span>`
+        : '';
+      const suspiciousDetail = reasons.length
+        ? `<div id="${suspBoxId}" style="display:none;color:#7A1F1F;font-size:11.5px;margin-top:4px;font-weight:600;">${tr('suspiciousReasonPrefix')} ${safe(reasonText)}</div>`
         : '';
       const metaText = isLegal
         ? `${safe(s.mahalla)} · ${safe(s.legalName) || '—'}${s.avgDailySales ? ' · ' + tr('lblSalesPerDay') + ': ' + formatNumber(s.avgDailySales) : ''} · ${safe(s.createdBy)} · ${safe(s.updatedAt)}`
@@ -9613,11 +9671,14 @@ async function loadObhodList() {
           <div>
             <div class="mahalla-row-name">${typeBadge}${suspiciousBadge}${safe(s.headName)}</div>
             <div class="mahalla-row-meta">${metaText}</div>
+            ${suspiciousDetail}
           </div>
           ${locationBtn}
         </div>
       </div>`;
     }).join('');
+
+    window.obhodSuspiciousFlagsCache = obhodSuspiciousFlagsCache;
   } catch (error) {
     box.innerHTML = '<div class="loading">' + tr('obhodListLoadFailed') + ' <a onclick="loadObhodList()" style="color:var(--brand);cursor:pointer;">' + tr('retryAgain') + '</a></div>';
     console.error(error);
@@ -9709,11 +9770,24 @@ async function loadObhodDashboard() {
     const daysElapsed = Math.max(1, Math.round((now - campaignStart) / (24 * 60 * 60 * 1000)));
 
     const managerNames = Object.keys(doneByManager);
+    const canSeeSuspicious = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+    const suspiciousByManager = {};
+    if (canSeeSuspicious) {
+      const flagsMap = findObhodSuspiciousPairs(allObhodSurveys);
+      window.obhodSuspiciousFlagsCache = flagsMap;
+      allObhodSurveys.forEach(s => {
+        if (flagsMap.get(s.id)) {
+          const who = s.createdBy || '—';
+          suspiciousByManager[who] = (suspiciousByManager[who] || 0) + 1;
+        }
+      });
+    }
     const managerRows = managerNames.map(name => {
       const done = doneByManager[name];
       const total = totalByManager[name] || 0;
       const weekCount = (surveysByManager[name] || []).filter(s => { const d = parseDate(s.createdAt); return d && d >= weekAgo; }).length;
-      return { name, total, done, perDay: (done / daysElapsed).toFixed(1), perWeek: weekCount };
+      const suspicious = suspiciousByManager[name] || 0;
+      return { name, total, done, perDay: (done / daysElapsed).toFixed(1), perWeek: weekCount, suspicious, suspiciousPct: done ? Math.round(suspicious / done * 100) : 0 };
     }).sort((a, b) => b.done - a.done);
 
     box.innerHTML = `
@@ -9818,11 +9892,15 @@ async function loadObhodDashboard() {
             <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('dashObhodDone2')}</th>
             <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thAvgDay')}</th>
             <th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thPerWeek')}</th>
+            ${canSeeSuspicious ? `<th style="text-align:right;padding:10px 14px;font-weight:700;color:var(--muted);">${tr('thSuspiciousCount')}</th>` : ''}
           </tr></thead>
           <tbody>
             ${managerRows.map((m, i) => {
               const pct = m.total ? Math.round(m.done / m.total * 100) : null;
               const badgeColor = pct === null ? { bg: '#EEF0F3', fg: 'var(--muted)' } : pct >= 25 ? { bg: '#eaf3de', fg: '#173404' } : pct >= 10 ? { bg: '#faeeda', fg: '#412402' } : { bg: '#fcebeb', fg: '#501313' };
+              const suspiciousCell = canSeeSuspicious
+                ? `<td style="padding:10px 14px;text-align:right;">${m.suspicious ? `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:700;background:#FCEBEB;color:#7A1F1F;">${m.suspicious} (${m.suspiciousPct}%)</span>` : '—'}</td>`
+                : '';
               return `
               <tr style="${i < managerRows.length - 1 ? 'border-bottom:1px solid var(--line);' : ''}">
                 <td style="padding:10px 14px;">${safe(m.name)}</td>
@@ -9831,6 +9909,7 @@ async function loadObhodDashboard() {
                 <td style="padding:10px 14px;text-align:right;">${pct === null ? '—' : `<span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11.5px;font-weight:700;background:${badgeColor.bg};color:${badgeColor.fg};">${pct}%</span>`}</td>
                 <td style="padding:10px 14px;text-align:right;">${m.perDay}</td>
                 <td style="padding:10px 14px;text-align:right;">${m.perWeek}</td>
+                ${suspiciousCell}
               </tr>`;
             }).join('')}
           </tbody>
@@ -10594,6 +10673,45 @@ function closeMicroprojectForm() {
 // Уменьшает фото до максимум 1280px по ширине и сжимает в JPEG перед
 // отправкой на сервер — без этого фото с телефона (несколько МБ) будет
 // долго грузиться и займёт много места на Google Drive.
+// ===== Перцептивный хэш фото (aHash) — для выявления повторно/пересжато
+// приложенных снимков в опросах обхода. Считается на устройстве банкира
+// в момент выбора фото: картинка сжимается до 8×8, переводится в градации
+// серого, каждый пиксель сравнивается со средней яркостью → 64-битный
+// отпечаток (хранится как 16 hex-символов). Похожие/пересжатые фото дают
+// почти одинаковый отпечаток — сравнение через hammingDistanceHex ниже.
+function computeAverageHash(img) {
+  const size = 8;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, size, size);
+  const data = ctx.getImageData(0, 0, size, size).data;
+  const gray = [];
+  for (let i = 0; i < data.length; i += 4) {
+    gray.push(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+  }
+  const avg = gray.reduce((a, b) => a + b, 0) / gray.length;
+  let bits = '';
+  for (let i = 0; i < gray.length; i++) bits += gray[i] >= avg ? '1' : '0';
+  let hex = '';
+  for (let i = 0; i < bits.length; i += 4) hex += parseInt(bits.substr(i, 4), 2).toString(16);
+  return hex;
+}
+
+const NIBBLE_POPCOUNT = [0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4];
+function hammingDistanceHex(a, b) {
+  if (!a || !b || a.length !== b.length) return 64;
+  let dist = 0;
+  for (let i = 0; i < a.length; i++) {
+    dist += NIBBLE_POPCOUNT[parseInt(a[i], 16) ^ parseInt(b[i], 16)];
+  }
+  return dist;
+}
+// "Умеренно строгий" порог: из 64 бит расходится не больше 6 — уверенно
+// ловит то же фото после пересжатия/лёгкого кропа, почти не даёт ложных
+// срабатываний на просто похожие, но разные снимки.
+const PHOTO_HASH_SUSPICIOUS_DISTANCE = 6;
+
 function resizeImageFile(file, maxWidth) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -10609,7 +10727,8 @@ function resizeImageFile(file, maxWidth) {
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+        const aHash = computeAverageHash(img);
+        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg', aHash: aHash });
       };
       img.onerror = () => reject(new Error('Не удалось прочитать изображение'));
       img.src = e.target.result;
