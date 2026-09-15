@@ -6049,10 +6049,15 @@ function formatPeriodLabel(period) {
 //     последнее увиденное имя подгруппы с этим кодом
 //   - Строка "ИТОГО <РАЗДЕЛ> - XXXXX": итог всего раздела
 //   - "ПО БАНКУ: ФОЙДА (+), ЗАРАР (-)": финансовый результат
-// Точные коды счетов для юридического и физического портфеля — даны
-// управляющим напрямую (не угадываем по ключевым словам, как раньше).
-const LEGAL_PORTFOLIO_CODES = ['11101','12601','12901','13101','13121','14301','15001','15021','15501','15521'];
-const INDIVIDUAL_PORTFOLIO_CODES = ['12501','12503','12521','12541','14901','14902','14903','14921','14931','14941'];
+// Портфель считаем по ГРУППАМ (коды "Итого по XXXXX"), а не по отдельным
+// счетам внутри группы — раньше список был захардкожен на уровне
+// 5-значных лицевых счетов и не покрывал все субсчета внутри тех же
+// групп (например, 13105 и 15505 — десятки млрд сум каждый были не
+// учтены), из-за чего портфель показывался заниженным. Итог по группе
+// уже правильно агрегирует ВСЕ субсчета (включая резервы на "99"),
+// берём его прямо из файла вместо пересборки вручную.
+const LEGAL_PORTFOLIO_GROUPS = ['12600','12900','13100','13300','14300','14400','15000','15500'];
+const INDIVIDUAL_PORTFOLIO_GROUPS = ['12500','14900'];
 
 let bankBalanceParserWorker = null;
 
@@ -6067,8 +6072,8 @@ function getBankBalanceParserWorker() {
   const workerCode = `
     importScripts('https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js');
 
-    const LEGAL_PORTFOLIO_CODES = ['11101','12601','12901','13101','13121','14301','15001','15021','15501','15521'];
-    const INDIVIDUAL_PORTFOLIO_CODES = ['12501','12503','12521','12541','14901','14902','14903','14921','14931','14941'];
+    const LEGAL_PORTFOLIO_GROUPS = ['12600','12900','13100','13300','14300','14400','15000','15500'];
+    const INDIVIDUAL_PORTFOLIO_GROUPS = ['12500','14900'];
 
     self.onmessage = function(e) {
       try {
@@ -6160,9 +6165,16 @@ function getBankBalanceParserWorker() {
           return;
         }
 
-        const sumCodes = (codes) => codes.reduce((s, code) => s + (accounts[code] || 0), 0);
-        const legalPortfolio = sumCodes(LEGAL_PORTFOLIO_CODES);
-        const individualPortfolio = sumCodes(INDIVIDUAL_PORTFOLIO_CODES);
+        // Берём готовые итоги по группам прямо из распаршенных "Итого по
+        // XXXXX" строк (sections.assets.items) — это те же числа, что
+        // видит бухгалтер в самом файле, уже включающие все субсчета
+        // группы (в т.ч. резервы на "99"), без риска забыть какой-то
+        // субсчёт при ручном перечислении кодов.
+        const sumGroupTotals = (groupCodes) => sections.assets.items
+          .filter(item => groupCodes.indexOf(item.code) !== -1)
+          .reduce((s, item) => s + item.amount, 0);
+        const legalPortfolio = sumGroupTotals(LEGAL_PORTFOLIO_GROUPS);
+        const individualPortfolio = sumGroupTotals(INDIVIDUAL_PORTFOLIO_GROUPS);
 
         let incomePriorPeriod = 0;
         let reserves568 = 0;
