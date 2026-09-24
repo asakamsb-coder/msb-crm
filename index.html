@@ -5786,11 +5786,17 @@ function getOverdueParserWorker() {
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
         let headerRowIdx = -1;
+        let looksLikeNplFile = false;
         for (let i = 0; i < Math.min(rows.length, 15); i++) {
           if (String(rows[i][0]).trim() === 'ИД договора') { headerRowIdx = i; break; }
+          if (String(rows[i][0]).trim() === 'Наименование клиента') { looksLikeNplFile = true; }
         }
         if (headerRowIdx === -1) {
-          self.postMessage({ error: 'Не найдена строка заголовков "ИД договора" в файле — проверьте, что это правильная выгрузка' });
+          if (looksLikeNplFile) {
+            self.postMessage({ error: 'Это файл NPL-выгрузки (колонка "Наименование клиента") — загрузите его в разделе "NPL / ПРОСРОЧКА" в меню слева, а не здесь.' });
+          } else {
+            self.postMessage({ error: 'Не найдена строка заголовков "ИД договора" в файле — проверьте, что это правильная выгрузка' });
+          }
           return;
         }
 
@@ -6188,11 +6194,17 @@ function getNplParserWorker() {
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
         let headerRowIdx = -1;
+        let looksLikePortfolioFile = false;
         for (let i = 0; i < Math.min(rows.length, 10); i++) {
           if (String(rows[i][0]).trim() === 'Наименование клиента') { headerRowIdx = i; break; }
+          if (String(rows[i][0]).trim() === 'ИД договора') { looksLikePortfolioFile = true; }
         }
         if (headerRowIdx === -1) {
-          self.postMessage({ error: 'Не найдена строка заголовков "Наименование клиента" в файле — проверьте, что это правильная NPL-выгрузка' });
+          if (looksLikePortfolioFile) {
+            self.postMessage({ error: 'Это файл ежедневной выгрузки портфеля (колонка "ИД договора") — загрузите его в разделе "ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ", а не здесь.' });
+          } else {
+            self.postMessage({ error: 'Не найдена строка заголовков "Наименование клиента" в файле — проверьте, что это правильная NPL-выгрузка' });
+          }
           return;
         }
 
