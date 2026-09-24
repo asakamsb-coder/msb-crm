@@ -1264,10 +1264,6 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
   <nav class="nav">
     <a class="active" data-msb-only="true" onclick="showMsbSales(this)"><span class="icon"></span><span data-i18n="navSales">МСБ ПРОДАЖИ</span></a>
-    <a data-msb-only="true" data-hide-for-collateral="true" onclick="showPage('portfolioPage', this)">
-    <span class="icon"></span>
-    <span data-i18n="navOverdue">ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ</span>
-</a>
     <a data-msb-only="true" data-hide-for-collateral="true" onclick="showPage('nplPage', this)"><span class="icon"></span><span data-i18n="navNpl">NPL / ПРОСРОЧКА</span></a>
     <a data-admin="true" data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('slaPage', this)"><span class="icon"></span><span data-i18n="navSla">SLA КОНТРОЛЬ</span></a>
     <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('statsPage', this)"><span class="icon"></span><span data-i18n="navAccounting">БУХГАЛТЕРИЯ</span></a>
@@ -1524,69 +1520,6 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
   </div>
 </section>
-<section id="portfolioPage" class="page">
-  <div class="header">
-    <div>
-      <h1 data-i18n="hOverdue">ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ</h1>
-      <p>Ежедневная выгрузка, претензионные письма (юрлица), контроль SLA</p>
-    </div>
-  </div>
-
-  <div id="overdueUploadPanel" style="margin-bottom:20px;padding:16px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;">
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;">Загрузить ежедневную выгрузку портфеля (Excel)</label>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <input type="file" id="overdueFile" accept=".xlsx,.xls">
-      <button class="btn" onclick="uploadOverdueFile()">Загрузить</button>
-    </div>
-    <div id="overdueUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
-  </div>
-
-  <div id="overdueEmptyState" class="loading">Портфель ещё не загружен — загрузите первый файл выше.</div>
-
-  <div id="overdueDashboard" style="display:none;">
-    <section class="kpi" style="margin-bottom:20px;">
-      <div class="card"><div class="card-label">Весь просроченный портфель</div><div class="card-value" id="ovTotalAmount">...</div></div>
-      <div class="card"><div class="card-label">Юрлица (просрочка)</div><div class="card-value" id="ovLegalAmount">...</div></div>
-      <div class="card"><div class="card-label">Физлица (просрочка)</div><div class="card-value" id="ovIndividualAmount">...</div></div>
-      <div class="card"><div class="card-label">Клиентов / Анкет (договоров)</div><div class="card-value" id="ovClientsLoans">...</div></div>
-    </section>
-
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-      <button class="msb-sales-tab active" id="ovTabAll" onclick="setOverdueView('all')">Все просроченные</button>
-      <button class="msb-sales-tab" id="ovTabClaims" onclick="setOverdueView('claims')">⚠ Нужна претензия</button>
-      <button class="msb-sales-tab" id="ovTabSla" onclick="setOverdueView('sla')">🔴 Нарушение SLA</button>
-    </div>
-
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-      <input id="overdueSearchInput" class="input" placeholder="Поиск по клиенту, ИНН, договору" style="max-width:280px;flex:1 1 200px;" oninput="renderOverdueDashboard()">
-      <select id="overdueSubjectFilter" class="select" style="max-width:200px;" onchange="renderOverdueDashboard()">
-        <option value="">Юр. и физ. лица</option>
-        <option value="J">Только юрлица</option>
-        <option value="P">Только физлица</option>
-      </select>
-    </div>
-
-    <div class="client-table-wrap">
-      <table class="mtbl-overdue">
-        <thead>
-          <tr>
-            <th>Клиент</th>
-            <th>ИНН</th>
-            <th>Тип</th>
-            <th>Договоров</th>
-            <th>Сумма просрочки</th>
-            <th>Макс. дней</th>
-            <th>Статус претензии</th>
-          </tr>
-        </thead>
-        <tbody id="overdueTableBody">
-          <tr><td colspan="7" class="loading">Загрузка...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
 <section id="nplPage" class="page">
   <div class="header">
     <div>
@@ -1651,18 +1584,6 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <button class="close-btn" onclick="closeNplClientDetail()">×</button>
   </div>
   <div class="drawer-body" id="nplDetailBody"></div>
-</aside>
-
-<div class="drawer-overlay" id="overdueDetailOverlay" onclick="closeOverdueClientDetail()"></div>
-<aside class="client-drawer" id="overdueDetailDrawer">
-  <div class="drawer-header">
-    <div>
-      <div class="drawer-title" id="ovDetailClientName">Клиент</div>
-      <div class="drawer-subtitle" id="ovDetailClientInn">-</div>
-    </div>
-    <button class="close-btn" onclick="closeOverdueClientDetail()">×</button>
-  </div>
-  <div class="drawer-body" id="ovDetailBody"></div>
 </aside>
 
 <div class="drawer-overlay" id="mahallaDetailOverlay" onclick="closeMahallaDetail()"></div>
@@ -3798,7 +3719,6 @@ async function loadCRM() {
 // оставаться после перезагрузки страницы.
 const APP_DICT = {
   navSales: { ru: 'МСБ ПРОДАЖИ', uz: 'MB SOTUVLAR' },
-  navOverdue: { ru: 'ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ', uz: "MUDDATI O'TGAN PORTFEL" },
   navNpl: { ru: 'NPL / ПРОСРОЧКА', uz: 'NPL / MUDDATI OTGAN' },
   navSla: { ru: 'SLA КОНТРОЛЬ', uz: 'SLA NAZORATI' },
   navAccounting: { ru: 'БУХГАЛТЕРИЯ', uz: 'BUXGALTERIYA' },
@@ -3813,7 +3733,6 @@ const APP_DICT = {
   hClients: { ru: 'КЛИЕНТЫ PRO', uz: 'MIJOZLAR PRO' },
   hSalesFunnel: { ru: 'ПРОДАЖИ', uz: 'SOTUVLAR' },
   pSalesFunnel: { ru: 'Воронка продаж и потенциальный портфель', uz: "Sotuvlar voronkasi va potensial portfel" },
-  hOverdue: { ru: 'ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ', uz: "MUDDATI O'TGAN PORTFEL" },
   hSla: { ru: 'SLA КОНТРОЛЬ PRO', uz: 'SLA NAZORATI PRO' },
   hAccounting: { ru: 'БУХГАЛТЕРИЯ', uz: 'BUXGALTERIYA' },
   hRegions: { ru: 'ГЕОГРАФИЯ МСБ', uz: 'MB GEOGRAFIYASI' },
@@ -4278,7 +4197,12 @@ async function fetchJSON(action, retriesLeft) {
   if (retriesLeft === undefined) retriesLeft = 2;
 
   try {
-    const response = await fetch(API_URL + '?action=' + action);
+    // "&_=" + Date.now() и cache:'no-store' — иначе браузер (не сервер!)
+    // иногда отдаёт СТАРЫЙ закэшированный ответ на этот же GET-запрос
+    // вместо свежих данных: например, сразу после загрузки файла список
+    // мог выглядеть пустым, хотя на сервере данные уже сохранены — просто
+    // страница показывала ответ, закэшированный ДО загрузки файла.
+    const response = await fetch(API_URL + '?action=' + action + '&_=' + Date.now(), { cache: 'no-store' });
     const text = await response.text();
     return JSON.parse(text);
   } catch (error) {
@@ -4331,10 +4255,6 @@ function showPage(id, el) {
 
   if (id === 'statsPage') {
     loadBankBalanceData().catch(error => console.error(error));
-  }
-
-  if (id === 'portfolioPage') {
-    loadOverdueData();
   }
 
   if (id === 'nplPage') {
@@ -5723,402 +5643,6 @@ function renderStats(stats) {
   document.getElementById('issuedCount').innerText = stats.issuedCount || 0;
   document.getElementById('updatedAt').innerText = 'MSB CRM Web 2.10 • Обновлено: ' + (stats.updatedAt || '');
 }
-
-// ============================================================
-// ПРОСРОЧЕННЫЙ ПОРТФЕЛЬ — ежедневная выгрузка (весь портфель банка,
-// парсим только строки с "Дни просрочки" > 0), отслеживание по договору,
-// претензионные письма для юрлиц (день 25 → день 40), эскалация SLA.
-// ============================================================
-
-let allOverdueLoans = [];
-let overdueDataLoaded = false;
-let overdueViewMode = 'all';
-let currentOverdueClientInn = null;
-
-async function loadOverdueData() {
-  const emptyState = document.getElementById('overdueEmptyState');
-  try {
-    allOverdueLoans = await fetchJSON('overdueLoans') || [];
-    overdueDataLoaded = true;
-
-    if (!allOverdueLoans.length) {
-      emptyState.innerHTML = 'Портфель ещё не загружен — загрузите первый файл выше.';
-      emptyState.style.display = 'block';
-      document.getElementById('overdueDashboard').style.display = 'none';
-      return;
-    }
-
-    emptyState.style.display = 'none';
-    document.getElementById('overdueDashboard').style.display = 'block';
-    renderOverdueDashboard();
-  } catch (error) {
-    emptyState.innerHTML = 'Не удалось загрузить данные. <a onclick="loadOverdueData()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a>';
-    emptyState.style.display = 'block';
-    document.getElementById('overdueDashboard').style.display = 'none';
-    console.error(error);
-  }
-}
-
-// ---- Парсер ежедневного файла (лист "KP", вся выгрузка портфеля банка) ----
-// Файл содержит ВЕСЬ портфель (десятки тысяч строк), а не только
-// просроченные — отбираем только строки с "Дни просрочки" > 0 прямо на
-// фронтенде, чтобы на сервер уходил уже отфильтрованный, компактный список.
-// Обработка файла идёт в ОТДЕЛЬНОМ ПОТОКЕ (Web Worker), а не в основном —
-// файл банка большой (десятки тысяч строк, под сотню колонок), и без
-// воркера главный поток браузера блокируется на секунды (а на слабом
-// телефоне — вплоть до минуты), из-за чего интерфейс выглядит "зависшим":
-// даже статус "Обработка файла..." может не успеть отрисоваться, потому
-// что браузер блокируется раньше, чем перерисует экран.
-let overdueParserWorker = null;
-
-function getOverdueParserWorker() {
-  if (overdueParserWorker) return overdueParserWorker;
-
-  const workerCode = `
-    importScripts('https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js');
-
-    self.onmessage = function(e) {
-      try {
-        const data = new Uint8Array(e.data);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames.includes('KP') ? 'KP' : workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-        let headerRowIdx = -1;
-        let looksLikeNplFile = false;
-        for (let i = 0; i < Math.min(rows.length, 15); i++) {
-          if (String(rows[i][0]).trim() === 'ИД договора') { headerRowIdx = i; break; }
-          if (String(rows[i][0]).trim() === 'Наименование клиента') { looksLikeNplFile = true; }
-        }
-        if (headerRowIdx === -1) {
-          if (looksLikeNplFile) {
-            self.postMessage({ error: 'Это файл NPL-выгрузки (колонка "Наименование клиента") — загрузите его в разделе "NPL / ПРОСРОЧКА" в меню слева, а не здесь.' });
-          } else {
-            self.postMessage({ error: 'Не найдена строка заголовков "ИД договора" в файле — проверьте, что это правильная выгрузка' });
-          }
-          return;
-        }
-
-        const loans = [];
-        for (let i = headerRowIdx + 1; i < rows.length; i++) {
-          const row = rows[i];
-          const contractId = row[0];
-          if (!contractId || isNaN(Number(contractId))) continue;
-
-          const daysOverdue = Number(row[23]) || 0;
-          if (daysOverdue <= 0) continue;
-
-          loans.push({
-            contractId: String(contractId).trim(),
-            clientName: String(row[6] || '').trim(),
-            subject: String(row[9] || '').trim().toUpperCase(),
-            loanAmount: Number(row[11]) || 0,
-            overdueBalance: Number(row[21]) || 0,
-            overdueDate: row[22] || '',
-            daysOverdue: daysOverdue,
-            inn: String(row[42] || '').trim(),
-            phone: String(row[43] || row[44] || '').trim(),
-            product: String(row[59] || '').trim(),
-            assignedOfficer: String(row[73] || '').trim()
-          });
-        }
-
-        if (!loans.length) {
-          self.postMessage({ error: 'В файле не найдено просроченных договоров (Дни просрочки > 0)' });
-          return;
-        }
-
-        self.postMessage({ loans: loans });
-      } catch (err) {
-        self.postMessage({ error: err.message || 'Ошибка обработки файла' });
-      }
-    };
-  `;
-
-  const blob = new Blob([workerCode], { type: 'application/javascript' });
-  overdueParserWorker = new Worker(URL.createObjectURL(blob));
-  return overdueParserWorker;
-}
-
-function parseOverduePortfolioFile(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = function(e) {
-      try {
-        const worker = getOverdueParserWorker();
-        if (onProgress) onProgress('Обрабатываю файл в фоновом потоке (интерфейс не зависнет)...');
-
-        // Защита: если воркер не смог даже запуститься (например, не
-        // получилось загрузить библиотеку внутри него из-за сети) — не
-        // ждём ответа вечно, а сообщаем об ошибке через 45 секунд.
-        const timeoutId = setTimeout(() => {
-          worker.removeEventListener('message', handleMessage);
-          worker.removeEventListener('error', handleError);
-          reject(new Error('Обработка файла заняла слишком много времени. Проверьте интернет-соединение и попробуйте ещё раз.'));
-        }, 45000);
-
-        const handleMessage = (msg) => {
-          clearTimeout(timeoutId);
-          worker.removeEventListener('message', handleMessage);
-          worker.removeEventListener('error', handleError);
-          if (msg.data.error) {
-            reject(new Error(msg.data.error));
-          } else {
-            resolve(msg.data.loans);
-          }
-        };
-        const handleError = (err) => {
-          clearTimeout(timeoutId);
-          worker.removeEventListener('message', handleMessage);
-          worker.removeEventListener('error', handleError);
-          overdueParserWorker = null; // воркер сломан — при следующей попытке создадим заново
-          reject(new Error('Не удалось обработать файл в фоновом потоке: ' + (err.message || 'неизвестная ошибка')));
-        };
-
-        worker.addEventListener('message', handleMessage);
-        worker.addEventListener('error', handleError);
-        worker.postMessage(e.target.result, [e.target.result]); // transferable — без копирования буфера
-      } catch (err) {
-        reject(err);
-      }
-    };
-
-    reader.onerror = () => reject(new Error('Не удалось открыть файл'));
-    reader.readAsArrayBuffer(file);
-  });
-}
-
-async function uploadOverdueFile() {
-  const input = document.getElementById('overdueFile');
-  const statusBox = document.getElementById('overdueUploadStatus');
-
-  if (!input.files || !input.files.length) {
-    statusBox.innerText = 'Выберите файл';
-    return;
-  }
-
-  statusBox.innerText = 'Читаю файл...';
-
-  try {
-    const loans = await parseOverduePortfolioFile(input.files[0], (msg) => { statusBox.innerText = msg; });
-
-    statusBox.innerText = 'Загрузка на сервер (' + loans.length + ' просроченных договоров)...';
-
-    const result = await postWebAction({
-      webAction: 'uploadOverduePortfolio',
-      sessionId: localStorage.getItem('msbSessionId'),
-      loans: loans
-    });
-
-    if (result.success) {
-      statusBox.innerText = result.message;
-      input.value = '';
-      await loadOverdueData();
-    } else {
-      statusBox.innerText = result.message || 'Ошибка загрузки';
-    }
-  } catch (error) {
-    statusBox.innerText = 'Ошибка чтения файла: ' + error.message;
-    console.error(error);
-  }
-}
-
-function groupOverdueByClient(loans) {
-  const map = {};
-  loans.forEach(l => {
-    // ИНН из таблицы может прийти числом, а не строкой — .trim() на числе
-    // упадёт с ошибкой, поэтому сначала явно приводим к строке.
-    const key = String(l.inn || l.clientName || '').trim() || l.contractId;
-    if (!map[key]) {
-      map[key] = { inn: l.inn, clientName: l.clientName, subject: l.subject, loans: [], totalOverdue: 0, maxDays: 0 };
-    }
-    map[key].loans.push(l);
-    map[key].totalOverdue += Number(l.overdueBalance) || 0;
-    map[key].maxDays = Math.max(map[key].maxDays, Number(l.daysOverdue) || 0);
-  });
-  return Object.values(map);
-}
-
-function setOverdueView(mode) {
-  overdueViewMode = mode;
-  document.getElementById('ovTabAll').classList.toggle('active', mode === 'all');
-  document.getElementById('ovTabClaims').classList.toggle('active', mode === 'claims');
-  document.getElementById('ovTabSla').classList.toggle('active', mode === 'sla');
-  renderOverdueDashboard();
-}
-
-function renderOverdueDashboard() {
-  const tbody = document.getElementById('overdueTableBody');
-  if (!tbody) return;
-
-  const totalAmount = allOverdueLoans.reduce((s, l) => s + (Number(l.overdueBalance) || 0), 0);
-  const legalAmount = allOverdueLoans.filter(l => l.subject === 'J').reduce((s, l) => s + (Number(l.overdueBalance) || 0), 0);
-  const individualAmount = allOverdueLoans.filter(l => l.subject === 'P').reduce((s, l) => s + (Number(l.overdueBalance) || 0), 0);
-
-  document.getElementById('ovTotalAmount').innerText = formatMoney(totalAmount);
-  document.getElementById('ovLegalAmount').innerText = formatMoney(legalAmount);
-  document.getElementById('ovIndividualAmount').innerText = formatMoney(individualAmount);
-
-  let clients = groupOverdueByClient(allOverdueLoans);
-  document.getElementById('ovClientsLoans').innerText = clients.length + ' / ' + allOverdueLoans.length;
-
-  const query = normalizeText((document.getElementById('overdueSearchInput')?.value || '').trim());
-  const subjectFilter = document.getElementById('overdueSubjectFilter')?.value || '';
-
-  if (query) {
-    clients = clients.filter(c => normalizeText([c.clientName, c.inn, ...c.loans.map(l => l.contractId)].join(' ')).includes(query));
-  }
-  if (subjectFilter) {
-    clients = clients.filter(c => c.subject === subjectFilter);
-  }
-  if (overdueViewMode === 'claims') {
-    clients = clients.filter(c => c.loans.some(l => l.claimStatus === 'Нужна 1-я претензия' || l.claimStatus === 'Нужна 2-я претензия'));
-  }
-  if (overdueViewMode === 'sla') {
-    clients = clients.filter(c => c.loans.some(l => l.slaViolation));
-  }
-
-  clients.sort((a, b) => b.totalOverdue - a.totalOverdue);
-
-  if (!clients.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">Ничего не найдено</td></tr>';
-    return;
-  }
-
-  const subjectLabel = (s) => s === 'J' ? 'Юрлицо' : s === 'P' ? 'Физлицо' : (s || '-');
-
-  tbody.innerHTML = clients.map(c => {
-    const hasSla = c.loans.some(l => l.slaViolation);
-    const needsClaim = c.loans.some(l => l.claimStatus === 'Нужна 1-я претензия' || l.claimStatus === 'Нужна 2-я претензия');
-    const badgeClass = hasSla ? 'status-red' : needsClaim ? 'status-orange' : 'status-green';
-    const badgeText = hasSla ? '🔴 Нарушение SLA' : needsClaim ? '⚠ Нужна претензия' : (c.subject === 'J' ? 'В порядке' : '—');
-
-    return `
-      <tr class="clickable-row${hasSla ? ' row-flagged' : ''}" onclick="openOverdueClientDetail('${encodeURIComponent(c.inn || '')}')">
-        <td>${safe(c.clientName)}</td>
-        <td class="nowrap">${safe(c.inn)}</td>
-        <td>${subjectLabel(c.subject)}</td>
-        <td class="nowrap">${c.loans.length}</td>
-        <td class="nowrap">${formatMoney(c.totalOverdue)}</td>
-        <td class="nowrap">${c.maxDays}</td>
-        <td><span class="status ${badgeClass}">${badgeText}</span></td>
-      </tr>`;
-  }).join('');
-}
-
-function openOverdueClientDetail(innEncoded) {
-  const inn = decodeURIComponent(innEncoded);
-  currentOverdueClientInn = inn;
-
-  const loans = allOverdueLoans.filter(l => String(l.inn || '').trim() === inn);
-  if (!loans.length) return;
-
-  document.getElementById('ovDetailClientName').innerText = safe(loans[0].clientName);
-  document.getElementById('ovDetailClientInn').innerText = 'ИНН: ' + safe(inn) + ' • ' + (loans[0].subject === 'J' ? 'Юрлицо' : 'Физлицо');
-
-  const claimColors = {
-    'Не требуется': 'status-blue',
-    'Не применимо (физлицо)': 'status-blue',
-    'Нужна 1-я претензия': 'status-orange',
-    '1-я претензия отправлена': 'status-green',
-    'Нужна 2-я претензия': 'status-red',
-    'Обе претензии отправлены': 'status-green'
-  };
-
-  document.getElementById('ovDetailBody').innerHTML = loans.map(l => `
-    <div class="panel" style="margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;">
-        <div>
-          <div style="font-weight:800;font-size:14px;">Договор № ${safe(l.contractId)}</div>
-          <div style="color:var(--muted);font-size:12.5px;margin-top:2px;">${safe(l.product)}</div>
-        </div>
-        <span class="status ${claimColors[l.claimStatus] || 'status-blue'}">${safe(l.claimStatus)}</span>
-      </div>
-      <div class="info-grid" style="margin-bottom:10px;">
-        <div class="info-card"><div class="info-label">Просроченный остаток</div><div class="info-value">${formatMoney(l.overdueBalance)}</div></div>
-        <div class="info-card"><div class="info-label">Дней просрочки</div><div class="info-value">${safe(l.daysOverdue)}</div></div>
-        <div class="info-card"><div class="info-label">Дата просрочки</div><div class="info-value">${safe(l.overdueDate)}</div></div>
-        <div class="info-card"><div class="info-label">Сумма кредита</div><div class="info-value">${formatMoney(l.loanAmount)}</div></div>
-        <div class="info-card"><div class="info-label">Ответственный</div><div class="info-value">${safe(l.assignedOfficer)}</div></div>
-        <div class="info-card"><div class="info-label">Телефон</div><div class="info-value">${safe(l.phone)}</div></div>
-      </div>
-
-      ${l.subject === 'J' ? renderClaimUploadBlock(l) : ''}
-    </div>
-  `).join('');
-
-  document.getElementById('overdueDetailOverlay').classList.add('active');
-  document.getElementById('overdueDetailDrawer').classList.add('active');
-}
-
-function renderClaimUploadBlock(l) {
-  const canUpload = currentUser && (currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-
-  let html = '<div style="border-top:1px solid var(--line);padding-top:12px;margin-top:4px;">';
-
-  if (l.claim1Url) {
-    html += `<div style="margin-bottom:8px;font-size:13px;">📄 1-я претензия: <a href="${safe(l.claim1Url)}" target="_blank" style="color:var(--brand);font-weight:700;">открыть</a> <span style="color:var(--muted);">(${safe(l.claim1Date)})</span></div>`;
-  }
-  if (l.claim2Url) {
-    html += `<div style="margin-bottom:8px;font-size:13px;">📄 2-я претензия: <a href="${safe(l.claim2Url)}" target="_blank" style="color:var(--brand);font-weight:700;">открыть</a> <span style="color:var(--muted);">(${safe(l.claim2Date)})</span></div>`;
-  }
-
-  if (canUpload) {
-    if (l.claimStatus === 'Нужна 1-я претензия') {
-      html += `<label class="mp-label">Загрузить скан 1-й претензии</label>
-        <input type="file" accept=".pdf,image/*" style="margin-bottom:6px;" onchange="uploadClaimLetterFile(this, '${safe(l.contractId)}', 1)">`;
-    } else if (l.claimStatus === 'Нужна 2-я претензия') {
-      html += `<label class="mp-label">Загрузить скан 2-й претензии (повторная)</label>
-        <input type="file" accept=".pdf,image/*" style="margin-bottom:6px;" onchange="uploadClaimLetterFile(this, '${safe(l.contractId)}', 2)">`;
-    }
-  }
-
-  html += `<div id="claimUploadStatus_${safe(l.contractId)}" style="font-size:12px;color:var(--muted);"></div>`;
-  html += '</div>';
-  return html;
-}
-
-async function uploadClaimLetterFile(input, contractId, claimNumber) {
-  if (!input.files || !input.files.length) return;
-  const file = input.files[0];
-  const statusBox = document.getElementById('claimUploadStatus_' + contractId);
-  if (statusBox) statusBox.innerText = 'Загрузка...';
-
-  try {
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const result = await postWebAction({
-      webAction: 'uploadClaimLetter',
-      sessionId: localStorage.getItem('msbSessionId'),
-      contractId: contractId,
-      claimNumber: claimNumber,
-      file: { base64: base64, mimeType: file.type, fileName: file.name }
-    });
-
-    if (result.success) {
-      await loadOverdueData();
-      openOverdueClientDetail(encodeURIComponent(currentOverdueClientInn));
-    } else if (statusBox) {
-      statusBox.innerText = result.message || 'Ошибка загрузки';
-    }
-  } catch (error) {
-    if (statusBox) statusBox.innerText = 'Не удалось загрузить файл';
-    console.error(error);
-  }
-}
-
-function closeOverdueClientDetail() {
-  document.getElementById('overdueDetailOverlay').classList.remove('active');
-  document.getElementById('overdueDetailDrawer').classList.remove('active');
-}
-
 
 // ============================================================
 // NPL / ПРОСРОЧКА ПО КЛИЕНТУ — отдельная периодическая выгрузка (другой
