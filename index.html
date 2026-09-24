@@ -345,6 +345,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .summary-card .big{font-size:22px;font-weight:800;}
 .client-table-wrap{overflow-x:auto;}
 .nowrap{white-space:nowrap;}
+/* Широкая таблица NPL (юр.лица) — показывает все поля из выгрузки,
+   поэтому не сжимаем колонки под ширину экрана, а даём прокрутку
+   влево/вправо (тем более удобно на телефоне). */
+.mtbl-npl-wide{min-width:1600px;}
+.mtbl-npl-wide th,.mtbl-npl-wide td{white-space:nowrap;padding:10px 12px;}
 
 
 .login-screen{
@@ -1541,8 +1546,34 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 
   <div id="nplDashboard" style="display:none;">
     <section class="kpi" style="margin-bottom:20px;">
-      <div class="card"><div class="card-label">Юр. лица + ИП (просрочка 1+)</div><div class="card-value" id="nplLegalAmount">...</div><div style="font-size:12px;color:var(--muted);margin-top:4px;" id="nplLegalCount">...</div></div>
-      <div class="card"><div class="card-label">Физ. лица (только NPL 90+)</div><div class="card-value" id="nplIndivAmount">...</div><div style="font-size:12px;color:var(--muted);margin-top:4px;" id="nplIndivCount">...</div></div>
+      <div class="card">
+        <div class="card-label">NPL общий ОД (итог)</div>
+        <div class="card-value" id="nplTotalOdAmount">...</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="nplTotalOdCount">...</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Всего задолженность NPL</div>
+        <div class="card-value" id="nplTotalDebtAmount">...</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Резерв по клиентам NPL</div>
+        <div class="card-value" id="nplReserveAmount">...</div>
+      </div>
+      <div class="card kpi-accent-orange">
+        <div class="card-label">Ожидаемый NPL (60–89 дн.)</div>
+        <div class="card-value" id="nplExpectedAmount">...</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="nplExpectedCount">...</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Юридический NPL (просрочка 1+)</div>
+        <div class="card-value" id="nplLegalAmount">...</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="nplLegalCount">...</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Физический NPL (только 90+)</div>
+        <div class="card-value" id="nplIndivAmount">...</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="nplIndivCount">...</div>
+      </div>
     </section>
 
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
@@ -1554,9 +1585,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <input id="nplSearchInput" class="input" placeholder="Поиск по ФИО, ИНН/ПИНФЛ" style="max-width:320px;flex:1 1 200px;" oninput="renderNplDashboard()">
     </div>
 
-    <div class="client-table-wrap">
-      <table class="mtbl-overdue">
-        <thead>
+    <div class="client-table-wrap" id="nplTableWrap">
+      <table class="mtbl-npl-wide" id="nplTable">
+        <thead id="nplTableHead">
           <tr>
             <th>Клиент</th>
             <th>ИНН/ПИНФЛ</th>
@@ -5873,17 +5904,59 @@ async function uploadNplFile() {
   }
 }
 
+// Дни просрочки клиента/анкеты — берём наибольшее из "Дни просрочки" и
+// "Дни просроч. процентов" (по просьбе: иногда просрочка по процентам
+// больше, чем по основному долгу, и наоборот — нужен худший случай).
+function nplLoanDays(l) {
+  return Math.max(Number(l.daysOverdue) || 0, Number(l.daysOverdueInterest) || 0);
+}
+
+// Объединяет несколько уникальных непустых текстовых значений через "; "
+// (для полей вроде "Ответственный" или "№ приказа суда", которые могут
+// отличаться между анкетами одного клиента).
+function joinDistinct(values) {
+  const seen = [];
+  values.forEach(v => {
+    const s = String(v || '').trim();
+    if (s && seen.indexOf(s) === -1) seen.push(s);
+  });
+  return seen.join('; ');
+}
+
 function groupNplByClient(loans) {
   const map = {};
   loans.forEach(l => {
     const key = l.clientKey;
     if (!map[key]) {
-      map[key] = { key: key, clientName: l.clientName, pin: l.pin, subject: l.subject, officer: l.officer, loans: [], nplSum: 0, maxDays: 0 };
+      map[key] = {
+        key: key, clientName: l.clientName, pin: l.pin, subject: l.subject, officer: l.officer, loans: [],
+        nplSum: 0, maxDays: 0,
+        totalDebtSum: 0, currentBalanceSum: 0, revisedBalanceSum: 0, overdueBalanceSum: 0,
+        totalInterestSum: 0, accruedInterestSum: 0, overdueInterestSum: 0, reserveSum: 0,
+        maxDaysOverdue: 0, maxDaysOverdueInterest: 0
+      };
     }
     const g = map[key];
     g.loans.push(l);
     g.nplSum += Number(l.totalNpl) || 0;
-    g.maxDays = Math.max(g.maxDays, Number(l.daysOverdue) || 0);
+    g.totalDebtSum += Number(l.totalDebt) || 0;
+    g.currentBalanceSum += Number(l.currentBalance) || 0;
+    g.revisedBalanceSum += Number(l.revisedBalance) || 0;
+    g.overdueBalanceSum += Number(l.overdueBalance) || 0;
+    g.totalInterestSum += Number(l.totalInterest) || 0;
+    g.accruedInterestSum += Number(l.accruedInterest) || 0;
+    g.overdueInterestSum += Number(l.overdueInterest) || 0;
+    g.reserveSum += Number(l.reserve) || 0;
+    g.maxDaysOverdue = Math.max(g.maxDaysOverdue, Number(l.daysOverdue) || 0);
+    g.maxDaysOverdueInterest = Math.max(g.maxDaysOverdueInterest, Number(l.daysOverdueInterest) || 0);
+    g.maxDays = Math.max(g.maxDays, nplLoanDays(l));
+  });
+  Object.values(map).forEach(g => {
+    g.officerJoined = joinDistinct(g.loans.map(l => l.officer));
+    g.courtOrderNumberJoined = joinDistinct(g.loans.map(l => l.courtOrderNumber));
+    g.courtOrderDateJoined = joinDistinct(g.loans.map(l => l.courtOrderDate));
+    g.mibCaseJoined = joinDistinct(g.loans.map(l => l.mibCase));
+    g.mibDateJoined = joinDistinct(g.loans.map(l => l.mibDate));
   });
   return Object.values(map);
 }
@@ -5897,7 +5970,9 @@ function setNplView(mode) {
 
 function renderNplDashboard() {
   const tbody = document.getElementById('nplTableBody');
-  if (!tbody) return;
+  const thead = document.getElementById('nplTableHead');
+  const table = document.getElementById('nplTable');
+  if (!tbody || !thead || !table) return;
 
   const allGroups = groupNplByClient(allNplLoans);
   nplGroupsByKey = {};
@@ -5905,12 +5980,27 @@ function renderNplDashboard() {
 
   const legalGroups = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 1);
   const indivGroups = allGroups.filter(g => g.subject === 'P' && g.maxDays >= 90);
+  // "Ожидаемый NPL" — клиенты (юр. и физ.), у которых просрочка уже 60+,
+  // но ещё не дошла до порога NPL (90+) — риск перехода в NPL.
+  const expectedGroups = allGroups.filter(g => g.maxDays >= 60 && g.maxDays <= 89);
+
+  // ---- Карточки дашборда ----
+  document.getElementById('nplTotalOdAmount').innerText = formatMoney(allNplLoans.reduce((s, l) => s + (Number(l.totalNpl) || 0), 0));
+  document.getElementById('nplTotalOdCount').innerText = allNplLoans.length + ' анкет';
+
+  document.getElementById('nplTotalDebtAmount').innerText = formatMoney(allNplLoans.reduce((s, l) => s + (Number(l.totalDebt) || 0), 0));
+
+  document.getElementById('nplReserveAmount').innerText = formatMoney(allNplLoans.reduce((s, l) => s + (Number(l.reserve) || 0), 0));
+
+  document.getElementById('nplExpectedAmount').innerText = formatMoney(expectedGroups.reduce((s, g) => s + g.nplSum, 0));
+  document.getElementById('nplExpectedCount').innerText = expectedGroups.length + ' клиентов';
 
   document.getElementById('nplLegalAmount').innerText = formatMoney(legalGroups.reduce((s, g) => s + g.nplSum, 0));
   document.getElementById('nplLegalCount').innerText = legalGroups.length + ' клиентов';
   document.getElementById('nplIndivAmount').innerText = formatMoney(indivGroups.reduce((s, g) => s + g.nplSum, 0));
   document.getElementById('nplIndivCount').innerText = indivGroups.length + ' клиентов';
 
+  // ---- Таблица ----
   let clients = nplViewMode === 'legal' ? legalGroups.slice() : indivGroups.slice();
 
   const query = normalizeText((document.getElementById('nplSearchInput')?.value || '').trim());
@@ -5920,20 +6010,92 @@ function renderNplDashboard() {
 
   clients.sort((a, b) => b.nplSum - a.nplSum);
 
-  if (!clients.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">Ничего не найдено</td></tr>';
-    return;
-  }
+  const isLegal = nplViewMode === 'legal';
+  table.classList.toggle('mtbl-npl-wide', isLegal);
 
-  tbody.innerHTML = clients.map(c => `
-    <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
-      <td>${safe(c.clientName)}</td>
-      <td class="nowrap">${safe(c.pin) || '—'}</td>
-      <td class="nowrap">${c.loans.length}</td>
-      <td class="nowrap">${formatMoney(c.nplSum)}</td>
-      <td class="nowrap">${c.maxDays}</td>
-      <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
-    </tr>`).join('');
+  if (isLegal) {
+    // Юр.лица — показываем ВСЕ поля из выгрузки, с прокруткой влево/вправо.
+    thead.innerHTML = `
+      <tr>
+        <th>Клиент</th>
+        <th>ИНН/ПИНФЛ</th>
+        <th>Анкет</th>
+        <th>Всего задолженность</th>
+        <th>Всего задолженность (НПЛ)</th>
+        <th>Текущий остаток</th>
+        <th>Пересмотр. остаток</th>
+        <th>Просроч. остаток</th>
+        <th>Дней просрочки (ОД)</th>
+        <th>Всего проценты</th>
+        <th>Начисл. проценты</th>
+        <th>Просроч. проценты</th>
+        <th>Дней просрочки (%)</th>
+        <th>Дней (макс.)</th>
+        <th>Резерв</th>
+        <th>Ответственный</th>
+        <th>№ приказа суда</th>
+        <th>Дата приказа суда</th>
+        <th>МИБ — дело</th>
+        <th>МИБ — дата</th>
+        <th></th>
+      </tr>`;
+
+    if (!clients.length) {
+      tbody.innerHTML = '<tr><td colspan="21" class="loading">Ничего не найдено</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = clients.map(c => `
+      <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
+        <td>${safe(c.clientName)}</td>
+        <td class="nowrap">${safe(c.pin) || '—'}</td>
+        <td class="nowrap">${c.loans.length}</td>
+        <td class="nowrap">${formatMoney(c.totalDebtSum)}</td>
+        <td class="nowrap">${formatMoney(c.nplSum)}</td>
+        <td class="nowrap">${formatMoney(c.currentBalanceSum)}</td>
+        <td class="nowrap">${formatMoney(c.revisedBalanceSum)}</td>
+        <td class="nowrap">${formatMoney(c.overdueBalanceSum)}</td>
+        <td class="nowrap">${c.maxDaysOverdue}</td>
+        <td class="nowrap">${formatMoney(c.totalInterestSum)}</td>
+        <td class="nowrap">${formatMoney(c.accruedInterestSum)}</td>
+        <td class="nowrap">${formatMoney(c.overdueInterestSum)}</td>
+        <td class="nowrap">${c.maxDaysOverdueInterest}</td>
+        <td class="nowrap"><b>${c.maxDays}</b></td>
+        <td class="nowrap">${formatMoney(c.reserveSum)}</td>
+        <td class="nowrap">${safe(c.officerJoined) || '—'}</td>
+        <td class="nowrap">${safe(c.courtOrderNumberJoined) || '—'}</td>
+        <td class="nowrap">${safe(c.courtOrderDateJoined) || '—'}</td>
+        <td class="nowrap">${safe(c.mibCaseJoined) || '—'}</td>
+        <td class="nowrap">${safe(c.mibDateJoined) || '—'}</td>
+        <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
+      </tr>`).join('');
+  } else {
+    // Физ.лица — короткая сводная таблица (без прокрутки).
+    thead.innerHTML = `
+      <tr>
+        <th>Клиент</th>
+        <th>ИНН/ПИНФЛ</th>
+        <th>Анкет</th>
+        <th>Сумма NPL</th>
+        <th>Дней (макс.)</th>
+        <th></th>
+      </tr>`;
+
+    if (!clients.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">Ничего не найдено</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = clients.map(c => `
+      <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
+        <td>${safe(c.clientName)}</td>
+        <td class="nowrap">${safe(c.pin) || '—'}</td>
+        <td class="nowrap">${c.loans.length}</td>
+        <td class="nowrap">${formatMoney(c.nplSum)}</td>
+        <td class="nowrap">${c.maxDays}</td>
+        <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
+      </tr>`).join('');
+  }
 }
 
 function openNplClientDetail(keyEncoded) {
