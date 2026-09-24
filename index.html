@@ -1589,7 +1589,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     </div>
 
     <div id="nplTabPanelLegal" style="display:none;">
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Юр. лица и ИП/ЯТТ, просрочка от 1 дня — поимённо, все поля из выгрузки (прокрутка вправо).</p>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Юр. лица и ИП/ЯТТ в NPL (просрочка 90+) — поимённо, все поля из выгрузки (прокрутка вправо).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input id="nplLegalSearchInput" class="input" placeholder="Поиск по названию, ИНН" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
       </div>
@@ -6058,14 +6058,14 @@ function renderNplPage() {
   nplGroupsByKey = {};
   allGroups.forEach(g => { nplGroupsByKey[g.key] = g; });
 
-  // Список "поимённо" (вкладки 2 и 3) — юр.лица от 1+ дня (широкий охват,
-  // как просили изначально), физ.лица — только от 90 дней.
-  const legalGroups = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 1);
+  // Списки "поимённо" (вкладки 2 и 3) — это списки именно клиентов NPL,
+  // то есть порог 90+ и для юр., и для физ. лиц (совпадает с карточками
+  // "Юридический NPL" / "Физический NPL" на дашборде).
+  const legalGroups = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 90);
   const indivGroups = allGroups.filter(g => g.subject === 'P' && g.maxDays >= 90);
 
   // Настоящий порог NPL (для карточек общего дашборда) — 90+ дней, и для
-  // юр., и для физ. лиц. Это не то же самое, что список "юр.лица 1+" на
-  // вкладке 2 — там показываем более широкий круг клиентов "в просрочке".
+  // юр., и для физ. лиц — тот же порог, что и в списках вкладок 2 и 3.
   const trueNplGroups = allGroups.filter(g => g.maxDays >= 90);
   const trueLegalNpl = trueNplGroups.filter(g => g.subject === 'J');
   const trueIndivNpl = trueNplGroups.filter(g => g.subject === 'P');
