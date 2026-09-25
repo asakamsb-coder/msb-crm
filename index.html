@@ -5959,17 +5959,37 @@ function getNplParserWorker() {
           if (String(rows[i][0]).trim() === 'ИД договора') { looksLikePortfolioFile = true; }
         }
 
-        // "Тип продукта" (Автокредит/Микрозайм) ищем по названию заголовка,
-        // а не по фиксированной позиции колонки — так парсер не сломается,
-        // когда эта колонка появится в файле (неизвестно точно, в каком
-        // месте её добавят). Пока колонки нет — значение просто пустое.
-        let productTypeColIdx = -1;
+        // Колонки "Тип продукта", "Адресс", "ID сотрудник", "Расчетный счет"
+        // ищем по названию заголовка, а не по фиксированной позиции — банк
+        // добавляет их в файл в разное время и в разных местах, поиск по
+        // имени переживает это без правок кода. Отсутствующая колонка просто
+        // даёт пустое значение, ничего не ломая.
+        let productTypeColIdx = -1, addressColIdx = -1, employeeColIdx = -1, accountColIdx = -1, phoneColIdx = -1;
         if (headerRowIdx !== -1) {
           const headerRow = rows[headerRowIdx] || [];
           for (let c = 0; c < headerRow.length; c++) {
-            const h = String(headerRow[c] || '').trim().toLowerCase();
-            if (h === 'тип продукта' || h.indexOf('тип продукта') !== -1) { productTypeColIdx = c; break; }
+            const h = String(headerRow[c] || '').trim().toLowerCase().replace(/ё/g, 'е');
+            if (h.indexOf('тип продукта') !== -1) productTypeColIdx = c;
+            else if (h.indexOf('id сотрудник') !== -1) employeeColIdx = c;
+            else if (h.indexOf('расчетный счет') !== -1) accountColIdx = c;
+            else if (h.indexOf('телефон') !== -1) phoneColIdx = c;
+            else if (h.indexOf('адрес') !== -1) addressColIdx = c;
           }
+        }
+
+        // В колонке "Адресс" адрес и телефон бывают склеены через запятую
+        // (например "КР Конырат рн Жаслык ОФИ,998612265071") — отделяем
+        // телефон, если последний кусок похож на номер, оставляем чистый
+        // адрес. Сам телефон отсюда не берём — он уже есть отдельной
+        // колонкой "Телефон".
+        function splitAddressPhone(raw) {
+          const s = String(raw || '').trim();
+          if (!s) return '';
+          const idx = s.lastIndexOf(',');
+          if (idx === -1) return s;
+          const last = s.slice(idx + 1).trim();
+          if (/^[+0-9][0-9\\s-]{6,14}$/.test(last)) return s.slice(0, idx).trim();
+          return s;
         }
         if (headerRowIdx === -1) {
           if (looksLikePortfolioFile) {
@@ -6020,8 +6040,11 @@ function getNplParserWorker() {
             courtOrderDate: String(row[16] || '').trim(),
             mibCase: String(row[17] || '').trim(),
             mibDate: String(row[18] || '').trim(),
-            phone: String(row[19] || '').trim(),
-            productType: productTypeColIdx !== -1 ? String(row[productTypeColIdx] || '').trim() : ''
+            phone: String((phoneColIdx !== -1 ? row[phoneColIdx] : row[19]) || '').trim(),
+            productType: productTypeColIdx !== -1 ? String(row[productTypeColIdx] || '').trim() : '',
+            address: addressColIdx !== -1 ? splitAddressPhone(row[addressColIdx]) : '',
+            employeeId: employeeColIdx !== -1 ? String(row[employeeColIdx] || '').trim() : '',
+            account: accountColIdx !== -1 ? String(row[accountColIdx] || '').trim() : ''
           });
         }
 
