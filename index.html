@@ -359,6 +359,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .npl-pager{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-weight:700;}
 .npl-pager .btn{padding:8px 16px;}
 .npl-pager .btn:disabled{opacity:.4;cursor:not-allowed;}
+/* Карточка клиента NPL: сводка сверху (6 плиток), затем анкеты списком,
+   разворачиваемые по клику — менеджер сам решает, какую анкету смотреть. */
+.npl-summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+.npl-summary-grid .info-card{padding:10px 12px;}
+.npl-summary-grid .info-value{font-size:16px;}
+.npl-danger-card{background:var(--red-soft)!important;border-color:var(--red-soft)!important;}
+.npl-danger-card .info-label{color:var(--red);}
+.npl-danger-card .info-value{color:var(--red);}
+.npl-loan-card{border:1px solid var(--line);border-radius:14px;}
+.npl-loan-header{display:flex;align-items:center;justify-content:space-between;padding:14px;cursor:pointer;}
+.npl-loan-header:hover{background:#FAFAFA;}
+@media(max-width:640px){.npl-summary-grid{grid-template-columns:1fr 1fr;}}
 
 
 .login-screen{
@@ -5838,6 +5850,7 @@ function renderStats(stats) {
 let allNplLoans = [];
 let allNplExtra = {};
 let allNplAssignments = {};
+let allNplAccounts = {};
 let nplDataLoaded = false;
 let nplGroupsByKey = {};
 let currentNplClientKey = null;
@@ -5851,15 +5864,17 @@ async function loadNplData() {
   try {
     const canAssign = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'CREDIT_MONITOR');
 
-    const [loans, extra, assignments, users] = await Promise.all([
+    const [loans, extra, assignments, accounts, users] = await Promise.all([
       fetchJSON('nplLoans'),
       fetchJSON('nplExtra'),
       fetchJSON('nplAssignments'),
+      fetchJSON('nplAccounts'),
       canAssign ? fetchJSON('users') : Promise.resolve(null)
     ]);
     allNplLoans = loans || [];
     allNplExtra = extra || {};
     allNplAssignments = assignments || {};
+    allNplAccounts = accounts || {};
     if (users) allWebUsers = users;
     nplDataLoaded = true;
 
@@ -6376,32 +6391,149 @@ function openNplClientDetail(keyEncoded) {
   document.getElementById('nplDetailDrawer').classList.add('active');
 }
 
+// Порядок карточки клиента: сначала все ОБЩИЕ данные (сводные цифры,
+// ПИНФЛ/ID, статус МИБ/суда, взыскатель, телефоны, адрес, фото), и только
+// потом сами анкеты — свёрнутые в список, разворачиваются по клику
+// (менеджер сам решает, какую анкету посмотреть).
 function renderNplClientDetailBody(group) {
-  const loansHtml = group.loans.map(l => `
-    <div class="panel" style="margin-bottom:14px;">
-      <div style="font-weight:800;font-size:14px;margin-bottom:8px;">Анкета № ${safe(l.contractId)}</div>
-      <div class="info-grid">
-        <div class="info-card"><div class="info-label">Всего задолженность</div><div class="info-value">${formatMoney(l.totalDebt)}</div></div>
-        <div class="info-card"><div class="info-label">Всего задолженность (НПЛ)</div><div class="info-value">${formatMoney(l.totalNpl)}</div></div>
-        <div class="info-card"><div class="info-label">Текущий остаток</div><div class="info-value">${formatMoney(l.currentBalance)}</div></div>
-        <div class="info-card"><div class="info-label">Пересмотренный остаток</div><div class="info-value">${formatMoney(l.revisedBalance)}</div></div>
-        <div class="info-card"><div class="info-label">Просроченный остаток</div><div class="info-value">${formatMoney(l.overdueBalance)}</div></div>
-        <div class="info-card"><div class="info-label">Дни просрочки</div><div class="info-value">${safe(l.daysOverdue)}</div></div>
-        <div class="info-card"><div class="info-label">Всего проценты</div><div class="info-value">${formatMoney(l.totalInterest)}</div></div>
-        <div class="info-card"><div class="info-label">Начисленные проценты</div><div class="info-value">${formatMoney(l.accruedInterest)}</div></div>
-        <div class="info-card"><div class="info-label">Просроченные проценты</div><div class="info-value">${formatMoney(l.overdueInterest)}</div></div>
-        <div class="info-card"><div class="info-label">Дни просроч. процентов</div><div class="info-value">${safe(l.daysOverdueInterest)}</div></div>
-        <div class="info-card"><div class="info-label">Резерв</div><div class="info-value">${formatMoney(l.reserve)}</div></div>
-        <div class="info-card"><div class="info-label">Ответственный</div><div class="info-value">${safe(l.officer)}</div></div>
-        <div class="info-card"><div class="info-label">№ приказа суда</div><div class="info-value">${safe(l.courtOrderNumber) || '—'}</div></div>
-        <div class="info-card"><div class="info-label">Дата приказа суда</div><div class="info-value">${safe(l.courtOrderDate) || '—'}</div></div>
-        <div class="info-card"><div class="info-label">МИБ — дело</div><div class="info-value">${safe(l.mibCase) || '—'}</div></div>
-        <div class="info-card"><div class="info-label">МИБ — дата</div><div class="info-value">${safe(l.mibDate) || '—'}</div></div>
-        <div class="info-card"><div class="info-label">Телефон (из выгрузки)</div><div class="info-value">${safe(l.phone) || '—'}</div></div>
-      </div>
-    </div>`).join('');
+  const overdueOd = group.overdueBalanceSum;
+  const overduePct = group.overdueInterestSum;
+  const overdueAll = overdueOd + overduePct;
 
-  return renderNplAssignBlock(group) + loansHtml + renderNplExtraBlock(group.key);
+  const clientKey = String(group.key || '').trim();
+  const pin = String(group.pin || '').trim();
+  const showClientId = clientKey && clientKey !== pin;
+
+  const summaryHtml = `
+    <div class="info-grid npl-summary-grid">
+      <div class="info-card"><div class="info-label">Всего задолженность</div><div class="info-value">${formatMoney(group.totalDebtSum)}</div></div>
+      <div class="info-card"><div class="info-label">Просрочка ОД</div><div class="info-value">${formatMoney(overdueOd)}</div></div>
+      <div class="info-card"><div class="info-label">Просрочка %</div><div class="info-value">${formatMoney(overduePct)}</div></div>
+      <div class="info-card npl-danger-card"><div class="info-label">Всего просрочка</div><div class="info-value">${formatMoney(overdueAll)}</div></div>
+      <div class="info-card"><div class="info-label">Анкет</div><div class="info-value">${group.loans.length}</div></div>
+      <div class="info-card"><div class="info-label">Дней (макс.)</div><div class="info-value">${group.maxDays}</div></div>
+    </div>`;
+
+  const mibBadge = group.mibCaseJoined
+    ? `<span class="status status-orange" style="margin:0 6px 6px 0;display:inline-block;">МИБ: ${safe(group.mibCaseJoined)}${group.mibDateJoined ? ' от ' + safe(group.mibDateJoined) : ''}</span>`
+    : `<span style="margin:0 6px 6px 0;display:inline-block;color:var(--muted);font-size:13px;">МИБ: нет</span>`;
+  const courtBadge = group.courtOrderNumberJoined
+    ? `<span class="status status-green" style="margin:0 6px 6px 0;display:inline-block;">Приказ суда № ${safe(group.courtOrderNumberJoined)}${group.courtOrderDateJoined ? ' от ' + safe(group.courtOrderDateJoined) : ''}</span>`
+    : `<span style="margin:0 6px 6px 0;display:inline-block;color:var(--muted);font-size:13px;">Приказ суда: нет</span>`;
+
+  const idBadgesHtml = `
+    <div style="margin-bottom:16px;">
+      <span class="status status-blue" style="margin:0 6px 6px 0;display:inline-block;">${pin ? 'ПИНФЛ/ИНН ' + safe(pin) : 'ПИНФЛ/ИНН не указан'}</span>
+      ${showClientId ? `<span class="status status-blue" style="margin:0 6px 6px 0;display:inline-block;">ID клиента ${safe(clientKey)}</span>` : ''}
+      ${mibBadge}
+      ${courtBadge}
+    </div>`;
+
+  const loansHtml = group.loans.map((l, idx) => {
+    const rowId = 'nplLoan_' + encodeURIComponent(group.key) + '_' + idx;
+    const loanOverdueAll = (Number(l.overdueBalance) || 0) + (Number(l.overdueInterest) || 0);
+    const accountInfo = allNplAccounts[l.contractId];
+    const accountValue = accountInfo && accountInfo.account ? accountInfo.account : '';
+
+    const accountCardHtml = accountValue
+      ? `<div class="info-card"><div class="info-label">Расчётный счёт</div><div class="info-value" style="font-family:monospace;font-size:13px;">${safe(accountValue)}</div></div>`
+      : `<div class="info-card">
+          <div class="info-label">Расчётный счёт</div>
+          <div style="display:flex;gap:6px;margin-top:4px;" onclick="event.stopPropagation();">
+            <input type="text" id="nplAccountInput_${rowId}" class="input" placeholder="Введите расч. счёт" style="font-size:13px;padding:6px 10px;">
+            <button class="btn btn-secondary" style="padding:6px 12px;" onclick="saveNplAccountUi('${safe(l.contractId)}', '${rowId}')">✓</button>
+          </div>
+          <div id="${rowId}_acctStatus" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+        </div>`;
+
+    return `
+    <div class="npl-loan-card" style="margin-bottom:10px;">
+      <div class="npl-loan-header" onclick="toggleNplLoanDetail('${rowId}')">
+        <div>
+          <div style="font-weight:800;font-size:14px;">Анкета № ${safe(l.contractId)}</div>
+          ${accountValue ? `<div style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;">Расч. счёт ${safe(accountValue)}</div>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:13px;color:var(--muted);">${nplLoanDays(l)} дн.</span>
+          <span id="${rowId}_chev" style="display:inline-block;transition:transform .15s;color:var(--muted);">⌄</span>
+        </div>
+      </div>
+      <div id="${rowId}_body" style="display:none;padding:14px;border-top:1px solid var(--line);">
+        <div class="info-grid">
+          ${accountCardHtml}
+          <div class="info-card"><div class="info-label">Всего задолженность</div><div class="info-value">${formatMoney(l.totalDebt)}</div></div>
+          <div class="info-card"><div class="info-label">Всего задолженность (НПЛ)</div><div class="info-value">${formatMoney(l.totalNpl)}</div></div>
+          <div class="info-card"><div class="info-label">Текущий остаток</div><div class="info-value">${formatMoney(l.currentBalance)}</div></div>
+          <div class="info-card"><div class="info-label">Пересмотренный остаток</div><div class="info-value">${formatMoney(l.revisedBalance)}</div></div>
+          <div class="info-card"><div class="info-label">Просроченный остаток ОД</div><div class="info-value">${formatMoney(l.overdueBalance)}</div></div>
+          <div class="info-card"><div class="info-label">Дни просрочки</div><div class="info-value">${safe(l.daysOverdue)}</div></div>
+          <div class="info-card"><div class="info-label">Всего проценты</div><div class="info-value">${formatMoney(l.totalInterest)}</div></div>
+          <div class="info-card"><div class="info-label">Начисленные проценты</div><div class="info-value">${formatMoney(l.accruedInterest)}</div></div>
+          <div class="info-card"><div class="info-label">Просроченный остаток %</div><div class="info-value">${formatMoney(l.overdueInterest)}</div></div>
+          <div class="info-card"><div class="info-label">Дни просроч. процентов</div><div class="info-value">${safe(l.daysOverdueInterest)}</div></div>
+          <div class="info-card npl-danger-card"><div class="info-label">Всего просрочка</div><div class="info-value">${formatMoney(loanOverdueAll)}</div></div>
+          <div class="info-card"><div class="info-label">Резерв</div><div class="info-value">${formatMoney(l.reserve)}</div></div>
+          <div class="info-card"><div class="info-label">Ответственный</div><div class="info-value">${safe(l.officer) || '—'}</div></div>
+          <div class="info-card"><div class="info-label">МИБ</div><div class="info-value">${safe(l.mibCase) ? safe(l.mibCase) + (l.mibDate ? ' от ' + safe(l.mibDate) : '') : '—'}</div></div>
+          <div class="info-card"><div class="info-label">Приказ суда</div><div class="info-value">${safe(l.courtOrderNumber) ? '№ ' + safe(l.courtOrderNumber) + (l.courtOrderDate ? ' от ' + safe(l.courtOrderDate) : '') : '—'}</div></div>
+          <div class="info-card"><div class="info-label">Телефон (из выгрузки)</div><div class="info-value">${safe(l.phone) || '—'}</div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return summaryHtml +
+    idBadgesHtml +
+    renderNplAssignBlock(group) +
+    renderNplExtraBlock(group.key) +
+    `<h2 style="font-size:15px;margin:20px 0 10px;">Анкеты</h2>` +
+    loansHtml;
+}
+
+// Разворачивает/сворачивает одну анкету в карточке клиента — свёрнуты по
+// умолчанию, менеджер кликает и смотрит именно ту, что ему нужна.
+function toggleNplLoanDetail(rowId) {
+  const body = document.getElementById(rowId + '_body');
+  const chev = document.getElementById(rowId + '_chev');
+  if (!body) return;
+  const willShow = body.style.display === 'none';
+  body.style.display = willShow ? 'block' : 'none';
+  if (chev) chev.style.transform = willShow ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// Расчётного счёта нет в самой NPL-выгрузке — сотрудники вводят его вручную
+// по каждой анкете, значение сохраняется отдельно и переживает новые
+// загрузки файла (см. setNplAccount/getNplAccounts в Code.gs).
+async function saveNplAccountUi(contractId, rowId) {
+  const input = document.getElementById('nplAccountInput_' + rowId);
+  const status = document.getElementById(rowId + '_acctStatus');
+  const account = input ? input.value.trim() : '';
+
+  if (!account) {
+    if (status) { status.style.color = 'var(--red)'; status.innerText = 'Введите расчётный счёт'; }
+    return;
+  }
+
+  if (status) { status.style.color = 'var(--muted)'; status.innerText = 'Сохранение...'; }
+
+  try {
+    const result = await postWebAction({
+      webAction: 'setNplAccount',
+      sessionId: localStorage.getItem('msbSessionId'),
+      contractId: contractId,
+      account: account
+    });
+
+    if (result.success) {
+      allNplAccounts[contractId] = { account: account };
+      if (currentNplClientKey) openNplClientDetail(encodeURIComponent(currentNplClientKey));
+    } else {
+      if (status) { status.style.color = 'var(--red)'; status.innerText = result.message || 'Не удалось сохранить'; }
+    }
+  } catch (error) {
+    if (status) { status.style.color = 'var(--red)'; status.innerText = 'Не удалось связаться с сервером'; }
+    console.error(error);
+  }
 }
 
 // Ручное назначение "своего" взыскателя клиенту — по ID сотрудника (не по
