@@ -5855,6 +5855,18 @@ let allNplVisits = {};
 let nplDataLoaded = false;
 let nplGroupsByKey = {};
 let currentNplClientKey = null;
+
+// Группировка анкет в клиентов (groupNplByClient) раньше пересчитывалась
+// заново на КАЖДЫЙ renderNplPage() — в том числе на каждое нажатие клавиши
+// в поиске, то есть заново перебирала все 30 000+ строк при наборе текста.
+// Теперь считаем один раз и кешируем, пересчитываем только когда реально
+// изменились сами анкеты (после загрузки/выгрузки), а не при каждом рендере.
+let nplGroupsCache = null;
+function getNplGroupsCached() {
+  if (!nplGroupsCache) nplGroupsCache = groupNplByClient(allNplLoans);
+  return nplGroupsCache;
+}
+function invalidateNplGroupsCache() { nplGroupsCache = null; }
 // Черновик визита (GPS + фото), пока сотрудник не нажал "Подтвердить визит" —
 // на сервер уходит только по кнопке подтверждения, см. confirmNplVisitUi().
 let nplVisitDraft = {};
