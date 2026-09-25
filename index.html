@@ -6469,40 +6469,38 @@ function renderNplClientHeaderMeta(group) {
 
   return `
     <div style="margin-top:2px;">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:10px;">
         ${group.subject === 'J' ? 'Юрлицо' : 'Физлицо'} • Ответственный: ${safe(group.officer || '—')}
       </div>
 
-      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px;">
-        <span style="flex:1;font-size:14px;">📍 ${address ? safe(address) : '<span style="color:var(--muted);">Адрес не указан</span>'}</span>
-        <button onclick="toggleNplHeaderAddressEdit('${keyEnc}')" title="Редактировать адрес" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:2px 4px;font-size:14px;">✎</button>
+      <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+        <span style="flex:1 1 auto;min-width:0;font-size:14px;word-break:break-word;">📍 ${address ? safe(address) : '<span style="color:var(--muted);">Адрес не указан</span>'}</span>
+        <button onclick="toggleNplHeaderAddressEdit('${keyEnc}')" title="Редактировать адрес" style="flex:0 0 auto;border:none;background:#F3F4F6;cursor:pointer;color:var(--muted);width:32px;height:32px;border-radius:8px;font-size:15px;">✎</button>
       </div>
-      <div id="nplHeaderAddressEdit_${keyEnc}" style="display:none;gap:6px;margin:6px 0;">
-        <input type="text" id="nplHeaderAddressInput_${keyEnc}" class="input" value="${safe(address)}" placeholder="Адрес клиента" style="flex:1;font-size:13px;">
-        <button class="btn btn-secondary" style="padding:6px 12px;" onclick="saveNplHeaderAddress('${keyEnc}')">✓</button>
+      <div id="nplHeaderAddressEdit_${keyEnc}" style="display:none;flex-direction:column;gap:8px;margin:0 0 10px;">
+        <input type="text" id="nplHeaderAddressInput_${keyEnc}" class="input" value="${safe(address)}" placeholder="Адрес клиента" style="width:100%;font-size:14px;">
+        <button class="btn btn-secondary" style="width:100%;padding:8px 12px;" onclick="saveNplHeaderAddress('${keyEnc}')">Сохранить адрес</button>
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;font-size:13px;margin:4px 0 6px;">
+      <div style="margin-bottom:8px;">
         ${hasLocation
-          ? `<a href="https://maps.google.com/?q=${extra.lat},${extra.lng}" target="_blank" style="color:var(--brand);font-weight:700;">На карте (${extra.lat}, ${extra.lng})</a>`
-          : `<span style="color:var(--muted);">Локация не указана</span>`}
-        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="captureNplLocationHeader('${keyEnc}')">Обновить локацию</button>
+          ? `<a href="https://maps.google.com/?q=${extra.lat},${extra.lng}" target="_blank" style="display:block;color:var(--brand);font-weight:700;font-size:13px;margin-bottom:8px;word-break:break-word;">На карте (${extra.lat}, ${extra.lng})</a>`
+          : `<div style="color:var(--muted);font-size:13px;margin-bottom:8px;">Локация не указана</div>`}
+        <button class="btn btn-secondary" style="width:100%;padding:8px 12px;font-size:13px;" onclick="captureNplLocationHeader('${keyEnc}')">📍 Обновить локацию</button>
       </div>
-      <div id="nplHeaderLocationStatus_${keyEnc}" style="font-size:11px;color:var(--muted);margin-bottom:6px;"></div>
+      <div id="nplHeaderLocationStatus_${keyEnc}" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
 
-      ${group.phoneJoined ? `<div style="font-size:14px;margin-bottom:10px;">📞 ${safe(group.phoneJoined)}</div>` : ''}
+      ${group.phoneJoined ? `<div style="font-size:14px;margin-bottom:12px;word-break:break-word;">📞 ${safe(group.phoneJoined)}</div>` : ''}
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:6px;background:#F3F4F6;border-radius:8px;padding:6px 10px;">
-          <span style="font-size:12px;color:var(--muted);">ПИНФЛ/ИНН</span>
-          <span style="font-size:13px;font-weight:700;">${pin ? safe(pin) : '—'}</span>
-          ${pin ? `<button onclick="copyNplValue('${encodeURIComponent(pin)}', this)" title="Скопировать" style="border:none;background:none;cursor:pointer;padding:0 2px;">📋</button>` : ''}
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F3F4F6;border-radius:8px;padding:8px 10px;">
+          <div style="min-width:0;"><div style="font-size:11px;color:var(--muted);">ПИНФЛ/ИНН</div><div style="font-size:14px;font-weight:700;word-break:break-all;">${pin ? safe(pin) : '—'}</div></div>
+          ${pin ? `<button onclick="copyNplValue('${encodeURIComponent(pin)}', this)" title="Скопировать" style="flex:0 0 auto;border:none;background:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;font-size:15px;">📋</button>` : ''}
         </div>
         ${showClientId ? `
-        <div style="display:flex;align-items:center;gap:6px;background:#F3F4F6;border-radius:8px;padding:6px 10px;">
-          <span style="font-size:12px;color:var(--muted);">ID клиента</span>
-          <span style="font-size:13px;font-weight:700;">${safe(clientKey)}</span>
-          <button onclick="copyNplValue('${encodeURIComponent(clientKey)}', this)" title="Скопировать" style="border:none;background:none;cursor:pointer;padding:0 2px;">📋</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F3F4F6;border-radius:8px;padding:8px 10px;">
+          <div style="min-width:0;"><div style="font-size:11px;color:var(--muted);">ID клиента</div><div style="font-size:14px;font-weight:700;word-break:break-all;">${safe(clientKey)}</div></div>
+          <button onclick="copyNplValue('${encodeURIComponent(clientKey)}', this)" title="Скопировать" style="flex:0 0 auto;border:none;background:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;font-size:15px;">📋</button>
         </div>` : ''}
       </div>
     </div>`;
