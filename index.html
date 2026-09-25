@@ -5878,22 +5878,15 @@ async function loadNplData() {
   if (uploadPanel) uploadPanel.style.display = canUpload ? 'block' : 'none';
 
   try {
-    const canAssign = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'CREDIT_MONITOR');
-
-    const [loans, extra, assignments, accounts, visits, users] = await Promise.all([
-      fetchJSON('nplLoans'),
-      fetchJSON('nplExtra'),
-      fetchJSON('nplAssignments'),
-      fetchJSON('nplAccounts'),
-      fetchJSON('nplVisits'),
-      canAssign ? fetchJSON('users') : Promise.resolve(null)
-    ]);
-    allNplLoans = loans || [];
-    allNplExtra = extra || {};
-    allNplAssignments = assignments || {};
-    allNplAccounts = accounts || {};
-    allNplVisits = visits || {};
-    if (users) allWebUsers = users;
+    // "Срочная" часть — анкеты + назначения взыскателей — это всё, что
+    // нужно, чтобы сразу показать список. Раньше здесь было 5-6 отдельных
+    // запросов одновременно (nplLoans/nplExtra/nplAssignments/nplAccounts/
+    // nplVisits/users) — каждый со своим "холодным стартом" на сервере;
+    // теперь это один запрос вместо пяти.
+    const urgent = await fetchJSON('nplBundleUrgent');
+    allNplLoans = (urgent && urgent.loans) || [];
+    allNplAssignments = (urgent && urgent.assignments) || {};
+    invalidateNplGroupsCache();
     nplDataLoaded = true;
 
     if (!allNplLoans.length) {
@@ -5906,11 +5899,37 @@ async function loadNplData() {
     emptyState.style.display = 'none';
     document.getElementById('nplDashboard').style.display = 'block';
     renderNplPage();
+
+    // Телефоны/фото/адрес, расчётные счета, визиты и список сотрудников
+    // нужны только при открытии карточки конкретного клиента — грузим их
+    // в фоне уже ПОСЛЕ того, как список показан, чтобы не задерживать
+    // первую отрисовку экрана.
+    loadNplRestInBackground();
   } catch (error) {
     emptyState.innerHTML = 'Не удалось загрузить данные. <a onclick="loadNplData()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a>';
     emptyState.style.display = 'block';
     document.getElementById('nplDashboard').style.display = 'none';
     console.error(error);
+  }
+}
+
+async function loadNplRestInBackground() {
+  try {
+    const rest = await fetchJSON('nplBundleRest');
+    allNplExtra = (rest && rest.extra) || {};
+    allNplAccounts = (rest && rest.accounts) || {};
+    allNplVisits = (rest && rest.visits) || {};
+    if (rest && rest.users) allWebUsers = rest.users;
+
+    // Если карточка клиента уже открыта, пока грузились доп.данные —
+    // обновим её содержимое (телефоны/фото/счета/визиты/взыскатель),
+    // не заставляя менеджера закрывать и открывать её заново.
+    const overlay = document.getElementById('nplDetailOverlay');
+    if (currentNplClientKey && overlay && overlay.classList.contains('active')) {
+      openNplClientDetail(encodeURIComponent(currentNplClientKey));
+    }
+  } catch (error) {
+    console.error('Не удалось догрузить доп. данные NPL:', error);
   }
 }
 
@@ -6221,7 +6240,7 @@ function renderNplPager(containerId, which, currentPage, totalItems) {
 }
 
 function renderNplPage() {
-  const allGroups = groupNplByClient(allNplLoans);
+  const allGroups = getNplGroupsCached();
   nplGroupsByKey = {};
   allGroups.forEach(g => { nplGroupsByKey[g.key] = g; });
 
@@ -6421,11 +6440,7 @@ function openNplClientDetail(keyEncoded) {
   if (!group) return;
 
   document.getElementById('nplDetailClientName').innerText = safe(group.clientName);
-  document.getElementById('nplDetailClientInn').innerText =
-    (group.pin ? 'ИНН/ПИНФЛ: ' + safe(group.pin) : 'ИНН/ПИНФЛ не указан (ИП/ЯТТ)') +
-    ' • ' + (group.subject === 'J' ? 'Юрлицо' : 'Физлицо') +
-    ' • Ответственный: ' + safe(group.officer || '—') +
-    (group.phoneJoined ? ' • Тел.: ' + safe(group.phoneJoined) : '');
+  document.getElementById('nplDetailClientInn').innerHTML = renderNplClientHeaderMeta(group);
 
   document.getElementById('nplDetailBody').innerHTML = renderNplClientDetailBody(group);
 
@@ -6437,6 +6452,183 @@ function openNplClientDetail(keyEncoded) {
 // ПИНФЛ/ID, статус МИБ/суда, взыскатель, телефоны, адрес, фото), и только
 // потом сами анкеты — свёрнутые в список, разворачиваются по клику
 // (менеджер сам решает, какую анкету посмотреть).
+// Шапка карточки клиента (фиксированная часть drawer'а, не скроллится):
+// крупное ФИО (уже задаётся отдельно, см. openNplClientDetail) + сразу
+// под ним — редактируемый адрес, локация на карте с возможностью её
+// обновить (если клиент переехал или адрес оказался неверным), телефон,
+// и копируемые ПИНФЛ/ИНН и ID клиента.
+function renderNplClientHeaderMeta(group) {
+  const key = String(group.key || '');
+  const keyEnc = encodeURIComponent(key);
+  const extra = allNplExtra[key] || {};
+  const address = String(extra.address || '').trim();
+  const hasLocation = extra.lat && extra.lng;
+  const pin = String(group.pin || '').trim();
+  const clientKey = String(group.key || '').trim();
+  const showClientId = clientKey && clientKey !== pin;
+
+  return `
+    <div style="margin-top:2px;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">
+        ${group.subject === 'J' ? 'Юрлицо' : 'Физлицо'} • Ответственный: ${safe(group.officer || '—')}
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:2px;">
+        <span style="flex:1;font-size:14px;">📍 ${address ? safe(address) : '<span style="color:var(--muted);">Адрес не указан</span>'}</span>
+        <button onclick="toggleNplHeaderAddressEdit('${keyEnc}')" title="Редактировать адрес" style="border:none;background:none;cursor:pointer;color:var(--muted);padding:2px 4px;font-size:14px;">✎</button>
+      </div>
+      <div id="nplHeaderAddressEdit_${keyEnc}" style="display:none;gap:6px;margin:6px 0;">
+        <input type="text" id="nplHeaderAddressInput_${keyEnc}" class="input" value="${safe(address)}" placeholder="Адрес клиента" style="flex:1;font-size:13px;">
+        <button class="btn btn-secondary" style="padding:6px 12px;" onclick="saveNplHeaderAddress('${keyEnc}')">✓</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px;margin:4px 0 6px;">
+        ${hasLocation
+          ? `<a href="https://maps.google.com/?q=${extra.lat},${extra.lng}" target="_blank" style="color:var(--brand);font-weight:700;">На карте (${extra.lat}, ${extra.lng})</a>`
+          : `<span style="color:var(--muted);">Локация не указана</span>`}
+        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="captureNplLocationHeader('${keyEnc}')">Обновить локацию</button>
+      </div>
+      <div id="nplHeaderLocationStatus_${keyEnc}" style="font-size:11px;color:var(--muted);margin-bottom:6px;"></div>
+
+      ${group.phoneJoined ? `<div style="font-size:14px;margin-bottom:10px;">📞 ${safe(group.phoneJoined)}</div>` : ''}
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:6px;background:#F3F4F6;border-radius:8px;padding:6px 10px;">
+          <span style="font-size:12px;color:var(--muted);">ПИНФЛ/ИНН</span>
+          <span style="font-size:13px;font-weight:700;">${pin ? safe(pin) : '—'}</span>
+          ${pin ? `<button onclick="copyNplValue('${encodeURIComponent(pin)}', this)" title="Скопировать" style="border:none;background:none;cursor:pointer;padding:0 2px;">📋</button>` : ''}
+        </div>
+        ${showClientId ? `
+        <div style="display:flex;align-items:center;gap:6px;background:#F3F4F6;border-radius:8px;padding:6px 10px;">
+          <span style="font-size:12px;color:var(--muted);">ID клиента</span>
+          <span style="font-size:13px;font-weight:700;">${safe(clientKey)}</span>
+          <button onclick="copyNplValue('${encodeURIComponent(clientKey)}', this)" title="Скопировать" style="border:none;background:none;cursor:pointer;padding:0 2px;">📋</button>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+// Правка адреса — не требует координат (см. setNplLocation в Code.gs:
+// текст адреса и GPS теперь сохраняются независимо), поэтому можно
+// поправить только текст, даже если локация ещё ни разу не снималась.
+function toggleNplHeaderAddressEdit(keyEnc) {
+  const box = document.getElementById('nplHeaderAddressEdit_' + keyEnc);
+  if (!box) return;
+  box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+}
+
+async function saveNplHeaderAddress(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const input = document.getElementById('nplHeaderAddressInput_' + keyEnc);
+  const address = input ? input.value.trim() : '';
+  const group = nplGroupsByKey[key];
+  const extra = allNplExtra[key] || {};
+
+  try {
+    const result = await postWebAction({
+      webAction: 'setNplLocation',
+      sessionId: localStorage.getItem('msbSessionId'),
+      key: key,
+      clientName: group ? group.clientName : '',
+      address: address,
+      lat: extra.lat || '',
+      lng: extra.lng || ''
+    });
+
+    if (result.success) {
+      allNplExtra[key] = allNplExtra[key] || {};
+      allNplExtra[key].address = address;
+      openNplClientDetail(keyEnc);
+    } else {
+      alert(result.message || 'Не удалось сохранить адрес');
+    }
+  } catch (error) {
+    alert('Не удалось связаться с сервером');
+    console.error(error);
+  }
+}
+
+// "Обновить локацию" — берёт GPS менеджера в момент нажатия (например,
+// если он стоит у нового адреса клиента) и заменяет сохранённые
+// координаты, сохраняя при этом уже введённый текст адреса как есть.
+function captureNplLocationHeader(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const status = document.getElementById('nplHeaderLocationStatus_' + keyEnc);
+
+  if (!navigator.geolocation) {
+    if (status) status.innerText = 'Геолокация не поддерживается этим браузером';
+    return;
+  }
+
+  if (status) status.innerText = 'Определение местоположения...';
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      const group = nplGroupsByKey[key];
+      const extra = allNplExtra[key] || {};
+
+      try {
+        const result = await postWebAction({
+          webAction: 'setNplLocation',
+          sessionId: localStorage.getItem('msbSessionId'),
+          key: key,
+          clientName: group ? group.clientName : '',
+          address: extra.address || '',
+          lat: lat, lng: lng
+        });
+
+        if (result.success) {
+          allNplExtra[key] = allNplExtra[key] || {};
+          allNplExtra[key].lat = lat; allNplExtra[key].lng = lng;
+          openNplClientDetail(keyEnc);
+        } else {
+          if (status) status.innerText = result.message || 'Не удалось сохранить';
+        }
+      } catch (error) {
+        if (status) status.innerText = 'Не удалось связаться с сервером';
+        console.error(error);
+      }
+    },
+    (err) => { if (status) status.innerText = 'Не удалось определить местоположение: ' + err.message; },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+// Копирование ПИНФЛ/ID клиента одним кликом — с запасным вариантом для
+// браузеров/контекстов, где Clipboard API недоступен (например, без HTTPS).
+function copyNplValue(valueEnc, btnEl) {
+  const value = decodeURIComponent(valueEnc);
+  const showCopied = () => {
+    if (!btnEl) return;
+    const original = btnEl.innerText;
+    btnEl.innerText = '✓';
+    setTimeout(() => { btnEl.innerText = original; }, 1200);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(value).then(showCopied).catch(() => {
+      fallbackCopyText(value);
+      showCopied();
+    });
+  } else {
+    fallbackCopyText(value);
+    showCopied();
+  }
+}
+
+function fallbackCopyText(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try { document.execCommand('copy'); } catch (e) { /* тихо игнорируем */ }
+  document.body.removeChild(textarea);
+}
+
 function renderNplClientDetailBody(group) {
   const overdueOd = group.overdueBalanceSum;
   const overduePct = group.overdueInterestSum;
@@ -6463,10 +6655,11 @@ function renderNplClientDetailBody(group) {
     ? `<span class="status status-green" style="margin:0 6px 6px 0;display:inline-block;">Приказ суда № ${safe(group.courtOrderNumberJoined)}${group.courtOrderDateJoined ? ' от ' + safe(group.courtOrderDateJoined) : ''}</span>`
     : `<span style="margin:0 6px 6px 0;display:inline-block;color:var(--muted);font-size:13px;">Приказ суда: нет</span>`;
 
+  // ПИНФЛ/ИНН и ID клиента теперь показаны в шапке карточки (с кнопкой
+  // копирования) — см. renderNplClientHeaderMeta(), здесь дублировать не
+  // нужно, оставляем только статусы МИБ/суд.
   const idBadgesHtml = `
     <div style="margin-bottom:16px;">
-      <span class="status status-blue" style="margin:0 6px 6px 0;display:inline-block;">${pin ? 'ПИНФЛ/ИНН ' + safe(pin) : 'ПИНФЛ/ИНН не указан'}</span>
-      ${showClientId ? `<span class="status status-blue" style="margin:0 6px 6px 0;display:inline-block;">ID клиента ${safe(clientKey)}</span>` : ''}
       ${mibBadge}
       ${courtBadge}
     </div>`;
@@ -6683,11 +6876,6 @@ function renderNplExtraBlock(key) {
       '</div>'
     : '<div style="color:var(--muted);font-size:13px;margin-top:6px;">Нет фото</div>';
 
-  const locationHtml = (extra.lat && extra.lng)
-    ? `<a href="https://maps.google.com/?q=${extra.lat},${extra.lng}" target="_blank" style="color:var(--brand);font-weight:700;font-size:13px;">📍 ${extra.lat}, ${extra.lng}</a>` +
-      (extra.address ? ` — ${safe(extra.address)}` : '')
-    : '<span style="color:var(--muted);font-size:13px;">Не указана</span>';
-
   return `
     <div class="panel" style="background:#FAFAFA;">
       <h2 style="font-size:15px;margin-bottom:12px;">📱 Доп. информация (заполняется на месте)</h2>
@@ -6708,16 +6896,6 @@ function renderNplExtraBlock(key) {
           <input type="text" id="nplNewPhoneNumber_${keyEnc}" class="input" placeholder="Номер телефона" style="max-width:180px;">
           <button class="btn btn-secondary" onclick="addNplPhoneUi('${keyEnc}')">+ Добавить</button>
         </div>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div class="mp-label">Адрес / геолокация</div>
-        <div style="margin-bottom:8px;">${locationHtml}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <input type="text" id="nplAddressInput_${keyEnc}" class="input" placeholder="Уточнение адреса (необязательно)" style="max-width:260px;">
-          <button class="btn btn-secondary" onclick="captureNplLocation('${keyEnc}')">📍 Определить моё местоположение</button>
-        </div>
-        <div id="nplGeoStatus_${keyEnc}" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
       </div>
 
       <div>
@@ -6782,50 +6960,6 @@ async function addNplPhoneUi(keyEnc) {
     alert('Не удалось связаться с сервером');
     console.error(error);
   }
-}
-
-function captureNplLocation(keyEnc) {
-  const key = decodeURIComponent(keyEnc);
-  const status = document.getElementById('nplGeoStatus_' + keyEnc);
-
-  if (!navigator.geolocation) {
-    status.innerText = 'Геолокация не поддерживается этим браузером';
-    return;
-  }
-
-  status.innerText = 'Определение местоположения...';
-
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      const lat = pos.coords.latitude.toFixed(6);
-      const lng = pos.coords.longitude.toFixed(6);
-      const address = document.getElementById('nplAddressInput_' + keyEnc)?.value.trim() || '';
-      const group = nplGroupsByKey[key];
-
-      try {
-        const result = await postWebAction({
-          webAction: 'setNplLocation',
-          sessionId: localStorage.getItem('msbSessionId'),
-          key: key,
-          clientName: group ? group.clientName : '',
-          lat: lat, lng: lng, address: address
-        });
-
-        if (result.success) {
-          allNplExtra[key] = allNplExtra[key] || {};
-          allNplExtra[key].lat = lat; allNplExtra[key].lng = lng; allNplExtra[key].address = address;
-          openNplClientDetail(keyEnc);
-        } else {
-          status.innerText = result.message || 'Не удалось сохранить';
-        }
-      } catch (error) {
-        status.innerText = 'Не удалось связаться с сервером';
-        console.error(error);
-      }
-    },
-    (err) => { status.innerText = 'Не удалось определить местоположение: ' + err.message; },
-    { enableHighAccuracy: true, timeout: 10000 }
-  );
 }
 
 async function addNplPhotosUi(keyEnc, input) {
