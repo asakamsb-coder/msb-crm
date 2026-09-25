@@ -354,6 +354,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
    важный блок для руководителя, цифры должны читаться издалека. */
 .npl-kpi .card-value.npl-kpi-value{font-size:34px;}
 .npl-kpi-sub{font-size:14px;color:var(--muted);margin-top:6px;font-weight:700;}
+/* Пагинация списков "Юридические лица"/"Физические лица" — Пред./След.,
+   без сетки номеров страниц (проще пальцем на телефоне). */
+.npl-pager{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-weight:700;}
+.npl-pager .btn{padding:8px 16px;}
+.npl-pager .btn:disabled{opacity:.4;cursor:not-allowed;}
 
 
 .login-screen{
@@ -1549,10 +1554,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div id="nplEmptyState" class="loading">NPL-выгрузка ещё не загружена — загрузите первый файл выше.</div>
 
   <div id="nplDashboard" style="display:none;">
-    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
       <button class="msb-sales-tab active" id="nplPageTabDash" onclick="setNplPageTab('dashboard')">1. Дашборд</button>
       <button class="msb-sales-tab" id="nplPageTabLegal" onclick="setNplPageTab('legal')">2. Юридические лица</button>
       <button class="msb-sales-tab" id="nplPageTabIndiv" onclick="setNplPageTab('indiv')">3. Физические лица</button>
+      <div id="nplMyClientsBadge" style="display:none;margin-left:auto;font-weight:700;font-size:14px;color:var(--muted);">
+        Мои клиенты: <b id="nplMyClientsCount" style="color:var(--text);">0</b>
+      </div>
     </div>
 
     <div id="nplTabPanelDash">
@@ -1618,11 +1626,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
               <th>Дата приказа суда</th>
               <th>МИБ — дело</th>
               <th>МИБ — дата</th>
+              <th>Телефон</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="nplLegalTableBody">
-            <tr><td colspan="22" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="23" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
@@ -1632,7 +1641,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <h2 style="font-size:16px;margin:0 0 6px;">2. Юридические лица</h2>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все юр. лица и ИП/ЯТТ с просрочкой от 1 дня — поимённо, все поля из выгрузки (прокрутка вправо).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-        <input id="nplLegalAllSearchInput" class="input" placeholder="Поиск по названию, ИНН" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
+        <input id="nplLegalAllSearchInput" class="input" placeholder="Поиск по названию, ИНН, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('legal')">
       </div>
       <div class="client-table-wrap">
         <table class="mtbl-npl-wide" id="nplLegalAllTable">
@@ -1659,21 +1668,23 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
               <th>Дата приказа суда</th>
               <th>МИБ — дело</th>
               <th>МИБ — дата</th>
+              <th>Телефон</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="nplLegalAllTableBody">
-            <tr><td colspan="22" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="23" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
+      <div id="nplLegalAllPager" class="npl-pager"></div>
     </div>
 
     <div id="nplTabPanelIndiv" style="margin-top:32px;display:none;">
       <h2 style="font-size:16px;margin:0 0 6px;">3. Физические лица</h2>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все физ. лица с просрочкой от 1 дня — поимённо (сводно).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-        <input id="nplIndivSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
+        <input id="nplIndivSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('indiv')">
       </div>
       <div class="client-table-wrap">
         <table class="mtbl-overdue" id="nplIndivTable">
@@ -1685,14 +1696,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
               <th>Анкет</th>
               <th>Сумма NPL</th>
               <th>Дней (макс.)</th>
+              <th>Телефон</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="nplIndivTableBody">
-            <tr><td colspan="7" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="8" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
+      <div id="nplIndivPager" class="npl-pager"></div>
     </div>
   </div>
 </section>
@@ -1740,9 +1753,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <option value="MAHALLA_BANKER">Банкир Махалли</option>
       <option value="CREDIT_MONITOR">Юридический мониторинг</option>
       <option value="COLLATERAL_OFFICER">Сотрудник по залогу</option>
+      <option value="VZYSKATEL">Взыскатель</option>
       <option value="DEPUTY">Заместитель (только просмотр)</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
+
+    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">ID сотрудника (для назначения клиентов взыскателю)</label>
+    <input type="text" id="editUserEmployeeId" class="input" placeholder="Например: 101" style="margin-bottom:16px;">
 
     <label style="display:block;font-size:13px;font-weight:700;margin-bottom:6px;">Новый пароль (необязательно)</label>
     <input type="text" id="editUserNewPassword" class="input" placeholder="Оставьте пустым, чтобы не менять" style="margin-bottom:16px;">
@@ -2105,9 +2122,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <option value="MAHALLA_BANKER">Банкир Махалли</option>
       <option value="CREDIT_MONITOR">Юридический мониторинг</option>
       <option value="COLLATERAL_OFFICER">Сотрудник по залогу</option>
+      <option value="VZYSKATEL">Взыскатель</option>
       <option value="DEPUTY">Заместитель (только просмотр)</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
+
+    <label style="margin-top:10px;display:block;">ID сотрудника (для назначения клиентов взыскателю)</label>
+    <input type="text" id="newUserEmployeeId" class="input" placeholder="Например: 101">
 
     <button class="btn" style="margin-top:15px;" id="createUserBtn" onclick="createUser()">Создать пользователя</button>
 
@@ -2118,9 +2139,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
     <h2 style="font-size:16px;margin-bottom:12px;">Существующие пользователи</h2>
     <div class="client-table-wrap">
       <table>
-        <thead><tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>Действия</th></tr></thead>
+        <thead><tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>ID сотрудника</th><th>Действия</th></tr></thead>
         <tbody id="usersListTable">
-          <tr><td colspan="3" class="loading">Загрузка...</td></tr>
+          <tr><td colspan="5" class="loading">Загрузка...</td></tr>
         </tbody>
       </table>
     </div>
@@ -3714,6 +3735,8 @@ function applyRoleView() {
       ? 'Юридический мониторинг'
       : currentUser.role === 'COLLATERAL_OFFICER'
       ? 'Сотрудник по залогу'
+      : currentUser.role === 'VZYSKATEL'
+      ? 'Взыскатель'
       : currentUser.role === 'DEPUTY'
       ? 'Заместитель (только просмотр)'
       : 'Менеджер';
@@ -5814,6 +5837,7 @@ function renderStats(stats) {
 
 let allNplLoans = [];
 let allNplExtra = {};
+let allNplAssignments = {};
 let nplDataLoaded = false;
 let nplGroupsByKey = {};
 let currentNplClientKey = null;
@@ -5825,12 +5849,18 @@ async function loadNplData() {
   if (uploadPanel) uploadPanel.style.display = canUpload ? 'block' : 'none';
 
   try {
-    const [loans, extra] = await Promise.all([
+    const canAssign = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'CREDIT_MONITOR');
+
+    const [loans, extra, assignments, users] = await Promise.all([
       fetchJSON('nplLoans'),
-      fetchJSON('nplExtra')
+      fetchJSON('nplExtra'),
+      fetchJSON('nplAssignments'),
+      canAssign ? fetchJSON('users') : Promise.resolve(null)
     ]);
     allNplLoans = loans || [];
     allNplExtra = extra || {};
+    allNplAssignments = assignments || {};
+    if (users) allWebUsers = users;
     nplDataLoaded = true;
 
     if (!allNplLoans.length) {
@@ -5924,7 +5954,8 @@ function getNplParserWorker() {
             courtOrderNumber: String(row[15] || '').trim(),
             courtOrderDate: String(row[16] || '').trim(),
             mibCase: String(row[17] || '').trim(),
-            mibDate: String(row[18] || '').trim()
+            mibDate: String(row[18] || '').trim(),
+            phone: String(row[19] || '').trim()
           });
         }
 
@@ -6079,6 +6110,8 @@ function groupNplByClient(loans) {
     g.courtOrderDateJoined = joinDistinct(g.loans.map(l => l.courtOrderDate));
     g.mibCaseJoined = joinDistinct(g.loans.map(l => l.mibCase));
     g.mibDateJoined = joinDistinct(g.loans.map(l => l.mibDate));
+    g.phoneJoined = joinDistinct(g.loans.map(l => l.phone));
+    g.contractIdsJoined = g.loans.map(l => l.contractId).join(' ');
   });
   return Object.values(map);
 }
@@ -6095,19 +6128,81 @@ function setNplPageTab(tab) {
   document.getElementById('nplTabPanelIndiv').style.display = tab === 'indiv' ? 'block' : 'none';
 }
 
+// Пагинация для пунктов 2 и 3 — рендерим в DOM не больше NPL_PAGE_SIZE
+// строк за раз (даже если анкет 30 000), иначе браузер зависает на большом
+// количестве DOM-элементов. Остальное — через поиск или переход по
+// страницам (Пред./След.), см. renderNplPager().
+const NPL_PAGE_SIZE = 50;
+let nplLegalAllPage = 1;
+let nplIndivPage = 1;
+
+// Сброс страницы на 1 при каждом новом вводе в поиск — иначе после поиска
+// можно "залипнуть" на странице 5-й, на которой уже не будет результатов.
+function onNplListSearchInput(which) {
+  if (which === 'legal') nplLegalAllPage = 1;
+  if (which === 'indiv') nplIndivPage = 1;
+  renderNplPage();
+}
+
+function nplGoToPage(which, page) {
+  if (which === 'legal') nplLegalAllPage = Math.max(1, page);
+  if (which === 'indiv') nplIndivPage = Math.max(1, page);
+  renderNplPage();
+}
+
+function renderNplPager(containerId, which, currentPage, totalItems) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const totalPages = Math.max(1, Math.ceil(totalItems / NPL_PAGE_SIZE));
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `
+    <button class="btn btn-secondary" ${currentPage <= 1 ? 'disabled' : ''} onclick="nplGoToPage('${which}', ${currentPage - 1})">‹ Пред.</button>
+    <span>Стр. ${currentPage} из ${totalPages} (${totalItems} клиентов)</span>
+    <button class="btn btn-secondary" ${currentPage >= totalPages ? 'disabled' : ''} onclick="nplGoToPage('${which}', ${currentPage + 1})">След. ›</button>
+  `;
+}
+
 function renderNplPage() {
   const allGroups = groupNplByClient(allNplLoans);
   nplGroupsByKey = {};
   allGroups.forEach(g => { nplGroupsByKey[g.key] = g; });
+
+  // Роль "Взыскатель": видит только клиентов, вручную назначенных на его
+  // ID сотрудника (через "Мой кабинет" → Пользователи), а не всех клиентов
+  // и не по совпадению текстового поля "Ответственный" из выгрузки (там
+  // пока тестовые данные). Дашборд (сводные показатели по всем клиентам)
+  // взыскателю не нужен и не показывается — см. ниже переключение вкладок.
+  const isCollector = !!(currentUser && currentUser.role === 'VZYSKATEL');
+  const myEmployeeId = String((currentUser && currentUser.employeeId) || '').trim();
+  const dashTabBtn = document.getElementById('nplPageTabDash');
+  const myClientsBadge = document.getElementById('nplMyClientsBadge');
+  const myClientsCount = document.getElementById('nplMyClientsCount');
+  if (dashTabBtn) dashTabBtn.style.display = isCollector ? 'none' : '';
+  if (isCollector && dashTabBtn && dashTabBtn.classList.contains('active')) {
+    setNplPageTab('legal');
+  }
+
+  function filterForCollector(groups) {
+    if (!isCollector) return groups;
+    if (!myEmployeeId) return [];
+    return groups.filter(g => String(allNplAssignments[g.key] || '').trim() === myEmployeeId);
+  }
 
   // Именной список NPL юр.лиц ВНУТРИ дашборда (п.1) — порог 90+, совпадает
   // с карточкой "Юридический NPL".
   const legalGroups = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 90);
 
   // Отдельные пункты 2 и 3 — ПОЛНЫЕ списки (не только NPL): все клиенты
-  // с просрочкой от 1 дня, юр. и физ. лица отдельно.
-  const legalAllGroups = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 1);
-  const indivAllGroups = allGroups.filter(g => g.subject === 'P' && g.maxDays >= 1);
+  // с просрочкой от 1 дня, юр. и физ. лица отдельно. Для взыскателя — только
+  // клиенты, назначенные лично на него.
+  const legalAllGroups = filterForCollector(allGroups.filter(g => g.subject === 'J' && g.maxDays >= 1));
+  const indivAllGroups = filterForCollector(allGroups.filter(g => g.subject === 'P' && g.maxDays >= 1));
+
+  if (myClientsBadge) {
+    myClientsBadge.style.display = isCollector ? 'flex' : 'none';
+    if (myClientsCount) myClientsCount.innerText = String(legalAllGroups.length + indivAllGroups.length);
+  }
 
   // Настоящий порог NPL (для карточек общего дашборда) — 90+ дней, и для
   // юр., и для физ. лиц — тот же порог, что и в списках вкладок 2 и 3.
@@ -6146,7 +6241,7 @@ function renderNplPage() {
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="22" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="23" class="loading">Ничего не найдено</td></tr>';
     } else {
       tbody.innerHTML = clients.map((c, i) => `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
@@ -6171,27 +6266,33 @@ function renderNplPage() {
           <td class="nowrap">${safe(c.courtOrderDateJoined) || '—'}</td>
           <td class="nowrap">${safe(c.mibCaseJoined) || '—'}</td>
           <td class="nowrap">${safe(c.mibDateJoined) || '—'}</td>
+          <td class="nowrap">${safe(c.phoneJoined) || '—'}</td>
           <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
         </tr>`).join('');
     }
   }
 
-  // ---- Пункт 2: юр.лица — ВСЕ, просрочка 1+ (широкая таблица) ----
+  // ---- Пункт 2: юр.лица — ВСЕ, просрочка 1+ (широкая таблица, 50 строк/стр.) ----
   {
     const tbody = document.getElementById('nplLegalAllTableBody');
     let clients = legalAllGroups.slice();
     const query = normalizeText((document.getElementById('nplLegalAllSearchInput')?.value || '').trim());
     if (query) {
-      clients = clients.filter(c => normalizeText([c.clientName, c.pin].join(' ')).includes(query));
+      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.contractIdsJoined].join(' ')).includes(query));
     }
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
+    const totalPages = Math.max(1, Math.ceil(clients.length / NPL_PAGE_SIZE));
+    if (nplLegalAllPage > totalPages) nplLegalAllPage = totalPages;
+    const pageStart = (nplLegalAllPage - 1) * NPL_PAGE_SIZE;
+    const pageClients = clients.slice(pageStart, pageStart + NPL_PAGE_SIZE);
+
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="22" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="23" class="loading">Ничего не найдено</td></tr>';
     } else {
-      tbody.innerHTML = clients.map((c, i) => `
+      tbody.innerHTML = pageClients.map((c, i) => `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
-          <td class="nowrap">${i + 1}</td>
+          <td class="nowrap">${pageStart + i + 1}</td>
           <td>${safe(c.clientName)}</td>
           <td class="nowrap">${safe(c.pin) || '—'}</td>
           <td class="nowrap">${c.loans.length}</td>
@@ -6212,35 +6313,46 @@ function renderNplPage() {
           <td class="nowrap">${safe(c.courtOrderDateJoined) || '—'}</td>
           <td class="nowrap">${safe(c.mibCaseJoined) || '—'}</td>
           <td class="nowrap">${safe(c.mibDateJoined) || '—'}</td>
+          <td class="nowrap">${safe(c.phoneJoined) || '—'}</td>
           <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
         </tr>`).join('');
     }
+
+    renderNplPager('nplLegalAllPager', 'legal', nplLegalAllPage, clients.length);
   }
 
-  // ---- Пункт 3: физ.лица — ВСЕ, просрочка 1+ (короткая сводная таблица) ----
+  // ---- Пункт 3: физ.лица — ВСЕ, просрочка 1+ (короткая сводная таблица, 50 строк/стр.) ----
   {
     const tbody = document.getElementById('nplIndivTableBody');
     let clients = indivAllGroups.slice();
     const query = normalizeText((document.getElementById('nplIndivSearchInput')?.value || '').trim());
     if (query) {
-      clients = clients.filter(c => normalizeText([c.clientName, c.pin].join(' ')).includes(query));
+      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.contractIdsJoined].join(' ')).includes(query));
     }
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
+    const totalPages = Math.max(1, Math.ceil(clients.length / NPL_PAGE_SIZE));
+    if (nplIndivPage > totalPages) nplIndivPage = totalPages;
+    const pageStart = (nplIndivPage - 1) * NPL_PAGE_SIZE;
+    const pageClients = clients.slice(pageStart, pageStart + NPL_PAGE_SIZE);
+
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="loading">Ничего не найдено</td></tr>';
     } else {
-      tbody.innerHTML = clients.map((c, i) => `
+      tbody.innerHTML = pageClients.map((c, i) => `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
-          <td class="nowrap">${i + 1}</td>
+          <td class="nowrap">${pageStart + i + 1}</td>
           <td>${safe(c.clientName)}</td>
           <td class="nowrap">${safe(c.pin) || '—'}</td>
           <td class="nowrap">${c.loans.length}</td>
           <td class="nowrap">${formatMoney(c.nplSum)}</td>
           <td class="nowrap">${c.maxDays}</td>
+          <td class="nowrap">${safe(c.phoneJoined) || '—'}</td>
           <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
         </tr>`).join('');
     }
+
+    renderNplPager('nplIndivPager', 'indiv', nplIndivPage, clients.length);
   }
 }
 
@@ -6255,7 +6367,8 @@ function openNplClientDetail(keyEncoded) {
   document.getElementById('nplDetailClientInn').innerText =
     (group.pin ? 'ИНН/ПИНФЛ: ' + safe(group.pin) : 'ИНН/ПИНФЛ не указан (ИП/ЯТТ)') +
     ' • ' + (group.subject === 'J' ? 'Юрлицо' : 'Физлицо') +
-    ' • Ответственный: ' + safe(group.officer || '—');
+    ' • Ответственный: ' + safe(group.officer || '—') +
+    (group.phoneJoined ? ' • Тел.: ' + safe(group.phoneJoined) : '');
 
   document.getElementById('nplDetailBody').innerHTML = renderNplClientDetailBody(group);
 
@@ -6284,25 +6397,111 @@ function renderNplClientDetailBody(group) {
         <div class="info-card"><div class="info-label">Дата приказа суда</div><div class="info-value">${safe(l.courtOrderDate) || '—'}</div></div>
         <div class="info-card"><div class="info-label">МИБ — дело</div><div class="info-value">${safe(l.mibCase) || '—'}</div></div>
         <div class="info-card"><div class="info-label">МИБ — дата</div><div class="info-value">${safe(l.mibDate) || '—'}</div></div>
+        <div class="info-card"><div class="info-label">Телефон (из выгрузки)</div><div class="info-value">${safe(l.phone) || '—'}</div></div>
       </div>
     </div>`).join('');
 
-  return loansHtml + renderNplExtraBlock(group.key);
+  return renderNplAssignBlock(group) + loansHtml + renderNplExtraBlock(group.key);
+}
+
+// Ручное назначение "своего" взыскателя клиенту — по ID сотрудника (не по
+// текстовому полю "Ответственный" из выгрузки, там пока тестовые данные).
+// Видно и редактируется только управляющим/юр.мониторингом; сам взыскатель
+// видит здесь только то, кому назначен.
+function renderNplAssignBlock(group) {
+  const canAssign = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'CREDIT_MONITOR');
+  const currentEmployeeId = String(allNplAssignments[group.key] || '').trim();
+
+  if (!canAssign) {
+    if (!currentEmployeeId) return '';
+    const assignedUser = (allWebUsers || []).find(u => String(u.employeeId || '').trim() === currentEmployeeId);
+    return `
+    <div class="panel" style="margin-bottom:14px;background:#FAFAFA;">
+      <div class="mp-label">Взыскатель</div>
+      <div style="font-weight:700;">${safe(assignedUser ? assignedUser.fullName : ('ID ' + currentEmployeeId))}</div>
+    </div>`;
+  }
+
+  const collectors = (allWebUsers || []).filter(u => u.role === 'VZYSKATEL' && String(u.employeeId || '').trim());
+  const options = ['<option value="">Не назначен</option>']
+    .concat(collectors.map(u => `<option value="${safe(u.employeeId)}"${String(u.employeeId).trim() === currentEmployeeId ? ' selected' : ''}>${safe(u.fullName)} (ID ${safe(u.employeeId)})</option>`))
+    .join('');
+
+  return `
+  <div class="panel" style="margin-bottom:14px;background:#FAFAFA;">
+    <div class="mp-label">Взыскатель</div>
+    <select id="nplAssignSelect_${encodeURIComponent(group.key)}" class="select" onchange="assignNplClientUi('${encodeURIComponent(group.key)}', this.value)">
+      ${options}
+    </select>
+    <div id="nplAssignStatus_${encodeURIComponent(group.key)}" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
+  </div>`;
+}
+
+async function assignNplClientUi(keyEncoded, employeeId) {
+  const key = decodeURIComponent(keyEncoded);
+  const statusEl = document.getElementById('nplAssignStatus_' + keyEncoded);
+  const group = nplGroupsByKey[key];
+
+  if (statusEl) { statusEl.style.color = 'var(--muted)'; statusEl.innerText = 'Сохранение...'; }
+
+  try {
+    const result = await postWebAction({
+      webAction: 'assignNplClient',
+      sessionId: localStorage.getItem('msbSessionId'),
+      key: key,
+      clientName: group ? group.clientName : '',
+      employeeId: employeeId
+    });
+
+    if (result.success) {
+      allNplAssignments[key] = employeeId;
+      if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.innerText = 'Сохранено'; }
+      renderNplPage();
+    } else {
+      if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.innerText = result.message || 'Ошибка сохранения'; }
+    }
+  } catch (error) {
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.innerText = 'Не удалось связаться с сервером'; }
+    console.error(error);
+  }
+}
+
+// Может ли текущий пользователь удалить этот телефон/фото — только тот,
+// кто его добавил, либо управляющий (ADMIN/DIRECTOR). Это только для
+// показа кнопки — настоящая проверка прав всегда на сервере (см.
+// deleteNplPhone/deleteNplPhoto в Code.gs).
+function canDeleteNplItem(item) {
+  if (!currentUser) return false;
+  if (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR') return true;
+  const owner = normalizeText(item && item.addedBy);
+  const me = normalizeText(currentUser.fullName || currentUser.login);
+  return !!owner && owner === me;
 }
 
 // "Доп. информация" — телефоны/адрес/гео/фото, добавляемые сотрудниками
-// прямо в поле (удобнее с телефона, но видно и на компьютере).
+// прямо в поле (удобнее с телефона, но видно и на компьютере). Каждый
+// телефон/фото подписан тем, кто его добавил — удалить может только он
+// сам или управляющий (см. canDeleteNplItem выше).
 function renderNplExtraBlock(key) {
   const extra = allNplExtra[key] || { phones: [], photos: [] };
   const keyEnc = encodeURIComponent(key);
 
-  const phonesHtml = (extra.phones || []).map(p =>
-    `<span class="status status-blue" style="margin:0 6px 6px 0;display:inline-block;">${safe(p.label) ? safe(p.label) + ' — ' : ''}${safe(p.phone)}</span>`
-  ).join('') || '<span style="color:var(--muted);font-size:13px;">Не добавлены</span>';
+  const phonesHtml = (extra.phones || []).length
+    ? (extra.phones || []).map((p, i) => `
+      <span class="status status-blue" style="margin:0 6px 6px 0;display:inline-flex;align-items:center;gap:6px;">
+        ${safe(p.label) ? safe(p.label) + ' — ' : ''}${safe(p.phone)}
+        ${p.addedBy ? `<span style="opacity:.7;font-weight:400;">(${safe(p.addedBy)})</span>` : ''}
+        ${canDeleteNplItem(p) ? `<button onclick="deleteNplPhoneUi('${keyEnc}', ${i})" title="Удалить" style="border:none;background:none;cursor:pointer;color:inherit;font-weight:800;padding:0 2px;">×</button>` : ''}
+      </span>`).join('')
+    : '<span style="color:var(--muted);font-size:13px;">Не добавлены</span>';
 
   const photosHtml = (extra.photos || []).length
     ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">' +
-      extra.photos.map(u => `<a href="${safe(u)}" target="_blank"><img src="${safe(u)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);"></a>`).join('') +
+      extra.photos.map((p, i) => `
+        <div style="position:relative;">
+          <a href="${safe(p.url)}" target="_blank"><img src="${safe(p.url)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);"></a>
+          ${canDeleteNplItem(p) ? `<button onclick="deleteNplPhotoUi('${keyEnc}', ${i})" title="Удалить" style="position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;border:none;background:var(--red);color:#fff;cursor:pointer;font-weight:800;line-height:1;">×</button>` : ''}
+        </div>`).join('') +
       '</div>'
     : '<div style="color:var(--muted);font-size:13px;margin-top:6px;">Нет фото</div>';
 
@@ -6457,6 +6656,60 @@ async function addNplPhotosUi(keyEnc, input) {
     }
   } catch (error) {
     status.innerText = 'Не удалось обработать фото: ' + error.message;
+    console.error(error);
+  }
+}
+
+async function deleteNplPhoneUi(keyEnc, index) {
+  if (!confirm('Удалить этот телефон?')) return;
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+
+  try {
+    const result = await postWebAction({
+      webAction: 'deleteNplPhone',
+      sessionId: localStorage.getItem('msbSessionId'),
+      key: key,
+      clientName: group ? group.clientName : '',
+      index: index
+    });
+
+    if (result.success) {
+      allNplExtra[key] = allNplExtra[key] || {};
+      allNplExtra[key].phones = result.phones;
+      openNplClientDetail(keyEnc);
+    } else {
+      alert(result.message || 'Не удалось удалить телефон');
+    }
+  } catch (error) {
+    alert('Не удалось связаться с сервером');
+    console.error(error);
+  }
+}
+
+async function deleteNplPhotoUi(keyEnc, index) {
+  if (!confirm('Удалить это фото?')) return;
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+
+  try {
+    const result = await postWebAction({
+      webAction: 'deleteNplPhoto',
+      sessionId: localStorage.getItem('msbSessionId'),
+      key: key,
+      clientName: group ? group.clientName : '',
+      index: index
+    });
+
+    if (result.success) {
+      allNplExtra[key] = allNplExtra[key] || {};
+      allNplExtra[key].photos = result.photos;
+      openNplClientDetail(keyEnc);
+    } else {
+      alert(result.message || 'Не удалось удалить фото');
+    }
+  } catch (error) {
+    alert('Не удалось связаться с сервером');
     console.error(error);
   }
 }
@@ -12272,6 +12525,7 @@ async function createUser() {
   const login = document.getElementById('newUserLogin').value.trim();
   const password = document.getElementById('newUserPassword').value.trim();
   const role = document.getElementById('newUserRole').value;
+  const employeeId = document.getElementById('newUserEmployeeId').value.trim();
   const msg = document.getElementById('createUserMessage');
   const btn = document.getElementById('createUserBtn');
 
@@ -12299,7 +12553,8 @@ async function createUser() {
       fullName: fullName,
       login: login,
       password: password,
-      role: role
+      role: role,
+      employeeId: employeeId
     });
 
     if (result.success) {
@@ -12308,6 +12563,7 @@ async function createUser() {
       document.getElementById('newUserFullName').value = '';
       document.getElementById('newUserLogin').value = '';
       document.getElementById('newUserPassword').value = '';
+      document.getElementById('newUserEmployeeId').value = '';
       loadUsersList();
     } else {
       msg.style.color = '#DC2626';
@@ -12329,6 +12585,7 @@ const USER_ROLE_LABELS = {
   MAHALLA_BANKER: 'Банкир Махалли',
   CREDIT_MONITOR: 'Юридический мониторинг',
   COLLATERAL_OFFICER: 'Сотрудник по залогу',
+  VZYSKATEL: 'Взыскатель',
   DEPUTY: 'Заместитель (только просмотр)'
 };
 
@@ -12343,7 +12600,7 @@ async function loadUsersList() {
     allWebUsers = users || [];
 
     if (!allWebUsers.length) {
-      tbody.innerHTML = '<tr><td colspan="4">Список пуст или бэкенд ещё не отдаёт действие "users"</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5">Список пуст или бэкенд ещё не отдаёт действие "users"</td></tr>';
       return;
     }
 
@@ -12354,11 +12611,12 @@ async function loadUsersList() {
         <td>${safe(u.fullName)}</td>
         <td>${safe(u.login)}</td>
         <td>${USER_ROLE_LABELS[u.role] || safe(u.role)}</td>
+        <td>${safe(u.employeeId) || '—'}</td>
         <td>${isMainAdmin ? '<span style="color:var(--muted);font-size:13px;">Главная запись</span>' : `<button class="btn-link" onclick="openEditUserForm('${encodeURIComponent(u.id)}')">Изменить</button>`}</td>
       </tr>`;
     }).join('');
   } catch (error) {
-    tbody.innerHTML = '<tr><td colspan="4">Не удалось загрузить список пользователей</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5">Не удалось загрузить список пользователей</td></tr>';
     console.error(error);
   }
 }
@@ -12374,6 +12632,7 @@ function openEditUserForm(idEncoded) {
   document.getElementById('editUserLoginLabel').innerText = 'Логин: ' + u.login;
   document.getElementById('editUserFullName').value = u.fullName || '';
   document.getElementById('editUserRole').value = u.role || 'MANAGER';
+  document.getElementById('editUserEmployeeId').value = u.employeeId || '';
   document.getElementById('editUserNewPassword').value = '';
   document.getElementById('editUserMessage').innerText = '';
 
@@ -12390,6 +12649,7 @@ function closeEditUserForm() {
 async function saveUserEdit() {
   const fullName = document.getElementById('editUserFullName').value.trim();
   const role = document.getElementById('editUserRole').value;
+  const employeeId = document.getElementById('editUserEmployeeId').value.trim();
   const newPassword = document.getElementById('editUserNewPassword').value.trim();
   const msg = document.getElementById('editUserMessage');
   const btn = document.getElementById('saveUserEditBtn');
@@ -12418,6 +12678,7 @@ async function saveUserEdit() {
       userId: editingUserId,
       fullName: fullName,
       role: role,
+      employeeId: employeeId,
       newPassword: newPassword
     });
 
