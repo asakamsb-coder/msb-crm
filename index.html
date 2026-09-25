@@ -5851,9 +5851,13 @@ let allNplLoans = [];
 let allNplExtra = {};
 let allNplAssignments = {};
 let allNplAccounts = {};
+let allNplVisits = {};
 let nplDataLoaded = false;
 let nplGroupsByKey = {};
 let currentNplClientKey = null;
+// Черновик визита (GPS + фото), пока сотрудник не нажал "Подтвердить визит" —
+// на сервер уходит только по кнопке подтверждения, см. confirmNplVisitUi().
+let nplVisitDraft = {};
 
 async function loadNplData() {
   const emptyState = document.getElementById('nplEmptyState');
@@ -5864,17 +5868,19 @@ async function loadNplData() {
   try {
     const canAssign = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'CREDIT_MONITOR');
 
-    const [loans, extra, assignments, accounts, users] = await Promise.all([
+    const [loans, extra, assignments, accounts, visits, users] = await Promise.all([
       fetchJSON('nplLoans'),
       fetchJSON('nplExtra'),
       fetchJSON('nplAssignments'),
       fetchJSON('nplAccounts'),
+      fetchJSON('nplVisits'),
       canAssign ? fetchJSON('users') : Promise.resolve(null)
     ]);
     allNplLoans = loans || [];
     allNplExtra = extra || {};
     allNplAssignments = assignments || {};
     allNplAccounts = accounts || {};
+    allNplVisits = visits || {};
     if (users) allWebUsers = users;
     nplDataLoaded = true;
 
@@ -5920,6 +5926,19 @@ function getNplParserWorker() {
         for (let i = 0; i < Math.min(rows.length, 10); i++) {
           if (String(rows[i][0]).trim() === 'Наименование клиента') { headerRowIdx = i; break; }
           if (String(rows[i][0]).trim() === 'ИД договора') { looksLikePortfolioFile = true; }
+        }
+
+        // "Тип продукта" (Автокредит/Микрозайм) ищем по названию заголовка,
+        // а не по фиксированной позиции колонки — так парсер не сломается,
+        // когда эта колонка появится в файле (неизвестно точно, в каком
+        // месте её добавят). Пока колонки нет — значение просто пустое.
+        let productTypeColIdx = -1;
+        if (headerRowIdx !== -1) {
+          const headerRow = rows[headerRowIdx] || [];
+          for (let c = 0; c < headerRow.length; c++) {
+            const h = String(headerRow[c] || '').trim().toLowerCase();
+            if (h === 'тип продукта' || h.indexOf('тип продукта') !== -1) { productTypeColIdx = c; break; }
+          }
         }
         if (headerRowIdx === -1) {
           if (looksLikePortfolioFile) {
@@ -5970,7 +5989,8 @@ function getNplParserWorker() {
             courtOrderDate: String(row[16] || '').trim(),
             mibCase: String(row[17] || '').trim(),
             mibDate: String(row[18] || '').trim(),
-            phone: String(row[19] || '').trim()
+            phone: String(row[19] || '').trim(),
+            productType: productTypeColIdx !== -1 ? String(row[productTypeColIdx] || '').trim() : ''
           });
         }
 
@@ -6077,6 +6097,16 @@ async function uploadNplFile() {
 // больше, чем по основному долгу, и наоборот — нужен худший случай).
 function nplLoanDays(l) {
   return Math.max(Number(l.daysOverdue) || 0, Number(l.daysOverdueInterest) || 0);
+}
+
+// Цветной бейдж анкеты по дням просрочки (пороги подтверждены):
+// до 30 — зелёный, 31–59 — жёлтый, 60–89 — красный, 90+ — критично.
+function nplSeverityBadge(days) {
+  const d = Number(days) || 0;
+  if (d <= 30) return { cls: 'status-green', style: '', label: d + ' дн.' };
+  if (d <= 59) return { cls: 'status-orange', style: '', label: d + ' дн.' };
+  if (d <= 89) return { cls: 'status-red', style: '', label: d + ' дн.' };
+  return { cls: '', style: 'background:var(--red);color:#fff;', label: d + ' дн. · критично' };
 }
 
 // Объединяет несколько уникальных непустых текстовых значений через "; "
@@ -6441,20 +6471,21 @@ function renderNplClientDetailBody(group) {
           <div class="info-label">Расчётный счёт</div>
           <div style="display:flex;gap:6px;margin-top:4px;" onclick="event.stopPropagation();">
             <input type="text" id="nplAccountInput_${rowId}" class="input" placeholder="Введите расч. счёт" style="font-size:13px;padding:6px 10px;">
-            <button class="btn btn-secondary" style="padding:6px 12px;" onclick="saveNplAccountUi('${safe(l.contractId)}', '${rowId}')">✓</button>
+            <button class="btn btn-secondary" style="padding:6px 12px;" onclick="saveNplAccountUi('${encodeURIComponent(String(l.contractId))}', '${rowId}')">✓</button>
           </div>
           <div id="${rowId}_acctStatus" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
         </div>`;
 
+    const severity = nplSeverityBadge(nplLoanDays(l));
     return `
     <div class="npl-loan-card" style="margin-bottom:10px;">
       <div class="npl-loan-header" onclick="toggleNplLoanDetail('${rowId}')">
         <div>
-          <div style="font-weight:800;font-size:14px;">Анкета № ${safe(l.contractId)}</div>
+          <div style="font-weight:800;font-size:14px;">Анкета № ${safe(l.contractId)}${l.productType ? ' · ' + safe(l.productType) : ''}</div>
           ${accountValue ? `<div style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;">Расч. счёт ${safe(accountValue)}</div>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:13px;color:var(--muted);">${nplLoanDays(l)} дн.</span>
+          <span class="status ${severity.cls}" style="${severity.style}">${severity.label}</span>
           <span id="${rowId}_chev" style="display:inline-block;transition:transform .15s;color:var(--muted);">⌄</span>
         </div>
       </div>
@@ -6477,6 +6508,7 @@ function renderNplClientDetailBody(group) {
           <div class="info-card"><div class="info-label">МИБ</div><div class="info-value">${safe(l.mibCase) ? safe(l.mibCase) + (l.mibDate ? ' от ' + safe(l.mibDate) : '') : '—'}</div></div>
           <div class="info-card"><div class="info-label">Приказ суда</div><div class="info-value">${safe(l.courtOrderNumber) ? '№ ' + safe(l.courtOrderNumber) + (l.courtOrderDate ? ' от ' + safe(l.courtOrderDate) : '') : '—'}</div></div>
           <div class="info-card"><div class="info-label">Телефон (из выгрузки)</div><div class="info-value">${safe(l.phone) || '—'}</div></div>
+          <div class="info-card"><div class="info-label">Тип продукта</div><div class="info-value">${safe(l.productType) || '—'}</div></div>
         </div>
       </div>
     </div>`;
@@ -6486,6 +6518,7 @@ function renderNplClientDetailBody(group) {
     idBadgesHtml +
     renderNplAssignBlock(group) +
     renderNplExtraBlock(group.key) +
+    renderNplVisitBlock(group.key) +
     `<h2 style="font-size:15px;margin:20px 0 10px;">Анкеты</h2>` +
     loansHtml;
 }
@@ -6504,7 +6537,8 @@ function toggleNplLoanDetail(rowId) {
 // Расчётного счёта нет в самой NPL-выгрузке — сотрудники вводят его вручную
 // по каждой анкете, значение сохраняется отдельно и переживает новые
 // загрузки файла (см. setNplAccount/getNplAccounts в Code.gs).
-async function saveNplAccountUi(contractId, rowId) {
+async function saveNplAccountUi(contractIdEnc, rowId) {
+  const contractId = decodeURIComponent(contractIdEnc);
   const input = document.getElementById('nplAccountInput_' + rowId);
   const status = document.getElementById(rowId + '_acctStatus');
   const account = input ? input.value.trim() : '';
@@ -6649,8 +6683,16 @@ function renderNplExtraBlock(key) {
       <div style="margin-bottom:14px;">
         <div class="mp-label">Телефоны</div>
         <div style="margin-bottom:8px;">${phonesHtml}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;" id="nplContactChips_${keyEnc}">
+          ${['Коллега', 'Родственник', 'Сосед', 'Другое'].map(role => `
+            <button type="button" class="btn btn-secondary" style="padding:6px 12px;font-size:13px;" onclick="pickNplContactRole('${keyEnc}', '${role}')">${role}</button>`).join('')}
+        </div>
+        <div id="nplContactOtherWrap_${keyEnc}" style="display:none;margin-bottom:8px;">
+          <input type="text" id="nplContactOtherInput_${keyEnc}" class="input" placeholder="Укажите, кто это" style="max-width:220px;">
+        </div>
+        <input type="hidden" id="nplNewPhoneLabel_${keyEnc}" value="">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;" id="nplContactPicked_${keyEnc}"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <input type="text" id="nplNewPhoneLabel_${keyEnc}" class="input" placeholder="Кто это (например: Отец)" style="max-width:180px;">
           <input type="text" id="nplNewPhoneNumber_${keyEnc}" class="input" placeholder="Номер телефона" style="max-width:180px;">
           <button class="btn btn-secondary" onclick="addNplPhoneUi('${keyEnc}')">+ Добавить</button>
         </div>
@@ -6675,6 +6717,27 @@ function renderNplExtraBlock(key) {
         <div id="nplPhotoStatus_${keyEnc}" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>
       </div>
     </div>`;
+}
+
+// Быстрый выбор роли контакта (Коллега/Родственник/Сосед/Другое) вместо
+// свободного текста — "Другое" открывает поле для ввода произвольного
+// текста, значение синхронизируется в скрытое поле nplNewPhoneLabel.
+function pickNplContactRole(keyEnc, role) {
+  const hidden = document.getElementById('nplNewPhoneLabel_' + keyEnc);
+  const otherWrap = document.getElementById('nplContactOtherWrap_' + keyEnc);
+  const otherInput = document.getElementById('nplContactOtherInput_' + keyEnc);
+  const picked = document.getElementById('nplContactPicked_' + keyEnc);
+
+  if (role === 'Другое') {
+    otherWrap.style.display = 'block';
+    hidden.value = otherInput.value.trim();
+    otherInput.oninput = () => { hidden.value = otherInput.value.trim(); };
+    if (picked) picked.innerText = 'Выбрано: Другое (укажите, кто это)';
+  } else {
+    otherWrap.style.display = 'none';
+    hidden.value = role;
+    if (picked) picked.innerText = 'Выбрано: ' + role;
+  }
 }
 
 async function addNplPhoneUi(keyEnc) {
@@ -6845,6 +6908,206 @@ async function deleteNplPhotoUi(keyEnc, index) {
     console.error(error);
   }
 }
+
+// ===================== NPL: ПОДТВЕРЖДЕНИЕ ВИЗИТА =====================
+// Геозабор 150 м — по решению: НЕ блокирует кнопку подтверждения, а лишь
+// помечает визит "сомнительным", чтобы руководитель видел это в истории.
+const NPL_VISIT_GEOFENCE_METERS = 150;
+const NPL_VISIT_STATUSES = ['Контакт с клиентом', 'Контакт с третьим лицом', 'Нет дома', 'Не проживает/съехал'];
+
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+
+function renderNplVisitBlock(key) {
+  const keyEnc = encodeURIComponent(key);
+  const extra = allNplExtra[key] || {};
+  const hasAddress = !!(extra.lat && extra.lng);
+  const visits = (allNplVisits[key] || []).slice();
+
+  const statusRadios = NPL_VISIT_STATUSES.map((s, i) => `
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;margin:0 14px 6px 0;">
+      <input type="radio" name="nplVisitStatus_${keyEnc}" value="${safe(s)}" ${i === 0 ? 'checked' : ''}> ${safe(s)}
+    </label>`).join('');
+
+  const historyHtml = visits.length
+    ? visits.map(v => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <span>${safe(v.addedAt)} · ${safe(v.addedBy)} · ${safe(v.status)}${v.comment ? ' — ' + safe(v.comment) : ''}</span>
+        ${v.suspicious ? '<span class="status status-orange" style="margin-left:8px;">сомнительный</span>' : ''}
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;">Визитов ещё не было</div>';
+
+  return `
+    <div class="panel" style="background:#FAFAFA;margin-top:14px;">
+      <h2 style="font-size:15px;margin-bottom:12px;">📍 Подтверждение визита</h2>
+
+      <div style="margin-bottom:10px;">${statusRadios}</div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+        <button class="btn btn-secondary" onclick="captureNplVisitGeo('${keyEnc}')">📍 Определить моё местоположение</button>
+        <input type="file" id="nplVisitPhotoInput_${keyEnc}" accept="image/*" capture="environment" onchange="captureNplVisitPhoto('${keyEnc}', this)">
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Фото делается только через камеру — на него автоматически наносится дата/время, координаты, ФИО и ID клиента (водяной знак).</div>
+      <div id="nplVisitGeoStatus_${keyEnc}" style="font-size:12px;color:var(--muted);margin-bottom:10px;">${hasAddress ? '' : 'Адрес клиента ещё не сохранён — геозабор будет недоступен для этого визита.'}</div>
+      <div id="nplVisitPhotoPreview_${keyEnc}" style="margin-bottom:10px;"></div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <input type="date" id="nplVisitPromiseDate_${keyEnc}" class="input" style="max-width:160px;">
+        <input type="number" id="nplVisitPromiseAmount_${keyEnc}" class="input" placeholder="Сумма обещания" style="max-width:160px;">
+      </div>
+      <textarea id="nplVisitComment_${keyEnc}" class="input" placeholder="Комментарий" style="width:100%;min-height:60px;margin-bottom:10px;"></textarea>
+
+      <button class="btn btn-primary" onclick="confirmNplVisitUi('${keyEnc}')">Подтвердить визит</button>
+      <div id="nplVisitConfirmStatus_${keyEnc}" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+
+      <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:12px;">
+        <div class="mp-label">История визитов (${visits.length})</div>
+        ${historyHtml}
+      </div>
+    </div>`;
+}
+
+function captureNplVisitGeo(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const status = document.getElementById('nplVisitGeoStatus_' + keyEnc);
+  if (!navigator.geolocation) {
+    status.innerText = 'Геолокация не поддерживается этим браузером';
+    return;
+  }
+
+  status.innerText = 'Определение местоположения...';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      nplVisitDraft[key] = nplVisitDraft[key] || {};
+      nplVisitDraft[key].lat = lat;
+      nplVisitDraft[key].lng = lng;
+
+      const extra = allNplExtra[key] || {};
+      if (extra.lat && extra.lng) {
+        const distance = haversineMeters(lat, lng, Number(extra.lat), Number(extra.lng));
+        nplVisitDraft[key].distance = distance;
+        const overLimit = distance > NPL_VISIT_GEOFENCE_METERS;
+        status.style.color = overLimit ? 'var(--orange)' : 'var(--green)';
+        status.innerText = 'GPS: ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ' · ' + distance + 'м от адреса клиента' +
+          (overLimit ? ' — больше ' + NPL_VISIT_GEOFENCE_METERS + 'м, визит будет отмечен как сомнительный' : ' — в пределах нормы');
+      } else {
+        nplVisitDraft[key].distance = '';
+        status.style.color = 'var(--muted)';
+        status.innerText = 'GPS: ' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ' (адрес клиента не сохранён — сравнить не с чем)';
+      }
+    },
+    (err) => { status.innerText = 'Не удалось определить местоположение: ' + err.message; },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+// Наносит водяной знак (дата/время, координаты, ФИО сотрудника, ID клиента)
+// прямо на фото перед отправкой — на канвасе, поверх уменьшенной копии.
+function captureNplVisitPhoto(keyEnc, input) {
+  const key = decodeURIComponent(keyEnc);
+  if (!input.files || !input.files[0]) return;
+  const preview = document.getElementById('nplVisitPhotoPreview_' + keyEnc);
+  const file = input.files[0];
+  const draft = nplVisitDraft[key] || {};
+  const who = (currentUser && (currentUser.fullName || currentUser.login)) || '—';
+  const when = new Date().toLocaleString('ru-RU');
+  const coords = (draft.lat && draft.lng) ? draft.lat.toFixed(6) + ', ' + draft.lng.toFixed(6) : 'GPS не определён';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const maxWidth = 1280;
+      if (w > maxWidth) { h = Math.round(h * (maxWidth / w)); w = maxWidth; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      const lines = [when, coords, who + ' · ID клиента ' + key];
+      const barHeight = 22 * lines.length + 12;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, h - barHeight, w, barHeight);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px sans-serif';
+      lines.forEach((line, i) => { ctx.fillText(line, 10, h - barHeight + 20 + i * 22); });
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      nplVisitDraft[key] = nplVisitDraft[key] || {};
+      nplVisitDraft[key].photoBase64 = dataUrl.split(',')[1];
+      nplVisitDraft[key].photoMime = 'image/jpeg';
+      preview.innerHTML = '<img src="' + dataUrl + '" style="max-width:220px;border-radius:8px;border:1px solid var(--line);">';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function confirmNplVisitUi(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const statusEl = document.getElementById('nplVisitConfirmStatus_' + keyEnc);
+  const group = nplGroupsByKey[key];
+  const draft = nplVisitDraft[key] || {};
+
+  const statusRadio = document.querySelector('input[name="nplVisitStatus_' + keyEnc + '"]:checked');
+  const status = statusRadio ? statusRadio.value : '';
+  if (!status) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.innerText = 'Выберите статус визита';
+    return;
+  }
+
+  const promiseDate = document.getElementById('nplVisitPromiseDate_' + keyEnc).value;
+  const promiseAmount = document.getElementById('nplVisitPromiseAmount_' + keyEnc).value;
+  const comment = document.getElementById('nplVisitComment_' + keyEnc).value.trim();
+  const suspicious = draft.distance !== undefined && draft.distance !== '' && draft.distance > NPL_VISIT_GEOFENCE_METERS;
+
+  statusEl.style.color = 'var(--muted)';
+  statusEl.innerText = 'Сохранение...';
+
+  try {
+    const result = await postWebAction({
+      webAction: 'addNplVisit',
+      sessionId: localStorage.getItem('msbSessionId'),
+      key: key,
+      clientName: group ? group.clientName : '',
+      status: status,
+      lat: draft.lat || '',
+      lng: draft.lng || '',
+      distance: draft.distance !== undefined ? draft.distance : '',
+      suspicious: suspicious,
+      photo: draft.photoBase64 ? { base64: draft.photoBase64, mimeType: draft.photoMime } : null,
+      promiseDate: promiseDate,
+      promiseAmount: promiseAmount,
+      comment: comment
+    });
+
+    if (result.success) {
+      delete nplVisitDraft[key];
+      const updatedVisits = await fetchJSON('nplVisits');
+      allNplVisits = updatedVisits || {};
+      openNplClientDetail(keyEnc);
+    } else {
+      statusEl.style.color = 'var(--red)';
+      statusEl.innerText = result.message || 'Не удалось сохранить визит';
+    }
+  } catch (error) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.innerText = 'Не удалось связаться с сервером';
+    console.error(error);
+  }
+}
+// =================== /NPL: ПОДТВЕРЖДЕНИЕ ВИЗИТА ======================
 
 function closeNplClientDetail() {
   document.getElementById('nplDetailOverlay').classList.remove('active');
