@@ -1581,11 +1581,9 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
           <div class="npl-kpi-sub" id="nplIndivCount">...</div>
         </div>
       </section>
-    </div>
 
-    <div id="nplTabPanelLegal" style="margin-bottom:28px;">
-      <h2 style="font-size:16px;margin:0 0 6px;">2. Юридические лица</h2>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Юр. лица и ИП/ЯТТ в NPL (просрочка 90+) — поимённо, все поля из выгрузки (прокрутка вправо).</p>
+      <h3 style="font-size:14px;margin:0 0 6px;">NPL — юридические лица (90+), поимённо</h3>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Только клиенты, которые уже в NPL (просрочка 90+) — все поля из выгрузки, прокрутка вправо.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input id="nplLegalSearchInput" class="input" placeholder="Поиск по названию, ИНН" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
       </div>
@@ -1623,9 +1621,49 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       </div>
     </div>
 
-    <div id="nplTabPanelIndiv">
+    <div id="nplTabPanelLegalAll" style="margin-top:32px;">
+      <h2 style="font-size:16px;margin:0 0 6px;">2. Юридические лица</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все юр. лица и ИП/ЯТТ с просрочкой от 1 дня — поимённо, все поля из выгрузки (прокрутка вправо).</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <input id="nplLegalAllSearchInput" class="input" placeholder="Поиск по названию, ИНН" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
+      </div>
+      <div class="client-table-wrap">
+        <table class="mtbl-npl-wide" id="nplLegalAllTable">
+          <thead>
+            <tr>
+              <th>Клиент</th>
+              <th>ИНН/ПИНФЛ</th>
+              <th>Анкет</th>
+              <th>Всего задолженность</th>
+              <th>Всего задолженность (НПЛ)</th>
+              <th>Текущий остаток</th>
+              <th>Пересмотр. остаток</th>
+              <th>Просроч. остаток</th>
+              <th>Дней просрочки (ОД)</th>
+              <th>Всего проценты</th>
+              <th>Начисл. проценты</th>
+              <th>Просроч. проценты</th>
+              <th>Дней просрочки (%)</th>
+              <th>Дней (макс.)</th>
+              <th>Резерв</th>
+              <th>Ответственный</th>
+              <th>№ приказа суда</th>
+              <th>Дата приказа суда</th>
+              <th>МИБ — дело</th>
+              <th>МИБ — дата</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="nplLegalAllTableBody">
+            <tr><td colspan="21" class="loading">Загрузка...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="nplTabPanelIndiv" style="margin-top:32px;">
       <h2 style="font-size:16px;margin:0 0 6px;">3. Физические лица</h2>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Физ. лица — только просрочка 90+, поимённо (сводно).</p>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все физ. лица с просрочкой от 1 дня — поимённо (сводно).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input id="nplIndivSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
       </div>
@@ -6041,11 +6079,14 @@ function renderNplPage() {
   nplGroupsByKey = {};
   allGroups.forEach(g => { nplGroupsByKey[g.key] = g; });
 
-  // Списки "поимённо" (вкладки 2 и 3) — это списки именно клиентов NPL,
-  // то есть порог 90+ и для юр., и для физ. лиц (совпадает с карточками
-  // "Юридический NPL" / "Физический NPL" на дашборде).
+  // Именной список NPL юр.лиц ВНУТРИ дашборда (п.1) — порог 90+, совпадает
+  // с карточкой "Юридический NPL".
   const legalGroups = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 90);
-  const indivGroups = allGroups.filter(g => g.subject === 'P' && g.maxDays >= 90);
+
+  // Отдельные пункты 2 и 3 — ПОЛНЫЕ списки (не только NPL): все клиенты
+  // с просрочкой от 1 дня, юр. и физ. лица отдельно.
+  const legalAllGroups = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 1);
+  const indivAllGroups = allGroups.filter(g => g.subject === 'P' && g.maxDays >= 1);
 
   // Настоящий порог NPL (для карточек общего дашборда) — 90+ дней, и для
   // юр., и для физ. лиц — тот же порог, что и в списках вкладок 2 и 3.
@@ -6113,10 +6154,50 @@ function renderNplPage() {
     }
   }
 
-  // ---- Раздел 3: физ.лица (поимённо, короткая сводная таблица) ----
+  // ---- Пункт 2: юр.лица — ВСЕ, просрочка 1+ (широкая таблица) ----
+  {
+    const tbody = document.getElementById('nplLegalAllTableBody');
+    let clients = legalAllGroups.slice();
+    const query = normalizeText((document.getElementById('nplLegalAllSearchInput')?.value || '').trim());
+    if (query) {
+      clients = clients.filter(c => normalizeText([c.clientName, c.pin].join(' ')).includes(query));
+    }
+    clients.sort((a, b) => b.nplSum - a.nplSum);
+
+    if (!clients.length) {
+      tbody.innerHTML = '<tr><td colspan="21" class="loading">Ничего не найдено</td></tr>';
+    } else {
+      tbody.innerHTML = clients.map(c => `
+        <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
+          <td>${safe(c.clientName)}</td>
+          <td class="nowrap">${safe(c.pin) || '—'}</td>
+          <td class="nowrap">${c.loans.length}</td>
+          <td class="nowrap">${formatMoney(c.totalDebtSum)}</td>
+          <td class="nowrap">${formatMoney(c.nplSum)}</td>
+          <td class="nowrap">${formatMoney(c.currentBalanceSum)}</td>
+          <td class="nowrap">${formatMoney(c.revisedBalanceSum)}</td>
+          <td class="nowrap">${formatMoney(c.overdueBalanceSum)}</td>
+          <td class="nowrap">${c.maxDaysOverdue}</td>
+          <td class="nowrap">${formatMoney(c.totalInterestSum)}</td>
+          <td class="nowrap">${formatMoney(c.accruedInterestSum)}</td>
+          <td class="nowrap">${formatMoney(c.overdueInterestSum)}</td>
+          <td class="nowrap">${c.maxDaysOverdueInterest}</td>
+          <td class="nowrap"><b>${c.maxDays}</b></td>
+          <td class="nowrap">${formatMoney(c.reserveSum)}</td>
+          <td class="nowrap">${safe(c.officerJoined) || '—'}</td>
+          <td class="nowrap">${safe(c.courtOrderNumberJoined) || '—'}</td>
+          <td class="nowrap">${safe(c.courtOrderDateJoined) || '—'}</td>
+          <td class="nowrap">${safe(c.mibCaseJoined) || '—'}</td>
+          <td class="nowrap">${safe(c.mibDateJoined) || '—'}</td>
+          <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
+        </tr>`).join('');
+    }
+  }
+
+  // ---- Пункт 3: физ.лица — ВСЕ, просрочка 1+ (короткая сводная таблица) ----
   {
     const tbody = document.getElementById('nplIndivTableBody');
-    let clients = indivGroups.slice();
+    let clients = indivAllGroups.slice();
     const query = normalizeText((document.getElementById('nplIndivSearchInput')?.value || '').trim());
     if (query) {
       clients = clients.filter(c => normalizeText([c.clientName, c.pin].join(' ')).includes(query));
