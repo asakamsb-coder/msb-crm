@@ -1549,6 +1549,12 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div id="nplEmptyState" class="loading">NPL-выгрузка ещё не загружена — загрузите первый файл выше.</div>
 
   <div id="nplDashboard" style="display:none;">
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="msb-sales-tab active" id="nplPageTabDash" onclick="setNplPageTab('dashboard')">1. Дашборд</button>
+      <button class="msb-sales-tab" id="nplPageTabLegal" onclick="setNplPageTab('legal')">2. Юридические лица</button>
+      <button class="msb-sales-tab" id="nplPageTabIndiv" onclick="setNplPageTab('indiv')">3. Физические лица</button>
+    </div>
+
     <div id="nplTabPanelDash">
       <h2 style="font-size:16px;margin:0 0 14px;">1. Дашборд</h2>
       <section class="kpi npl-kpi" style="margin-bottom:28px;">
@@ -1591,6 +1597,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <table class="mtbl-npl-wide" id="nplLegalTable">
           <thead>
             <tr>
+              <th>№</th>
               <th>Клиент</th>
               <th>ИНН/ПИНФЛ</th>
               <th>Анкет</th>
@@ -1615,13 +1622,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
             </tr>
           </thead>
           <tbody id="nplLegalTableBody">
-            <tr><td colspan="21" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="22" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <div id="nplTabPanelLegalAll" style="margin-top:32px;">
+    <div id="nplTabPanelLegalAll" style="margin-top:32px;display:none;">
       <h2 style="font-size:16px;margin:0 0 6px;">2. Юридические лица</h2>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все юр. лица и ИП/ЯТТ с просрочкой от 1 дня — поимённо, все поля из выгрузки (прокрутка вправо).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
@@ -1631,6 +1638,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <table class="mtbl-npl-wide" id="nplLegalAllTable">
           <thead>
             <tr>
+              <th>№</th>
               <th>Клиент</th>
               <th>ИНН/ПИНФЛ</th>
               <th>Анкет</th>
@@ -1655,13 +1663,13 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
             </tr>
           </thead>
           <tbody id="nplLegalAllTableBody">
-            <tr><td colspan="21" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="22" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <div id="nplTabPanelIndiv" style="margin-top:32px;">
+    <div id="nplTabPanelIndiv" style="margin-top:32px;display:none;">
       <h2 style="font-size:16px;margin:0 0 6px;">3. Физические лица</h2>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все физ. лица с просрочкой от 1 дня — поимённо (сводно).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
@@ -1671,6 +1679,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
         <table class="mtbl-overdue" id="nplIndivTable">
           <thead>
             <tr>
+              <th>№</th>
               <th>Клиент</th>
               <th>ПИНФЛ</th>
               <th>Анкет</th>
@@ -1680,7 +1689,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
             </tr>
           </thead>
           <tbody id="nplIndivTableBody">
-            <tr><td colspan="6" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="7" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
@@ -6074,6 +6083,18 @@ function groupNplByClient(loans) {
   return Object.values(map);
 }
 
+// Переключение между тремя пунктами блока NPL: общий дашборд (с
+// именным списком NPL юр.лиц внутри), полный список юр.лиц, полный
+// список физ.лиц. Активен всегда только один пункт.
+function setNplPageTab(tab) {
+  document.getElementById('nplPageTabDash').classList.toggle('active', tab === 'dashboard');
+  document.getElementById('nplPageTabLegal').classList.toggle('active', tab === 'legal');
+  document.getElementById('nplPageTabIndiv').classList.toggle('active', tab === 'indiv');
+  document.getElementById('nplTabPanelDash').style.display = tab === 'dashboard' ? 'block' : 'none';
+  document.getElementById('nplTabPanelLegalAll').style.display = tab === 'legal' ? 'block' : 'none';
+  document.getElementById('nplTabPanelIndiv').style.display = tab === 'indiv' ? 'block' : 'none';
+}
+
 function renderNplPage() {
   const allGroups = groupNplByClient(allNplLoans);
   nplGroupsByKey = {};
@@ -6125,10 +6146,11 @@ function renderNplPage() {
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="21" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="22" class="loading">Ничего не найдено</td></tr>';
     } else {
-      tbody.innerHTML = clients.map(c => `
+      tbody.innerHTML = clients.map((c, i) => `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
+          <td class="nowrap">${i + 1}</td>
           <td>${safe(c.clientName)}</td>
           <td class="nowrap">${safe(c.pin) || '—'}</td>
           <td class="nowrap">${c.loans.length}</td>
@@ -6165,10 +6187,11 @@ function renderNplPage() {
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="21" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="22" class="loading">Ничего не найдено</td></tr>';
     } else {
-      tbody.innerHTML = clients.map(c => `
+      tbody.innerHTML = clients.map((c, i) => `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
+          <td class="nowrap">${i + 1}</td>
           <td>${safe(c.clientName)}</td>
           <td class="nowrap">${safe(c.pin) || '—'}</td>
           <td class="nowrap">${c.loans.length}</td>
@@ -6205,10 +6228,11 @@ function renderNplPage() {
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="loading">Ничего не найдено</td></tr>';
     } else {
-      tbody.innerHTML = clients.map(c => `
+      tbody.innerHTML = clients.map((c, i) => `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
+          <td class="nowrap">${i + 1}</td>
           <td>${safe(c.clientName)}</td>
           <td class="nowrap">${safe(c.pin) || '—'}</td>
           <td class="nowrap">${c.loans.length}</td>
