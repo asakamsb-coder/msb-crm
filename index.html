@@ -359,17 +359,31 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .npl-pager{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-weight:700;}
 .npl-pager .btn{padding:8px 16px;}
 .npl-pager .btn:disabled{opacity:.4;cursor:not-allowed;}
-/* Карточка клиента NPL: сводка сверху (6 плиток), затем анкеты списком,
-   разворачиваемые по клику — менеджер сам решает, какую анкету смотреть. */
-.npl-summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+/* Карточка клиента NPL: сводка сверху — 3 парных ряда (по 2 плитки),
+   затем анкеты списком, разворачиваемые по клику — менеджер сам решает,
+   какую анкету смотреть. */
+.npl-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
 .npl-summary-grid .info-card{padding:10px 12px;}
 .npl-summary-grid .info-value{font-size:16px;}
 .npl-danger-card{background:var(--red-soft)!important;border-color:var(--red-soft)!important;}
 .npl-danger-card .info-label{color:var(--red);}
 .npl-danger-card .info-value{color:var(--red);}
 .npl-loan-card{border:1px solid var(--line);border-radius:14px;}
-.npl-loan-header{display:flex;align-items:center;justify-content:space-between;padding:14px;cursor:pointer;}
+.npl-loan-header{display:flex;flex-direction:column;gap:8px;padding:14px;cursor:pointer;}
 .npl-loan-header:hover{background:#FAFAFA;}
+.npl-loan-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;}
+.npl-loan-header-bottom{display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+/* Компактные кнопки-вызовы попапов "Взыскатель" / "Доп. информация". */
+.npl-popup-triggers{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;}
+.npl-popup-triggers .btn{flex:1 1 auto;min-width:140px;}
+.npl-modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;z-index:1000;}
+.npl-modal-overlay.active{display:block;}
+.npl-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:16px;width:min(480px,92vw);max-height:86vh;overflow-y:auto;z-index:1001;display:none;box-shadow:0 20px 50px rgba(0,0,0,.25);}
+.npl-modal.active{display:block;}
+.npl-modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;border-radius:16px 16px 0 0;}
+.npl-modal-head h2{font-size:16px;margin:0;}
+.npl-modal-close{border:none;background:#F3F4F6;cursor:pointer;width:32px;height:32px;border-radius:8px;font-size:16px;color:var(--muted);}
+.npl-modal-body{padding:16px 18px;}
 @media(max-width:640px){.npl-summary-grid{grid-template-columns:1fr 1fr;}}
 
 
@@ -1733,6 +1747,15 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
   <div class="drawer-body" id="nplDetailBody"></div>
 </aside>
+
+<div class="npl-modal-overlay" id="nplModalOverlay" onclick="closeNplModal()"></div>
+<div class="npl-modal" id="nplModal">
+  <div class="npl-modal-head">
+    <h2 id="nplModalTitle">—</h2>
+    <button class="npl-modal-close" onclick="closeNplModal()">×</button>
+  </div>
+  <div class="npl-modal-body" id="nplModalBody"></div>
+</div>
 
 <div class="drawer-overlay" id="mahallaDetailOverlay" onclick="closeMahallaDetail()"></div>
 <aside class="client-drawer" id="mahallaDetailDrawer">
@@ -6576,6 +6599,10 @@ function captureNplLocationHeader(keyEnc) {
   const key = decodeURIComponent(keyEnc);
   const status = document.getElementById('nplHeaderLocationStatus_' + keyEnc);
 
+  if (!confirm('Обновить локацию? Текущие координаты клиента будут заменены на местоположение, определённое сейчас.')) {
+    return;
+  }
+
   if (!navigator.geolocation) {
     if (status) status.innerText = 'Геолокация не поддерживается этим браузером';
     return;
@@ -6662,9 +6689,9 @@ function renderNplClientDetailBody(group) {
   const summaryHtml = `
     <div class="info-grid npl-summary-grid">
       <div class="info-card"><div class="info-label">Всего задолженность</div><div class="info-value">${formatMoney(group.totalDebtSum)}</div></div>
+      <div class="info-card npl-danger-card"><div class="info-label">Всего просрочка</div><div class="info-value">${formatMoney(overdueAll)}</div></div>
       <div class="info-card"><div class="info-label">Просрочка ОД</div><div class="info-value">${formatMoney(overdueOd)}</div></div>
       <div class="info-card"><div class="info-label">Просрочка %</div><div class="info-value">${formatMoney(overduePct)}</div></div>
-      <div class="info-card npl-danger-card"><div class="info-label">Всего просрочка</div><div class="info-value">${formatMoney(overdueAll)}</div></div>
       <div class="info-card"><div class="info-label">Анкет</div><div class="info-value">${group.loans.length}</div></div>
       <div class="info-card"><div class="info-label">Дней (макс.)</div><div class="info-value">${group.maxDays}</div></div>
     </div>`;
@@ -6706,11 +6733,14 @@ function renderNplClientDetailBody(group) {
     return `
     <div class="npl-loan-card" style="margin-bottom:10px;">
       <div class="npl-loan-header" onclick="toggleNplLoanDetail('${rowId}')">
-        <div>
-          <div style="font-weight:800;font-size:14px;">Анкета № ${safe(l.contractId)}${l.productType ? ' · ' + safe(l.productType) : ''}</div>
-          ${accountValue ? `<div style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;">Расч. счёт ${safe(accountValue)}</div>` : ''}
+        <div class="npl-loan-header-top">
+          <div style="min-width:0;">
+            <div style="font-weight:800;font-size:14px;word-break:break-word;">Анкета № ${safe(l.contractId)}</div>
+            ${l.productType ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${safe(l.productType)}</div>` : ''}
+            ${accountValue ? `<div style="font-size:12px;color:var(--muted);font-family:monospace;margin-top:2px;">Расч. счёт ${safe(accountValue)}</div>` : ''}
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div class="npl-loan-header-bottom">
           <span class="status ${severity.cls}" style="${severity.style}">${severity.label}</span>
           <span id="${rowId}_chev" style="display:inline-block;transition:transform .15s;color:var(--muted);">⌄</span>
         </div>
@@ -6740,13 +6770,47 @@ function renderNplClientDetailBody(group) {
     </div>`;
   }).join('');
 
+  const keyEnc = encodeURIComponent(group.key);
+  const popupTriggersHtml = `
+    <div class="npl-popup-triggers">
+      <button type="button" class="btn btn-secondary" onclick="openNplAssignModal('${keyEnc}')">🧑‍💼 Взыскатель</button>
+      <button type="button" class="btn btn-secondary" onclick="openNplExtraModal('${keyEnc}')">📱 Доп. информация</button>
+    </div>`;
+
   return summaryHtml +
     idBadgesHtml +
-    renderNplAssignBlock(group) +
-    renderNplExtraBlock(group.key) +
-    renderNplVisitBlock(group.key) +
     `<h2 style="font-size:15px;margin:20px 0 10px;">Анкеты</h2>` +
-    loansHtml;
+    loansHtml +
+    popupTriggersHtml +
+    renderNplVisitBlock(group.key);
+}
+
+// Всплывающие окна "Взыскатель" и "Доп. информация" — раньше эти блоки
+// всегда были видны в карточке клиента, теперь по компактным кнопкам,
+// чтобы не перегружать карточку (сама карточка теперь начинается сразу
+// с анкет — самого важного для менеджера).
+function openNplModal(title, bodyHtml) {
+  document.getElementById('nplModalTitle').innerText = title;
+  document.getElementById('nplModalBody').innerHTML = bodyHtml;
+  document.getElementById('nplModalOverlay').classList.add('active');
+  document.getElementById('nplModal').classList.add('active');
+}
+
+function closeNplModal() {
+  document.getElementById('nplModalOverlay').classList.remove('active');
+  document.getElementById('nplModal').classList.remove('active');
+}
+
+function openNplAssignModal(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+  if (!group) return;
+  openNplModal('Взыскатель', renderNplAssignBlock(group));
+}
+
+function openNplExtraModal(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  openNplModal('Доп. информация', renderNplExtraBlock(key));
 }
 
 // Разворачивает/сворачивает одну анкету в карточке клиента — свёрнуты по
@@ -6973,7 +7037,7 @@ async function addNplPhoneUi(keyEnc) {
     if (result.success) {
       allNplExtra[key] = allNplExtra[key] || {};
       allNplExtra[key].phones = result.phones;
-      openNplClientDetail(keyEnc);
+      openNplExtraModal(keyEnc);
     } else {
       alert(result.message || 'Не удалось добавить телефон');
     }
@@ -7012,7 +7076,7 @@ async function addNplPhotosUi(keyEnc, input) {
       const updatedExtra = await fetchJSON('nplExtra');
       allNplExtra = updatedExtra || {};
       input.value = '';
-      openNplClientDetail(keyEnc);
+      openNplExtraModal(keyEnc);
     } else {
       status.innerText = result.message || 'Не удалось загрузить фото';
     }
@@ -7039,7 +7103,7 @@ async function deleteNplPhoneUi(keyEnc, index) {
     if (result.success) {
       allNplExtra[key] = allNplExtra[key] || {};
       allNplExtra[key].phones = result.phones;
-      openNplClientDetail(keyEnc);
+      openNplExtraModal(keyEnc);
     } else {
       alert(result.message || 'Не удалось удалить телефон');
     }
@@ -7066,7 +7130,7 @@ async function deleteNplPhotoUi(keyEnc, index) {
     if (result.success) {
       allNplExtra[key] = allNplExtra[key] || {};
       allNplExtra[key].photos = result.photos;
-      openNplClientDetail(keyEnc);
+      openNplExtraModal(keyEnc);
     } else {
       alert(result.message || 'Не удалось удалить фото');
     }
@@ -7279,6 +7343,7 @@ async function confirmNplVisitUi(keyEnc) {
 function closeNplClientDetail() {
   document.getElementById('nplDetailOverlay').classList.remove('active');
   document.getElementById('nplDetailDrawer').classList.remove('active');
+  closeNplModal();
 }
 
 
