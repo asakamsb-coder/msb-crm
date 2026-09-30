@@ -520,6 +520,102 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   font-size:13px;
   line-height:1.6;
 }
+/* Экраны быстрого входа: "Это вы?" (выбор ID сотрудника), фото профиля,
+   настройка PIN/отпечатка, ежедневная разблокировка. Тот же визуальный
+   язык, что и .login-screen/.login-card (fixed-оверлей, белая карточка). */
+.onboard-screen{
+  position:fixed;
+  inset:0;
+  background:linear-gradient(160deg,#FAFAFB,#FFFFFF 55%,var(--brand-soft));
+  z-index:110;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  overflow-y:auto;
+}
+.onboard-screen.active{display:flex;}
+.onboard-card{
+  width:420px;
+  max-width:100%;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--radius-lg);
+  padding:28px 24px;
+  box-shadow:var(--shadow-lg);
+  text-align:center;
+  margin:auto;
+}
+.onboard-icon-circle{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--brand-soft);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 16px;color:var(--brand);
+}
+.onboard-title{font-size:17px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.onboard-subtitle{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5;}
+.onboard-list{text-align:left;max-height:320px;overflow-y:auto;margin-bottom:14px;}
+.onboard-list-item{
+  display:flex;align-items:center;gap:12px;padding:10px;border-radius:12px;cursor:pointer;
+  border:2px solid transparent;
+}
+.onboard-list-item:hover{background:#F9FAFB;}
+.onboard-list-item.selected{border-color:var(--brand);background:var(--brand-soft);}
+.onboard-avatar{
+  width:38px;height:38px;border-radius:50%;background:#F3F4F6;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:0 0 auto;
+  overflow:hidden;
+}
+.onboard-avatar img{width:100%;height:100%;object-fit:cover;}
+.pin-dots{display:flex;justify-content:center;gap:16px;margin:0 0 24px;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line);background:#fff;transition:background .1s,border-color .1s;}
+.pin-dot.filled{background:var(--brand);border-color:var(--brand);}
+.pin-dot.error{background:#DC2626;border-color:#DC2626;}
+.pin-keypad{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:240px;margin:0 auto;
+}
+.pin-key{
+  aspect-ratio:1;border-radius:50%;background:#F3F4F6;border:none;font-size:20px;font-weight:700;
+  color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.pin-key:active{background:#E5E7EB;}
+.pin-key.pin-key-ghost{visibility:hidden;}
+.onboard-photo-preview{
+  width:96px;height:96px;border-radius:50%;margin:0 auto 18px;object-fit:cover;
+  border:1.5px dashed var(--line);background:#F9FAFB;display:flex;align-items:center;justify-content:center;color:var(--muted);
+}
+
+/* Отдельная "мобильная" оболочка для роли Взыскатель: свой набор
+   вкладок вместо большого сайдбара CRM (которого ему не нужно) — только
+   Главная / Клиенты / Профиль внизу экрана, как в банковском приложении. */
+.vzyskatel-navbar{
+  display:none;
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:#fff;border-top:1px solid var(--line);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  justify-content:space-around;
+}
+.vzyskatel-nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;cursor:pointer;color:var(--muted);padding:6px 2px;font-size:11px;font-weight:700;
+}
+.vzyskatel-nav-btn.active{color:var(--brand);}
+body.role-vzyskatel .sidebar{display:none !important;}
+body.role-vzyskatel .mobile-topbar{display:none !important;}
+body.role-vzyskatel .global-top-bar{display:none !important;}
+body.role-vzyskatel .main{margin-left:0 !important;padding:16px 16px 84px !important;}
+body.role-vzyskatel .vzyskatel-navbar{display:flex;}
+.vz-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;}
+.vz-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.vz-summary-tile{background:#F9FAFB;border-radius:12px;padding:12px;}
+.vz-summary-tile.danger{background:#FCEBEB;}
+.vz-summary-tile .label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.vz-summary-tile .value{font-size:18px;font-weight:800;}
+.vz-quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+.vz-quick-action{text-align:center;padding:12px 4px;background:#F9FAFB;border-radius:12px;border:none;cursor:pointer;color:var(--text);}
+.vz-quick-action .icon{color:var(--brand);margin:0 auto 6px;}
+.vz-attention-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;}
+.vz-attention-row:last-child{border-bottom:none;}
 .top-actions{
   display:flex;
   align-items:center;
@@ -1296,6 +1392,19 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 </div>
 
+<!-- Экраны быстрого входа: "Это вы?" (привязка ID сотрудника), фото
+     профиля (обязательно), настройка PIN/отпечатка (по желанию) — все
+     показываются один раз, сразу после обычного входа по паролю, см.
+     maybeRunOnboarding(). Разметка внутри рисуется через JS (innerHTML),
+     контейнеры здесь пустые. -->
+<div class="onboard-screen" id="identityScreen"></div>
+<div class="onboard-screen" id="photoScreen"></div>
+<div class="onboard-screen" id="pinSetupScreen"></div>
+
+<!-- Ежедневная разблокировка (вместо логина/пароля), когда на этом
+     устройстве уже настроен быстрый вход — см. boot()/renderUnlockScreen(). -->
+<div class="onboard-screen" id="unlockScreen"></div>
+
 <div class="mobile-topbar">
   <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Меню">
     <span></span>
@@ -1303,6 +1412,10 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   <div class="mobile-topbar-title">Asaka<span>bank</span> CRM</div>
 </div>
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+
+<!-- Содержимое рисуется через JS (renderVzyskatelNavbar), т.к. иконки —
+     это appIcon(), а не статичная разметка. -->
+<div class="vzyskatel-navbar" id="vzyskatelNavbar"></div>
 
 <div class="app">
 
@@ -1815,6 +1928,18 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
   </div>
 </aside>
 
+<!-- Главный экран и профиль для роли "Взыскатель" — отдельная мобильная
+     оболочка вместо большого сайдбара CRM, см. .vzyskatel-navbar ниже и
+     applyRoleView()/renderVzyskatelHome()/renderVzyskatelProfile(). Раздел
+     "Клиенты" переиспользует обычный nplPage (уже отфильтрован на его
+     клиентов, см. isCollector в renderNplPage). -->
+<section id="vzyskatelHomePage" class="page">
+  <div id="vzyskatelHomeBody"></div>
+</section>
+
+<section id="vzyskatelProfilePage" class="page">
+  <div id="vzyskatelProfileBody"></div>
+</section>
 
 <section id="slaPage" class="page">
   <div class="header">
@@ -3593,6 +3718,535 @@ function togglePasswordVisibility(inputId, btn) {
   }
 }
 
+// ===================== БЫСТРЫЙ ВХОД: PIN / ОТПЕЧАТОК =====================
+// Общий набор экранов, показываемых один раз после обычного входа паролем
+// ("Это вы?" → фото → PIN/отпечаток), и экран ежедневной разблокировки,
+// который boot() показывает вместо формы логина, если на этом телефоне
+// быстрый вход уже настроен. Подробности схемы (deviceToken, зачем PIN
+// хэшируется с солью, почему отпечаток не проверяется криптографически
+// на сервере) — см. комментарии в Code.gs рядом с setupDevicePin/
+// unlockWithPin/unlockWithDeviceToken.
+
+// Небольшой набор современных line-иконок (тот же принцип, что и nplIcon
+// в блоке NPL) — не эмодзи, чтобы не "квадратиться" на части телефонов.
+function appIcon(name, size) {
+  const s = size || 18;
+  const common = `width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:0 0 auto;"`;
+  const paths = {
+    fingerprint: '<path d="M12 11.5v2" /><path d="M8 12a4 4 0 1 1 8 0v1a8 8 0 0 1 -1 4" /><path d="M6 12a6 6 0 1 1 12 0v1a10 10 0 0 1 -1.5 5.5" /><path d="M4 11.5a8 8 0 0 1 15.5 -3" /><path d="M4.5 16a10 10 0 0 1 -.5 -3" /><path d="M14 15.5a4 4 0 0 1 -4 -4" />',
+    camera: '<path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /><path d="M9 13a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" />',
+    photo: '<path d="M15 8h.01" /><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" />',
+    check: '<path d="M5 12l5 5l10 -10" />',
+    search: '<path d="M10 10m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0" /><path d="M21 21l-6 -6" />',
+    user: '<path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />',
+    home: '<path d="M5 12l-2 0l9 -9l9 9l-2 0" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" />',
+    users: '<path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /><path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />',
+    mappin: '<path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />',
+    chevron: '<path d="M9 6l6 6l-6 6" />',
+    alert: '<path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" />',
+    logout: '<path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" /><path d="M9 12h12l-3 -3" /><path d="M18 15l3 -3" />'
+  };
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${common}>${paths[name] || ''}</svg>`;
+}
+
+function pinDotsHtml(length, filled) {
+  let html = '<div class="pin-dots">';
+  for (let i = 0; i < length; i++) {
+    html += `<div class="pin-dot${i < filled ? ' filled' : ''}"></div>`;
+  }
+  return html + '</div>';
+}
+
+function pinKeypadHtml(pressFn, backFn) {
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'];
+  return '<div class="pin-keypad">' + keys.map(k => {
+    if (k === '') return '<div class="pin-key pin-key-ghost"></div>';
+    if (k === 'back') return `<button type="button" class="pin-key" onclick="${backFn}()">⌫</button>`;
+    return `<button type="button" class="pin-key" onclick="${pressFn}('${k}')">${k}</button>`;
+  }).join('') + '</div>';
+}
+
+// ---- Хранение привязки "это устройство" в localStorage ----
+// { deviceToken, login, fullName, role, employeeId, photoUrl, biometricEnabled }
+function getDeviceRecord() {
+  try { return JSON.parse(localStorage.getItem('msbDeviceUnlock') || 'null'); } catch (e) { return null; }
+}
+function saveDeviceRecord(rec) {
+  try { localStorage.setItem('msbDeviceUnlock', JSON.stringify(rec)); } catch (e) {}
+}
+function clearDeviceRecord() {
+  try { localStorage.removeItem('msbDeviceUnlock'); } catch (e) {}
+}
+
+// ---- Шаг 1: "Это вы?" — привязка ID сотрудника (только если его ещё нет
+// на этом логине и роль — Взыскатель, см. maybeRunOnboarding) ----
+let identityCandidates = [];
+let identitySelectedId = '';
+let identityResolve = null;
+
+function showIdentityPickerScreen() {
+  return new Promise(async (resolve) => {
+    identityResolve = resolve;
+    identitySelectedId = '';
+    const screen = document.getElementById('identityScreen');
+    screen.innerHTML = `
+      <div class="onboard-card">
+        <div class="onboard-icon-circle">${appIcon('user', 32)}</div>
+        <div class="onboard-title">Это вы?</div>
+        <div class="onboard-subtitle">Выберите себя из списка сотрудников — так система свяжет вход с вашей ролью и назначенными клиентами.</div>
+        <div style="position:relative;margin-bottom:12px;">
+          <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);">${appIcon('search', 16)}</span>
+          <input type="text" id="identitySearchInput" class="input" placeholder="Поиск по имени или ID" style="width:100%;padding-left:34px;" oninput="renderIdentityList()">
+        </div>
+        <div class="onboard-list" id="identityListBox">Загрузка...</div>
+        <button class="btn" style="width:100%;" id="identityConfirmBtn" disabled onclick="confirmIdentitySelection()">Подтвердить и продолжить</button>
+        <div id="identityError" style="color:#DC2626;font-size:13px;margin-top:10px;"></div>
+      </div>`;
+    screen.classList.add('active');
+
+    const result = await postWebAction({ webAction: 'listEmployeeCandidates', sessionId: localStorage.getItem('msbSessionId') });
+    identityCandidates = (result && result.candidates) || [];
+    renderIdentityList();
+  });
+}
+
+function renderIdentityList() {
+  const box = document.getElementById('identityListBox');
+  if (!box) return;
+  const query = normalizeText((document.getElementById('identitySearchInput') || {}).value || '');
+  let list = identityCandidates;
+  if (query) list = list.filter(c => normalizeText(c.fullName + ' ' + c.id).includes(query));
+
+  if (!list.length) {
+    box.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px;">Никого не найдено</div>';
+    return;
+  }
+
+  box.innerHTML = list.map(c => {
+    const initials = safe(c.fullName).trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
+    const selected = identitySelectedId === c.id;
+    return `
+    <div class="onboard-list-item ${selected ? 'selected' : ''}" onclick="selectIdentity('${encodeURIComponent(c.id)}')">
+      <div class="onboard-avatar">${initials}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:14px;">${safe(c.fullName)}</div>
+        <div style="font-size:12px;color:var(--muted);">ID ${safe(c.id)}</div>
+      </div>
+      ${selected ? appIcon('check', 18) : ''}
+    </div>`;
+  }).join('');
+}
+
+function selectIdentity(idEnc) {
+  identitySelectedId = decodeURIComponent(idEnc);
+  document.getElementById('identityConfirmBtn').disabled = false;
+  renderIdentityList();
+}
+
+async function confirmIdentitySelection() {
+  if (!identitySelectedId) return;
+  const btn = document.getElementById('identityConfirmBtn');
+  btn.disabled = true;
+  const result = await postWebAction({ webAction: 'linkEmployeeIdentity', sessionId: localStorage.getItem('msbSessionId'), employeeId: identitySelectedId });
+  if (!result.success) {
+    document.getElementById('identityError').innerText = result.message || 'Не удалось сохранить';
+    btn.disabled = false;
+    return;
+  }
+  document.getElementById('identityScreen').classList.remove('active');
+  if (identityResolve) identityResolve(identitySelectedId);
+}
+
+// ---- Шаг 2: обязательное фото профиля ----
+let photoResolve = null;
+let photoPendingBase64 = null;
+let photoPendingMime = null;
+
+function showPhotoStepScreen() {
+  return new Promise((resolve) => {
+    photoResolve = resolve;
+    photoPendingBase64 = null;
+    const screen = document.getElementById('photoScreen');
+    screen.innerHTML = `
+      <div class="onboard-card">
+        <div class="onboard-photo-preview" id="photoPreviewBox">${appIcon('camera', 32)}</div>
+        <div class="onboard-title">Добавьте фото профиля</div>
+        <input type="file" accept="image/*" capture="user" id="photoCameraInput" style="display:none;" onchange="handlePhotoFileSelected(event)">
+        <input type="file" accept="image/*" id="photoGalleryInput" style="display:none;" onchange="handlePhotoFileSelected(event)">
+        <button class="btn" style="width:100%;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="document.getElementById('photoCameraInput').click()">${appIcon('camera', 16)}Сделать селфи</button>
+        <button class="btn btn-secondary" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="document.getElementById('photoGalleryInput').click()">${appIcon('photo', 16)}Выбрать из галереи</button>
+        <div id="photoError" style="color:#DC2626;font-size:13px;margin-top:12px;min-height:16px;"></div>
+        <button class="btn" style="width:100%;margin-top:6px;" id="photoContinueBtn" onclick="confirmPhotoStep()">Продолжить</button>
+      </div>`;
+    screen.classList.add('active');
+  });
+}
+
+async function handlePhotoFileSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const errorBox = document.getElementById('photoError');
+  errorBox.innerText = '';
+  try {
+    const resized = await resizeImageFile(file, 480);
+    photoPendingBase64 = resized.base64;
+    photoPendingMime = resized.mimeType;
+    document.getElementById('photoPreviewBox').innerHTML = `<img src="data:${resized.mimeType};base64,${resized.base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } catch (err) {
+    errorBox.innerText = 'Не удалось обработать фото. Попробуйте ещё раз.';
+    console.error(err);
+  }
+}
+
+async function confirmPhotoStep() {
+  const errorBox = document.getElementById('photoError');
+  if (!photoPendingBase64) {
+    errorBox.innerText = 'Добавьте своё фото, чтобы продолжить';
+    return;
+  }
+  errorBox.innerText = '';
+  const btn = document.getElementById('photoContinueBtn');
+  btn.disabled = true;
+  const result = await postWebAction({ webAction: 'uploadEmployeePhoto', sessionId: localStorage.getItem('msbSessionId'), base64: photoPendingBase64, mimeType: photoPendingMime });
+  if (!result.success) {
+    errorBox.innerText = result.message || 'Не удалось сохранить фото';
+    btn.disabled = false;
+    return;
+  }
+  document.getElementById('photoScreen').classList.remove('active');
+  if (photoResolve) photoResolve(result.photoUrl);
+}
+
+// ---- Шаг 3 (по желанию): настройка PIN + предложение отпечатка ----
+let pinSetupResolve = null;
+let pinSetupBuffer = '';
+let pinSetupFirstEntry = '';
+let pinSetupStage = 'offer'; // offer | create | confirm | biometric
+let pinSetupError = '';
+
+function showQuickLoginOfferScreen() {
+  return new Promise((resolve) => {
+    pinSetupResolve = resolve;
+    pinSetupBuffer = '';
+    pinSetupFirstEntry = '';
+    pinSetupStage = 'offer';
+    pinSetupError = '';
+    renderPinSetupScreen();
+    document.getElementById('pinSetupScreen').classList.add('active');
+  });
+}
+
+function renderPinSetupScreen() {
+  const screen = document.getElementById('pinSetupScreen');
+
+  if (pinSetupStage === 'offer') {
+    screen.innerHTML = `
+      <div class="onboard-card">
+        <div class="onboard-icon-circle">${appIcon('fingerprint', 32)}</div>
+        <div class="onboard-title">Настроить быстрый вход?</div>
+        <div class="onboard-subtitle">В следующий раз сможете войти по PIN-коду или отпечатку пальца — без пароля.</div>
+        <button class="btn" style="width:100%;margin-bottom:8px;" onclick="pinSetupStage='create';renderPinSetupScreen()">Настроить</button>
+        <button class="btn btn-secondary" style="width:100%;" onclick="finishPinSetup()">Не сейчас</button>
+      </div>`;
+    return;
+  }
+
+  if (pinSetupStage === 'create' || pinSetupStage === 'confirm') {
+    const isConfirm = pinSetupStage === 'confirm';
+    screen.innerHTML = `
+      <div class="onboard-card">
+        <div class="onboard-title">${isConfirm ? 'Повторите PIN-код' : 'Придумайте PIN-код'}</div>
+        <div class="onboard-subtitle" style="${pinSetupError ? 'color:#DC2626;' : ''}">${pinSetupError || (isConfirm ? 'Введите те же 4 цифры ещё раз' : '4 цифры для входа на этом телефоне')}</div>
+        ${pinDotsHtml(4, pinSetupBuffer.length)}
+        ${pinKeypadHtml('pressPinSetupDigit', 'backspacePinSetupDigit')}
+      </div>`;
+    return;
+  }
+
+  if (pinSetupStage === 'biometric') {
+    screen.innerHTML = `
+      <div class="onboard-card">
+        <div class="onboard-icon-circle">${appIcon('fingerprint', 32)}</div>
+        <div class="onboard-title">Включить вход по отпечатку?</div>
+        <div class="onboard-subtitle">Будет ещё быстрее — прикладываете палец вместо ввода PIN.</div>
+        <button class="btn" style="width:100%;margin-bottom:8px;" onclick="enableBiometricStep()">Включить</button>
+        <button class="btn btn-secondary" style="width:100%;" onclick="finishPinSetup()">Не сейчас</button>
+      </div>`;
+    return;
+  }
+}
+
+function pressPinSetupDigit(d) {
+  if (pinSetupBuffer.length >= 4) return;
+  pinSetupBuffer += d;
+  if (pinSetupBuffer.length < 4) { renderPinSetupScreen(); return; }
+
+  if (pinSetupStage === 'create') {
+    pinSetupFirstEntry = pinSetupBuffer;
+    pinSetupBuffer = '';
+    pinSetupStage = 'confirm';
+    pinSetupError = '';
+    renderPinSetupScreen();
+    return;
+  }
+
+  if (pinSetupStage === 'confirm') {
+    if (pinSetupBuffer === pinSetupFirstEntry) {
+      finalizePinSetup(pinSetupBuffer);
+    } else {
+      pinSetupError = 'PIN не совпадает, попробуйте снова';
+      pinSetupStage = 'create';
+      pinSetupBuffer = '';
+      pinSetupFirstEntry = '';
+      renderPinSetupScreen();
+    }
+  }
+}
+
+function backspacePinSetupDigit() {
+  pinSetupBuffer = pinSetupBuffer.slice(0, -1);
+  renderPinSetupScreen();
+}
+
+async function finalizePinSetup(pin) {
+  const result = await postWebAction({ webAction: 'setupDevicePin', sessionId: localStorage.getItem('msbSessionId'), pin: pin, deviceLabel: navigator.userAgent });
+  if (!result.success) {
+    pinSetupError = result.message || 'Не удалось сохранить PIN';
+    pinSetupStage = 'create';
+    pinSetupBuffer = '';
+    pinSetupFirstEntry = '';
+    renderPinSetupScreen();
+    return;
+  }
+
+  const u = (pendingLoginResult && pendingLoginResult.user) || {};
+  saveDeviceRecord({
+    deviceToken: result.deviceToken,
+    login: u.login,
+    fullName: u.fullName,
+    role: u.role,
+    employeeId: u.employeeId || '',
+    photoUrl: u.photoUrl || '',
+    biometricEnabled: false
+  });
+
+  const biometricAvailable = !!(window.PublicKeyCredential && navigator.credentials);
+  if (biometricAvailable) {
+    pinSetupStage = 'biometric';
+    renderPinSetupScreen();
+  } else {
+    finishPinSetup();
+  }
+}
+
+async function enableBiometricStep() {
+  try {
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    const userId = new Uint8Array(16);
+    crypto.getRandomValues(userId);
+    const u = (pendingLoginResult && pendingLoginResult.user) || {};
+    await navigator.credentials.create({
+      publicKey: {
+        challenge: challenge,
+        rp: { name: 'MSB CRM' },
+        user: { id: userId, name: u.login || 'user', displayName: u.fullName || u.login || 'user' },
+        pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 60000
+      }
+    });
+    const rec = getDeviceRecord();
+    if (rec) { rec.biometricEnabled = true; saveDeviceRecord(rec); }
+  } catch (e) {
+    console.error('Не удалось настроить вход по отпечатку', e);
+  }
+  finishPinSetup();
+}
+
+function finishPinSetup() {
+  document.getElementById('pinSetupScreen').classList.remove('active');
+  if (pinSetupResolve) pinSetupResolve();
+}
+
+// ---- Оркестрация: запускается сразу после успешного входа паролем ----
+let pendingLoginResult = null;
+
+async function maybeRunOnboarding(result) {
+  pendingLoginResult = result;
+  currentUser = result.user;
+  localStorage.setItem('msbSessionId', result.sessionId);
+  localStorage.setItem('msbUser', JSON.stringify(result.user));
+
+  document.getElementById('loginScreen').style.display = 'none';
+
+  if (result.user.role === 'VZYSKATEL' && !result.user.employeeId) {
+    const chosenId = await showIdentityPickerScreen();
+    if (chosenId) {
+      result.user.employeeId = chosenId;
+      localStorage.setItem('msbUser', JSON.stringify(result.user));
+    }
+  }
+
+  if (!result.user.photoUrl) {
+    const photoUrl = await showPhotoStepScreen();
+    result.user.photoUrl = photoUrl;
+    localStorage.setItem('msbUser', JSON.stringify(result.user));
+  }
+
+  if (!getDeviceRecord()) {
+    await showQuickLoginOfferScreen();
+  }
+
+  await proceedAfterLogin(result);
+}
+
+async function proceedAfterLogin(result) {
+  currentUser = result.user;
+  localStorage.setItem('msbSessionId', result.sessionId);
+  localStorage.setItem('msbUser', JSON.stringify(result.user));
+  sessionStorage.setItem('msbActiveSession', '1');
+
+  document.getElementById('loginScreen').style.display = 'none';
+  const unlockScreen = document.getElementById('unlockScreen');
+  if (unlockScreen) unlockScreen.classList.remove('active');
+  document.getElementById('loadingScreen').classList.add('active');
+
+  applyRoleView();
+  await loadCRM();
+  restoreLastPage();
+  startInactivityWatcher();
+
+  document.getElementById('loadingScreen').classList.remove('active');
+}
+
+// ---- Ежедневная разблокировка (вместо пароля), см. boot() ниже ----
+let unlockBuffer = '';
+let unlockMessage = '';
+
+function renderUnlockScreen() {
+  const rec = getDeviceRecord();
+  const screen = document.getElementById('unlockScreen');
+  if (!rec || !screen) return;
+
+  const avatarHtml = rec.photoUrl
+    ? `<img src="${safe(rec.photoUrl)}" style="width:100%;height:100%;object-fit:cover;">`
+    : appIcon('user', 22);
+
+  screen.innerHTML = `
+    <div class="onboard-card">
+      <div class="onboard-avatar" style="width:52px;height:52px;margin:0 auto 12px;font-size:16px;">${avatarHtml}</div>
+      <div class="onboard-title" style="margin-bottom:2px;">${safe(rec.fullName || rec.login)}</div>
+      <div class="onboard-subtitle">${safe((typeof USER_ROLE_LABELS !== 'undefined' && USER_ROLE_LABELS[rec.role]) || rec.role || '')}</div>
+      ${pinDotsHtml(4, unlockBuffer.length)}
+      <div id="unlockMessage" style="color:#DC2626;font-size:13px;margin:-14px 0 14px;min-height:16px;">${safe(unlockMessage)}</div>
+      ${pinKeypadHtml('pressUnlockDigit', 'backspaceUnlockDigit')}
+      ${rec.biometricEnabled ? `<button class="btn btn-secondary" style="width:100%;margin-top:18px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="tryBiometricUnlock()">${appIcon('fingerprint', 16)}Войти по отпечатку</button>` : ''}
+      <div style="margin-top:16px;font-size:12px;color:var(--muted);cursor:pointer;" onclick="notMeUnlock()">Не я → выйти и войти по паролю</div>
+    </div>`;
+}
+
+function pressUnlockDigit(d) {
+  if (unlockBuffer.length >= 4) return;
+  unlockMessage = '';
+  unlockBuffer += d;
+  renderUnlockScreen();
+  if (unlockBuffer.length === 4) submitUnlockPin();
+}
+
+function backspaceUnlockDigit() {
+  unlockBuffer = unlockBuffer.slice(0, -1);
+  renderUnlockScreen();
+}
+
+async function submitUnlockPin() {
+  const rec = getDeviceRecord();
+  if (!rec) return;
+  const pin = unlockBuffer;
+  const result = await postWebAction({ webAction: 'unlockWithPin', deviceToken: rec.deviceToken, pin: pin, browser: navigator.userAgent });
+  unlockBuffer = '';
+
+  if (result.success) {
+    await proceedAfterLogin(result);
+    return;
+  }
+  if (result.requirePassword) {
+    clearDeviceRecord();
+    showLoginScreenFresh();
+    return;
+  }
+  unlockMessage = result.message || 'Неверный PIN';
+  renderUnlockScreen();
+}
+
+async function tryBiometricUnlock() {
+  const rec = getDeviceRecord();
+  if (!rec || !rec.biometricEnabled) return;
+  try {
+    const challenge = new Uint8Array(32);
+    crypto.getRandomValues(challenge);
+    await navigator.credentials.get({ publicKey: { challenge: challenge, userVerification: 'required', timeout: 60000 } });
+  } catch (e) {
+    console.error('Отпечаток не подтверждён', e);
+    unlockMessage = 'Не удалось подтвердить отпечаток. Введите PIN.';
+    renderUnlockScreen();
+    return;
+  }
+
+  const result = await postWebAction({ webAction: 'unlockWithDeviceToken', deviceToken: rec.deviceToken, browser: navigator.userAgent });
+  if (result.success) {
+    await proceedAfterLogin(result);
+  } else if (result.requirePassword) {
+    clearDeviceRecord();
+    showLoginScreenFresh();
+  } else {
+    unlockMessage = result.message || 'Не удалось войти';
+    renderUnlockScreen();
+  }
+}
+
+function notMeUnlock() {
+  const rec = getDeviceRecord();
+  if (rec && rec.deviceToken) {
+    postWebAction({ webAction: 'revokeDevicePin', deviceToken: rec.deviceToken }).catch(() => {});
+  }
+  clearDeviceRecord();
+  showLoginScreenFresh();
+}
+
+function showLoginScreenFresh() {
+  const unlockScreen = document.getElementById('unlockScreen');
+  if (unlockScreen) unlockScreen.classList.remove('active');
+  const loginInput = document.getElementById('loginInput');
+  const passwordInput = document.getElementById('passwordInput');
+  if (loginInput) loginInput.value = '';
+  if (passwordInput) passwordInput.value = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// Точка входа при загрузке страницы — заменяет собой голый вызов
+// tryAutoLogin() (см. самый низ файла): если это тот же браузерный сеанс
+// (F5) — тихо восстанавливаем сессию как раньше; иначе, если на этом
+// телефоне уже настроен быстрый вход — показываем PIN/отпечаток вместо
+// формы логина/пароля; иначе — обычный экран входа (он и так виден по
+// умолчанию в разметке).
+function boot() {
+  if (sessionStorage.getItem('msbActiveSession')) {
+    tryAutoLogin();
+    return;
+  }
+  const rec = getDeviceRecord();
+  if (rec) {
+    document.getElementById('loginScreen').style.display = 'none';
+    unlockBuffer = '';
+    unlockMessage = '';
+    renderUnlockScreen();
+    document.getElementById('unlockScreen').classList.add('active');
+    return;
+  }
+  tryAutoLogin();
+}
+
 async function login() {
   const loginValue = document.getElementById('loginInput').value.trim();
   const passwordValue = document.getElementById('passwordInput').value.trim();
@@ -3620,26 +4274,11 @@ async function login() {
       return;
     }
 
-    currentUser = result.user;
-
-    localStorage.setItem('msbSessionId', result.sessionId);
-    localStorage.setItem('msbUser', JSON.stringify(result.user));
-    // sessionStorage живёт только пока открыта эта вкладка/приложение —
-    // стирается сам при закрытии браузера/PWA. Используется ниже в
-    // tryAutoLogin(), чтобы отличить "просто обновил страницу" (можно
-    // войти автоматически) от "закрыл и заново открыл браузер/приложение"
-    // (нужно запросить логин и пароль заново).
-    sessionStorage.setItem('msbActiveSession', '1');
-
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('loadingScreen').classList.add('active');
-
-    applyRoleView();
-    await loadCRM();
-    restoreLastPage();
-    startInactivityWatcher();
-
-    document.getElementById('loadingScreen').classList.remove('active');
+    // "Это вы?" (если ID сотрудника ещё не привязан) → обязательное фото
+    // профиля → по желанию настройка PIN/отпечатка — см. maybeRunOnboarding
+    // выше. Она сама переводит на loadCRM()/restoreLastPage() в конце
+    // (через proceedAfterLogin), так что здесь это больше не дублируется.
+    await maybeRunOnboarding(result);
 
   } catch (error) {
     document.getElementById('loadingScreen').classList.remove('active');
@@ -3746,8 +4385,15 @@ function logoutDueToInactivity() {
   localStorage.removeItem('msbSessionId');
   localStorage.removeItem('msbUser');
   localStorage.removeItem('msbLastPage');
-  localStorage.setItem('msbLogoutReason', 'inactivity');
   sessionStorage.removeItem('msbActiveSession');
+
+  // Если на этом телефоне уже настроен быстрый вход — не выгоняем на
+  // полный пароль: после перезагрузки boot() увидит запись устройства и
+  // покажет экран PIN/отпечатка (как блокировка экрана в банковском
+  // приложении), а не форму логина/пароля.
+  if (!getDeviceRecord()) {
+    localStorage.setItem('msbLogoutReason', 'inactivity');
+  }
   location.reload();
 }
 
@@ -3758,6 +4404,15 @@ function logout() {
   localStorage.removeItem('msbLastPage');
   localStorage.removeItem('msbLogoutReason');
   sessionStorage.removeItem('msbActiveSession');
+
+  // Осознанный выход ("Выйти") — в отличие от автовыхода по бездействию,
+  // здесь отключаем и быстрый вход на этом телефоне: сотрудник явно
+  // попросил выйти, поэтому в следующий раз снова понадобится пароль.
+  const rec = getDeviceRecord();
+  if (rec && rec.deviceToken) {
+    postWebAction({ webAction: 'revokeDevicePin', deviceToken: rec.deviceToken }).catch(() => {});
+  }
+  clearDeviceRecord();
   location.reload();
 }
 
@@ -3818,6 +4473,14 @@ function applyRoleView() {
 
   const myCabinetMsbBlock = document.getElementById('myCabinetMsbBlock');
   if (myCabinetMsbBlock) myCabinetMsbBlock.classList.toggle('hidden-by-role', isMahallaOnly);
+
+  // Взыскатель — отдельная мобильная оболочка (Главная/Клиенты/Профиль
+  // внизу экрана вместо большого сайдбара CRM), см. .role-vzyskatel в CSS
+  // и renderVzyskatelNavbar()/renderVzyskatelHome() ниже.
+  document.body.classList.toggle('role-vzyskatel', currentUser.role === 'VZYSKATEL');
+  if (currentUser.role === 'VZYSKATEL') {
+    renderVzyskatelNavbar();
+  }
 }
 
 function getVisibleClients() {
@@ -3883,6 +4546,14 @@ async function loadCRM() {
       webFormLists = await fetchJSON('formLists');
       const mahallaLink = document.getElementById('mahallaNavLink');
       showPage('mahallaPage', mahallaLink);
+      return;
+    }
+
+    // Взыскатель — своя мобильная оболочка (см. renderVzyskatelHome),
+    // ему тоже не нужны данные МСБ-дашборда, только NPL.
+    if (currentUser && currentUser.role === 'VZYSKATEL') {
+      await loadNplData();
+      vzyskatelGoTo('home');
       return;
     }
 
@@ -5901,6 +6572,156 @@ function invalidateNplGroupsCache() { nplGroupsCache = null; }
 // Черновик визита (GPS + фото), пока сотрудник не нажал "Подтвердить визит" —
 // на сервер уходит только по кнопке подтверждения, см. confirmNplVisitUi().
 let nplVisitDraft = {};
+
+// ===================== МОБИЛЬНАЯ ОБОЛОЧКА ВЗЫСКАТЕЛЯ =====================
+// Отдельный "уютный" интерфейс вместо большого сайдбара CRM — три вкладки
+// внизу экрана (Главная / Клиенты / Профиль), см. .role-vzyskatel в CSS.
+// "Клиенты" — это тот же nplPage (уже отфильтрован на его клиентов через
+// isCollector в renderNplPage), здесь только Главная и Профиль — свои.
+
+function renderVzyskatelNavbar() {
+  const bar = document.getElementById('vzyskatelNavbar');
+  if (!bar) return;
+  bar.innerHTML = `
+    <button type="button" class="vzyskatel-nav-btn" id="vzNavHomeBtn" onclick="vzyskatelGoTo('home')">${appIcon('home', 20)}<span>Главная</span></button>
+    <button type="button" class="vzyskatel-nav-btn" id="vzNavClientsBtn" onclick="vzyskatelGoTo('clients')">${appIcon('users', 20)}<span>Клиенты</span></button>
+    <button type="button" class="vzyskatel-nav-btn" id="vzNavProfileBtn" onclick="vzyskatelGoTo('profile')">${appIcon('user', 20)}<span>Профиль</span></button>`;
+}
+
+function vzyskatelSetActiveNavBtn(tab) {
+  ['home', 'clients', 'profile'].forEach(t => {
+    const btn = document.getElementById('vzNav' + t[0].toUpperCase() + t.slice(1) + 'Btn');
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+}
+
+function vzyskatelGoTo(tab) {
+  vzyskatelSetActiveNavBtn(tab);
+  if (tab === 'home') {
+    renderVzyskatelHome();
+    showPage('vzyskatelHomePage');
+  } else if (tab === 'clients') {
+    showPage('nplPage');
+  } else if (tab === 'profile') {
+    renderVzyskatelProfile();
+    showPage('vzyskatelProfilePage');
+  }
+}
+
+// Сводка "своих" клиентов — та же фильтрация по ID сотрудника, что и в
+// renderNplPage() (см. filterForCollector), просто без всей остальной
+// разметки списков/дашборда, которая взыскателю не нужна.
+function getMyNplGroups() {
+  const myEmployeeId = String((currentUser && currentUser.employeeId) || '').trim();
+  if (!myEmployeeId) return [];
+  return getNplGroupsCached().filter(g => String(allNplAssignments[g.key] || '').trim() === myEmployeeId);
+}
+
+function renderVzyskatelHome() {
+  const box = document.getElementById('vzyskatelHomeBody');
+  if (!box || !currentUser) return;
+
+  const myGroups = getMyNplGroups();
+  const totalOverdue = myGroups.reduce((s, g) => s + (Number(g.overdueBalanceSum) || 0) + (Number(g.overdueInterestSum) || 0), 0);
+  const attention = myGroups.slice().sort((a, b) => b.maxDays - a.maxDays).slice(0, 5);
+
+  const photoHtml = currentUser.photoUrl
+    ? `<img src="${safe(currentUser.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+    : appIcon('user', 22);
+
+  box.innerHTML = `
+    <div class="vz-card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div class="onboard-avatar" style="width:44px;height:44px;font-size:14px;">${photoHtml}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:800;font-size:15px;">${safe(currentUser.fullName || currentUser.login)}</div>
+          <div style="font-size:12px;color:var(--muted);">Взыскатель · ID ${safe(currentUser.employeeId) || '—'}</div>
+        </div>
+      </div>
+      <div class="vz-summary-grid">
+        <div class="vz-summary-tile">
+          <div class="label">Назначено клиентов</div>
+          <div class="value">${myGroups.length}</div>
+        </div>
+        <div class="vz-summary-tile danger">
+          <div class="label">Общая просрочка</div>
+          <div class="value">${formatMoney(totalOverdue)}</div>
+        </div>
+      </div>
+      <div class="vz-quick-actions">
+        <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('clients')"><div class="icon">${appIcon('users', 20)}</div>Клиенты</button>
+        <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('clients')"><div class="icon">${appIcon('mappin', 20)}</div>Визит</button>
+        <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('profile')"><div class="icon">${appIcon('user', 20)}</div>Профиль</button>
+      </div>
+      <div style="font-size:13px;font-weight:800;margin-bottom:4px;">Требуют внимания</div>
+      ${attention.length ? attention.map(g => `
+        <div class="vz-attention-row" onclick="openNplClientDetail('${encodeURIComponent(g.key)}')">
+          <div class="onboard-avatar" style="width:32px;height:32px;font-size:11px;">${safe(g.clientName).trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase()}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;">${safe(g.clientName)}</div>
+            <div style="font-size:11.5px;color:var(--muted);">Просрочка ${g.maxDays} дн.</div>
+          </div>
+          <span style="color:var(--muted);">${appIcon('chevron', 16)}</span>
+        </div>`).join('') : `<div style="font-size:13px;color:var(--muted);padding:10px 0;">Пока нет назначенных клиентов</div>`}
+    </div>`;
+}
+
+function renderVzyskatelProfile() {
+  const box = document.getElementById('vzyskatelProfileBody');
+  if (!box || !currentUser) return;
+
+  const photoHtml = currentUser.photoUrl
+    ? `<img src="${safe(currentUser.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+    : appIcon('user', 28);
+  const rec = getDeviceRecord();
+
+  box.innerHTML = `
+    <div class="vz-card" style="text-align:center;">
+      <div class="onboard-avatar" style="width:76px;height:76px;font-size:22px;margin:0 auto 12px;">${photoHtml}</div>
+      <div style="font-weight:800;font-size:16px;">${safe(currentUser.fullName || currentUser.login)}</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:2px;">Взыскатель</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">ID сотрудника: ${safe(currentUser.employeeId) || '—'}</div>
+      <input type="file" accept="image/*" capture="user" id="vzProfilePhotoInput" style="display:none;" onchange="handleVzProfilePhotoSelected(event)">
+      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="document.getElementById('vzProfilePhotoInput').click()">Изменить фото</button>
+      <div id="vzProfilePhotoStatus" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
+      ${rec ? `<button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="resetDevicePinFromProfile()">Сбросить вход по PIN/отпечатку на этом телефоне</button>` : ''}
+      <button class="btn btn-secondary" style="width:100%;color:var(--red);" onclick="logout()">Выйти</button>
+    </div>`;
+}
+
+async function handleVzProfilePhotoSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const statusBox = document.getElementById('vzProfilePhotoStatus');
+  statusBox.innerText = 'Загрузка...';
+  try {
+    const resized = await resizeImageFile(file, 480);
+    const result = await postWebAction({ webAction: 'uploadEmployeePhoto', sessionId: localStorage.getItem('msbSessionId'), base64: resized.base64, mimeType: resized.mimeType });
+    if (!result.success) {
+      statusBox.innerText = result.message || 'Не удалось сохранить фото';
+      return;
+    }
+    currentUser.photoUrl = result.photoUrl;
+    localStorage.setItem('msbUser', JSON.stringify(currentUser));
+    const rec = getDeviceRecord();
+    if (rec) { rec.photoUrl = result.photoUrl; saveDeviceRecord(rec); }
+    statusBox.innerText = '';
+    renderVzyskatelProfile();
+  } catch (err) {
+    statusBox.innerText = 'Не удалось обработать фото';
+    console.error(err);
+  }
+}
+
+function resetDevicePinFromProfile() {
+  if (!confirm('Сбросить быстрый вход на этом телефоне? В следующий раз понадобится пароль.')) return;
+  const rec = getDeviceRecord();
+  if (rec && rec.deviceToken) {
+    postWebAction({ webAction: 'revokeDevicePin', sessionId: localStorage.getItem('msbSessionId'), deviceToken: rec.deviceToken }).catch(() => {});
+  }
+  clearDeviceRecord();
+  renderVzyskatelProfile();
+}
 
 async function loadNplData() {
   const emptyState = document.getElementById('nplEmptyState');
@@ -9486,7 +10307,7 @@ async function postWebAction(body, retriesLeft) {
   // Заместитель (DEPUTY) — доступ только на просмотр. Блокируем сразу на
   // фронтенде, не дожидаясь ответа сервера (сервер тоже это проверяет —
   // это просто для мгновенной обратной связи, а не единственная защита).
-  const selfServiceActions = ['login', 'changePassword', 'generateTelegramLinkCode', 'getTelegramLinkStatus', 'unlinkTelegram'];
+  const selfServiceActions = ['login', 'changePassword', 'generateTelegramLinkCode', 'getTelegramLinkStatus', 'unlinkTelegram', 'uploadEmployeePhoto', 'listEmployeeCandidates', 'linkEmployeeIdentity', 'setupDevicePin', 'unlockWithPin', 'unlockWithDeviceToken', 'revokeDevicePin'];
   if (currentUser && currentUser.role === 'DEPUTY' && body.webAction && selfServiceActions.indexOf(body.webAction) === -1) {
     return { success: false, message: 'У вас доступ только на просмотр. Изменения и удаление недоступны.' };
   }
@@ -13398,9 +14219,12 @@ async function loadUsersList() {
 
     tbody.innerHTML = allWebUsers.map(u => {
       const isMainAdmin = u.login === 'admin' || u.role === 'ADMIN';
+      const avatarHtml = u.photoUrl
+        ? `<img src="${safe(u.photoUrl)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;">`
+        : `<span style="display:inline-flex;width:28px;height:28px;border-radius:50%;background:#F3F4F6;color:var(--muted);align-items:center;justify-content:center;vertical-align:middle;margin-right:8px;font-size:12px;">—</span>`;
       return `
       <tr>
-        <td>${safe(u.fullName)}</td>
+        <td>${avatarHtml}${safe(u.fullName)}</td>
         <td>${safe(u.login)}</td>
         <td>${USER_ROLE_LABELS[u.role] || safe(u.role)}</td>
         <td>${safe(u.employeeId) || '—'}</td>
@@ -13705,7 +14529,7 @@ async function unlinkTelegramNotifications() {
 }
 // =================== /PUSH-УВЕДОМЛЕНИЯ (TELEGRAM) =======================
 
-tryAutoLogin();
+boot();
 
 // Service Worker НЕ регистрируем: Google Apps Script не может отдать файл
 // sw.js по отдельному адресу того же источника (origin) рядом со страницей
