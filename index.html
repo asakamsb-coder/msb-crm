@@ -625,6 +625,13 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 .npl-quick-action{text-align:center;padding:10px 4px;background:#F9FAFB;border-radius:12px;border:none;cursor:pointer;color:var(--text);font-size:12.5px;text-decoration:none;display:block;}
 .npl-quick-action.disabled{opacity:.45;pointer-events:none;}
 .npl-quick-action .icon{color:var(--brand);margin:0 auto 6px;}
+/* Вкладки внутри карточки клиента NPL: "Анкеты" / "Юр. статус". */
+.npl-detail-tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.npl-detail-tab{flex:1;text-align:center;padding:10px 0;font-size:13px;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;}
+.npl-detail-tab.active{color:var(--text);font-weight:700;border-bottom-color:var(--brand);}
+.npl-stage-chip{font-size:12px;padding:5px 10px;border-radius:8px;background:#F3F4F6;color:var(--muted);display:inline-block;margin:0 6px 6px 0;}
+.npl-stage-chip.active{background:var(--brand);color:#fff;font-weight:700;}
+.npl-stage-chip.active.danger{background:var(--red);}
 .top-actions{
   display:flex;
   align-items:center;
@@ -6577,6 +6584,7 @@ let allNplExtra = {};
 let allNplAssignments = {};
 let allNplAccounts = {};
 let allNplVisits = {};
+let allNplMib = { data: {}, files: {} };
 let allNplCollectors = {};
 let nplDataLoaded = false;
 let nplGroupsByKey = {};
@@ -6856,6 +6864,7 @@ async function loadNplRestInBackground() {
     allNplExtra = (rest && rest.extra) || {};
     allNplAccounts = (rest && rest.accounts) || {};
     allNplVisits = (rest && rest.visits) || {};
+    allNplMib = (rest && rest.mib) || { data: {}, files: {} };
     allNplCollectors = (rest && rest.collectors) || {};
     if (rest && rest.users) allWebUsers = rest.users;
 
@@ -7896,6 +7905,235 @@ function fallbackCopyText(text) {
   document.body.removeChild(textarea);
 }
 
+// ===================== NPL: ВКЛАДКА "ЮРИДИЧЕСКИЙ СТАТУС" =====================
+// Этап взыскания считается автоматически (по дням просрочки и наличию
+// приказа суда из выгрузки), кроме самого позднего этапа "МИБ" — туда
+// клиент переходит только вручную (прикреплён документ МИБ и/или
+// сотрудник сам заполнил данные), так как реальная передача дела в МИБ —
+// отдельное действие, а не то, что можно вывести из старой выгрузки.
+function computeNplStage(group) {
+  const mib = allNplMib.data[group.key];
+  if (mib && (mib.caseId || mib.inspectorName || (mib.actions && mib.actions.length))) return 'МИБ';
+  if (group.courtOrderNumberJoined) return 'Суд';
+  if (group.maxDays >= 90) return 'Hard';
+  if (group.maxDays >= 30) return 'Soft';
+  return 'Pre-collection';
+}
+
+function canEditNplLegal() {
+  return !!currentUser && (currentUser.role === 'VZYSKATEL' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+}
+
+function fileToBase64(file) {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function() { resolve(String(reader.result).split(',')[1] || ''); };
+    reader.onerror = function() { reject(new Error('Не удалось прочитать файл')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderNplLegalStatusTab(group) {
+  const keyEnc = encodeURIComponent(group.key);
+  const stage = computeNplStage(group);
+  const stages = ['Pre-collection', 'Soft', 'Hard', 'Суд', 'МИБ'];
+  const stageChipsHtml = stages.map(function(s) {
+    const isActive = s === stage;
+    return `<span class="npl-stage-chip${isActive ? ' active' + (s === 'МИБ' ? ' danger' : '') : ''}">${s}</span>`;
+  }).join('');
+
+  const courtHtml = group.courtOrderNumberJoined
+    ? `<div style="background:#F9FAFB;border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-size:11px;color:var(--muted);">Приказ суда</div>
+        <div style="font-size:14px;">№ ${safe(group.courtOrderNumberJoined)}${group.courtOrderDateJoined ? ' от ' + safe(group.courtOrderDateJoined) : ''}</div>
+      </div>`
+    : `<div style="font-size:13px;color:var(--muted);margin-bottom:10px;">Приказ суда: нет</div>`;
+
+  const fileMibHtml = group.mibCaseJoined
+    ? `<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Из выгрузки: дело МИБ ${safe(group.mibCaseJoined)}${group.mibDateJoined ? ' от ' + safe(group.mibDateJoined) : ''}</div>`
+    : '';
+
+  const mib = allNplMib.data[group.key] || {};
+  const files = allNplMib.files[group.key] || [];
+  const canEdit = canEditNplLegal();
+
+  const filesHtml = files.length
+    ? files.map(f => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);">
+          <a href="${safe(f.url)}" target="_blank" style="font-size:13px;color:var(--brand);font-weight:700;word-break:break-word;">${safe(f.name)}</a>
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">${safe(f.uploadedAt)}${f.recognized ? '' : ' · вручную'}</span>
+        </div>`).join('')
+    : `<div style="font-size:13px;color:var(--muted);padding:6px 0;">Документы МИБ ещё не прикреплены</div>`;
+
+  const uploadHtml = canEdit ? `
+    <input type="file" accept="application/pdf" id="nplMibFileInput_${keyEnc}" style="display:none;" onchange="uploadNplMibFile('${keyEnc}', this)">
+    <button type="button" class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="document.getElementById('nplMibFileInput_${keyEnc}').click()">${nplIcon('copy', 15)} Прикрепить документ МИБ (PDF)</button>
+    <div id="nplMibUploadStatus_${keyEnc}" style="font-size:12px;color:var(--muted);margin-top:6px;"></div>` : '';
+
+  const fieldsHtml = canEdit ? `
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+      <div><label style="font-size:11px;color:var(--muted);">ИЖРО ID</label><input type="text" class="input" id="nplMibCaseId_${keyEnc}" value="${safe(mib.caseId)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Номер дела</label><input type="text" class="input" id="nplMibCaseNumber_${keyEnc}" value="${safe(mib.caseNumber)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Дата передачи в МИБ</label><input type="text" class="input" id="nplMibDate_${keyEnc}" value="${safe(mib.mibDate)}" placeholder="дд.мм.гггг"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Остаток по делу</label><input type="text" class="input" id="nplMibDebt_${keyEnc}" value="${safe(mib.debtRemaining)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Инспектор МИБ (ФИО)</label><input type="text" class="input" id="nplMibInspector_${keyEnc}" value="${safe(mib.inspectorName)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Телефон инспектора</label><input type="text" class="input" id="nplMibInspectorPhone_${keyEnc}" value="${safe(mib.inspectorPhone)}"></div>
+      <button type="button" class="btn btn-primary" style="margin-top:4px;" onclick="saveNplMibFieldsUi('${keyEnc}')">Сохранить</button>
+      <div id="nplMibFieldsStatus_${keyEnc}" style="font-size:12px;color:var(--muted);"></div>
+    </div>` : `
+    <div style="font-size:13px;line-height:1.8;margin-top:8px;">
+      ${mib.caseId ? 'ИЖРО ID: ' + safe(mib.caseId) + '<br>' : ''}
+      ${mib.caseNumber ? 'Номер дела: ' + safe(mib.caseNumber) + '<br>' : ''}
+      ${mib.mibDate ? 'Дата передачи: ' + safe(mib.mibDate) + '<br>' : ''}
+      ${mib.inspectorName ? 'Инспектор: ' + safe(mib.inspectorName) + (mib.inspectorPhone ? ' · ' + safe(mib.inspectorPhone) : '') : ''}
+    </div>`;
+
+  const actions = mib.actions || [];
+  const actionsHtml = actions.length
+    ? actions.map((a, i) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);">
+          <div style="min-width:0;"><div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(a.article)}</div>${a.date ? `<div style="font-size:11.5px;color:var(--muted);">${safe(a.date)}</div>` : ''}</div>
+          ${canEdit ? `<button onclick="deleteNplMibActionUi('${keyEnc}', ${i})" title="Удалить" style="flex:0 0 auto;border:none;background:none;cursor:pointer;color:var(--muted);font-weight:800;">×</button>` : ''}
+        </div>`).join('')
+    : `<div style="font-size:13px;color:var(--muted);padding:6px 0;">Действий пока нет</div>`;
+
+  const addActionHtml = canEdit ? `
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+      <input type="text" class="input" id="nplMibActionText_${keyEnc}" placeholder="Статья/действие" style="flex:1 1 160px;">
+      <input type="text" class="input" id="nplMibActionDate_${keyEnc}" placeholder="дд.мм.гггг" style="flex:0 1 120px;">
+      <button type="button" class="btn btn-secondary" onclick="addNplMibActionUi('${keyEnc}')">Добавить</button>
+    </div>` : '';
+
+  return `
+    <div style="margin-bottom:4px;font-size:12px;color:var(--muted);">Этап взыскания</div>
+    <div style="margin-bottom:6px;">${stageChipsHtml}</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:16px;">Автоматически, кроме «МИБ» — она ставится вручную ниже.</div>
+
+    ${courtHtml}
+    ${fileMibHtml}
+
+    <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:6px;">
+      <div style="font-size:14px;font-weight:800;margin-bottom:8px;">Документы МИБ</div>
+      ${filesHtml}
+      ${uploadHtml}
+    </div>
+
+    <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px;">
+      <div style="font-size:14px;font-weight:800;margin-bottom:4px;">Данные дела</div>
+      ${fieldsHtml}
+    </div>
+
+    <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px;">
+      <div style="font-size:14px;font-weight:800;margin-bottom:8px;">Действия (статьи)</div>
+      ${actionsHtml}
+      ${addActionHtml}
+    </div>`;
+}
+
+async function uploadNplMibFile(keyEnc, input) {
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+  const status = document.getElementById('nplMibUploadStatus_' + keyEnc);
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  if (status) status.innerText = 'Загрузка и распознавание...';
+  try {
+    const base64 = await fileToBase64(file);
+    const result = await postWebAction({
+      webAction: 'uploadNplMibDocument',
+      sessionId: localStorage.getItem('msbSessionId'),
+      key: key,
+      clientName: group ? group.clientName : '',
+      base64: base64,
+      fileName: file.name
+    });
+    if (result.success) {
+      if (result.recognized && result.parsed) {
+        allNplMib.data[key] = Object.assign({}, allNplMib.data[key], result.parsed, { actions: result.actions || [] });
+      }
+      allNplMib.files[key] = allNplMib.files[key] || [];
+      allNplMib.files[key].unshift({ url: result.fileUrl, name: file.name, uploadedAt: new Date().toLocaleString('ru-RU'), recognized: result.recognized });
+      if (status) { status.style.color = result.recognized ? 'var(--green)' : 'var(--orange)'; status.innerText = result.message; }
+      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+    } else {
+      if (status) { status.style.color = 'var(--red)'; status.innerText = result.message || 'Ошибка загрузки'; }
+    }
+  } catch (error) {
+    if (status) { status.style.color = 'var(--red)'; status.innerText = 'Не удалось связаться с сервером'; }
+    console.error(error);
+  }
+}
+
+async function saveNplMibFieldsUi(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+  const status = document.getElementById('nplMibFieldsStatus_' + keyEnc);
+  const payload = {
+    webAction: 'updateNplMibFields',
+    sessionId: localStorage.getItem('msbSessionId'),
+    key: key,
+    clientName: group ? group.clientName : '',
+    caseId: document.getElementById('nplMibCaseId_' + keyEnc).value.trim(),
+    caseNumber: document.getElementById('nplMibCaseNumber_' + keyEnc).value.trim(),
+    mibDate: document.getElementById('nplMibDate_' + keyEnc).value.trim(),
+    debtRemaining: document.getElementById('nplMibDebt_' + keyEnc).value.trim(),
+    inspectorName: document.getElementById('nplMibInspector_' + keyEnc).value.trim(),
+    inspectorPhone: document.getElementById('nplMibInspectorPhone_' + keyEnc).value.trim()
+  };
+  if (status) { status.style.color = 'var(--muted)'; status.innerText = 'Сохранение...'; }
+  try {
+    const result = await postWebAction(payload);
+    if (result.success) {
+      allNplMib.data[key] = Object.assign({}, allNplMib.data[key], {
+        caseId: payload.caseId, caseNumber: payload.caseNumber, mibDate: payload.mibDate,
+        debtRemaining: payload.debtRemaining, inspectorName: payload.inspectorName, inspectorPhone: payload.inspectorPhone
+      });
+      if (status) { status.style.color = 'var(--green)'; status.innerText = 'Сохранено'; }
+      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+    } else {
+      if (status) { status.style.color = 'var(--red)'; status.innerText = result.message || 'Ошибка сохранения'; }
+    }
+  } catch (error) {
+    if (status) { status.style.color = 'var(--red)'; status.innerText = 'Не удалось связаться с сервером'; }
+    console.error(error);
+  }
+}
+
+async function addNplMibActionUi(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+  const article = document.getElementById('nplMibActionText_' + keyEnc).value.trim();
+  const date = document.getElementById('nplMibActionDate_' + keyEnc).value.trim();
+  if (!article) return;
+  try {
+    const result = await postWebAction({
+      webAction: 'addNplMibAction', sessionId: localStorage.getItem('msbSessionId'),
+      key: key, clientName: group ? group.clientName : '', article: article, date: date
+    });
+    if (result.success) {
+      allNplMib.data[key] = Object.assign({}, allNplMib.data[key], { actions: result.actions });
+      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+    }
+  } catch (error) { console.error(error); }
+}
+
+async function deleteNplMibActionUi(keyEnc, index) {
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+  try {
+    const result = await postWebAction({
+      webAction: 'deleteNplMibAction', sessionId: localStorage.getItem('msbSessionId'),
+      key: key, index: index
+    });
+    if (result.success) {
+      allNplMib.data[key] = Object.assign({}, allNplMib.data[key], { actions: result.actions });
+      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+    }
+  } catch (error) { console.error(error); }
+}
+// =================== /NPL: ВКЛАДКА "ЮРИДИЧЕСКИЙ СТАТУС" ======================
+
 function renderNplClientDetailBody(group) {
   const overdueOd = group.overdueBalanceSum;
   const overduePct = group.overdueInterestSum;
@@ -7926,22 +8164,6 @@ function renderNplClientDetailBody(group) {
       <div class="info-card"><div class="info-label">Просрочка %</div><div class="info-value">${formatMoney(overduePct)}</div></div>
       ${hasAnyAccountBalance ? `<div class="info-card"><div class="info-label">Остаток на счёте</div><div class="info-value">${formatMoney(accountBalanceSum)}</div></div>` : `<div class="info-card"><div class="info-label">Анкет</div><div class="info-value">${group.loans.length}</div></div>`}
       <div class="info-card"><div class="info-label">Дней (макс.)</div><div class="info-value">${group.maxDays}</div></div>
-    </div>`;
-
-  const mibBadge = group.mibCaseJoined
-    ? `<span class="status status-orange" style="margin:0 6px 6px 0;display:inline-block;">МИБ: ${safe(group.mibCaseJoined)}${group.mibDateJoined ? ' от ' + safe(group.mibDateJoined) : ''}</span>`
-    : `<span style="margin:0 6px 6px 0;display:inline-block;color:var(--muted);font-size:13px;">МИБ: нет</span>`;
-  const courtBadge = group.courtOrderNumberJoined
-    ? `<span class="status status-green" style="margin:0 6px 6px 0;display:inline-block;">Приказ суда № ${safe(group.courtOrderNumberJoined)}${group.courtOrderDateJoined ? ' от ' + safe(group.courtOrderDateJoined) : ''}</span>`
-    : `<span style="margin:0 6px 6px 0;display:inline-block;color:var(--muted);font-size:13px;">Приказ суда: нет</span>`;
-
-  // ПИНФЛ/ИНН и ID клиента теперь показаны в шапке карточки (с кнопкой
-  // копирования) — см. renderNplClientHeaderMeta(), здесь дублировать не
-  // нужно, оставляем только статусы МИБ/суд.
-  const idBadgesHtml = `
-    <div style="margin-bottom:16px;">
-      ${mibBadge}
-      ${courtBadge}
     </div>`;
 
   const loansHtml = group.loans.map((l, idx) => {
@@ -8019,13 +8241,31 @@ function renderNplClientDetailBody(group) {
       <button type="button" class="btn btn-secondary" onclick="openNplExtraModal('${keyEnc}')">📱 Доп. информация</button>
     </div>`;
 
-  return renderNplQuickActions(group) +
+  const tab1Html = renderNplQuickActions(group) +
     summaryHtml +
-    idBadgesHtml +
     `<h2 style="font-size:15px;margin:20px 0 10px;">Анкеты (${group.loans.length})</h2>` +
     loansHtml +
     popupTriggersHtml +
     renderNplVisitBlock(group.key);
+
+  const tab2Html = renderNplLegalStatusTab(group);
+
+  return `
+    <div class="npl-detail-tabs">
+      <button type="button" class="npl-detail-tab active" id="nplDetailTabBtn_anketi" onclick="switchNplDetailTab('anketi')">Анкеты</button>
+      <button type="button" class="npl-detail-tab" id="nplDetailTabBtn_legal" onclick="switchNplDetailTab('legal')">Юр. статус</button>
+    </div>
+    <div id="nplDetailTabBody_anketi">${tab1Html}</div>
+    <div id="nplDetailTabBody_legal" style="display:none;">${tab2Html}</div>`;
+}
+
+function switchNplDetailTab(tab) {
+  ['anketi', 'legal'].forEach(function(t) {
+    const body = document.getElementById('nplDetailTabBody_' + t);
+    const btn = document.getElementById('nplDetailTabBtn_' + t);
+    if (body) body.style.display = t === tab ? 'block' : 'none';
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
 }
 
 // Всплывающие окна "Взыскатель" и "Доп. информация" — раньше эти блоки
