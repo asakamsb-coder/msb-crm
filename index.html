@@ -1449,7 +1449,6 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 
 <div class="global-top-bar">
   <div class="user-box" id="currentUserBox">Пользователь</div>
-  <button class="logout-btn" onclick="logout()">Выйти</button>
 </div>
 
 <section id="dashboard" class="page active">
@@ -2185,6 +2184,19 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
     </div>
     <div class="user-box" id="myCabinetRole">-</div>
   </div>
+
+<div class="panel">
+  <h2>Мой профиль</h2>
+  <div style="max-width:450px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div class="onboard-avatar" id="cabinetPhotoAvatar" style="width:72px;height:72px;font-size:22px;flex-shrink:0;"></div>
+    <div style="flex:1;min-width:180px;">
+      <input type="file" accept="image/*" capture="user" id="cabinetPhotoInput" style="display:none;" onchange="handleCabinetPhotoSelected(event)">
+      <button class="btn btn-secondary" onclick="document.getElementById('cabinetPhotoInput').click()">Изменить фото</button>
+      <div id="cabinetPhotoStatus" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
+    </div>
+  </div>
+  <button class="btn btn-secondary" style="margin-top:20px;color:var(--red);" onclick="logout()">Выйти</button>
+</div>
 
 <div class="panel">
   <h2>🔔 Push-уведомления</h2>
@@ -4398,6 +4410,7 @@ function logoutDueToInactivity() {
 }
 
 function logout() {
+  if (!confirm('Вы уверены, что хотите выйти?')) return;
   stopInactivityWatcher();
   localStorage.removeItem('msbSessionId');
   localStorage.removeItem('msbUser');
@@ -4419,6 +4432,8 @@ function logout() {
 function applyRoleView() {
   document.getElementById('currentUserBox').innerText =
     currentUser.fullName || currentUser.login || 'Пользователь';
+
+  renderCabinetPhoto();
 
   document.getElementById('myCabinetSubtitle').innerText =
     currentUser.fullName || currentUser.login || 'Пользователь';
@@ -6707,6 +6722,38 @@ async function handleVzProfilePhotoSelected(e) {
     if (rec) { rec.photoUrl = result.photoUrl; saveDeviceRecord(rec); }
     statusBox.innerText = '';
     renderVzyskatelProfile();
+  } catch (err) {
+    statusBox.innerText = 'Не удалось обработать фото';
+    console.error(err);
+  }
+}
+
+function renderCabinetPhoto() {
+  const box = document.getElementById('cabinetPhotoAvatar');
+  if (!box || !currentUser) return;
+  box.innerHTML = currentUser.photoUrl
+    ? `<img src="${safe(currentUser.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+    : appIcon('user', 26);
+}
+
+async function handleCabinetPhotoSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const statusBox = document.getElementById('cabinetPhotoStatus');
+  statusBox.innerText = 'Загрузка...';
+  try {
+    const resized = await resizeImageFile(file, 480);
+    const result = await postWebAction({ webAction: 'uploadEmployeePhoto', sessionId: localStorage.getItem('msbSessionId'), base64: resized.base64, mimeType: resized.mimeType });
+    if (!result.success) {
+      statusBox.innerText = result.message || 'Не удалось сохранить фото';
+      return;
+    }
+    currentUser.photoUrl = result.photoUrl;
+    localStorage.setItem('msbUser', JSON.stringify(currentUser));
+    const rec = getDeviceRecord();
+    if (rec) { rec.photoUrl = result.photoUrl; saveDeviceRecord(rec); }
+    statusBox.innerText = 'Фото обновлено';
+    renderCabinetPhoto();
   } catch (err) {
     statusBox.innerText = 'Не удалось обработать фото';
     console.error(err);
