@@ -6559,6 +6559,25 @@ function openNplClientDetail(keyEncoded) {
 // под ним — редактируемый адрес, локация на карте с возможностью её
 // обновить (если клиент переехал или адрес оказался неверным), телефон,
 // и копируемые ПИНФЛ/ИНН и ID клиента.
+// Современные line-иконки (Tabler, 2px stroke) вместо эмодзи — эмодзи
+// на части Android-устройств отрисовывается «квадратиком» (проблема
+// шрифта/кодировки), а SVG-иконка выглядит одинаково везде и аккуратнее.
+function nplIcon(name, size) {
+  const s = size || 16;
+  const common = `width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex:0 0 auto;"`;
+  const paths = {
+    pin: '<path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />',
+    pencil: '<path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /><path d="M13.5 6.5l4 4" />',
+    phone: '<path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />',
+    copy: '<path d="M7 9.667A2.667 2.667 0 0 1 9.667 7h8.666A2.667 2.667 0 0 1 21 9.667v8.666A2.667 2.667 0 0 1 18.333 21H9.667A2.667 2.667 0 0 1 7 18.333z" /><path d="M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1" />',
+    check: '<path d="M5 12l5 5l10 -10" />',
+    locate: '<path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M12 3l0 2" /><path d="M12 19l0 2" /><path d="M3 12l2 0" /><path d="M19 12l2 0" />',
+    chevron: '<path d="M9 6l6 6l-6 6" />',
+    userStar: '<path d="M9 10a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h2.5" /><path d="M19 22l-1.5 -1.5" /><path d="M20.5 20.5a1.5 1.5 0 1 0 -3 0a1.5 1.5 0 0 0 3 0" />'
+  };
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${common}>${paths[name] || ''}</svg>`;
+}
+
 function renderNplClientHeaderMeta(group) {
   const key = String(group.key || '');
   const keyEnc = encodeURIComponent(key);
@@ -6574,34 +6593,33 @@ function renderNplClientHeaderMeta(group) {
         <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;${group.subject === 'J' ? 'background:#E6F1FB;color:#0C447C;' : 'background:#EAF3DE;color:#27500A;'}">${group.subject === 'J' ? 'Юрлицо' : 'Физлицо'}</span>
       </div>
 
-      <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
-        <span style="flex:1 1 auto;min-width:0;font-size:14px;word-break:break-word;">📍 ${address ? safe(address) : '<span style="color:var(--muted);">Адрес не указан</span>'}</span>
-        <button onclick="toggleNplHeaderAddressEdit('${keyEnc}')" title="Редактировать адрес" style="flex:0 0 auto;border:none;background:#F3F4F6;cursor:pointer;color:var(--muted);width:32px;height:32px;border-radius:8px;font-size:15px;">✎</button>
+      <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
+        <span style="flex:1 1 auto;min-width:0;font-size:14px;line-height:1.4;word-break:break-word;display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--muted);margin-top:2px;">${nplIcon('pin', 15)}</span><span>${address ? safe(address) : '<span style="color:var(--muted);">Адрес не указан</span>'}</span></span>
+        <button onclick="toggleNplHeaderAddressEdit('${keyEnc}')" title="Редактировать адрес и локацию" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:none;background:#F3F4F6;cursor:pointer;color:var(--muted);width:32px;height:32px;border-radius:8px;">${nplIcon('pencil', 15)}</button>
       </div>
-      <div id="nplHeaderAddressEdit_${keyEnc}" style="display:none;flex-direction:column;gap:8px;margin:0 0 10px;">
+      ${hasLocation
+        ? `<a href="https://maps.google.com/?q=${extra.lat},${extra.lng}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;color:var(--brand);font-weight:700;font-size:12.5px;margin-bottom:8px;word-break:break-word;">${nplIcon('locate', 13)}На карте (${extra.lat}, ${extra.lng})</a>`
+        : ''}
+
+      <div id="nplHeaderAddressEdit_${keyEnc}" style="display:none;flex-direction:column;gap:8px;background:#F9FAFB;border-radius:10px;padding:10px;margin:0 0 10px;">
         <input type="text" id="nplHeaderAddressInput_${keyEnc}" class="input" value="${safe(address)}" placeholder="Адрес клиента" style="width:100%;font-size:14px;">
         <button class="btn btn-secondary" style="width:100%;padding:8px 12px;" onclick="saveNplHeaderAddress('${keyEnc}')">Сохранить адрес</button>
+        <div style="height:1px;background:var(--line);margin:2px 0;"></div>
+        <button class="btn btn-secondary" style="width:100%;padding:8px 12px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="captureNplLocationHeader('${keyEnc}')">${nplIcon('locate', 15)}Обновить локацию</button>
+        <div id="nplHeaderLocationStatus_${keyEnc}" style="font-size:12px;color:var(--muted);"></div>
       </div>
 
-      <div style="margin-bottom:8px;">
-        ${hasLocation
-          ? `<a href="https://maps.google.com/?q=${extra.lat},${extra.lng}" target="_blank" style="display:block;color:var(--brand);font-weight:700;font-size:13px;margin-bottom:8px;word-break:break-word;">На карте (${extra.lat}, ${extra.lng})</a>`
-          : `<div style="color:var(--muted);font-size:13px;margin-bottom:8px;">Локация не указана</div>`}
-        <button class="btn btn-secondary" style="width:100%;padding:8px 12px;font-size:13px;" onclick="captureNplLocationHeader('${keyEnc}')">📍 Обновить локацию</button>
-      </div>
-      <div id="nplHeaderLocationStatus_${keyEnc}" style="font-size:12px;color:var(--muted);margin-bottom:10px;"></div>
-
-      ${group.phoneJoined ? `<div style="font-size:14px;margin-bottom:12px;word-break:break-word;">📞 ${safe(group.phoneJoined)}</div>` : ''}
+      ${group.phoneJoined ? `<div style="font-size:14px;margin-bottom:12px;word-break:break-word;display:flex;align-items:center;gap:6px;"><span style="color:var(--muted);">${nplIcon('phone', 14)}</span>${safe(group.phoneJoined)}</div>` : ''}
 
       <div style="display:flex;flex-direction:column;gap:8px;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F3F4F6;border-radius:8px;padding:8px 10px;">
           <div style="min-width:0;"><div style="font-size:11px;color:var(--muted);">ПИНФЛ/ИНН</div><div style="font-size:14px;font-weight:700;word-break:break-all;">${pin ? safe(pin) : '—'}</div></div>
-          ${pin ? `<button onclick="copyNplValue('${encodeURIComponent(pin)}', this)" title="Скопировать" style="flex:0 0 auto;border:none;background:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;font-size:15px;">📋</button>` : ''}
+          ${pin ? `<button onclick="copyNplValue('${encodeURIComponent(pin)}', this)" title="Скопировать" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:none;background:#fff;cursor:pointer;color:var(--muted);width:34px;height:34px;border-radius:8px;">${nplIcon('copy', 15)}</button>` : ''}
         </div>
         ${displayClientId ? `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F3F4F6;border-radius:8px;padding:8px 10px;">
           <div style="min-width:0;"><div style="font-size:11px;color:var(--muted);">ID клиента</div><div style="font-size:14px;font-weight:700;word-break:break-all;">${safe(displayClientId)}</div></div>
-          <button onclick="copyNplValue('${encodeURIComponent(displayClientId)}', this)" title="Скопировать" style="flex:0 0 auto;border:none;background:#fff;cursor:pointer;width:34px;height:34px;border-radius:8px;font-size:15px;">📋</button>
+          <button onclick="copyNplValue('${encodeURIComponent(displayClientId)}', this)" title="Скопировать" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:none;background:#fff;cursor:pointer;color:var(--muted);width:34px;height:34px;border-radius:8px;">${nplIcon('copy', 15)}</button>
         </div>` : ''}
       </div>
 
@@ -6620,8 +6638,8 @@ function renderNplCollectorInline(group) {
   if (!employeeId) {
     return `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:#F3F4F6;border-radius:8px;padding:10px;margin-top:8px;cursor:pointer;" onclick="openNplAssignModal('${keyEnc}')">
-        <div style="font-size:13px;color:var(--muted);">Взыскатель не назначен</div>
-        <span style="color:var(--muted);">›</span>
+        <div style="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;">${nplIcon('userStar', 15)}Взыскатель не назначен</div>
+        <span style="color:var(--muted);">${nplIcon('chevron', 15)}</span>
       </div>`;
   }
   const collectorName = allNplCollectors[employeeId]
@@ -6633,7 +6651,7 @@ function renderNplCollectorInline(group) {
         <div style="font-size:11px;color:var(--muted);">Взыскатель</div>
         <div style="font-size:13px;font-weight:700;word-break:break-word;">${collectorName ? safe(collectorName) + ' (ID ' + safe(employeeId) + ')' : 'ID ' + safe(employeeId)}</div>
       </div>
-      <span style="color:var(--muted);">›</span>
+      <span style="color:var(--muted);">${nplIcon('chevron', 15)}</span>
     </div>`;
 }
 
@@ -6735,9 +6753,11 @@ function copyNplValue(valueEnc, btnEl) {
   const value = decodeURIComponent(valueEnc);
   const showCopied = () => {
     if (!btnEl) return;
-    const original = btnEl.innerText;
-    btnEl.innerText = '✓';
-    setTimeout(() => { btnEl.innerText = original; }, 1200);
+    const original = btnEl.innerHTML;
+    const prevColor = btnEl.style.color;
+    btnEl.innerHTML = nplIcon('check', 15);
+    btnEl.style.color = 'var(--green, #1E8E3E)';
+    setTimeout(() => { btnEl.innerHTML = original; btnEl.style.color = prevColor; }, 1200);
   };
 
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -6865,9 +6885,10 @@ function renderNplClientDetailBody(group) {
   }).join('');
 
   const keyEnc = encodeURIComponent(group.key);
+  // Кнопка "Взыскатель" убрана отсюда — теперь взыскатель виден и
+  // открывается кликом прямо в шапке карточки (см. renderNplCollectorInline).
   const popupTriggersHtml = `
     <div class="npl-popup-triggers">
-      <button type="button" class="btn btn-secondary" onclick="openNplAssignModal('${keyEnc}')">🧑‍💼 Взыскатель</button>
       <button type="button" class="btn btn-secondary" onclick="openNplExtraModal('${keyEnc}')">📱 Доп. информация</button>
     </div>`;
 
