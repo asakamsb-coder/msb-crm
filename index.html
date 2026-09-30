@@ -616,6 +616,15 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 .vz-quick-action .icon{color:var(--brand);margin:0 auto 6px;}
 .vz-attention-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;}
 .vz-attention-row:last-child{border-bottom:none;}
+/* Панель быстрых действий в карточке клиента NPL (Позвонить/Написать/
+   Маршрут/Визит) — один тап вместо поиска нужной кнопки в длинной
+   карточке. Те же классы, что и у vz-quick-action, но своя сетка на 4
+   колонки (на узком экране сама переносится в 2 строки по 2). */
+.npl-quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+@media (max-width:420px){.npl-quick-actions{grid-template-columns:repeat(2,1fr);}}
+.npl-quick-action{text-align:center;padding:10px 4px;background:#F9FAFB;border-radius:12px;border:none;cursor:pointer;color:var(--text);font-size:12.5px;text-decoration:none;display:block;}
+.npl-quick-action.disabled{opacity:.45;pointer-events:none;}
+.npl-quick-action .icon{color:var(--brand);margin:0 auto 6px;}
 .top-actions{
   display:flex;
   align-items:center;
@@ -7555,7 +7564,9 @@ function nplIcon(name, size) {
     check: '<path d="M5 12l5 5l10 -10" />',
     locate: '<path d="M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M12 3l0 2" /><path d="M12 19l0 2" /><path d="M3 12l2 0" /><path d="M19 12l2 0" />',
     chevron: '<path d="M9 6l6 6l-6 6" />',
-    userStar: '<path d="M9 10a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h2.5" /><path d="M19 22l-1.5 -1.5" /><path d="M20.5 20.5a1.5 1.5 0 1 0 -3 0a1.5 1.5 0 0 0 3 0" />'
+    userStar: '<path d="M9 10a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h2.5" /><path d="M19 22l-1.5 -1.5" /><path d="M20.5 20.5a1.5 1.5 0 1 0 -3 0a1.5 1.5 0 0 0 3 0" />',
+    message: '<path d="M8 9h8" /><path d="M8 13h6" /><path d="M12.01 18.594l-3.01 1.406v-3h-2a3 3 0 0 1 -3 -3v-6a3 3 0 0 1 3 -3h10a3 3 0 0 1 3 3v6a3 3 0 0 1 -3 3h-2.5l-2.5 2.594z" />',
+    route: '<path d="M9 4v13a3 3 0 0 1 -6 0v-1" /><path d="M15 20v-13a3 3 0 0 1 6 0v1" /><path d="M5 8l-2 -2l2 -2" /><path d="M19 16l2 2l-2 2" />'
   };
   return `<svg xmlns="http://www.w3.org/2000/svg" ${common}>${paths[name] || ''}</svg>`;
 }
@@ -7607,6 +7618,97 @@ function renderNplClientHeaderMeta(group) {
 
       ${renderNplCollectorInline(group)}
     </div>`;
+}
+
+// ===================== NPL: ПАНЕЛЬ БЫСТРЫХ ДЕЙСТВИЙ =====================
+// "Позвонить / Написать / Маршрут / Визит" — вынесены в один ряд наверх
+// карточки клиента, чтобы взыскателю в поле не нужно было прокручивать
+// всю карточку в поисках номера телефона или адреса.
+
+// Телефон для звонка/сообщения: сначала вручную добавленный (свежее и
+// надёжнее — сотрудник сам проверил, что дозвонился), иначе первый из
+// выгрузки. Возвращает только цифры и "+", как нужно для tel:/sms:.
+function getNplPrimaryPhone(group) {
+  const extra = allNplExtra[group.key] || {};
+  let raw = '';
+  if (extra.phones && extra.phones.length) raw = extra.phones[0].phone || '';
+  if (!raw) raw = String(group.phoneJoined || '').split(';')[0];
+  raw = String(raw || '').trim();
+  if (!raw) return '';
+  const digits = raw.replace(/[^\d+]/g, '');
+  if (!digits) return '';
+  return digits.indexOf('+') === 0 ? digits : '+' + digits.replace(/^0+/, '998');
+}
+
+// Стандартный текст напоминания о долге — сумма и дни просрочки
+// подставляются автоматически из карточки клиента.
+function buildNplDebtMessage(group) {
+  const overdueAll = (Number(group.overdueBalanceSum) || 0) + (Number(group.overdueInterestSum) || 0);
+  return 'Уважаемый(ая) ' + group.clientName + ', у вас имеется просроченная задолженность перед Asakabank в размере '
+    + formatMoney(overdueAll) + ', просрочка ' + group.maxDays + ' дней. Просим погасить в ближайшее время.';
+}
+
+function renderNplQuickActions(group) {
+  const keyEnc = encodeURIComponent(group.key);
+  const phone = getNplPrimaryPhone(group);
+  const extra = allNplExtra[group.key] || {};
+  const hasLocation = !!(extra.lat && extra.lng);
+  const routeHref = hasLocation ? `geo:${extra.lat},${extra.lng}?q=${extra.lat},${extra.lng}(${encodeURIComponent(group.clientName)})` : '#';
+
+  return `
+    <div class="npl-quick-actions">
+      <a class="npl-quick-action${phone ? '' : ' disabled'}" href="${phone ? 'tel:' + phone : '#'}">
+        <div class="icon">${nplIcon('phone', 20)}</div>Позвонить
+      </a>
+      <button type="button" class="npl-quick-action${phone ? '' : ' disabled'}" onclick="openNplMessageModal('${keyEnc}')">
+        <div class="icon">${nplIcon('message', 20)}</div>Написать
+      </button>
+      <a class="npl-quick-action${hasLocation ? '' : ' disabled'}" href="${routeHref}">
+        <div class="icon">${nplIcon('route', 20)}</div>Маршрут
+      </a>
+      <button type="button" class="npl-quick-action" onclick="document.getElementById('nplVisitBlock_${keyEnc}')?.scrollIntoView({behavior:'smooth', block:'start'})">
+        <div class="icon">${nplIcon('pin', 20)}</div>Визит
+      </button>
+    </div>`;
+}
+
+// "Написать" — небольшое окно с готовым текстом напоминания и двумя
+// способами отправки. Telegram по номеру телефона не позволяет
+// подставить текст сообщения через ссылку (ограничение самого Telegram,
+// не наше) — поэтому текст сначала копируется в буфer обмена, а чат
+// открывается рядом, взыскателю остаётся один раз вставить (Ctrl+V/
+// "Вставить"). Для SMS текст подставляется в само сообщение напрямую.
+function openNplMessageModal(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+  if (!group) return;
+  const phone = getNplPrimaryPhone(group);
+  const message = buildNplDebtMessage(group);
+  const msgId = 'nplMsgText_' + keyEnc;
+
+  openNplModal('Написать клиенту', `
+    <div style="margin-bottom:12px;">
+      <div class="mp-label">Телефон</div>
+      <div style="font-size:14px;font-weight:700;">${phone ? safe(phone) : 'Не указан — добавьте телефон в "Доп. информация"'}</div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <div class="mp-label">Текст напоминания</div>
+      <textarea id="${msgId}" class="input" style="width:100%;min-height:100px;">${safe(message)}</textarea>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <a class="btn btn-primary${phone ? '' : ' disabled'}" style="text-align:center;${phone ? '' : 'opacity:.5;pointer-events:none;'}"
+         href="${phone ? 'sms:' + phone + '?body=' + encodeURIComponent(message) : '#'}">SMS</a>
+      <button type="button" class="btn btn-secondary"${phone ? '' : ' disabled'} onclick="copyAndOpenTelegram('${phone}', '${msgId}')">Telegram (текст скопируется)</button>
+    </div>
+  `);
+}
+
+async function copyAndOpenTelegram(phone, msgId) {
+  const text = document.getElementById(msgId)?.value || '';
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) { /* буфер обмена может быть недоступен — просто откроем чат */ }
+  if (phone) window.open('https://t.me/' + phone, '_blank');
 }
 
 // Взыскатель в списке "Физические лица" — по умолчанию виден только ID
@@ -7917,7 +8019,8 @@ function renderNplClientDetailBody(group) {
       <button type="button" class="btn btn-secondary" onclick="openNplExtraModal('${keyEnc}')">📱 Доп. информация</button>
     </div>`;
 
-  return summaryHtml +
+  return renderNplQuickActions(group) +
+    summaryHtml +
     idBadgesHtml +
     `<h2 style="font-size:15px;margin:20px 0 10px;">Анкеты (${group.loans.length})</h2>` +
     loansHtml +
@@ -8315,7 +8418,7 @@ function renderNplVisitBlock(key) {
     : '<div style="color:var(--muted);font-size:13px;">Визитов ещё не было</div>';
 
   return `
-    <div class="panel" style="background:#FAFAFA;margin-top:14px;">
+    <div class="panel" style="background:#FAFAFA;margin-top:14px;" id="nplVisitBlock_${keyEnc}">
       <h2 style="font-size:15px;margin-bottom:12px;">📍 Подтверждение визита</h2>
 
       <div style="margin-bottom:10px;">${statusRadios}</div>
