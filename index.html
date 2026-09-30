@@ -6852,11 +6852,15 @@ function getNplParserWorker() {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
+        // Строку заголовков ищем по всей строке (любая колонка), а не только
+        // по колонке A — банк иногда переставляет "Наименование клиента" не
+        // на первое место при добавлении новых колонок в начало файла.
         let headerRowIdx = -1;
         let looksLikePortfolioFile = false;
         for (let i = 0; i < Math.min(rows.length, 10); i++) {
-          if (String(rows[i][0]).trim() === 'Наименование клиента') { headerRowIdx = i; break; }
-          if (String(rows[i][0]).trim() === 'ИД договора') { looksLikePortfolioFile = true; }
+          const rowVals = (rows[i] || []).map(function(v) { return String(v || '').trim(); });
+          if (rowVals.indexOf('Наименование клиента') !== -1) { headerRowIdx = i; break; }
+          if (rowVals.indexOf('ИД договора') !== -1) { looksLikePortfolioFile = true; }
         }
 
         // Колонки "Тип продукта", "Адресс", "ID сотрудник", "Расчетный счет"
@@ -6880,11 +6884,29 @@ function getNplParserWorker() {
         // сдвиг колонок в будущих выгрузках.
         let productTypeColIdx = -1, addressColIdx = -1, employeeColIdx = -1, accountColIdx = -1, accountBalanceColIdx = -1, phoneColIdx = -1;
         let subjectColIdx = -1, officerColIdx = -1, courtNumColIdx = -1, courtDateColIdx = -1, mibCaseColIdx = -1, mibDateColIdx = -1;
+        // Основные поля (имя/ID клиента/ПИНФЛ и суммы) раньше читались по
+        // жёстким номерам колонок (row[0]..row[13]) — это ломалось, как
+        // только банк вставлял новую колонку в середину файла (например,
+        // "Дата выдачи кредита" перед "ID клиента" — баг, найденный
+        // 30.09.2026: после вставки этой колонки "ID клиента" из row[1]
+        // превращался в дату, а не число, и вообще ни одна строка не
+        // проходила проверку contractId). Теперь эти поля тоже сначала
+        // ищутся по названию заголовка, как адрес/счёт/сотрудник — и
+        // переживают вставку/удаление/перестановку любых колонок. Если
+        // подходящий заголовок не найден (совсем другой формат файла) —
+        // используется старая жёсткая позиция как запасной вариант.
+        let nameColIdx = -1, idColIdx = -1, pinColIdx = -1;
+        let totalDebtColIdx = -1, totalNplColIdx = -1, currentBalanceColIdx = -1, revisedBalanceColIdx = -1, overdueBalanceColIdx = -1;
+        let daysOverdueColIdx = -1, totalInterestColIdx = -1, accruedInterestColIdx = -1, overdueInterestColIdx = -1;
+        let daysOverdueInterestColIdx = -1, reserveColIdx = -1;
         if (headerRowIdx !== -1) {
           const headerRow = rows[headerRowIdx] || [];
           for (let c = 0; c < headerRow.length; c++) {
-            const h = String(headerRow[c] || '').trim().toLowerCase().replace(/ё/g, 'е');
-            if (h.indexOf('тип продукта') !== -1) productTypeColIdx = c;
+            const h = String(headerRow[c] || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\\s+/g, ' ');
+            if (h === 'наименование клиента') nameColIdx = c;
+            else if (h === 'id' || h === 'id клиента') idColIdx = c;
+            else if (h.indexOf('пинфл') !== -1 || h === 'инн' || h.indexOf('пинфл/инн') !== -1) pinColIdx = c;
+            else if (h.indexOf('тип продукта') !== -1) productTypeColIdx = c;
             else if (h.indexOf('id сотрудник') !== -1) employeeColIdx = c;
             else if (h.indexOf('остаток расчетный счет') !== -1 || (h.indexOf('расчетный счет') !== -1 && h.indexOf('остаток') !== -1)) accountBalanceColIdx = c;
             else if (h.indexOf('расчетный счет') !== -1) accountColIdx = c;
@@ -6896,8 +6918,36 @@ function getNplParserWorker() {
             else if (h.indexOf('дата приказа') !== -1) courtDateColIdx = c;
             else if (h.indexOf('миб возбужд') !== -1) mibCaseColIdx = c;
             else if (h.indexOf('миб дата') !== -1) mibDateColIdx = c;
+            else if (h.indexOf('всего задолженность') !== -1 && h.indexOf('нпл') !== -1) totalNplColIdx = c;
+            else if (h.indexOf('всего задолженность') !== -1) totalDebtColIdx = c;
+            else if (h.indexOf('текущий остаток') !== -1) currentBalanceColIdx = c;
+            else if (h.indexOf('пересмотренный остаток') !== -1) revisedBalanceColIdx = c;
+            else if (h.indexOf('просроченный остаток') !== -1) overdueBalanceColIdx = c;
+            else if (h.indexOf('дни просроч') !== -1 && h.indexOf('процент') !== -1) daysOverdueInterestColIdx = c;
+            else if (h.indexOf('дни просрочки') !== -1) daysOverdueColIdx = c;
+            else if (h.indexOf('всего процент') !== -1) totalInterestColIdx = c;
+            else if (h.indexOf('начисленн') !== -1 && h.indexOf('процент') !== -1) accruedInterestColIdx = c;
+            else if (h.indexOf('просроченные процент') !== -1) overdueInterestColIdx = c;
+            else if (h.indexOf('резерв') !== -1) reserveColIdx = c;
           }
         }
+        // Запасные позиции — как файл выглядел исторически, если заголовок
+        // почему-то не нашёлся по имени (не должно происходить, но не даёт
+        // упасть в ноль анкет молча).
+        if (nameColIdx === -1) nameColIdx = 0;
+        if (idColIdx === -1) idColIdx = 1;
+        if (pinColIdx === -1) pinColIdx = 2;
+        if (totalDebtColIdx === -1) totalDebtColIdx = 3;
+        if (totalNplColIdx === -1) totalNplColIdx = 4;
+        if (currentBalanceColIdx === -1) currentBalanceColIdx = 5;
+        if (revisedBalanceColIdx === -1) revisedBalanceColIdx = 6;
+        if (overdueBalanceColIdx === -1) overdueBalanceColIdx = 7;
+        if (daysOverdueColIdx === -1) daysOverdueColIdx = 8;
+        if (totalInterestColIdx === -1) totalInterestColIdx = 9;
+        if (accruedInterestColIdx === -1) accruedInterestColIdx = 10;
+        if (overdueInterestColIdx === -1) overdueInterestColIdx = 11;
+        if (daysOverdueInterestColIdx === -1) daysOverdueInterestColIdx = 12;
+        if (reserveColIdx === -1) reserveColIdx = 13;
 
         // В колонке "Адресс" адрес и телефон бывают склеены через запятую
         // (например "КР Конырат рн Жаслык ОФИ,998612265071") — отделяем
@@ -6925,11 +6975,11 @@ function getNplParserWorker() {
         const loans = [];
         for (let i = headerRowIdx + 1; i < rows.length; i++) {
           const row = rows[i];
-          const contractId = row[1];
+          const contractId = row[idColIdx];
           if (!contractId || isNaN(Number(contractId))) continue;
 
-          const clientName = String(row[0] || '').trim();
-          const pin = String(row[2] || '').trim();
+          const clientName = String(row[nameColIdx] || '').trim();
+          const pin = String(row[pinColIdx] || '').trim();
 
           // Субъект (физ./юр. лицо): если в файле есть готовая колонка
           // "Субъект" (J/P) — берём её напрямую, это надёжнее. Если колонки
@@ -6954,17 +7004,17 @@ function getNplParserWorker() {
             pin: pin,
             clientKey: clientKey,
             subject: subject,
-            totalDebt: Number(row[3]) || 0,
-            totalNpl: Number(row[4]) || 0,
-            currentBalance: Number(row[5]) || 0,
-            revisedBalance: Number(row[6]) || 0,
-            overdueBalance: Number(row[7]) || 0,
-            daysOverdue: Number(row[8]) || 0,
-            totalInterest: Number(row[9]) || 0,
-            accruedInterest: Number(row[10]) || 0,
-            overdueInterest: Number(row[11]) || 0,
-            daysOverdueInterest: Number(row[12]) || 0,
-            reserve: Number(row[13]) || 0,
+            totalDebt: Number(row[totalDebtColIdx]) || 0,
+            totalNpl: Number(row[totalNplColIdx]) || 0,
+            currentBalance: Number(row[currentBalanceColIdx]) || 0,
+            revisedBalance: Number(row[revisedBalanceColIdx]) || 0,
+            overdueBalance: Number(row[overdueBalanceColIdx]) || 0,
+            daysOverdue: Number(row[daysOverdueColIdx]) || 0,
+            totalInterest: Number(row[totalInterestColIdx]) || 0,
+            accruedInterest: Number(row[accruedInterestColIdx]) || 0,
+            overdueInterest: Number(row[overdueInterestColIdx]) || 0,
+            daysOverdueInterest: Number(row[daysOverdueInterestColIdx]) || 0,
+            reserve: Number(row[reserveColIdx]) || 0,
             officer: officerColIdx !== -1 ? String(row[officerColIdx] || '').trim() : '',
             courtOrderNumber: courtNumColIdx !== -1 ? String(row[courtNumColIdx] || '').trim() : '',
             courtOrderDate: courtDateColIdx !== -1 ? String(row[courtDateColIdx] || '').trim() : '',
