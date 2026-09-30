@@ -350,6 +350,16 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
    влево/вправо (тем более удобно на телефоне). */
 .mtbl-npl-wide{min-width:1600px;}
 .mtbl-npl-wide th,.mtbl-npl-wide td{white-space:nowrap;padding:10px 12px;}
+/* Список "Физические лица" — первая колонка (ФИО + ID клиента) закреплена
+   слева (position:sticky), остальные колонки прокручиваются вбок; раньше
+   на мобильном эти колонки просто скрывались (display:none), из-за чего
+   ФИО клиента вообще не было видно в списке на телефоне. */
+.npl-clients-table{min-width:520px;width:100%;border-collapse:collapse;}
+.npl-clients-table th,.npl-clients-table td{white-space:nowrap;padding:12px 10px;text-align:left;border-bottom:1px solid var(--line);}
+.npl-clients-table th:first-child,.npl-clients-table td:first-child{position:sticky;left:0;background:#fff;white-space:normal;border-right:1px solid var(--line);z-index:1;}
+.npl-clients-table tr.clickable-row:active td:first-child{background:#fafafa;}
+.npl-clients-table .npl-client-name{font-weight:700;font-size:14px;}
+.npl-clients-table .npl-client-id{font-size:11.5px;color:var(--muted);margin-top:2px;}
 /* Крупные цифры в карточках дашборда NPL — просили увеличить, это самый
    важный блок для руководителя, цифры должны читаться издалека. */
 .npl-kpi .card-value.npl-kpi-value{font-size:34px;}
@@ -1625,7 +1635,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <h3 style="font-size:14px;margin:0 0 6px;">NPL — юридические лица (90+), поимённо</h3>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Только клиенты, которые уже в NPL (просрочка 90+) — все поля из выгрузки, прокрутка вправо.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-        <input id="nplLegalSearchInput" class="input" placeholder="Поиск по названию, ИНН" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
+        <input id="nplLegalSearchInput" class="input" placeholder="Поиск по названию, ИНН, ID клиента" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
       </div>
       <div class="client-table-wrap" id="nplLegalTableWrap">
         <table class="mtbl-npl-wide" id="nplLegalTable">
@@ -1667,7 +1677,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <h2 style="font-size:16px;margin:0 0 6px;">2. Юридические лица</h2>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все юр. лица и ИП/ЯТТ с просрочкой от 1 дня — поимённо, все поля из выгрузки (прокрутка вправо).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-        <input id="nplLegalAllSearchInput" class="input" placeholder="Поиск по названию, ИНН, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('legal')">
+        <input id="nplLegalAllSearchInput" class="input" placeholder="Поиск по названию, ИНН, ID клиента, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('legal')">
       </div>
       <div class="client-table-wrap">
         <table class="mtbl-npl-wide" id="nplLegalAllTable">
@@ -1710,24 +1720,21 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
       <h2 style="font-size:16px;margin:0 0 6px;">3. Физические лица</h2>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все физ. лица с просрочкой от 1 дня — поимённо (сводно).</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-        <input id="nplIndivSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('indiv')">
+        <input id="nplIndivSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ, ID клиента, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('indiv')">
       </div>
       <div class="client-table-wrap">
-        <table class="mtbl-overdue" id="nplIndivTable">
+        <table class="npl-clients-table" id="nplIndivTable">
           <thead>
             <tr>
-              <th>№</th>
               <th>Клиент</th>
-              <th>ПИНФЛ</th>
-              <th>Анкет</th>
               <th>Сумма NPL</th>
-              <th>Дней (макс.)</th>
+              <th>Дней</th>
               <th>Телефон</th>
-              <th></th>
+              <th>Взыскатель</th>
             </tr>
           </thead>
           <tbody id="nplIndivTableBody">
-            <tr><td colspan="8" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="5" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
@@ -6414,7 +6421,7 @@ function renderNplPage() {
     let clients = legalGroups.slice();
     const query = normalizeText((document.getElementById('nplLegalSearchInput')?.value || '').trim());
     if (query) {
-      clients = clients.filter(c => normalizeText([c.clientName, c.pin].join(' ')).includes(query));
+      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.displayClientId, c.contractIdsJoined].join(' ')).includes(query));
     }
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
@@ -6456,7 +6463,7 @@ function renderNplPage() {
     let clients = legalAllGroups.slice();
     const query = normalizeText((document.getElementById('nplLegalAllSearchInput')?.value || '').trim());
     if (query) {
-      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.contractIdsJoined].join(' ')).includes(query));
+      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.displayClientId, c.contractIdsJoined].join(' ')).includes(query));
     }
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
@@ -6505,7 +6512,7 @@ function renderNplPage() {
     let clients = indivAllGroups.slice();
     const query = normalizeText((document.getElementById('nplIndivSearchInput')?.value || '').trim());
     if (query) {
-      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.contractIdsJoined].join(' ')).includes(query));
+      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.displayClientId, c.contractIdsJoined].join(' ')).includes(query));
     }
     clients.sort((a, b) => b.nplSum - a.nplSum);
 
@@ -6515,18 +6522,18 @@ function renderNplPage() {
     const pageClients = clients.slice(pageStart, pageStart + NPL_PAGE_SIZE);
 
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="loading">Ничего не найдено</td></tr>';
     } else {
-      tbody.innerHTML = pageClients.map((c, i) => `
+      tbody.innerHTML = pageClients.map((c) => `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
-          <td class="nowrap">${pageStart + i + 1}</td>
-          <td>${safe(c.clientName)}</td>
-          <td class="nowrap">${safe(c.pin) || '—'}</td>
-          <td class="nowrap">${c.loans.length}</td>
+          <td>
+            <div class="npl-client-name">${safe(c.clientName)}</div>
+            <div class="npl-client-id">ID ${safe(c.displayClientId) || '—'}</div>
+          </td>
           <td class="nowrap">${formatMoney(c.nplSum)}</td>
           <td class="nowrap">${c.maxDays}</td>
           <td class="nowrap">${safe(c.phoneJoined) || '—'}</td>
-          <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
+          <td class="nowrap">${renderNplListCollectorCell(c)}</td>
         </tr>`).join('');
     }
 
@@ -6625,6 +6632,36 @@ function renderNplClientHeaderMeta(group) {
 
       ${renderNplCollectorInline(group)}
     </div>`;
+}
+
+// Взыскатель в списке "Физические лица" — по умолчанию виден только ID
+// сотрудника (быстро и без лишних подстановок в 50 строк за раз), а ФИО
+// подтягивается по клику из того же справочника, что и в карточке клиента
+// (allNplCollectors — из листа "взыскатель" файла, allWebUsers — запасной
+// вариант по списку пользователей CRM с ролью "Взыскатель").
+function nplCollectorLabel(employeeId) {
+  const id = String(employeeId || '').trim();
+  if (!id) return '';
+  return allNplCollectors[id]
+    || ((allWebUsers || []).find(u => String(u.employeeId || '').trim() === id) || {}).fullName
+    || '';
+}
+
+function renderNplListCollectorCell(group) {
+  const employeeId = String(allNplAssignments[group.key] || '').trim();
+  if (!employeeId) return '<span style="color:var(--muted);">—</span>';
+  return `<span onclick="revealNplListCollector(this, '${encodeURIComponent(employeeId)}', event)" style="display:inline-flex;align-items:center;gap:3px;color:var(--brand);font-weight:700;cursor:pointer;">ID ${safe(employeeId)} ${nplIcon('chevron', 12)}</span>`;
+}
+
+function revealNplListCollector(el, employeeIdEnc, evt) {
+  if (evt) evt.stopPropagation();
+  const employeeId = decodeURIComponent(employeeIdEnc);
+  const name = nplCollectorLabel(employeeId);
+  el.innerHTML = name ? safe(name) : ('ID ' + safe(employeeId) + ' — не найден в справочнике');
+  el.style.color = 'var(--text)';
+  el.style.fontWeight = '400';
+  el.style.cursor = 'default';
+  el.onclick = null;
 }
 
 // Взыскатель — видно прямо в теле карточки (а не только в попапе), чтобы
@@ -6791,13 +6828,26 @@ function renderNplClientDetailBody(group) {
   const pin = String(group.pin || '').trim();
   const showClientId = clientKey && clientKey !== pin;
 
+  // Остаток по расчётному счёту — сумма остатков по счетам всех анкет
+  // клиента (каждая анкета может иметь свой счёт), берём только там, где
+  // остаток реально пришёл из последней выгрузки (см. allNplAccounts).
+  const accountBalanceSum = group.loans.reduce((sum, l) => {
+    const info = allNplAccounts[l.contractId];
+    const val = info && info.balance !== '' && info.balance !== undefined && info.balance !== null ? Number(info.balance) || 0 : null;
+    return val !== null ? sum + val : sum;
+  }, 0);
+  const hasAnyAccountBalance = group.loans.some(l => {
+    const info = allNplAccounts[l.contractId];
+    return !!(info && info.balance !== '' && info.balance !== undefined && info.balance !== null);
+  });
+
   const summaryHtml = `
     <div class="info-grid npl-summary-grid">
       <div class="info-card"><div class="info-label">Всего задолженность</div><div class="info-value">${formatMoney(group.totalDebtSum)}</div></div>
       <div class="info-card npl-danger-card"><div class="info-label">Всего просрочка</div><div class="info-value">${formatMoney(overdueAll)}</div></div>
       <div class="info-card"><div class="info-label">Просрочка ОД</div><div class="info-value">${formatMoney(overdueOd)}</div></div>
       <div class="info-card"><div class="info-label">Просрочка %</div><div class="info-value">${formatMoney(overduePct)}</div></div>
-      <div class="info-card"><div class="info-label">Анкет</div><div class="info-value">${group.loans.length}</div></div>
+      ${hasAnyAccountBalance ? `<div class="info-card"><div class="info-label">Остаток на счёте</div><div class="info-value">${formatMoney(accountBalanceSum)}</div></div>` : `<div class="info-card"><div class="info-label">Анкет</div><div class="info-value">${group.loans.length}</div></div>`}
       <div class="info-card"><div class="info-label">Дней (макс.)</div><div class="info-value">${group.maxDays}</div></div>
     </div>`;
 
@@ -6894,7 +6944,7 @@ function renderNplClientDetailBody(group) {
 
   return summaryHtml +
     idBadgesHtml +
-    `<h2 style="font-size:15px;margin:20px 0 10px;">Анкеты</h2>` +
+    `<h2 style="font-size:15px;margin:20px 0 10px;">Анкеты (${group.loans.length})</h2>` +
     loansHtml +
     popupTriggersHtml +
     renderNplVisitBlock(group.key);
