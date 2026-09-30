@@ -7959,10 +7959,13 @@ function renderNplLegalStatusTab(group) {
 
   const filesHtml = files.length
     ? files.map(f => `
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);">
-          <a href="${safe(f.url)}" target="_blank" style="font-size:13px;color:var(--brand);font-weight:700;word-break:break-word;flex:1;min-width:0;">${safe(f.name)}</a>
-          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">${safe(f.uploadedAt)}${f.recognized ? '' : ' · вручную'}</span>
-          ${canEdit ? `<button onclick="deleteNplMibFileUi('${keyEnc}', '${encodeURIComponent(f.url)}')" title="Удалить" style="flex:0 0 auto;border:none;background:none;cursor:pointer;color:var(--muted);font-weight:800;padding:0 2px;">×</button>` : ''}
+        <div style="padding:8px 0;border-bottom:1px solid var(--line);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <a href="${safe(f.url)}" target="_blank" style="font-size:13px;color:var(--brand);font-weight:700;word-break:break-word;flex:1;min-width:0;">${safe(f.name)}</a>
+            <span style="font-size:11px;color:var(--muted);white-space:nowrap;">${safe(f.uploadedAt)}${f.recognized ? '' : ' · вручную'}</span>
+            ${canEdit ? `<button onclick="deleteNplMibFileUi('${keyEnc}', '${encodeURIComponent(f.url)}')" title="Удалить" style="flex:0 0 auto;border:none;background:none;cursor:pointer;color:var(--muted);font-weight:800;padding:0 2px;">×</button>` : ''}
+          </div>
+          ${(!f.recognized && f.ocrError) ? `<div style="font-size:11px;color:var(--red,#c0392b);margin-top:3px;word-break:break-word;">Ошибка распознавания: ${safe(f.ocrError)}</div>` : ''}
         </div>`).join('')
     : `<div style="font-size:13px;color:var(--muted);padding:6px 0;">Документы МИБ ещё не прикреплены</div>`;
 
@@ -8054,8 +8057,10 @@ async function uploadNplMibFile(keyEnc, input) {
         allNplMib.data[key] = Object.assign({}, allNplMib.data[key], result.parsed, { actions: result.actions || [] });
       }
       allNplMib.files[key] = allNplMib.files[key] || [];
-      allNplMib.files[key].unshift({ url: result.fileUrl, name: file.name, uploadedAt: new Date().toLocaleString('ru-RU'), recognized: result.recognized });
-      if (status) { status.style.color = result.recognized ? 'var(--green)' : 'var(--orange)'; status.innerText = result.message; }
+      allNplMib.files[key].unshift({ url: result.fileUrl, name: file.name, uploadedAt: new Date().toLocaleString('ru-RU'), recognized: result.recognized, ocrError: result.ocrError || '' });
+      if (!result.recognized && result.ocrError) {
+        alert('Автораспознавание не сработало.\n\nПричина: ' + result.ocrError);
+      }
       document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
     } else {
       if (status) { status.style.color = 'var(--red)'; status.innerText = result.message || 'Ошибка загрузки'; }
