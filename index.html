@@ -2190,7 +2190,7 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
   <div style="max-width:450px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
     <div class="onboard-avatar" id="cabinetPhotoAvatar" style="width:72px;height:72px;font-size:22px;flex-shrink:0;"></div>
     <div style="flex:1;min-width:180px;">
-      <input type="file" accept="image/*" capture="user" id="cabinetPhotoInput" style="display:none;" onchange="handleCabinetPhotoSelected(event)">
+      <input type="file" accept="image/*" id="cabinetPhotoInput" style="display:none;" onchange="handleCabinetPhotoSelected(event)">
       <button class="btn btn-secondary" onclick="document.getElementById('cabinetPhotoInput').click()">Изменить фото</button>
       <div id="cabinetPhotoStatus" style="font-size:12px;color:var(--muted);margin-top:8px;"></div>
     </div>
@@ -6678,6 +6678,35 @@ function renderVzyskatelHome() {
           </div>
           <span style="color:var(--muted);">${appIcon('chevron', 16)}</span>
         </div>`).join('') : `<div style="font-size:13px;color:var(--muted);padding:10px 0;">Пока нет назначенных клиентов</div>`}
+    </div>
+    ${renderVzVisitsHistory()}`;
+}
+
+// История всех обходов (визитов), которые сотрудник сам подтвердил —
+// полная история, не только по текущим назначенным клиентам, отдельным
+// блоком внизу "Главной". Показываем последние 30 — при необходимости
+// полную историю по конкретному клиенту всегда можно посмотреть в его
+// карточке (там уже есть отдельный блок "История визитов").
+function renderVzVisitsHistory() {
+  const visits = getMyNplVisitsFlat();
+  const shown = visits.slice(0, 30);
+  const rows = shown.length
+    ? shown.map(v => `
+        <div class="vz-attention-row" onclick="openNplClientDetail('${encodeURIComponent(v.key)}')">
+          <div class="onboard-avatar" style="width:32px;height:32px;font-size:11px;">${appIcon('mappin', 15)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:700;">${safe(v.clientName) || 'Клиент'}</div>
+            <div style="font-size:11.5px;color:var(--muted);">${safe(v.addedAt)} · ${safe(v.status)}${v.suspicious ? ' · сомнительный' : ''}</div>
+          </div>
+          <span style="color:var(--muted);">${appIcon('chevron', 16)}</span>
+        </div>`).join('')
+    : `<div style="font-size:13px;color:var(--muted);padding:10px 0;">Визитов ещё не было</div>`;
+
+  return `
+    <div class="vz-card" style="margin-top:16px;">
+      <div style="font-size:13px;font-weight:800;margin-bottom:4px;">История визитов${visits.length ? ' (' + visits.length + ')' : ''}</div>
+      ${rows}
+      ${visits.length > shown.length ? `<div style="font-size:12px;color:var(--muted);text-align:center;padding-top:8px;">Показаны последние ${shown.length} из ${visits.length}</div>` : ''}
     </div>`;
 }
 
@@ -6696,7 +6725,7 @@ function renderVzyskatelProfile() {
       <div style="font-weight:800;font-size:16px;">${safe(currentUser.fullName || currentUser.login)}</div>
       <div style="font-size:13px;color:var(--muted);margin-bottom:2px;">Взыскатель</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">ID сотрудника: ${safe(currentUser.employeeId) || '—'}</div>
-      <input type="file" accept="image/*" capture="user" id="vzProfilePhotoInput" style="display:none;" onchange="handleVzProfilePhotoSelected(event)">
+      <input type="file" accept="image/*" id="vzProfilePhotoInput" style="display:none;" onchange="handleVzProfilePhotoSelected(event)">
       <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="document.getElementById('vzProfilePhotoInput').click()">Изменить фото</button>
       <div id="vzProfilePhotoStatus" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
       ${rec ? `<button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="resetDevicePinFromProfile()">Сбросить вход по PIN/отпечатку на этом телефоне</button>` : ''}
@@ -6828,9 +6857,37 @@ async function loadNplRestInBackground() {
     if (currentNplClientKey && overlay && overlay.classList.contains('active')) {
       openNplClientDetail(encodeURIComponent(currentNplClientKey));
     }
+
+    // История визитов приходит только в "остальных" данных (nplBundleRest) —
+    // если взыскатель уже открыл "Главная" до того, как это догрузилось,
+    // перерисуем блок истории визитов без перезагрузки страницы.
+    if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) {
+      renderVzyskatelHome();
+    }
   } catch (error) {
     console.error('Не удалось догрузить доп. данные NPL:', error);
   }
+}
+
+// Список "моих" визитов (всех статусов, по всем клиентам, не только
+// назначенным сейчас — история визита не должна пропадать при
+// переназначении клиента другому взыскателю) — плоским списком, самые
+// новые сверху. Сверяем по ФИО/логину, которые записываются в визит в
+// момент подтверждения (addNplVisit), так как отдельного поля "ID
+// сотрудника" в самой записи визита нет.
+function getMyNplVisitsFlat() {
+  const myName = String((currentUser && (currentUser.fullName || currentUser.login)) || '').trim().toLowerCase();
+  if (!myName) return [];
+  const flat = [];
+  Object.keys(allNplVisits || {}).forEach(function(key) {
+    (allNplVisits[key] || []).forEach(function(v) {
+      if (String(v.addedBy || '').trim().toLowerCase() === myName) {
+        flat.push(Object.assign({ key: key }, v));
+      }
+    });
+  });
+  flat.sort(function(a, b) { return new Date(b.addedAt) - new Date(a.addedAt); });
+  return flat;
 }
 
 // ---- Парсер NPL-файла (лист с колонками "Наименование клиента", "ID",
