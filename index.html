@@ -7960,8 +7960,9 @@ function renderNplLegalStatusTab(group) {
   const filesHtml = files.length
     ? files.map(f => `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);">
-          <a href="${safe(f.url)}" target="_blank" style="font-size:13px;color:var(--brand);font-weight:700;word-break:break-word;">${safe(f.name)}</a>
+          <a href="${safe(f.url)}" target="_blank" style="font-size:13px;color:var(--brand);font-weight:700;word-break:break-word;flex:1;min-width:0;">${safe(f.name)}</a>
           <span style="font-size:11px;color:var(--muted);white-space:nowrap;">${safe(f.uploadedAt)}${f.recognized ? '' : ' · вручную'}</span>
+          ${canEdit ? `<button onclick="deleteNplMibFileUi('${keyEnc}', '${encodeURIComponent(f.url)}')" title="Удалить" style="flex:0 0 auto;border:none;background:none;cursor:pointer;color:var(--muted);font-weight:800;padding:0 2px;">×</button>` : ''}
         </div>`).join('')
     : `<div style="font-size:13px;color:var(--muted);padding:6px 0;">Документы МИБ ещё не прикреплены</div>`;
 
@@ -8131,6 +8132,25 @@ async function deleteNplMibActionUi(keyEnc, index) {
       document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
     }
   } catch (error) { console.error(error); }
+}
+
+async function deleteNplMibFileUi(keyEnc, urlEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const url = decodeURIComponent(urlEnc);
+  const group = nplGroupsByKey[key];
+  if (!confirm('Удалить прикреплённый файл?')) return;
+  try {
+    const result = await postWebAction({
+      webAction: 'deleteNplMibFile', sessionId: localStorage.getItem('msbSessionId'),
+      key: key, url: url
+    });
+    if (result.success) {
+      allNplMib.files[key] = (allNplMib.files[key] || []).filter(f => f.url !== url);
+      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+    } else {
+      alert(result.message || 'Не удалось удалить файл');
+    }
+  } catch (error) { console.error(error); alert('Ошибка при удалении файла'); }
 }
 // =================== /NPL: ВКЛАДКА "ЮРИДИЧЕСКИЙ СТАТУС" ======================
 
