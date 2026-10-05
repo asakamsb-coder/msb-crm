@@ -7011,6 +7011,11 @@ function getNplParserWorker() {
         // подходящий заголовок не найден (совсем другой формат файла) —
         // используется старая жёсткая позиция как запасной вариант.
         let nameColIdx = -1, idColIdx = -1, pinColIdx = -1;
+        // Новый формат выгрузки (с 05.10.2026): две колонки подряд называются
+        // "Остаток расчетных счет" — первая содержит НОМЕР счёта, вторая —
+        // остаток. Собираем все такие колонки и раздаём по порядку.
+        const acctLikeCols = [];
+        let loanKindColIdx = -1, daysNewColIdx = -1;
         let totalDebtColIdx = -1, totalNplColIdx = -1, currentBalanceColIdx = -1, revisedBalanceColIdx = -1, overdueBalanceColIdx = -1;
         let daysOverdueColIdx = -1, totalInterestColIdx = -1, accruedInterestColIdx = -1, overdueInterestColIdx = -1;
         let daysOverdueInterestColIdx = -1, reserveColIdx = -1;
@@ -7023,7 +7028,7 @@ function getNplParserWorker() {
             else if (h.indexOf('пинфл') !== -1 || h === 'инн' || h.indexOf('пинфл/инн') !== -1) pinColIdx = c;
             else if (h.indexOf('тип продукта') !== -1) productTypeColIdx = c;
             else if (h.indexOf('id сотрудник') !== -1) employeeColIdx = c;
-            else if (h.indexOf('остаток расчетный счет') !== -1 || (h.indexOf('расчетный счет') !== -1 && h.indexOf('остаток') !== -1)) accountBalanceColIdx = c;
+            else if (h.indexOf('остаток расчетн') !== -1) acctLikeCols.push(c);
             else if (h.indexOf('расчетный счет') !== -1) accountColIdx = c;
             else if (h.indexOf('телефон') !== -1) phoneColIdx = c;
             else if (h.indexOf('адрес') !== -1) addressColIdx = c;
@@ -7037,7 +7042,10 @@ function getNplParserWorker() {
             else if (h.indexOf('всего задолженность') !== -1) totalDebtColIdx = c;
             else if (h.indexOf('текущий остаток') !== -1) currentBalanceColIdx = c;
             else if (h.indexOf('пересмотренный остаток') !== -1) revisedBalanceColIdx = c;
-            else if (h.indexOf('просроченный остаток') !== -1) overdueBalanceColIdx = c;
+            else if (h.indexOf('просроченный остаток') !== -1 || h.indexOf('просроченный основной') !== -1) overdueBalanceColIdx = c;
+            else if (h === 'npl') totalNplColIdx = c;
+            else if (h.indexOf('вид кредита') !== -1) productTypeColIdx = c;
+            else if (h.indexOf('день просроч') !== -1) daysOverdueColIdx = c;
             else if (h.indexOf('дни просроч') !== -1 && h.indexOf('процент') !== -1) daysOverdueInterestColIdx = c;
             else if (h.indexOf('дни просрочки') !== -1) daysOverdueColIdx = c;
             else if (h.indexOf('всего процент') !== -1) totalInterestColIdx = c;
@@ -7046,23 +7054,33 @@ function getNplParserWorker() {
             else if (h.indexOf('резерв') !== -1) reserveColIdx = c;
           }
         }
-        // Запасные позиции — как файл выглядел исторически, если заголовок
-        // почему-то не нашёлся по имени (не должно происходить, но не даёт
-        // упасть в ноль анкет молча).
-        if (nameColIdx === -1) nameColIdx = 0;
-        if (idColIdx === -1) idColIdx = 1;
-        if (pinColIdx === -1) pinColIdx = 2;
-        if (totalDebtColIdx === -1) totalDebtColIdx = 3;
-        if (totalNplColIdx === -1) totalNplColIdx = 4;
-        if (currentBalanceColIdx === -1) currentBalanceColIdx = 5;
-        if (revisedBalanceColIdx === -1) revisedBalanceColIdx = 6;
-        if (overdueBalanceColIdx === -1) overdueBalanceColIdx = 7;
-        if (daysOverdueColIdx === -1) daysOverdueColIdx = 8;
-        if (totalInterestColIdx === -1) totalInterestColIdx = 9;
-        if (accruedInterestColIdx === -1) accruedInterestColIdx = 10;
-        if (overdueInterestColIdx === -1) overdueInterestColIdx = 11;
-        if (daysOverdueInterestColIdx === -1) daysOverdueInterestColIdx = 12;
-        if (reserveColIdx === -1) reserveColIdx = 13;
+        // Раздаём колонки "Остаток расчетных счет": две подряд = номер счёта + остаток,
+        // одна = остаток.
+        if (acctLikeCols.length >= 2) { accountColIdx = acctLikeCols[0]; accountBalanceColIdx = acctLikeCols[1]; }
+        else if (acctLikeCols.length === 1) { accountBalanceColIdx = acctLikeCols[0]; }
+
+        // Файл с понятными заголовками (есть "ID клиента" и "Всего задолженность") —
+        // недостающие колонки просто остаются пустыми (-1): в новом формате нет
+        // ПИНФЛ/ИНН, текущего остатка, резерва и т.п., и подставлять вместо них
+        // колонки по старым позициям нельзя — туда попадут чужие данные.
+        const namedFile = idColIdx !== -1 && totalDebtColIdx !== -1 && pinColIdx !== -1 ? false : (idColIdx !== -1 && totalDebtColIdx !== -1);
+        if (!namedFile) {
+          // Запасные позиции — как файл выглядел исторически
+          if (nameColIdx === -1) nameColIdx = 0;
+          if (idColIdx === -1) idColIdx = 1;
+          if (pinColIdx === -1) pinColIdx = 2;
+          if (totalDebtColIdx === -1) totalDebtColIdx = 3;
+          if (totalNplColIdx === -1) totalNplColIdx = 4;
+          if (currentBalanceColIdx === -1) currentBalanceColIdx = 5;
+          if (revisedBalanceColIdx === -1) revisedBalanceColIdx = 6;
+          if (overdueBalanceColIdx === -1) overdueBalanceColIdx = 7;
+          if (daysOverdueColIdx === -1) daysOverdueColIdx = 8;
+          if (totalInterestColIdx === -1) totalInterestColIdx = 9;
+          if (accruedInterestColIdx === -1) accruedInterestColIdx = 10;
+          if (overdueInterestColIdx === -1) overdueInterestColIdx = 11;
+          if (daysOverdueInterestColIdx === -1) daysOverdueInterestColIdx = 12;
+          if (reserveColIdx === -1) reserveColIdx = 13;
+        }
 
         // В колонке "Адресс" адрес и телефон бывают склеены через запятую
         // (например "КР Конырат рн Жаслык ОФИ,998612265071") — отделяем
@@ -7094,7 +7112,9 @@ function getNplParserWorker() {
           if (!contractId || isNaN(Number(contractId))) continue;
 
           const clientName = String(row[nameColIdx] || '').trim();
-          const pin = String(row[pinColIdx] || '').trim();
+          // служебная строка с кодами колонок (1, 7, 10, 36 ...) — не клиент
+          if (!clientName || !isNaN(Number(clientName))) continue;
+          const pin = pinColIdx !== -1 ? String(row[pinColIdx] || '').trim() : '';
 
           // Субъект (физ./юр. лицо): если в файле есть готовая колонка
           // "Субъект" (J/P) — берём её напрямую, это надёжнее. Если колонки
@@ -7105,9 +7125,13 @@ function getNplParserWorker() {
           if (fileSubjectRaw === 'P' || fileSubjectRaw === 'J') {
             subject = fileSubjectRaw;
           } else {
-            subject = pin.length === 14 ? 'P' : 'J';
+            subject = pin ? (pin.length === 14 ? 'P' : 'J') : 'P';
           }
-          if (subject === 'P') {
+          if (!pin) {
+            // В файле нет ПИНФЛ/ИНН — ключ строим по ID клиента; уже известных
+            // клиентов потом сопоставляем со старыми ключами (см. uploadNplFile).
+            clientKey = 'ID:' + String(contractId).trim();
+          } else if (subject === 'P') {
             clientKey = pin;
           } else {
             clientKey = (pin && pin !== '000000000') ? pin : ('NOID:' + clientName.toUpperCase());
@@ -7237,6 +7261,32 @@ async function uploadNplFile() {
   try {
     const parsed = await parseNplFile(input.files[0], (msg) => { statusBox.innerText = msg; });
     const loans = parsed.loans;
+
+    // Новый формат файла без ПИНФЛ/ИНН: известных клиентов находим по ID клиента
+    // среди уже загруженных анкет и сохраняем их прежний ключ — так не теряются
+    // фото, адреса, документы МИБ/суда и назначения.
+    try {
+      const keyById = {};
+      const nameCount = {}, keyByName = {};
+      (allNplLoans || []).forEach(l => {
+        if (!l.clientKey || String(l.clientKey).indexOf('ID:') === 0) return;
+        const id = String(l.contractId || '').trim();
+        if (id) keyById[id] = { key: l.clientKey, pin: l.pin || '' };
+        const nm = String(l.clientName || '').trim().toUpperCase();
+        if (nm) { nameCount[nm] = (nameCount[nm] || 0) + (keyByName[nm] && keyByName[nm].key !== l.clientKey ? 2 : 1); keyByName[nm] = { key: l.clientKey, pin: l.pin || '' }; }
+      });
+      loans.forEach(l => {
+        if (String(l.clientKey || '').indexOf('ID:') === 0) {
+          let m = keyById[String(l.contractId || '').trim()];
+          if (!m) {
+            // запасной вариант — по ФИО, только если такое имя среди старых клиентов одно
+            const nm = String(l.clientName || '').trim().toUpperCase();
+            if (nm && keyByName[nm] && nameCount[nm] === 1) m = keyByName[nm];
+          }
+          if (m) { l.clientKey = m.key; l.pin = m.pin; }
+        }
+      });
+    } catch (e) { console.error(e); }
 
     try {
       const oldKeys = new Set((allNplLoans || []).map(l => String(l.clientKey || '')));
@@ -8111,7 +8161,7 @@ function renderMyTasks() {
       <div id="vpOptions" style="max-height:24vh;overflow-y:auto;"></div>
       <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="vpAutoFill()">Подобрать 10 клиентов автоматически</button>
       <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Берутся самые просроченные, у которых не было визита последние 14 дней.</div>
-      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;text-align:right;">версия плана 3</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;text-align:right;">версия плана 4</div>
     </div>`;
   openNplModal('План визитов', body);
   vpRefreshOptions();
@@ -8121,10 +8171,14 @@ function vpRefreshOptions() {
   const q = (document.getElementById('vpSearch') || {}).value || '';
   const opts = vpClientOptions(q);
   el.innerHTML = opts.length ? opts.map(g => `
-    <div class="vz-attention-row" onclick="addVisitPlanClient('${encodeURIComponent(g.key).replace(/'/g, '%27')}')">
+    <div class="vz-attention-row" data-vpkey="${encodeURIComponent(g.key).replace(/"/g, '%22')}">
       <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(g.clientName)}</div><div style="font-size:11.5px;color:var(--muted);">${g.maxDays} дн. · ${(allNplVisits[g.key] || []).length} визитов</div></div>
       <span style="font-size:20px;color:var(--brand);">+</span>
     </div>`).join('') : '<div style="font-size:13px;color:var(--muted);padding:6px 0;">Нет подходящих клиентов</div>';
+  el.onclick = function(ev) {
+    const row = ev.target && ev.target.closest ? ev.target.closest('[data-vpkey]') : null;
+    if (row) addVisitPlanClient(row.getAttribute('data-vpkey'));
+  };
 }
 function vpNewId() {
   return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'T' + Date.now() + Math.random().toString(16).slice(2);
@@ -8139,9 +8193,12 @@ async function vpAddMany(groups) {
   await vpSync(items);
 }
 function addVisitPlanClient(keyEnc) {
-  const key = decodeURIComponent(keyEnc);
-  const g = getMyNplGroups().find(x => x.key === key);
-  if (g) vpAddMany([g]);
+  try {
+    const key = decodeURIComponent(keyEnc);
+    const g = getMyNplGroups().find(x => x.key === key);
+    if (!g) { alert('Клиент не найден в вашем списке: ' + key); return; }
+    vpAddMany([g]).catch(function(e) { alert('Ошибка добавления в план: ' + (e && e.message || e)); console.error(e); });
+  } catch (e) { alert('Ошибка добавления в план: ' + (e && e.message || e)); console.error(e); }
 }
 function vpAutoFill() {
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14); cutoff.setMinutes(cutoff.getMinutes() - cutoff.getTimezoneOffset());
