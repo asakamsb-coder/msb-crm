@@ -11641,7 +11641,14 @@ async function postWebAction(body, retriesLeft) {
       body: JSON.stringify(body)
     });
     const text = await response.text();
-    return JSON.parse(text);
+    try {
+      return JSON.parse(text);
+    } catch (parseError) {
+      // Сервер ответил, но не JSON (пустой ответ/HTML) — обычно это значит,
+      // что в Apps Script не опубликована новая версия Code.gs. Повторять
+      // бессмысленно (и опасно для записи) — сообщаем сразу.
+      return { success: false, message: 'Сервер вернул неожиданный ответ. Скорее всего, в Apps Script не опубликована новая версия Code.gs (Развертывание → Управление → Новая версия).' };
+    }
   } catch (error) {
     if (retriesLeft > 0) {
       await new Promise(resolve => setTimeout(resolve, 1000));
