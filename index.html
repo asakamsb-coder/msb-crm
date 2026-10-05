@@ -8031,13 +8031,39 @@ function vpVisitedOnOrAfter(clientKey, dateStr) {
     return m && (m[3] + '-' + m[2] + '-' + m[1]) >= dateStr;
   });
 }
+function vpLsKey() { return 'msbVisitPlan_' + String((currentUser && (currentUser.login || currentUser.employeeId)) || ''); }
+function vpLoadLocal() { try { return JSON.parse(localStorage.getItem(vpLsKey()) || '[]') || []; } catch (e) { return []; } }
+function vpSaveLocal() { try { localStorage.setItem(vpLsKey(), JSON.stringify(myTasks)); } catch (e) {} }
+let vpNote = '';
 async function openMyTasks() {
   if (!visitPlanDate) visitPlanDate = vpTodayStr();
+  vpNote = '';
   openNplModal('План визитов', '<div style="color:var(--muted);padding:10px 0;">Загрузка...</div>');
+  const local = vpLoadLocal();
+  let serverTasks = null;
   try {
     const r = await postWebAction({ webAction: 'listMyTasks', sessionId: localStorage.getItem('msbSessionId') });
-    myTasks = (r && r.success && r.tasks) || [];
-  } catch (e) { myTasks = []; }
+    if (r && r.success) serverTasks = r.tasks || [];
+    else vpNote = (r && r.message) || 'Сервер недоступен';
+  } catch (e) { vpNote = 'Сервер недоступен'; }
+  const serverIds = new Set((serverTasks || []).map(t => t.id));
+  // локальные записи, которых нет на сервере, — ждут отправки
+  const pending = local.filter(t => t.pending && !serverIds.has(t.id));
+  myTasks = (serverTasks || local.filter(t => !t.pending)).concat(pending);
+  renderMyTasks();
+  if (serverTasks && pending.length) vpSync(pending);
+}
+async function vpSync(items) {
+  const r = await postWebAction({ webAction: 'addMyTasks', sessionId: localStorage.getItem('msbSessionId'),
+    tasks: items.map(t => ({ id: t.id, title: 'Визит', due: t.due, clientKey: t.clientKey, clientName: t.clientName })) });
+  if (r && r.success) {
+    const ids = new Set(items.map(t => t.id));
+    myTasks.forEach(t => { if (ids.has(t.id)) t.pending = false; });
+    vpNote = '';
+  } else {
+    vpNote = (r && r.message) || 'Не удалось сохранить на сервере';
+  }
+  vpSaveLocal();
   renderMyTasks();
 }
 function setVisitPlanDate(v) { visitPlanDate = v || vpTodayStr(); renderMyTasks(); }
@@ -8077,10 +8103,11 @@ function renderMyTasks() {
       <input type="date" class="input" value="${visitPlanDate}" onchange="setVisitPlanDate(this.value)" style="flex:1;min-width:0;">
       <button type="button" class="btn btn-secondary" style="padding:8px 12px;" onclick="shiftVisitPlanDate(1)">›</button>
     </div>
+    ${vpNote ? `<div style="font-size:12px;background:var(--bg-warning,#FFF4E5);color:#8A5300;border-radius:8px;padding:8px 10px;margin-bottom:8px;">План сохранён на этом устройстве, на сервер пока не ушёл: ${String(vpNote).replace(/</g, '&lt;')}</div>` : ''}
     <div style="font-size:13px;font-weight:800;margin-bottom:4px;">План на день: ${dayTasks.length} · выполнено ${doneCount}</div>
     <div style="max-height:32vh;overflow-y:auto;">${rows || '<div style="color:var(--muted);font-size:13px;padding:8px 0;">На этот день визитов не запланировано</div>'}</div>
     <div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px;">
-      <input id="vpSearch" class="input" placeholder="Поиск по ФИО, ИД клиента или ПИНФЛ" value="${safe(query)}" oninput="vpRefreshOptions()" style="margin-bottom:8px;">
+      <input id="vpSearch" class="input" placeholder="Поиск по ФИО, ИД клиента или ПИНФЛ" value="${String(query).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" oninput="vpRefreshOptions()" style="margin-bottom:8px;">
       <div id="vpOptions" style="max-height:24vh;overflow-y:auto;"></div>
       <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="vpAutoFill()">Подобрать 10 клиентов автоматически</button>
       <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Берутся самые просроченные, у которых не было визита последние 14 дней.</div>
@@ -8104,16 +8131,11 @@ function vpNewId() {
 // Добавление мгновенное: сначала обновляем экран, запись на сервер идёт
 // фоном одним запросом; при ошибке — откатываем и сообщаем.
 async function vpAddMany(groups) {
-  const items = groups.map(g => ({ id: vpNewId(), title: 'Визит', due: visitPlanDate, clientKey: g.key, clientName: g.clientName }));
-  items.forEach(t => myTasks.push({ id: t.id, title: '', due: t.due, clientKey: t.clientKey, clientName: t.clientName, done: false }));
+  const items = groups.map(g => ({ id: vpNewId(), title: '', due: visitPlanDate, clientKey: g.key, clientName: g.clientName, done: false, pending: true }));
+  items.forEach(t => myTasks.push(t));
+  vpSaveLocal();
   renderMyTasks();
-  const r = await postWebAction({ webAction: 'addMyTasks', sessionId: localStorage.getItem('msbSessionId'), tasks: items });
-  if (!r || !r.success) {
-    const ids = new Set(items.map(t => t.id));
-    myTasks = myTasks.filter(t => !ids.has(t.id));
-    renderMyTasks();
-    alert((r && r.message) || 'Не удалось сохранить план. Обновите Code.gs в Apps Script и попробуйте снова.');
-  }
+  await vpSync(items);
 }
 function addVisitPlanClient(keyEnc) {
   const key = decodeURIComponent(keyEnc);
@@ -8129,6 +8151,7 @@ function vpAutoFill() {
 }
 async function deleteMyTaskUi(id) {
   myTasks = myTasks.filter(x => x.id !== id);
+  vpSaveLocal();
   renderMyTasks();
   try { await postWebAction({ webAction: 'deleteMyTask', sessionId: localStorage.getItem('msbSessionId'), id }); } catch (e) { console.error(e); }
 }
