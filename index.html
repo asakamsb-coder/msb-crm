@@ -1722,6 +1722,8 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
       <button class="msb-sales-tab active" id="nplPageTabDash" onclick="setNplPageTab('dashboard')">1. Дашборд</button>
       <button class="msb-sales-tab" id="nplPageTabLegal" onclick="setNplPageTab('legal')">2. Юридические лица</button>
       <button class="msb-sales-tab" id="nplPageTabIndiv" onclick="setNplPageTab('indiv')">3. Физические лица</button>
+      <button class="msb-sales-tab" id="nplPageTabArchive" onclick="setNplPageTab('archive')">4. Архив</button>
+      <button class="msb-sales-tab" id="nplPageTabStats" style="display:none;" onclick="setNplPageTab('stats')">5. Статистика</button>
       <div id="nplMyClientsBadge" style="display:none;margin-left:auto;font-weight:700;font-size:14px;color:var(--muted);">
         Мои клиенты: <b id="nplMyClientsCount" style="color:var(--text);">0</b>
       </div>
@@ -1867,6 +1869,20 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
         </table>
       </div>
       <div id="nplIndivPager" class="npl-pager"></div>
+    </div>
+
+    <div id="nplTabPanelArchive" style="margin-top:32px;display:none;">
+      <h2 style="font-size:16px;margin:0 0 6px;">4. Архив</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Клиенты, у которых просрочка закрыта. Фото, адреса, телефоны и документы сохранены и вернутся, если просрочка появится снова.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <input id="nplArchiveSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ" style="max-width:320px;flex:1 1 200px;" oninput="renderNplArchivePanel()">
+      </div>
+      <div id="nplArchiveList"></div>
+    </div>
+
+    <div id="nplTabPanelStats" style="margin-top:32px;display:none;">
+      <h2 style="font-size:16px;margin:0 0 6px;">5. Статистика по взыскателям</h2>
+      <div id="nplStatsBody"></div>
     </div>
   </div>
 </section>
@@ -6594,6 +6610,11 @@ let allNplAccounts = {};
 let allNplVisits = {};
 let allNplMib = { data: {}, files: {} };
 let allNplCourt = { data: {}, files: {} };
+let allNplArchive = {};
+let allNplStats = [];
+let vzStatsMode = 'month';
+let vzNoLegalExpanded = false;
+let nplStatsSelectedEmp = null;
 let allNplCollectors = {};
 let nplDataLoaded = false;
 let nplGroupsByKey = {};
@@ -6705,6 +6726,7 @@ function renderVzyskatelHome() {
           <span style="color:var(--muted);">${appIcon('chevron', 16)}</span>
         </div>`).join('') : `<div style="font-size:13px;color:var(--muted);padding:10px 0;">Пока нет назначенных клиентов</div>`}
     </div>
+    ${renderVzStatsBlocks()}
     ${renderVzVisitsHistory()}`;
 }
 
@@ -6875,6 +6897,8 @@ async function loadNplRestInBackground() {
     allNplVisits = (rest && rest.visits) || {};
     allNplMib = (rest && rest.mib) || { data: {}, files: {} };
     allNplCourt = (rest && rest.court) || { data: {}, files: {} };
+    allNplArchive = (rest && rest.archive) || {};
+    allNplStats = (rest && rest.stats) || [];
     allNplCollectors = (rest && rest.collectors) || {};
     if (rest && rest.users) allWebUsers = rest.users;
 
@@ -6892,6 +6916,7 @@ async function loadNplRestInBackground() {
     if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) {
       renderVzyskatelHome();
     }
+    try { renderNplArchivePanel(); renderNplStatsPanel(); } catch (e) { console.error(e); }
   } catch (error) {
     console.error('Не удалось догрузить доп. данные NPL:', error);
   }
@@ -7208,6 +7233,20 @@ async function uploadNplFile() {
     const parsed = await parseNplFile(input.files[0], (msg) => { statusBox.innerText = msg; });
     const loans = parsed.loans;
 
+    try {
+      const oldKeys = new Set((allNplLoans || []).map(l => String(l.clientKey || '')));
+      const newKeys = new Set(loans.map(l => String(l.clientKey || '')));
+      let droppedCount = 0;
+      oldKeys.forEach(k => { if (k && !newKeys.has(k)) droppedCount++; });
+      if (oldKeys.size > 0 && droppedCount > Math.max(30, oldKeys.size * 0.2)) {
+        const okGo = await confirmNplUploadDrop(oldKeys.size, newKeys.size, droppedCount);
+        if (!okGo) {
+          statusBox.innerText = 'Загрузка отменена';
+          return;
+        }
+      }
+    } catch (e) { console.error(e); }
+
     statusBox.innerText = 'Загрузка на сервер (' + loans.length + ' анкет)...';
 
     const result = await postWebAction({
@@ -7308,12 +7347,16 @@ function groupNplByClient(loans) {
 // именным списком NPL юр.лиц внутри), полный список юр.лиц, полный
 // список физ.лиц. Активен всегда только один пункт.
 function setNplPageTab(tab) {
-  document.getElementById('nplPageTabDash').classList.toggle('active', tab === 'dashboard');
-  document.getElementById('nplPageTabLegal').classList.toggle('active', tab === 'legal');
-  document.getElementById('nplPageTabIndiv').classList.toggle('active', tab === 'indiv');
-  document.getElementById('nplTabPanelDash').style.display = tab === 'dashboard' ? 'block' : 'none';
-  document.getElementById('nplTabPanelLegalAll').style.display = tab === 'legal' ? 'block' : 'none';
-  document.getElementById('nplTabPanelIndiv').style.display = tab === 'indiv' ? 'block' : 'none';
+  const tabs = { dashboard: 'Dash', legal: 'Legal', indiv: 'Indiv', archive: 'Archive', stats: 'Stats' };
+  const panels = { dashboard: 'Dash', legal: 'LegalAll', indiv: 'Indiv', archive: 'Archive', stats: 'Stats' };
+  Object.keys(tabs).forEach(function(k) {
+    const b = document.getElementById('nplPageTab' + tabs[k]);
+    if (b) b.classList.toggle('active', tab === k);
+    const pn = document.getElementById('nplTabPanel' + panels[k]);
+    if (pn) pn.style.display = tab === k ? 'block' : 'none';
+  });
+  if (tab === 'archive') renderNplArchivePanel();
+  if (tab === 'stats') renderNplStatsPanel();
 }
 
 // Пагинация для пунктов 2 и 3 — рендерим в DOM не больше NPL_PAGE_SIZE
@@ -7542,14 +7585,430 @@ function renderNplPage() {
 
     renderNplPager('nplIndivPager', 'indiv', nplIndivPage, clients.length);
   }
+  try {
+    const statsTab = document.getElementById('nplPageTabStats');
+    const r = currentUser && currentUser.role;
+    if (statsTab) statsTab.style.display = (r === 'ADMIN' || r === 'DIRECTOR' || r === 'DEPUTY') ? '' : 'none';
+    renderNplArchivePanel(); renderNplStatsPanel();
+  } catch (e) { console.error(e); }
 }
+
+// ===================== NPL: АРХИВ И СТАТИСТИКА =====================
+// Клиент, который пропал из ежедневной выгрузки (просрочка закрыта), уходит в
+// архив, а все ручные данные (фото, локация, визиты, МИБ, суд) остаются
+// привязанными к ключу клиента — при возврате просрочки всё на месте.
+// Статистика считается на сервере по дневным строкам (см. recordNplDailyDiff
+// в Code.gs), здесь только сборка месячных/дневных цифр и отрисовка.
+
+function nplPad2(n) { return String(n).padStart(2, '0'); }
+function nplLocalDateStr(d) {
+  d = d || new Date();
+  return d.getFullYear() + '-' + nplPad2(d.getMonth() + 1) + '-' + nplPad2(d.getDate());
+}
+function nplFmtDayShort(s) { return String(s).slice(8, 10) + '.' + String(s).slice(5, 7); }
+function nplFmtPct(x) { return (Math.round((Number(x) || 0) * 10) / 10).toString().replace('.', ','); }
+
+function nplCollectorLabel(empId) {
+  const id = String(empId || '').trim();
+  if (!id) return 'Не назначен';
+  const name = allNplCollectors[id]
+    || ((allWebUsers || []).find(u => String(u.employeeId || '').trim() === id) || {}).fullName
+    || '';
+  return name ? name : 'ID ' + id;
+}
+
+// Есть ли у клиента хоть какой-то юридический статус: приказ суда или МИБ из
+// выгрузки, либо данные/файлы, внесённые вручную (суд, МИБ).
+function nplHasLegalStatus(g) {
+  const key = g.key;
+  if (g.courtOrderNumberJoined || g.mibCaseJoined) return true;
+  const mib = allNplMib.data[key];
+  if (mib && (mib.caseId || mib.inspectorName || (mib.actions && mib.actions.length))) return true;
+  if ((allNplMib.files[key] || []).length) return true;
+  const court = allNplCourt.data[key];
+  if (court && court.caseStatus) return true;
+  if ((allNplCourt.files[key] || []).length) return true;
+  return false;
+}
+
+// Клиенты с просрочкой 60+ дней без юридического статуса (по взыскателю или все).
+function getNplNoLegalGroups(empId) {
+  return getNplGroupsCached()
+    .filter(g => g.maxDays >= 60 && !nplHasLegalStatus(g)
+      && (empId === null || String(allNplAssignments[g.key] || '').trim() === String(empId)))
+    .sort((a, b) => b.maxDays - a.maxDays);
+}
+
+// empId === null — по всем взыскателям, иначе по одному (строка ID).
+function computeNplStats(empId) {
+  const today = nplLocalDateStr();
+  const month = today.slice(0, 7);
+  const match = r => empId === null || r.employeeId === String(empId);
+  const allRows = allNplStats.filter(match);
+  const rows = allRows.filter(r => r.date.slice(0, 7) === month)
+    .sort((a, b) => a.date < b.date ? -1 : (a.date > b.date ? 1 : 0));
+
+  const byEmp = {};
+  rows.forEach(r => {
+    let e = byEmp[r.employeeId];
+    if (!e) e = byEmp[r.employeeId] = { base: r.startCount, startSum: r.startSum, add: 0, closed: 0, end: 0, arrivalsSum: 0, repaid: 0 };
+    e.add += r.newCount + r.returned;
+    e.closed += r.closed;
+    e.end = r.endCount;
+    e.arrivalsSum += r.arrivalsSum;
+    e.repaid += r.repaid;
+  });
+  const t = { assigned: 0, open: 0, closed: 0, baseSum: 0, repaid: 0 };
+  Object.keys(byEmp).forEach(id => {
+    const e = byEmp[id];
+    t.assigned += e.base + e.add;
+    t.open += e.end;
+    t.closed += e.closed;
+    t.baseSum += e.startSum + e.arrivalsSum;
+    t.repaid += e.repaid;
+  });
+
+  const td = { closed: 0, repaid: 0, arrivals: 0 };
+  rows.filter(r => r.date === today).forEach(r => {
+    td.closed += r.closed;
+    td.repaid += r.repaid;
+    td.arrivals += r.newCount + r.returned;
+  });
+
+  const dayMap = {};
+  allRows.forEach(r => {
+    const d = dayMap[r.date] || (dayMap[r.date] = { date: r.date, closed: 0, repaid: 0 });
+    d.closed += r.closed;
+    d.repaid += r.repaid;
+  });
+  const daily = Object.values(dayMap).sort((a, b) => a.date < b.date ? 1 : (a.date > b.date ? -1 : 0));
+
+  return {
+    hasData: allRows.length > 0,
+    monthHasData: rows.length > 0,
+    assigned: t.assigned, open: t.open, closed: t.closed,
+    pctClients: t.assigned ? t.closed / t.assigned * 100 : 0,
+    baseSum: t.baseSum, repaid: t.repaid,
+    pctSum: t.baseSum ? t.repaid / t.baseSum * 100 : 0,
+    today: td, daily: daily
+  };
+}
+
+function setNplStatsMode(mode) {
+  vzStatsMode = mode;
+  if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
+  renderNplStatsPanel();
+}
+
+function renderNplStatsCard(empId) {
+  const s = computeNplStats(empId);
+  const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  const monthLabel = monthNames[new Date().getMonth()];
+  const toggle = `
+    <div style="display:flex;gap:4px;">
+      <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;${vzStatsMode === 'today' ? 'background:#E8F0FE;color:var(--brand);font-weight:800;' : ''}" onclick="setNplStatsMode('today')">Сегодня</button>
+      <button type="button" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;${vzStatsMode === 'month' ? 'background:#E8F0FE;color:var(--brand);font-weight:800;' : ''}" onclick="setNplStatsMode('month')">Месяц</button>
+    </div>`;
+
+  if (!s.hasData) {
+    return `
+      <div class="vz-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><div style="font-size:15px;font-weight:800;">Статистика</div></div>
+        <div style="font-size:13px;color:var(--muted);">Цифры начнут копиться после следующей загрузки ежедневной выгрузки.</div>
+      </div>`;
+  }
+
+  const tiles = vzStatsMode === 'today' ? `
+      <div class="vz-summary-tile"><div class="label">Открыто</div><div class="value">${s.open}</div><div style="font-size:11px;color:var(--muted);">в просрочке сейчас</div></div>
+      <div class="vz-summary-tile"><div class="label">Закрыто сегодня</div><div class="value" style="color:#1E7B34;">${s.today.closed}</div></div>
+      <div class="vz-summary-tile"><div class="label">Погашено сегодня</div><div class="value">${formatMoney(s.today.repaid)}</div></div>
+      <div class="vz-summary-tile"><div class="label">Новых и вернувшихся</div><div class="value">${s.today.arrivals}</div></div>` : `
+      <div class="vz-summary-tile"><div class="label">Назначено</div><div class="value">${s.assigned}</div><div style="font-size:11px;color:var(--muted);">за ${monthLabel}</div></div>
+      <div class="vz-summary-tile"><div class="label">Открыто</div><div class="value">${s.open}</div><div style="font-size:11px;color:var(--muted);">в просрочке сейчас</div></div>
+      <div class="vz-summary-tile"><div class="label">Закрыто</div><div class="value" style="color:#1E7B34;">${s.closed}</div><div style="font-size:11px;color:var(--muted);">сегодня: ${s.today.closed}</div></div>
+      <div class="vz-summary-tile"><div class="label">Закрытие</div><div class="value">${nplFmtPct(s.pctClients)}%</div><div style="font-size:11px;color:var(--muted);">${s.closed} из ${s.assigned} клиентов</div></div>`;
+
+  const sumBlock = vzStatsMode === 'month' && s.monthHasData ? `
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Погашено суммой</span><span style="font-weight:800;">${nplFmtPct(s.pctSum)}%</span></div>
+        <div style="height:6px;border-radius:3px;background:#F1F3F5;margin:6px 0 4px;overflow:hidden;"><div style="height:100%;width:${Math.min(100, Math.max(0, s.pctSum))}%;background:#1E7B34;"></div></div>
+        <div style="font-size:11px;color:var(--muted);">${formatMoney(s.repaid)} из ${formatMoney(s.baseSum)} просрочки</div>
+      </div>` : '';
+
+  const dailyRows = s.daily.slice(0, 7).map(d => `
+      <tr><td style="padding:6px 0;border-bottom:1px solid var(--line);">${nplFmtDayShort(d.date)}</td><td style="text-align:right;border-bottom:1px solid var(--line);">${d.closed}</td><td style="text-align:right;border-bottom:1px solid var(--line);">${formatMoney(d.repaid)}</td></tr>`).join('');
+
+  return `
+    <div class="vz-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
+        <div style="font-size:15px;font-weight:800;">Статистика${vzStatsMode === 'month' ? ' за ' + monthLabel : ''}</div>
+        ${toggle}
+      </div>
+      <div class="vz-summary-grid" style="margin-bottom:12px;">${tiles}</div>
+      ${sumBlock}
+      <div style="font-size:12px;color:var(--muted);margin:8px 0 4px;">По дням</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <thead><tr style="color:var(--muted);"><th style="text-align:left;font-weight:700;padding:4px 0;border-bottom:1px solid var(--line);">Дата</th><th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Закрыто</th><th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Погашено</th></tr></thead>
+        <tbody>${dailyRows}</tbody>
+      </table>
+    </div>`;
+}
+
+function toggleNplNoLegalList() {
+  vzNoLegalExpanded = !vzNoLegalExpanded;
+  if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
+  renderNplStatsPanel();
+}
+
+function renderNplNoLegalCard(groups) {
+  const shown = vzNoLegalExpanded ? groups : groups.slice(0, 3);
+  const rows = shown.map(g => {
+    const overdueAll = (Number(g.overdueBalanceSum) || 0) + (Number(g.overdueInterestSum) || 0);
+    return `
+      <div class="vz-attention-row" onclick="openNplClientDetail('${encodeURIComponent(g.key)}')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(g.clientName)}</div>
+          <div style="font-size:11.5px;color:var(--muted);">${g.subject === 'J' ? 'ИНН' : 'ПИНФЛ'} ${safe(g.pin) || '—'}</div>
+        </div>
+        <div style="text-align:right;flex:0 0 auto;"><div style="font-size:13px;font-weight:800;">${g.maxDays} дн</div><div style="font-size:11.5px;color:var(--muted);">${formatMoney(overdueAll)}</div></div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="vz-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">
+        <div style="font-size:15px;font-weight:800;">Без юр. статуса</div>
+        <span style="font-size:12px;font-weight:800;padding:2px 10px;border-radius:8px;${groups.length ? 'background:#FFF4E5;color:#8A5300;' : 'background:#E6F4EA;color:#1E7B34;'}">${groups.length} клиентов</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Просрочка 60+ дней, нет суда и МИБ</div>
+      ${groups.length ? rows : '<div style="font-size:13px;color:var(--muted);padding:8px 0;">Все клиенты с просрочкой 60+ дней имеют юридический статус.</div>'}
+      ${groups.length > 3 ? `<button type="button" class="btn btn-secondary" style="width:100%;margin-top:8px;font-size:13px;" onclick="toggleNplNoLegalList()">${vzNoLegalExpanded ? 'Свернуть' : 'Показать все ' + groups.length}</button>` : ''}
+    </div>`;
+}
+
+function renderVzStatsBlocks() {
+  const emp = String((currentUser && currentUser.employeeId) || '').trim();
+  if (!emp) return '';
+  return renderNplStatsCard(emp) + renderNplNoLegalCard(getNplNoLegalGroups(emp));
+}
+
+// ---- Архив закрытых клиентов ----
+function nplArchiveSortKey(a) {
+  const d = String(a.closedAt || '').split('.');
+  return d.length === 3 ? d[2] + '-' + d[1] + '-' + d[0] : '';
+}
+
+function getNplArchiveList() {
+  const isCollector = !!(currentUser && currentUser.role === 'VZYSKATEL');
+  const myEmp = String((currentUser && currentUser.employeeId) || '').trim();
+  return Object.keys(allNplArchive || {})
+    .map(k => Object.assign({ key: k }, allNplArchive[k]))
+    .filter(a => a.status === 'closed' && (!isCollector || a.employeeId === myEmp))
+    .sort((a, b) => nplArchiveSortKey(a) < nplArchiveSortKey(b) ? 1 : -1);
+}
+
+function renderNplArchivePanel() {
+  const box = document.getElementById('nplArchiveList');
+  const tabBtn = document.getElementById('nplPageTabArchive');
+  if (!box) return;
+  const all = getNplArchiveList();
+  if (tabBtn) tabBtn.innerText = '4. Архив (' + all.length + ')';
+
+  const query = normalizeText((document.getElementById('nplArchiveSearchInput')?.value || '').trim());
+  const list = query ? all.filter(a => normalizeText([a.name, a.key].join(' ')).includes(query)) : all;
+  const isCollector = !!(currentUser && currentUser.role === 'VZYSKATEL');
+
+  if (!list.length) {
+    box.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:12px 0;">${all.length ? 'Ничего не найдено' : 'Закрытых клиентов пока нет. Клиенты, у которых просрочка закрылась, появятся здесь после следующей загрузки выгрузки.'}</div>`;
+    return;
+  }
+
+  box.innerHTML = list.slice(0, 100).map(a => {
+    const extra = allNplExtra[a.key] || {};
+    const visitsCount = (allNplVisits[a.key] || []).length;
+    const photosCount = (extra.photos || []).length;
+    const tags = [];
+    if (photosCount) tags.push('фото ' + photosCount);
+    if (visitsCount) tags.push('визитов ' + visitsCount);
+    if (extra.lat && extra.lng) tags.push('локация есть');
+    if (allNplCourt.data[a.key] && allNplCourt.data[a.key].caseStatus) tags.push('суд: ' + allNplCourt.data[a.key].caseStatus.toLowerCase());
+    if (allNplMib.data[a.key] && (allNplMib.data[a.key].caseId || allNplMib.data[a.key].inspectorName)) tags.push('МИБ');
+    return `
+      <div class="vz-attention-row" onclick="openNplClientDetail('${encodeURIComponent(a.key)}')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(a.name) || safe(a.key)}</div>
+          <div style="font-size:11.5px;color:var(--muted);">Закрыта ${safe(a.closedAt)} · была просрочка ${a.days} дн${isCollector ? '' : ' · ' + safe(nplCollectorLabel(a.employeeId))}</div>
+          ${tags.length ? `<div style="font-size:11.5px;color:var(--muted);">${safe(tags.join(' · '))}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex:0 0 auto;">
+          <span style="font-size:11px;font-weight:800;padding:1px 8px;border-radius:8px;background:#E6F4EA;color:#1E7B34;">закрыта</span>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">последний долг ${formatMoney(a.lastDebt)}</div>
+        </div>
+      </div>`;
+  }).join('') + (list.length > 100 ? `<div style="font-size:12px;color:var(--muted);text-align:center;padding-top:8px;">Показаны первые 100 из ${list.length} — уточните поиск</div>` : '');
+}
+
+// Карточка закрытого клиента: тех же данных из выгрузки уже нет, поэтому
+// собираем "пустую" группу из записи архива — всё остальное (адрес, фото,
+// визиты, МИБ, суд) подтягивается по ключу клиента как обычно.
+function buildNplArchivedGroup(key) {
+  const a = allNplArchive[key];
+  if (!a) return null;
+  const pin = key.indexOf('NOID:') === 0 ? '' : key;
+  return {
+    key: key, clientName: a.name || key, pin: pin, subject: a.subject || (pin.length === 14 ? 'P' : 'J'),
+    officer: '', loans: [], nplSum: 0, maxDays: a.days || 0,
+    totalDebtSum: 0, currentBalanceSum: 0, revisedBalanceSum: 0, overdueBalanceSum: a.lastDebt || 0,
+    totalInterestSum: 0, accruedInterestSum: 0, overdueInterestSum: 0, reserveSum: 0,
+    maxDaysOverdue: a.days || 0, maxDaysOverdueInterest: 0,
+    officerJoined: '', courtOrderNumberJoined: '', courtOrderDateJoined: '', mibCaseJoined: '', mibDateJoined: '',
+    phoneJoined: '', contractIdsJoined: '', displayClientId: '', archived: true
+  };
+}
+
+function renderNplArchivedBody(group) {
+  const key = group.key;
+  const arch = allNplArchive[key] || {};
+  const extra = allNplExtra[key] || {};
+  const visits = allNplVisits[key] || [];
+
+  const phonesHtml = (extra.phones || []).length
+    ? (extra.phones || []).map(p => `<span class="status status-blue" style="margin:0 6px 6px 0;display:inline-flex;">${safe(p.label) ? safe(p.label) + ' — ' : ''}${safe(p.phone)}</span>`).join('')
+    : '<span style="color:var(--muted);font-size:13px;">Не добавлены</span>';
+  const photosHtml = (extra.photos || []).length
+    ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">' + extra.photos.map(p => `<a href="${safe(p.url)}" target="_blank"><img src="${safe(p.url)}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);"></a>`).join('') + '</div>'
+    : '<div style="color:var(--muted);font-size:13px;margin-top:6px;">Нет фото</div>';
+  const visitsHtml = visits.length
+    ? visits.slice().reverse().map(v => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+          <span>${safe(v.addedAt)} · ${safe(v.addedBy)} · ${safe(v.status)}${v.comment ? ' — ' + safe(v.comment) : ''}</span>
+          ${v.suspicious ? '<span class="status status-orange" style="margin-left:8px;">сомнительный</span>' : ''}
+        </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;">Визитов не было</div>';
+
+  const tab1 = `
+    <div style="background:#E6F4EA;color:#1E7B34;border-radius:10px;padding:10px 12px;font-size:13px;font-weight:700;margin-bottom:12px;">Просрочка закрыта ${safe(arch.closedAt)}. Карточка только для просмотра.</div>
+    <div class="info-grid npl-summary-grid">
+      <div class="info-card"><div class="info-label">Последний долг</div><div class="info-value">${formatMoney(arch.lastDebt)}</div></div>
+      <div class="info-card"><div class="info-label">Была просрочка</div><div class="info-value">${arch.days || 0} дн</div></div>
+    </div>
+    <div class="panel" style="background:#FAFAFA;margin-top:14px;">
+      <h2 style="font-size:15px;margin-bottom:10px;">Доп. информация</h2>
+      <div class="mp-label">Телефоны</div>
+      <div style="margin-bottom:10px;">${phonesHtml}</div>
+      <div class="mp-label">Фото</div>
+      ${photosHtml}
+    </div>
+    <div class="panel" style="background:#FAFAFA;margin-top:14px;">
+      <div class="mp-label">История визитов (${visits.length})</div>
+      ${visitsHtml}
+    </div>`;
+
+  return `
+    <div class="npl-detail-tabs">
+      <button type="button" class="npl-detail-tab active" id="nplDetailTabBtn_anketi" onclick="switchNplDetailTab('anketi')">Данные</button>
+      <button type="button" class="npl-detail-tab" id="nplDetailTabBtn_legal" onclick="switchNplDetailTab('legal')">Юр. статус</button>
+    </div>
+    <div id="nplDetailTabBody_anketi">${tab1}</div>
+    <div id="nplDetailTabBody_legal" style="display:none;">${renderNplLegalStatusTab(group)}</div>`;
+}
+
+// ---- Сводка управляющего по всем взыскателям ----
+function selectNplStatsEmp(empEnc) {
+  nplStatsSelectedEmp = empEnc === '__all__' ? null : decodeURIComponent(empEnc);
+  renderNplStatsPanel();
+}
+
+function renderNplStatsPanel() {
+  const box = document.getElementById('nplStatsBody');
+  if (!box) return;
+  const month = nplLocalDateStr().slice(0, 7);
+  const ids = {};
+  allNplStats.filter(r => r.date.slice(0, 7) === month).forEach(r => { ids[r.employeeId] = true; });
+  getNplGroupsCached().forEach(g => { const id = String(allNplAssignments[g.key] || '').trim(); if (id) ids[id] = true; });
+
+  const rows = Object.keys(ids).map(id => {
+    const s = computeNplStats(id);
+    return { id: id, s: s, noLegal: getNplNoLegalGroups(id).length };
+  }).filter(r => r.s.hasData || r.noLegal).sort((a, b) => b.s.assigned - a.s.assigned);
+
+  const total = computeNplStats(null);
+  const totalNoLegal = getNplNoLegalGroups(null).length;
+  const cell = 'padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;';
+  const body = rows.map(r => `
+      <tr class="clickable-row" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')" style="${nplStatsSelectedEmp === r.id ? 'background:#F3F6FF;' : ''}">
+        <td style="padding:7px 4px;border-bottom:1px solid var(--line);">${safe(nplCollectorLabel(r.id))}</td>
+        <td style="${cell}">${r.s.assigned}</td><td style="${cell}">${r.s.closed}</td>
+        <td style="${cell}">${nplFmtPct(r.s.pctClients)}</td><td style="${cell}">${nplFmtPct(r.s.pctSum)}</td><td style="${cell}">${r.noLegal}</td>
+      </tr>`).join('');
+
+  const detail = nplStatsSelectedEmp === null ? '' : `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;">
+        <h3 style="font-size:15px;margin:0;">${safe(nplCollectorLabel(nplStatsSelectedEmp))}</h3>
+        <button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="selectNplStatsEmp('__all__')">Все взыскатели</button>
+      </div>
+      ${renderNplStatsCard(nplStatsSelectedEmp)}
+      ${renderNplNoLegalCard(getNplNoLegalGroups(nplStatsSelectedEmp))}`;
+
+  box.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="width:100%;min-width:420px;font-size:13px;border-collapse:collapse;">
+        <thead><tr style="color:var(--muted);">
+          <th style="text-align:left;font-weight:700;padding:6px 4px;border-bottom:1px solid var(--line);">Взыскатель</th>
+          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Назнач.</th>
+          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Закр.</th>
+          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">% кл.</th>
+          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">% сумм</th>
+          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Без юр.</th>
+        </tr></thead>
+        <tbody>${body || '<tr><td colspan="6" style="padding:12px 4px;color:var(--muted);">Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.</td></tr>'}</tbody>
+        <tfoot><tr style="font-weight:800;">
+          <td style="padding:7px 4px;">Всего</td>
+          <td style="text-align:right;">${total.assigned}</td><td style="text-align:right;">${total.closed}</td>
+          <td style="text-align:right;">${nplFmtPct(total.pctClients)}</td><td style="text-align:right;">${nplFmtPct(total.pctSum)}</td><td style="text-align:right;">${totalNoLegal}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Нажмите на строку, чтобы открыть статистику взыскателя. «% кл.» — закрыто от назначенных, «% сумм» — погашено от суммы просрочки.</div>
+    ${detail}`;
+}
+
+// ---- Подтверждение при резком уменьшении числа клиентов в файле ----
+let nplUploadConfirmResolve = null;
+function confirmNplUploadDrop(oldCount, newCount, closed) {
+  return new Promise(function(resolve) {
+    nplUploadConfirmResolve = resolve;
+    const row = (k, v, danger) => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px;"><span style="color:var(--muted);">${k}</span><b${danger ? ' style="color:var(--red);"' : ''}>${v}</b></div>`;
+    openNplModal('Проверьте файл', `
+      ${row('Было клиентов', oldCount)}
+      ${row('Стало в файле', newCount)}
+      ${row('Уйдёт в архив', closed, true)}
+      <div style="font-size:12px;color:var(--muted);margin:10px 0;">Клиентов стало заметно меньше. Если это не так, загрузите верный файл.</div>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-secondary" style="flex:1;" onclick="resolveNplUploadConfirm(false)">Отмена</button>
+        <button type="button" class="btn btn-primary" style="flex:1;" onclick="resolveNplUploadConfirm(true)">Всё равно загрузить</button>
+      </div>`);
+  });
+}
+
+function resolveNplUploadConfirm(ok) {
+  const r = nplUploadConfirmResolve;
+  nplUploadConfirmResolve = null;
+  closeNplModal();
+  if (r) r(!!ok);
+}
+// =================== /NPL: АРХИВ И СТАТИСТИКА ======================
+
 
 function openNplClientDetail(keyEncoded) {
   const key = decodeURIComponent(keyEncoded);
   currentNplClientKey = key;
 
-  const group = nplGroupsByKey[key];
-  if (!group) return;
+  let group = nplGroupsByKey[key];
+  if (!group) {
+    group = buildNplArchivedGroup(key);
+    if (!group) return;
+    nplGroupsByKey[key] = group;
+  }
 
   document.getElementById('nplDetailClientName').innerText = safe(group.clientName);
   document.getElementById('nplDetailClientInn').innerHTML = renderNplClientHeaderMeta(group);
@@ -7599,15 +8058,21 @@ function renderNplClientHeaderMeta(group) {
   const pin = String(group.pin || '').trim();
   const displayClientId = String(group.displayClientId || '').trim();
 
+  const arch = allNplArchive[key] || null;
+  const returnedBadge = (arch && arch.status === 'returned')
+    ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#FFF4E0;color:#8A5A00;">вернулся после закрытия${arch.closedAt ? ' ' + safe(arch.closedAt) : ''}</span>` : '';
+  const archivedBadge = group.archived
+    ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#F3F4F6;color:var(--muted);">в архиве</span>` : '';
   return `
     <div style="margin-top:2px;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;${group.subject === 'J' ? 'background:#E6F1FB;color:#0C447C;' : 'background:#EAF3DE;color:#27500A;'}">${group.subject === 'J' ? 'Юрлицо' : 'Физлицо'}</span>
+        ${returnedBadge}${archivedBadge}
       </div>
 
       <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
         <span style="flex:1 1 auto;min-width:0;font-size:14px;line-height:1.4;word-break:break-word;display:flex;align-items:flex-start;gap:6px;"><span style="color:var(--muted);margin-top:2px;">${nplIcon('pin', 15)}</span><span>${address ? safe(address) : '<span style="color:var(--muted);">Адрес не указан</span>'}</span></span>
-        <button onclick="toggleNplHeaderAddressEdit('${keyEnc}')" title="Редактировать адрес и локацию" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:none;background:#F3F4F6;cursor:pointer;color:var(--muted);width:32px;height:32px;border-radius:8px;">${nplIcon('pencil', 15)}</button>
+        ${group.archived ? '' : `<button onclick="toggleNplHeaderAddressEdit('${keyEnc}')" title="Редактировать адрес и локацию" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;border:none;background:#F3F4F6;cursor:pointer;color:var(--muted);width:32px;height:32px;border-radius:8px;">${nplIcon('pencil', 15)}</button>`}
       </div>
       ${hasLocation
         ? `<a href="https://maps.google.com/?q=${extra.lat},${extra.lng}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;color:var(--brand);font-weight:700;font-size:12.5px;margin-bottom:8px;word-break:break-word;">${nplIcon('locate', 13)}На карте (${extra.lat}, ${extra.lng})</a>`
@@ -7767,6 +8232,7 @@ function revealNplListCollector(el, employeeIdEnc, evt) {
 // (allWebUsers), как и раньше. Клик открывает то же окно назначения.
 function renderNplCollectorInline(group) {
   const keyEnc = encodeURIComponent(group.key);
+  if (group.archived) return '';
   const employeeId = String(allNplAssignments[group.key] || '').trim();
   if (!employeeId) {
     return `
@@ -7992,8 +8458,8 @@ function renderNplLegalStatusTab(group) {
     return `<span class="npl-stage-chip${isActive ? ' active' + (s === 'МИБ' ? ' danger' : '') : ''}">${s}</span>`;
   }).join('');
 
-  const canEditMib = canEditNplMib();
-  const canEditCourt = canEditNplCourt();
+  const canEditMib = canEditNplMib() && !group.archived;
+  const canEditCourt = canEditNplCourt() && !group.archived;
   const mib = allNplMib.data[group.key] || {};
   const mibFiles = allNplMib.files[group.key] || [];
   const court = allNplCourt.data[group.key] || {};
@@ -8275,6 +8741,7 @@ async function deleteNplCourtFileUi(keyEnc, urlEnc) {
 // =================== /NPL: ВКЛАДКА "ЮРИДИЧЕСКИЙ СТАТУС" ======================
 
 function renderNplClientDetailBody(group) {
+  if (group.archived) return renderNplArchivedBody(group);
   const overdueOd = group.overdueBalanceSum;
   const overduePct = group.overdueInterestSum;
   const overdueAll = overdueOd + overduePct;
@@ -8420,6 +8887,7 @@ function openNplModal(title, bodyHtml) {
 }
 
 function closeNplModal() {
+  if (typeof nplUploadConfirmResolve === 'function') { const r = nplUploadConfirmResolve; nplUploadConfirmResolve = null; r(false); }
   document.getElementById('nplModalOverlay').classList.remove('active');
   document.getElementById('nplModal').classList.remove('active');
 }
