@@ -8061,7 +8061,7 @@ function renderMyTasks() {
     const missed = !visited && visitPlanDate < todayStr;
     return `
     <div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);">
-      <div style="flex:1;min-width:0;cursor:pointer;" onclick="closeNplModal();openNplClientDetail('${encodeURIComponent(t.clientKey)}')">
+      <div style="flex:1;min-width:0;cursor:pointer;" onclick="closeNplModal();openNplClientDetail('${encodeURIComponent(t.clientKey).replace(/'/g, '%27')}')">
         <div style="font-size:14px;font-weight:700;word-break:break-word;">${safe(t.clientName || t.clientKey)}</div>
         <div style="font-size:12px;color:${visited ? '#1E7B34' : (missed ? 'var(--red)' : 'var(--muted)')};">${visited ? '✓ визит выполнен' : (missed ? 'не посещён' : 'запланирован')}${t.title ? ' · ' + safe(t.title) : ''}</div>
       </div>
@@ -8093,30 +8093,39 @@ function vpRefreshOptions() {
   const q = (document.getElementById('vpSearch') || {}).value || '';
   const opts = vpClientOptions(q);
   el.innerHTML = opts.length ? opts.map(g => `
-    <div class="vz-attention-row" onclick="addVisitPlanClient('${encodeURIComponent(g.key)}')">
+    <div class="vz-attention-row" onclick="addVisitPlanClient('${encodeURIComponent(g.key).replace(/'/g, '%27')}')">
       <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(g.clientName)}</div><div style="font-size:11.5px;color:var(--muted);">${g.maxDays} дн. · ${(allNplVisits[g.key] || []).length} визитов</div></div>
       <span style="font-size:20px;color:var(--brand);">+</span>
     </div>`).join('') : '<div style="font-size:13px;color:var(--muted);padding:6px 0;">Нет подходящих клиентов</div>';
 }
-async function vpAddOne(g) {
-  const r = await postWebAction({ webAction: 'addMyTask', sessionId: localStorage.getItem('msbSessionId'), title: 'Визит', due: visitPlanDate, clientKey: g.key, clientName: g.clientName });
-  if (!r || !r.success) { alert((r && r.message) || 'Не удалось добавить'); return false; }
-  myTasks.push({ id: r.id, title: '', due: visitPlanDate, clientKey: g.key, clientName: g.clientName, done: false });
-  return true;
+function vpNewId() {
+  return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'T' + Date.now() + Math.random().toString(16).slice(2);
 }
-async function addVisitPlanClient(keyEnc) {
+// Добавление мгновенное: сначала обновляем экран, запись на сервер идёт
+// фоном одним запросом; при ошибке — откатываем и сообщаем.
+async function vpAddMany(groups) {
+  const items = groups.map(g => ({ id: vpNewId(), title: 'Визит', due: visitPlanDate, clientKey: g.key, clientName: g.clientName }));
+  items.forEach(t => myTasks.push({ id: t.id, title: '', due: t.due, clientKey: t.clientKey, clientName: t.clientName, done: false }));
+  renderMyTasks();
+  const r = await postWebAction({ webAction: 'addMyTasks', sessionId: localStorage.getItem('msbSessionId'), tasks: items });
+  if (!r || !r.success) {
+    const ids = new Set(items.map(t => t.id));
+    myTasks = myTasks.filter(t => !ids.has(t.id));
+    renderMyTasks();
+    alert((r && r.message) || 'Не удалось сохранить план. Обновите Code.gs в Apps Script и попробуйте снова.');
+  }
+}
+function addVisitPlanClient(keyEnc) {
   const key = decodeURIComponent(keyEnc);
   const g = getMyNplGroups().find(x => x.key === key);
-  if (!g) return;
-  if (await vpAddOne(g)) renderMyTasks();
+  if (g) vpAddMany([g]);
 }
-async function vpAutoFill() {
+function vpAutoFill() {
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14); cutoff.setMinutes(cutoff.getMinutes() - cutoff.getTimezoneOffset());
   const cutoffStr = cutoff.toISOString().slice(0, 10);
   const picks = vpClientOptions('').filter(g => !vpVisitedOnOrAfter(g.key, cutoffStr)).slice(0, 10);
   if (!picks.length) { alert('Нет подходящих клиентов для автоподбора'); return; }
-  for (const g of picks) { if (!(await vpAddOne(g))) break; }
-  renderMyTasks();
+  vpAddMany(picks);
 }
 async function deleteMyTaskUi(id) {
   myTasks = myTasks.filter(x => x.id !== id);
