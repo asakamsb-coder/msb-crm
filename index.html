@@ -6716,9 +6716,9 @@ function renderVzyskatelHome() {
       </div>
       <div class="vz-quick-actions">
         <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('clients')"><div class="icon">${appIcon('users', 20)}</div>Клиенты</button>
-        <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('clients')"><div class="icon">${appIcon('mappin', 20)}</div>Визит</button>
-        <button type="button" class="vz-quick-action" onclick="openMyTasks()"><div class="icon">${appIcon('check', 20)}</div>Планировка задач</button>
-        <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('profile')"><div class="icon">${appIcon('user', 20)}</div>Профиль</button>
+        <button type="button" class="vz-quick-action" onclick="openNearby()"><div class="icon">${appIcon('mappin', 20)}</div>Клиенты рядом</button>
+        <button type="button" class="vz-quick-action" onclick="openMyTasks()"><div class="icon">${appIcon('check', 20)}</div>План визитов</button>
+        <button type="button" class="vz-quick-action" onclick="openPromises()"><div class="icon">${appIcon('alert', 20)}</div>Обещания оплат${vzPromiseBadge()}</button>
       </div>
       <div style="font-size:13px;font-weight:800;margin-bottom:4px;">Требуют внимания</div>
       ${attention.length ? attention.map(g => `
@@ -8017,67 +8017,194 @@ function vzMonthClosed() {
   } catch (e) { return 0; }
 }
 
-// ---- Планировка задач (личный список задач сотрудника) ----
+// ---- План визитов (клиенты, которых взыскатель планирует посетить в выбранный день) ----
 let myTasks = [];
+let visitPlanDate = '';
+function vpTodayStr() {
+  const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+}
+function vpVisitedOnOrAfter(clientKey, dateStr) {
+  // визит считается выполненным, если есть визит с датой >= плановой
+  return (allNplVisits[clientKey] || []).some(function(v) {
+    const m = String(v.addedAt || '').match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+    return m && (m[3] + '-' + m[2] + '-' + m[1]) >= dateStr;
+  });
+}
 async function openMyTasks() {
-  openNplModal('Планировка задач', '<div style="color:var(--muted);padding:10px 0;">Загрузка...</div>');
+  if (!visitPlanDate) visitPlanDate = vpTodayStr();
+  openNplModal('План визитов', '<div style="color:var(--muted);padding:10px 0;">Загрузка...</div>');
   try {
     const r = await postWebAction({ webAction: 'listMyTasks', sessionId: localStorage.getItem('msbSessionId') });
     myTasks = (r && r.success && r.tasks) || [];
   } catch (e) { myTasks = []; }
   renderMyTasks();
 }
+function setVisitPlanDate(v) { visitPlanDate = v || vpTodayStr(); renderMyTasks(); }
+function shiftVisitPlanDate(delta) {
+  const d = new Date(visitPlanDate + 'T00:00:00'); d.setDate(d.getDate() + delta);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  setVisitPlanDate(d.toISOString().slice(0, 10));
+}
+function vpClientOptions(query) {
+  const q = normalizeText(query || '');
+  const planned = new Set(myTasks.filter(t => t.due === visitPlanDate).map(t => t.clientKey));
+  return getMyNplGroups()
+    .filter(g => !planned.has(g.key) && (!q || normalizeText([g.clientName, g.pin, g.displayClientId, g.key].join(' ')).indexOf(q) !== -1))
+    .sort((a, b) => b.maxDays - a.maxDays).slice(0, 40);
+}
 function renderMyTasks() {
-  const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-  const todayStr = today.toISOString().slice(0, 10);
-  const sorted = myTasks.slice().sort((a, b) => (a.done - b.done) || String(a.due || '9999').localeCompare(String(b.due || '9999')));
-  const rows = sorted.map(t => {
-    const overdue = !t.done && t.due && t.due < todayStr;
+  const todayStr = vpTodayStr();
+  const dayTasks = myTasks.filter(t => t.due === visitPlanDate && t.clientKey);
+  const rows = dayTasks.map(t => {
+    const visited = t.done || vpVisitedOnOrAfter(t.clientKey, visitPlanDate);
+    const missed = !visited && visitPlanDate < todayStr;
     return `
-    <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);">
-      <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleMyTaskUi('${t.id}', this.checked)" style="width:20px;height:20px;margin-top:2px;flex:0 0 auto;">
-      <div style="flex:1;min-width:0;${t.done ? 'opacity:.5;text-decoration:line-through;' : ''}">
-        <div style="font-size:14px;font-weight:700;word-break:break-word;">${safe(t.title)}</div>
-        <div style="font-size:12px;color:${overdue ? 'var(--red)' : 'var(--muted)'};">${t.due ? safe(t.due.split('-').reverse().join('.')) + (overdue ? ' · просрочено' : '') : 'без срока'}${t.clientName ? ' · ' + safe(t.clientName) : ''}</div>
+    <div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);">
+      <div style="flex:1;min-width:0;cursor:pointer;" onclick="closeNplModal();openNplClientDetail('${encodeURIComponent(t.clientKey)}')">
+        <div style="font-size:14px;font-weight:700;word-break:break-word;">${safe(t.clientName || t.clientKey)}</div>
+        <div style="font-size:12px;color:${visited ? '#1E7B34' : (missed ? 'var(--red)' : 'var(--muted)')};">${visited ? '✓ визит выполнен' : (missed ? 'не посещён' : 'запланирован')}${t.title ? ' · ' + safe(t.title) : ''}</div>
       </div>
-      <button type="button" onclick="deleteMyTaskUi('${t.id}')" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">×</button>
+      <button type="button" onclick="deleteMyTaskUi('${t.id}')" style="border:none;background:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;">×</button>
     </div>`;
   }).join('');
-  const clients = (typeof getMyNplGroups === 'function' ? getMyNplGroups() : []).slice().sort((a, b) => b.maxDays - a.maxDays).slice(0, 300);
-  const opts = '<option value="">Без клиента</option>' + clients.map(g => `<option value="${encodeURIComponent(g.key)}|${encodeURIComponent(g.clientName)}">${safe(g.clientName)}</option>`).join('');
+  const doneCount = dayTasks.filter(t => t.done || vpVisitedOnOrAfter(t.clientKey, visitPlanDate)).length;
+  const searchEl = document.getElementById('vpSearch');
+  const query = searchEl ? searchEl.value : '';
   const body = `
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
-      <input id="myTaskTitle" class="input" placeholder="Что нужно сделать">
-      <div style="display:flex;gap:8px;">
-        <input id="myTaskDue" type="date" class="input" value="${todayStr}" style="flex:1;min-width:0;">
-        <select id="myTaskClient" class="input" style="flex:1;min-width:0;">${opts}</select>
-      </div>
-      <button type="button" class="btn btn-primary" onclick="addMyTaskUi()">Добавить задачу</button>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+      <button type="button" class="btn btn-secondary" style="padding:8px 12px;" onclick="shiftVisitPlanDate(-1)">‹</button>
+      <input type="date" class="input" value="${visitPlanDate}" onchange="setVisitPlanDate(this.value)" style="flex:1;min-width:0;">
+      <button type="button" class="btn btn-secondary" style="padding:8px 12px;" onclick="shiftVisitPlanDate(1)">›</button>
     </div>
-    <div style="max-height:50vh;overflow-y:auto;">${rows || '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Задач пока нет</div>'}</div>`;
-  openNplModal('Планировка задач', body);
+    <div style="font-size:13px;font-weight:800;margin-bottom:4px;">План на день: ${dayTasks.length} · выполнено ${doneCount}</div>
+    <div style="max-height:32vh;overflow-y:auto;">${rows || '<div style="color:var(--muted);font-size:13px;padding:8px 0;">На этот день визитов не запланировано</div>'}</div>
+    <div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px;">
+      <input id="vpSearch" class="input" placeholder="Поиск по ФИО, ИД клиента или ПИНФЛ" value="${safe(query)}" oninput="vpRefreshOptions()" style="margin-bottom:8px;">
+      <div id="vpOptions" style="max-height:24vh;overflow-y:auto;"></div>
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="vpAutoFill()">Подобрать 10 клиентов автоматически</button>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Берутся самые просроченные, у которых не было визита последние 14 дней.</div>
+    </div>`;
+  openNplModal('План визитов', body);
+  vpRefreshOptions();
 }
-async function addMyTaskUi() {
-  const title = document.getElementById('myTaskTitle').value.trim();
-  if (!title) { alert('Введите задачу'); return; }
-  const due = document.getElementById('myTaskDue').value;
-  const cv = document.getElementById('myTaskClient').value;
-  let clientKey = '', clientName = '';
-  if (cv) { const p = cv.split('|'); clientKey = decodeURIComponent(p[0]); clientName = decodeURIComponent(p[1] || ''); }
-  const r = await postWebAction({ webAction: 'addMyTask', sessionId: localStorage.getItem('msbSessionId'), title, due, clientKey, clientName });
-  if (!r || !r.success) { alert((r && r.message) || 'Не удалось добавить'); return; }
-  myTasks.push({ id: r.id, title, due, clientKey, clientName, done: false });
-  renderMyTasks();
+function vpRefreshOptions() {
+  const el = document.getElementById('vpOptions'); if (!el) return;
+  const q = (document.getElementById('vpSearch') || {}).value || '';
+  const opts = vpClientOptions(q);
+  el.innerHTML = opts.length ? opts.map(g => `
+    <div class="vz-attention-row" onclick="addVisitPlanClient('${encodeURIComponent(g.key)}')">
+      <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(g.clientName)}</div><div style="font-size:11.5px;color:var(--muted);">${g.maxDays} дн. · ${(allNplVisits[g.key] || []).length} визитов</div></div>
+      <span style="font-size:20px;color:var(--brand);">+</span>
+    </div>`).join('') : '<div style="font-size:13px;color:var(--muted);padding:6px 0;">Нет подходящих клиентов</div>';
 }
-async function toggleMyTaskUi(id, done) {
-  const t = myTasks.find(x => x.id === id); if (t) t.done = done;
+async function vpAddOne(g) {
+  const r = await postWebAction({ webAction: 'addMyTask', sessionId: localStorage.getItem('msbSessionId'), title: 'Визит', due: visitPlanDate, clientKey: g.key, clientName: g.clientName });
+  if (!r || !r.success) { alert((r && r.message) || 'Не удалось добавить'); return false; }
+  myTasks.push({ id: r.id, title: '', due: visitPlanDate, clientKey: g.key, clientName: g.clientName, done: false });
+  return true;
+}
+async function addVisitPlanClient(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const g = getMyNplGroups().find(x => x.key === key);
+  if (!g) return;
+  if (await vpAddOne(g)) renderMyTasks();
+}
+async function vpAutoFill() {
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14); cutoff.setMinutes(cutoff.getMinutes() - cutoff.getTimezoneOffset());
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const picks = vpClientOptions('').filter(g => !vpVisitedOnOrAfter(g.key, cutoffStr)).slice(0, 10);
+  if (!picks.length) { alert('Нет подходящих клиентов для автоподбора'); return; }
+  for (const g of picks) { if (!(await vpAddOne(g))) break; }
   renderMyTasks();
-  try { await postWebAction({ webAction: 'toggleMyTask', sessionId: localStorage.getItem('msbSessionId'), id, done }); } catch (e) { console.error(e); }
 }
 async function deleteMyTaskUi(id) {
   myTasks = myTasks.filter(x => x.id !== id);
   renderMyTasks();
   try { await postWebAction({ webAction: 'deleteMyTask', sessionId: localStorage.getItem('msbSessionId'), id }); } catch (e) { console.error(e); }
+}
+
+// ---- Обещания оплат: клиенты, по которым в визите указана дата обещания ----
+function vpNormDate(s) {
+  s = String(s || '').trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1] + '-' + m[2] + '-' + m[3];
+  m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return m[3] + '-' + m[2] + '-' + m[1];
+  return '';
+}
+function getMyPromises() {
+  const today = vpTodayStr();
+  const list = [];
+  getMyNplGroups().forEach(function(g) {
+    const visits = allNplVisits[g.key] || [];
+    const v = visits.find(x => vpNormDate(x.promiseDate));
+    if (!v) return;
+    const d = vpNormDate(v.promiseDate);
+    // если после обещания уже был новый визит без обещания — считаем обещание закрытым
+    if (visits[0] && visits[0] !== v) return;
+    list.push({ g: g, date: d, amount: Number(v.promiseAmount) || 0, overdue: d < today, today: d === today });
+  });
+  return list.sort((a, b) => a.date.localeCompare(b.date));
+}
+function vzPromiseBadge() {
+  try {
+    const n = getMyPromises().filter(x => x.overdue || x.today).length;
+    return n ? `<span style="display:block;font-size:11px;font-weight:800;color:var(--red);">${n} срочно</span>` : '';
+  } catch (e) { return ''; }
+}
+function openPromises() {
+  const list = getMyPromises();
+  const rows = list.map(x => `
+    <div class="vz-attention-row" onclick="closeNplModal();openNplClientDetail('${encodeURIComponent(x.g.key)}')">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(x.g.clientName)}</div>
+        <div style="font-size:12px;color:${x.overdue ? 'var(--red)' : (x.today ? '#8A5300' : 'var(--muted)')};">${x.overdue ? 'просрочено · ' : (x.today ? 'сегодня · ' : '')}${safe(x.date.split('-').reverse().join('.'))}</div>
+      </div>
+      <div style="text-align:right;font-size:13px;font-weight:800;">${x.amount ? formatMoney(x.amount) : '—'}</div>
+    </div>`).join('');
+  openNplModal('Обещания оплат', `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Клиенты, которые пообещали оплатить. Сначала самые срочные.</div>
+    <div style="max-height:60vh;overflow-y:auto;">${rows || '<div style="font-size:13px;color:var(--muted);padding:10px 0;">Обещаний пока нет. Они появятся, когда вы укажете дату обещания в визите.</div>'}</div>`);
+}
+
+// ---- Клиенты рядом: ближайшие клиенты с сохранённой локацией ----
+function fmtDistance(m) { return m < 1000 ? Math.round(m) + ' м' : (m / 1000).toFixed(1) + ' км'; }
+function openNearby() {
+  openNplModal('Клиенты рядом', '<div style="color:var(--muted);padding:10px 0;">Определяем ваше местоположение...</div>');
+  if (!navigator.geolocation) {
+    openNplModal('Клиенты рядом', '<div style="padding:10px 0;">Геолокация не поддерживается этим браузером.</div>');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    const lat = pos.coords.latitude, lng = pos.coords.longitude;
+    const mine = getMyNplGroups();
+    const withLoc = [];
+    let noLoc = 0;
+    mine.forEach(function(g) {
+      const ex = allNplExtra[g.key] || {};
+      if (ex.lat && ex.lng) {
+        withLoc.push({ g: g, dist: haversineMeters(lat, lng, Number(ex.lat), Number(ex.lng)), lat: ex.lat, lng: ex.lng, address: ex.address || '' });
+      } else noLoc++;
+    });
+    withLoc.sort((a, b) => a.dist - b.dist);
+    const rows = withLoc.slice(0, 30).map(x => `
+      <div class="vz-attention-row" onclick="closeNplModal();openNplClientDetail('${encodeURIComponent(x.g.key)}')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(x.g.clientName)}</div>
+          <div style="font-size:11.5px;color:var(--muted);word-break:break-word;">${x.address ? safe(x.address) + ' · ' : ''}${x.g.maxDays} дн. просрочки</div>
+        </div>
+        <div style="text-align:right;flex:0 0 auto;">
+          <div style="font-size:13px;font-weight:800;">${fmtDistance(x.dist)}</div>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${x.lat},${x.lng}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:var(--brand);font-weight:700;">Маршрут</a>
+        </div>
+      </div>`).join('');
+    openNplModal('Клиенты рядом', `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Ближайшие к вам клиенты с сохранённой локацией${noLoc ? '. У ' + noLoc + ' клиентов локация не указана' : ''}.</div>
+      <div style="max-height:60vh;overflow-y:auto;">${rows || '<div style="font-size:13px;color:var(--muted);padding:10px 0;">Нет клиентов с локацией. Добавьте её в карточке клиента, нажав на карандаш рядом с адресом.</div>'}</div>`);
+  }, function() {
+    openNplModal('Клиенты рядом', '<div style="padding:10px 0;font-size:14px;">Не удалось определить местоположение. Разрешите доступ к геолокации в браузере и повторите.</div>');
+  }, { enableHighAccuracy: true, timeout: 15000 });
 }
 
 function openNplClientDetail(keyEncoded) {
