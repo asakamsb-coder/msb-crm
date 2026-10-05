@@ -611,7 +611,7 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 .vz-summary-tile.danger{background:#FCEBEB;}
 .vz-summary-tile .label{font-size:12px;color:var(--muted);margin-bottom:4px;}
 .vz-summary-tile .value{font-size:18px;font-weight:800;}
-.vz-quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px;}
+.vz-quick-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:18px;}
 .vz-quick-action{text-align:center;padding:12px 4px;background:#F9FAFB;border-radius:12px;border:none;cursor:pointer;color:var(--text);}
 .vz-quick-action .icon{color:var(--brand);margin:0 auto 6px;}
 .vz-attention-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;}
@@ -1720,8 +1720,8 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
   <div id="nplDashboard" style="display:none;">
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
       <button class="msb-sales-tab active" id="nplPageTabDash" onclick="setNplPageTab('dashboard')">1. Дашборд</button>
-      <button class="msb-sales-tab" id="nplPageTabLegal" onclick="setNplPageTab('legal')">2. Юридические лица</button>
-      <button class="msb-sales-tab" id="nplPageTabIndiv" onclick="setNplPageTab('indiv')">3. Физические лица</button>
+      <button class="msb-sales-tab" id="nplPageTabIndiv" onclick="setNplPageTab('indiv')">2. Физические лица</button>
+      <button class="msb-sales-tab" id="nplPageTabLegal" onclick="setNplPageTab('legal')">3. Юридические лица</button>
       <button class="msb-sales-tab" id="nplPageTabArchive" onclick="setNplPageTab('archive')">4. Архив</button>
       <button class="msb-sales-tab" id="nplPageTabStats" style="display:none;" onclick="setNplPageTab('stats')">5. Статистика</button>
       <div id="nplMyClientsBadge" style="display:none;margin-left:auto;font-weight:700;font-size:14px;color:var(--muted);">
@@ -6702,10 +6702,14 @@ function renderVzyskatelHome() {
       </div>
       <div class="vz-summary-grid">
         <div class="vz-summary-tile">
-          <div class="label">Назначено клиентов</div>
+          <div class="label">Активных клиентов</div>
           <div class="value">${myGroups.length}</div>
         </div>
-        <div class="vz-summary-tile danger">
+        <div class="vz-summary-tile">
+          <div class="label">Закрыто за ${nplMonthNameGen()}</div>
+          <div class="value">${vzMonthClosed()}</div>
+        </div>
+        <div class="vz-summary-tile danger" style="grid-column:span 2;">
           <div class="label">Общая просрочка</div>
           <div class="value">${formatMoney(totalOverdue)}</div>
         </div>
@@ -6713,6 +6717,7 @@ function renderVzyskatelHome() {
       <div class="vz-quick-actions">
         <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('clients')"><div class="icon">${appIcon('users', 20)}</div>Клиенты</button>
         <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('clients')"><div class="icon">${appIcon('mappin', 20)}</div>Визит</button>
+        <button type="button" class="vz-quick-action" onclick="openMyTasks()"><div class="icon">${appIcon('check', 20)}</div>Планировка задач</button>
         <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('profile')"><div class="icon">${appIcon('user', 20)}</div>Профиль</button>
       </div>
       <div style="font-size:13px;font-weight:800;margin-bottom:4px;">Требуют внимания</div>
@@ -7411,7 +7416,7 @@ function renderNplPage() {
   const myClientsCount = document.getElementById('nplMyClientsCount');
   if (dashTabBtn) dashTabBtn.style.display = isCollector ? 'none' : '';
   if (isCollector && dashTabBtn && dashTabBtn.classList.contains('active')) {
-    setNplPageTab('legal');
+    setNplPageTab('indiv');
   }
 
   function filterForCollector(groups) {
@@ -7998,6 +8003,82 @@ function resolveNplUploadConfirm(ok) {
 }
 // =================== /NPL: АРХИВ И СТАТИСТИКА ======================
 
+
+// ---- Месяц и счётчик закрытых (обновляется сам каждый месяц) ----
+function nplMonthNameGen() {
+  const m = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+  return m[new Date().getMonth()];
+}
+function vzMonthClosed() {
+  try {
+    const emp = String((currentUser && currentUser.employeeId) || '').trim();
+    const s = computeNplStats(emp);
+    return s && s.monthHasData ? s.closed : 0;
+  } catch (e) { return 0; }
+}
+
+// ---- Планировка задач (личный список задач сотрудника) ----
+let myTasks = [];
+async function openMyTasks() {
+  openNplModal('Планировка задач', '<div style="color:var(--muted);padding:10px 0;">Загрузка...</div>');
+  try {
+    const r = await postWebAction({ webAction: 'listMyTasks', sessionId: localStorage.getItem('msbSessionId') });
+    myTasks = (r && r.success && r.tasks) || [];
+  } catch (e) { myTasks = []; }
+  renderMyTasks();
+}
+function renderMyTasks() {
+  const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  const todayStr = today.toISOString().slice(0, 10);
+  const sorted = myTasks.slice().sort((a, b) => (a.done - b.done) || String(a.due || '9999').localeCompare(String(b.due || '9999')));
+  const rows = sorted.map(t => {
+    const overdue = !t.done && t.due && t.due < todayStr;
+    return `
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line);">
+      <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleMyTaskUi('${t.id}', this.checked)" style="width:20px;height:20px;margin-top:2px;flex:0 0 auto;">
+      <div style="flex:1;min-width:0;${t.done ? 'opacity:.5;text-decoration:line-through;' : ''}">
+        <div style="font-size:14px;font-weight:700;word-break:break-word;">${safe(t.title)}</div>
+        <div style="font-size:12px;color:${overdue ? 'var(--red)' : 'var(--muted)'};">${t.due ? safe(t.due.split('-').reverse().join('.')) + (overdue ? ' · просрочено' : '') : 'без срока'}${t.clientName ? ' · ' + safe(t.clientName) : ''}</div>
+      </div>
+      <button type="button" onclick="deleteMyTaskUi('${t.id}')" style="border:none;background:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">×</button>
+    </div>`;
+  }).join('');
+  const clients = (typeof getMyNplGroups === 'function' ? getMyNplGroups() : []).slice().sort((a, b) => b.maxDays - a.maxDays).slice(0, 300);
+  const opts = '<option value="">Без клиента</option>' + clients.map(g => `<option value="${encodeURIComponent(g.key)}|${encodeURIComponent(g.clientName)}">${safe(g.clientName)}</option>`).join('');
+  const body = `
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+      <input id="myTaskTitle" class="input" placeholder="Что нужно сделать">
+      <div style="display:flex;gap:8px;">
+        <input id="myTaskDue" type="date" class="input" value="${todayStr}" style="flex:1;min-width:0;">
+        <select id="myTaskClient" class="input" style="flex:1;min-width:0;">${opts}</select>
+      </div>
+      <button type="button" class="btn btn-primary" onclick="addMyTaskUi()">Добавить задачу</button>
+    </div>
+    <div style="max-height:50vh;overflow-y:auto;">${rows || '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Задач пока нет</div>'}</div>`;
+  openNplModal('Планировка задач', body);
+}
+async function addMyTaskUi() {
+  const title = document.getElementById('myTaskTitle').value.trim();
+  if (!title) { alert('Введите задачу'); return; }
+  const due = document.getElementById('myTaskDue').value;
+  const cv = document.getElementById('myTaskClient').value;
+  let clientKey = '', clientName = '';
+  if (cv) { const p = cv.split('|'); clientKey = decodeURIComponent(p[0]); clientName = decodeURIComponent(p[1] || ''); }
+  const r = await postWebAction({ webAction: 'addMyTask', sessionId: localStorage.getItem('msbSessionId'), title, due, clientKey, clientName });
+  if (!r || !r.success) { alert((r && r.message) || 'Не удалось добавить'); return; }
+  myTasks.push({ id: r.id, title, due, clientKey, clientName, done: false });
+  renderMyTasks();
+}
+async function toggleMyTaskUi(id, done) {
+  const t = myTasks.find(x => x.id === id); if (t) t.done = done;
+  renderMyTasks();
+  try { await postWebAction({ webAction: 'toggleMyTask', sessionId: localStorage.getItem('msbSessionId'), id, done }); } catch (e) { console.error(e); }
+}
+async function deleteMyTaskUi(id) {
+  myTasks = myTasks.filter(x => x.id !== id);
+  renderMyTasks();
+  try { await postWebAction({ webAction: 'deleteMyTask', sessionId: localStorage.getItem('msbSessionId'), id }); } catch (e) { console.error(e); }
+}
 
 function openNplClientDetail(keyEncoded) {
   const key = decodeURIComponent(keyEncoded);
