@@ -6612,6 +6612,7 @@ let allNplMib = { data: {}, files: {} };
 let allNplCourt = { data: {}, files: {} };
 let allNplArchive = {};
 let allNplStats = [];
+let allNplTransfers = {};
 let vzStatsMode = 'month';
 let vzNoLegalExpanded = false;
 let nplStatsSelectedEmp = null;
@@ -6904,6 +6905,7 @@ async function loadNplRestInBackground() {
     allNplCourt = (rest && rest.court) || { data: {}, files: {} };
     allNplArchive = (rest && rest.archive) || {};
     allNplStats = (rest && rest.stats) || [];
+    allNplTransfers = (rest && rest.transfers) || {};
     allNplCollectors = (rest && rest.collectors) || {};
     if (rest && rest.users) allWebUsers = rest.users;
 
@@ -7706,14 +7708,16 @@ function computeNplStats(empId) {
   const byEmp = {};
   rows.forEach(r => {
     let e = byEmp[r.employeeId];
-    if (!e) e = byEmp[r.employeeId] = { base: r.startCount, startSum: r.startSum, add: 0, closed: 0, end: 0, arrivalsSum: 0, repaid: 0 };
-    e.add += r.newCount + r.returned;
+    if (!e) e = byEmp[r.employeeId] = { base: r.startCount, startSum: r.startSum, add: 0, closed: 0, end: 0, arrivalsSum: 0, repaid: 0, received: 0, sent: 0 };
+    e.add += r.newCount + r.returned + (r.inCount || 0) - (r.outCount || 0);
+    e.received += (r.inCount || 0);
+    e.sent += (r.outCount || 0);
     e.closed += r.closed;
     e.end = r.endCount;
-    e.arrivalsSum += r.arrivalsSum;
+    e.arrivalsSum += r.arrivalsSum + (r.inSum || 0) - (r.outSum || 0);
     e.repaid += r.repaid;
   });
-  const t = { assigned: 0, open: 0, closed: 0, baseSum: 0, repaid: 0 };
+  const t = { assigned: 0, open: 0, closed: 0, baseSum: 0, repaid: 0, received: 0, sent: 0 };
   Object.keys(byEmp).forEach(id => {
     const e = byEmp[id];
     t.assigned += e.base + e.add;
@@ -7721,13 +7725,17 @@ function computeNplStats(empId) {
     t.closed += e.closed;
     t.baseSum += e.startSum + e.arrivalsSum;
     t.repaid += e.repaid;
+    t.received += e.received;
+    t.sent += e.sent;
   });
 
-  const td = { closed: 0, repaid: 0, arrivals: 0 };
+  const td = { closed: 0, repaid: 0, arrivals: 0, received: 0, sent: 0 };
   rows.filter(r => r.date === today).forEach(r => {
     td.closed += r.closed;
     td.repaid += r.repaid;
     td.arrivals += r.newCount + r.returned;
+    td.received += (r.inCount || 0);
+    td.sent += (r.outCount || 0);
   });
 
   const dayMap = {};
@@ -7741,7 +7749,7 @@ function computeNplStats(empId) {
   return {
     hasData: allRows.length > 0,
     monthHasData: rows.length > 0,
-    assigned: t.assigned, open: t.open, closed: t.closed,
+    assigned: t.assigned, open: t.open, closed: t.closed, received: t.received, sent: t.sent,
     pctClients: t.assigned ? t.closed / t.assigned * 100 : 0,
     baseSum: t.baseSum, repaid: t.repaid,
     pctSum: t.baseSum ? t.repaid / t.baseSum * 100 : 0,
@@ -7777,8 +7785,8 @@ function renderNplStatsCard(empId) {
       <div class="vz-summary-tile"><div class="label">Открыто</div><div class="value">${s.open}</div><div style="font-size:11px;color:var(--muted);">в просрочке сейчас</div></div>
       <div class="vz-summary-tile"><div class="label">Закрыто сегодня</div><div class="value" style="color:#1E7B34;">${s.today.closed}</div></div>
       <div class="vz-summary-tile"><div class="label">Погашено сегодня</div><div class="value">${formatMoney(s.today.repaid)}</div></div>
-      <div class="vz-summary-tile"><div class="label">Новых и вернувшихся</div><div class="value">${s.today.arrivals}</div></div>` : `
-      <div class="vz-summary-tile"><div class="label">Назначено</div><div class="value">${s.assigned}</div><div style="font-size:11px;color:var(--muted);">за ${monthLabel}</div></div>
+      <div class="vz-summary-tile"><div class="label">Новых и вернувшихся</div><div class="value">${s.today.arrivals}</div>${(s.today.received || s.today.sent) ? '<div style="font-size:11px;color:var(--muted);">получено: ' + s.today.received + ' · передано: ' + s.today.sent + '</div>' : ''}</div>` : `
+      <div class="vz-summary-tile"><div class="label">Назначено</div><div class="value">${s.assigned}</div><div style="font-size:11px;color:var(--muted);">за ${monthLabel}${s.received ? ' · получено ' + s.received : ''}${s.sent ? ' · передано ' + s.sent : ''}</div></div>
       <div class="vz-summary-tile"><div class="label">Открыто</div><div class="value">${s.open}</div><div style="font-size:11px;color:var(--muted);">в просрочке сейчас</div></div>
       <div class="vz-summary-tile"><div class="label">Закрыто</div><div class="value" style="color:#1E7B34;">${s.closed}</div><div style="font-size:11px;color:var(--muted);">сегодня: ${s.today.closed}</div></div>
       <div class="vz-summary-tile"><div class="label">Закрытие</div><div class="value">${nplFmtPct(s.pctClients)}%</div><div style="font-size:11px;color:var(--muted);">${s.closed} из ${s.assigned} клиентов</div></div>`;
@@ -7840,10 +7848,39 @@ function renderNplNoLegalCard(groups) {
     </div>`;
 }
 
+function renderVzTransfersCard(emp) {
+  const mineByKey = {};
+  getMyNplGroups().forEach(g => { mineByKey[String(g.key)] = g; });
+  const items = Object.keys(allNplTransfers || {}).map(k => Object.assign({ key: k }, allNplTransfers[k]))
+    .filter(t => t.to === emp && mineByKey[t.key])
+    .sort((a, b) => a.date < b.date ? 1 : -1);
+  if (!items.length) return '';
+  const rows = items.slice(0, 10).map(t => {
+    const g = mineByKey[t.key];
+    return `
+      <div class="vz-attention-row" onclick="openNplClientDetail('${encodeURIComponent(t.key).replace(/'/g, '%27')}')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;word-break:break-word;">${safe(g.clientName)}</div>
+          <div style="font-size:11.5px;color:var(--muted);">от ${safe(nplCollectorLabel(t.from))} · ${safe(t.date.split('-').reverse().join('.'))}</div>
+        </div>
+        <div style="font-size:13px;font-weight:800;">${g.maxDays} дн</div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="vz-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:15px;font-weight:800;">Переданы вам</div>
+        <span style="font-size:12px;font-weight:800;padding:2px 10px;border-radius:8px;background:#E8F0FE;color:var(--brand);">${items.length}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Клиенты, переданные вам за последние 14 дней</div>
+      ${rows}
+    </div>`;
+}
+
 function renderVzStatsBlocks() {
   const emp = String((currentUser && currentUser.employeeId) || '').trim();
   if (!emp) return '';
-  return renderNplStatsCard(emp) + renderNplNoLegalCard(getNplNoLegalGroups(emp));
+  return renderNplStatsCard(emp) + renderVzTransfersCard(emp) + renderNplNoLegalCard(getNplNoLegalGroups(emp));
 }
 
 // ---- Архив закрытых клиентов ----
@@ -8131,7 +8168,9 @@ function vpClientOptions(query) {
 }
 function renderMyTasks() {
   const todayStr = vpTodayStr();
-  const dayTasks = myTasks.filter(t => t.due === visitPlanDate && t.clientKey);
+  // клиенты, переданные другому взыскателю или ушедшие в архив, в плане не показываем
+  const mineSet = new Set(getMyNplGroups().map(g => String(g.key)));
+  const dayTasks = myTasks.filter(t => t.due === visitPlanDate && t.clientKey && mineSet.has(String(t.clientKey)));
   const rows = dayTasks.map(t => {
     const visited = t.done || vpVisitedOnOrAfter(t.clientKey, visitPlanDate);
     const missed = !visited && visitPlanDate < todayStr;
@@ -8359,13 +8398,16 @@ function renderNplClientHeaderMeta(group) {
   const arch = allNplArchive[key] || null;
   const returnedBadge = (arch && arch.status === 'returned')
     ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#FFF4E0;color:#8A5A00;">вернулся после закрытия${arch.closedAt ? ' ' + safe(arch.closedAt) : ''}</span>` : '';
+  const tr = allNplTransfers[key] || null;
+  const transferBadge = tr
+    ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#E8F0FE;color:var(--brand);">передан от ${safe(nplCollectorLabel(tr.from))}${tr.date ? ', ' + safe(tr.date.split('-').reverse().slice(0, 2).join('.')) : ''}</span>` : '';
   const archivedBadge = group.archived
     ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#F3F4F6;color:var(--muted);">в архиве</span>` : '';
   return `
     <div style="margin-top:2px;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;${group.subject === 'J' ? 'background:#E6F1FB;color:#0C447C;' : 'background:#EAF3DE;color:#27500A;'}">${group.subject === 'J' ? 'Юрлицо' : 'Физлицо'}</span>
-        ${returnedBadge}${archivedBadge}
+        ${returnedBadge}${transferBadge}${archivedBadge}
       </div>
 
       <div style="display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px;">
