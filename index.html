@@ -8124,9 +8124,9 @@ function shiftVisitPlanDate(delta) {
 }
 function vpClientOptions(query) {
   const q = normalizeText(query || '');
-  const planned = new Set(myTasks.filter(t => t.due === visitPlanDate).map(t => t.clientKey));
+  const planned = new Set(myTasks.filter(t => t.due === visitPlanDate).map(t => String(t.clientKey)));
   return getMyNplGroups()
-    .filter(g => !planned.has(g.key) && (!q || normalizeText([g.clientName, g.pin, g.displayClientId, g.key].join(' ')).indexOf(q) !== -1))
+    .filter(g => !planned.has(String(g.key)) && (!q || normalizeText([g.clientName, g.pin, g.displayClientId, g.key].join(' ')).indexOf(q) !== -1))
     .sort((a, b) => b.maxDays - a.maxDays).slice(0, 40);
 }
 function renderMyTasks() {
@@ -8161,7 +8161,7 @@ function renderMyTasks() {
       <div id="vpOptions" style="max-height:24vh;overflow-y:auto;"></div>
       <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="vpAutoFill()">Подобрать 10 клиентов автоматически</button>
       <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Берутся самые просроченные, у которых не было визита последние 14 дней.</div>
-      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;text-align:right;">версия плана 4</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:6px;text-align:right;">версия плана 5</div>
     </div>`;
   openNplModal('План визитов', body);
   vpRefreshOptions();
@@ -8186,7 +8186,7 @@ function vpNewId() {
 // Добавление мгновенное: сначала обновляем экран, запись на сервер идёт
 // фоном одним запросом; при ошибке — откатываем и сообщаем.
 async function vpAddMany(groups) {
-  const items = groups.map(g => ({ id: vpNewId(), title: '', due: visitPlanDate, clientKey: g.key, clientName: g.clientName, done: false, pending: true }));
+  const items = groups.map(g => ({ id: vpNewId(), title: '', due: visitPlanDate, clientKey: String(g.key), clientName: g.clientName, done: false, pending: true }));
   items.forEach(t => myTasks.push(t));
   vpSaveLocal();
   renderMyTasks();
@@ -8195,7 +8195,7 @@ async function vpAddMany(groups) {
 function addVisitPlanClient(keyEnc) {
   try {
     const key = decodeURIComponent(keyEnc);
-    const g = getMyNplGroups().find(x => x.key === key);
+    const g = getMyNplGroups().find(x => String(x.key) === key);
     if (!g) { alert('Клиент не найден в вашем списке: ' + key); return; }
     vpAddMany([g]).catch(function(e) { alert('Ошибка добавления в план: ' + (e && e.message || e)); console.error(e); });
   } catch (e) { alert('Ошибка добавления в план: ' + (e && e.message || e)); console.error(e); }
