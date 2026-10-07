@@ -616,6 +616,22 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 .vz-quick-action .icon{color:var(--brand);margin:0 auto 6px;}
 .vz-attention-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;}
 .vz-attention-row:last-child{border-bottom:none;}
+.sv-box{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;background:#fff;}
+.sv-title{font-size:13px;font-weight:800;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;align-items:center;}
+.sv-meta{font-size:11.5px;color:var(--muted);font-weight:400;}
+.sv-photos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+.sv-photo{position:relative;width:64px;height:64px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#F3F4F6;}
+.sv-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+.sv-photo .sv-x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;border:none;font-size:12px;line-height:20px;padding:0;cursor:pointer;}
+.sv-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.sv-btns .btn,.sv-btns label.btn{font-size:12.5px;padding:8px 12px;cursor:pointer;}
+.sv-chk{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;}
+.sv-chk input{width:20px;height:20px;}
+.sv-flags{display:flex;gap:6px;flex-wrap:wrap;}
+.sv-flag{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:8px;}
+.sv-flag.ok{background:#EAF3DE;color:#27500A;}
+.sv-flag.bad{background:#FCEBEB;color:#791F1F;}
+.sv-flag.warn{background:#FAEEDA;color:#633806;}
 /* Панель быстрых действий в карточке клиента NPL (Позвонить/Написать/
    Маршрут/Визит) — один тап вместо поиска нужной кнопки в длинной
    карточке. Те же классы, что и у vz-quick-action, но своя сетка на 4
@@ -4542,8 +4558,10 @@ function applyRoleView() {
   // Взыскатель — отдельная мобильная оболочка (Главная/Клиенты/Профиль
   // внизу экрана вместо большого сайдбара CRM), см. .role-vzyskatel в CSS
   // и renderVzyskatelNavbar()/renderVzyskatelHome() ниже.
-  document.body.classList.toggle('role-vzyskatel', currentUser.role === 'VZYSKATEL');
-  if (currentUser.role === 'VZYSKATEL') {
+  // Юридический мониторинг на телефоне получает ту же оболочку (только на
+  // узком экране — на компьютере у него остаётся полная CRM).
+  document.body.classList.toggle('role-vzyskatel', isVzShell());
+  if (isVzShell()) {
     renderVzyskatelNavbar();
   }
 }
@@ -4616,7 +4634,7 @@ async function loadCRM() {
 
     // Взыскатель — своя мобильная оболочка (см. renderVzyskatelHome),
     // ему тоже не нужны данные МСБ-дашборда, только NPL.
-    if (currentUser && currentUser.role === 'VZYSKATEL') {
+    if (isVzShell()) {
       await loadNplData();
       vzyskatelGoTo('home');
       return;
@@ -6620,6 +6638,7 @@ let allNplAccounts = {};
 let allNplVisits = {};
 let allNplMib = { data: {}, files: {} };
 let allNplCourt = { data: {}, files: {} };
+let allNplSurveys = {};
 let allNplArchive = {};
 let allNplStats = [];
 let allNplTransfers = {};
@@ -6687,7 +6706,35 @@ function vzyskatelGoTo(tab) {
 // Сводка "своих" клиентов — та же фильтрация по ID сотрудника, что и в
 // renderNplPage() (см. filterForCollector), просто без всей остальной
 // разметки списков/дашборда, которая взыскателю не нужна.
+// Юридический мониторинг на телефоне (до 820px): ему показывается мобильная
+// оболочка как у взыскателей, но с ЮРИДИЧЕСКИМИ клиентами (все юр.лица с
+// просрочкой), а не только закреплёнными за ID сотрудника.
+function nplMobileMonitor() {
+  try {
+    return !!(currentUser && currentUser.role === 'CREDIT_MONITOR' && window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
+  } catch (e) { return false; }
+}
+function isVzShell() {
+  return !!(currentUser && (currentUser.role === 'VZYSKATEL' || nplMobileMonitor()));
+}
+(function() {
+  let wasMon = null;
+  window.addEventListener('resize', function() {
+    clearTimeout(window.__nplMonResizeT);
+    window.__nplMonResizeT = setTimeout(function() {
+      if (!currentUser || currentUser.role !== 'CREDIT_MONITOR') return;
+      const now = nplMobileMonitor();
+      if (wasMon === null) { wasMon = now; return; }
+      if (now !== wasMon) { wasMon = now; location.reload(); }
+    }, 300);
+  });
+  window.addEventListener('load', function() { wasMon = nplMobileMonitor(); });
+})();
+
 function getMyNplGroups() {
+  if (nplMobileMonitor()) {
+    return getNplGroupsCached().filter(g => g.subject === 'J' && g.maxDays >= 1);
+  }
   const myEmployeeId = String((currentUser && currentUser.employeeId) || '').trim();
   if (!myEmployeeId) return [];
   return getNplGroupsCached().filter(g => String(allNplAssignments[g.key] || '').trim() === myEmployeeId);
@@ -6700,6 +6747,8 @@ function renderVzyskatelHome() {
   const myGroups = getMyNplGroups();
   const totalOverdue = myGroups.reduce((s, g) => s + (Number(g.overdueBalanceSum) || 0) + (Number(g.overdueInterestSum) || 0), 0);
   const attention = myGroups.slice().sort((a, b) => b.maxDays - a.maxDays).slice(0, 5);
+  const isMon = nplMobileMonitor();
+  const monSurveyCount = isMon ? myGroups.reduce((t, g) => t + g.loans.filter(l => allNplSurveys[l.contractId] && allNplSurveys[l.contractId].length).length, 0) : 0;
 
   const photoHtml = currentUser.photoUrl
     ? `<img src="${safe(currentUser.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
@@ -6711,18 +6760,21 @@ function renderVzyskatelHome() {
         <div class="onboard-avatar" style="width:44px;height:44px;font-size:14px;">${photoHtml}</div>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:800;font-size:15px;">${safe(currentUser.fullName || currentUser.login)}</div>
-          <div style="font-size:12px;color:var(--muted);">Взыскатель · ID ${safe(currentUser.employeeId) || '—'}</div>
+          <div style="font-size:12px;color:var(--muted);">${isMon ? 'Юридический мониторинг' : 'Взыскатель · ID ' + (safe(currentUser.employeeId) || '—')}</div>
         </div>
       </div>
       <div class="vz-summary-grid">
         <div class="vz-summary-tile">
-          <div class="label">Активных клиентов</div>
+          <div class="label">${isMon ? 'Юр. клиентов' : 'Активных клиентов'}</div>
           <div class="value">${myGroups.length}</div>
         </div>
-        <div class="vz-summary-tile">
+        ${isMon ? `<div class="vz-summary-tile">
+          <div class="label">Собрано данных по анкетам</div>
+          <div class="value">${monSurveyCount}</div>
+        </div>` : `<div class="vz-summary-tile">
           <div class="label">Закрыто за ${nplMonthNameGen()}</div>
           <div class="value">${vzMonthClosed()}</div>
-        </div>
+        </div>`}
         <div class="vz-summary-tile danger" style="grid-column:span 2;">
           <div class="label">Общая просрочка</div>
           <div class="value">${formatMoney(totalOverdue)}</div>
@@ -6745,8 +6797,8 @@ function renderVzyskatelHome() {
           <span style="color:var(--muted);">${appIcon('chevron', 16)}</span>
         </div>`).join('') : `<div style="font-size:13px;color:var(--muted);padding:10px 0;">Пока нет назначенных клиентов</div>`}
     </div>
-    ${renderVzStatsBlocks()}
-    ${renderVzVisitsHistory()}`;
+    ${isMon ? '' : renderVzStatsBlocks()}
+    ${isMon ? '' : renderVzVisitsHistory()}`;
 }
 
 // История всех обходов (визитов), которые сотрудник сам подтвердил —
@@ -6790,8 +6842,8 @@ function renderVzyskatelProfile() {
     <div class="vz-card" style="text-align:center;">
       <div class="onboard-avatar" style="width:76px;height:76px;font-size:22px;margin:0 auto 12px;">${photoHtml}</div>
       <div style="font-weight:800;font-size:16px;">${safe(currentUser.fullName || currentUser.login)}</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:2px;">Взыскатель</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">ID сотрудника: ${safe(currentUser.employeeId) || '—'}</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:2px;">${nplMobileMonitor() ? 'Юридический мониторинг' : 'Взыскатель'}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${nplMobileMonitor() ? '' : 'ID сотрудника: ' + (safe(currentUser.employeeId) || '—')}</div>
       <input type="file" accept="image/*" id="vzProfilePhotoInput" style="display:none;" onchange="handleVzProfilePhotoSelected(event)">
       <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="document.getElementById('vzProfilePhotoInput').click()">Изменить фото</button>
       <div id="vzProfilePhotoStatus" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
@@ -6996,6 +7048,7 @@ async function loadNplRestInBackground() {
     allNplVisits = (rest && rest.visits) || {};
     allNplMib = (rest && rest.mib) || { data: {}, files: {} };
     allNplCourt = (rest && rest.court) || { data: {}, files: {} };
+    allNplSurveys = (rest && rest.surveys) || {};
     allNplCollectors = (rest && rest.collectors) || {};
     if (rest && rest.users) allWebUsers = rest.users;
 
@@ -7006,7 +7059,7 @@ async function loadNplRestInBackground() {
       openNplClientDetail(encodeURIComponent(currentNplClientKey));
     }
     // История визитов взыскателя приходит здесь — обновим «Главную».
-    if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) {
+    if (isVzShell() && document.getElementById('vzyskatelHomeBody')) {
       renderVzyskatelHome();
     }
     nplRenderSoon();
@@ -7020,7 +7073,7 @@ async function loadNplStatsInBackground() {
     const r = await nplTimedFetch('stats', 'nplStatsBundle');
     allNplStats = (r && r.stats) || [];
     allNplTransfers = (r && r.transfers) || {};
-    if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) {
+    if (isVzShell() && document.getElementById('vzyskatelHomeBody')) {
       renderVzyskatelHome();
     }
     if (nplActiveTab === 'stats') { try { renderNplStatsPanel(); } catch (e) { console.error(e); } }
@@ -7986,9 +8039,17 @@ function renderNplPage() {
   const dashTabBtn = document.getElementById('nplPageTabDash');
   const myClientsBadge = document.getElementById('nplMyClientsBadge');
   const myClientsCount = document.getElementById('nplMyClientsCount');
-  if (dashTabBtn) dashTabBtn.style.display = isCollector ? 'none' : '';
+  const monMobile = nplMobileMonitor();
+  const indivTabBtn = document.getElementById('nplPageTabIndiv');
+  if (dashTabBtn) dashTabBtn.style.display = (isCollector || monMobile) ? 'none' : '';
+  if (indivTabBtn) indivTabBtn.style.display = monMobile ? 'none' : '';
   if (isCollector && nplActiveTab === 'dashboard') {
     setNplPageTab('indiv');
+    return;
+  }
+  // Юр. мониторинг на телефоне работает только с юридическими лицами.
+  if (monMobile && (nplActiveTab === 'dashboard' || nplActiveTab === 'indiv')) {
+    setNplPageTab('legal');
     return;
   }
 
@@ -8338,7 +8399,7 @@ function computeNplStats(empId) {
 
 function setNplStatsMode(mode) {
   vzStatsMode = mode;
-  if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
+  if (isVzShell() && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
   renderNplStatsPanel();
 }
 
@@ -8398,7 +8459,7 @@ function renderNplStatsCard(empId) {
 
 function toggleNplNoLegalList() {
   vzNoLegalExpanded = !vzNoLegalExpanded;
-  if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
+  if (isVzShell() && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
   renderNplStatsPanel();
 }
 
@@ -9768,6 +9829,7 @@ function renderNplClientDetailBody(group) {
           <div class="info-card"><div class="info-label">Телефон (из выгрузки)</div><div class="info-value">${safe(l.phone) || '—'}</div></div>
           <div class="info-card"><div class="info-label">Тип продукта</div><div class="info-value">${safe(l.productType) || '—'}</div></div>
         </div>
+        ${group.subject === 'J' ? renderNplLoanSurvey(l, group, rowId) : ''}
       </div>
     </div>`;
   }).join('');
@@ -9797,6 +9859,291 @@ function renderNplClientDetailBody(group) {
     <div id="nplDetailTabBody_anketi">${tab1Html}</div>
     <div id="nplDetailTabBody_legal" style="display:none;">${tab2Html}</div>`;
 }
+
+
+// ===================== СБОР ДАННЫХ ПО АНКЕТЕ (юр.лица) =====================
+// Заполняет только юридический мониторинг; остальные роли видят собранное.
+function nplCanCollectSurvey() {
+  return !!(currentUser && currentUser.role === 'CREDIT_MONITOR');
+}
+
+function svMapLink(lat, lng) {
+  if (lat === '' || lat === null || lat === undefined || lng === '' || lng === null || lng === undefined) return '';
+  return `<a href="https://www.google.com/maps?q=${encodeURIComponent(lat + ',' + lng)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:700;font-size:12.5px;">📍 ${safe(Number(lat).toFixed(5))}, ${safe(Number(lng).toFixed(5))}</a>`;
+}
+
+function svPhotosHtml(urls) {
+  if (!urls || !urls.length) return '<div class="sv-meta" style="margin-bottom:6px;">Фото не добавлены</div>';
+  return '<div class="sv-photos">' + urls.map(u => `<a class="sv-photo" href="${safe(u)}" target="_blank" onclick="event.stopPropagation()"><img src="${safe(u)}" loading="lazy" alt=""></a>`).join('') + '</div>';
+}
+
+function svFmtWhen(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + nplPad2(d.getHours()) + ':' + nplPad2(d.getMinutes());
+}
+
+function renderNplLoanSurvey(l, group, rowId) {
+  const list = allNplSurveys[l.contractId] || [];
+  const last = list[0];
+  const canEdit = nplCanCollectSurvey();
+  const cEnc = encodeURIComponent(String(l.contractId));
+  const kEnc = encodeURIComponent(group.key);
+  const btn = canEdit
+    ? `<button type="button" class="btn btn-secondary" style="width:100%;margin-top:10px;" onclick="event.stopPropagation();openNplSurveyForm('${cEnc}','${kEnc}')">${last ? 'Обновить данные' : 'Сбор данных'}</button>` : '';
+  if (!last) {
+    return `<div class="sv-box"><div class="sv-title">Сбор данных</div><div class="sv-meta">Данные по этой анкете ещё не собраны.</div>${btn}</div>`;
+  }
+  const flags = [];
+  if (last.bizExists) flags.push('<span class="sv-flag ok">Бизнес есть</span>');
+  if (last.fictitious) flags.push('<span class="sv-flag bad">Фиктивный бизнес</span>');
+  if (last.finDifficulty) flags.push('<span class="sv-flag warn">Финансовое затруднение</span>');
+  const openDate = last.openDate ? nplFmtDateRu(last.openDate) : '';
+  const history = list.length > 1 ? `<div class="sv-meta" style="margin-top:8px;">Всего записей: ${list.length}. ${list.slice(1, 4).map(h => safe(svFmtWhen(h.addedAt)) + ' · ' + safe(h.addedBy)).join(' · ')}</div>` : '';
+  return `
+    <div class="sv-box">
+      <div class="sv-title"><span>Бизнес</span><span class="sv-meta">${safe(svFmtWhen(last.addedAt))} · ${safe(last.addedBy)}</span></div>
+      ${svPhotosHtml(last.bizPhotos)}
+      <div>${svMapLink(last.bizLat, last.bizLng) || '<span class="sv-meta">Локация не указана</span>'}</div>
+    </div>
+    <div class="sv-box">
+      <div class="sv-title"><span>Залог</span></div>
+      ${svPhotosHtml(last.collPhotos)}
+      <div>${svMapLink(last.collLat, last.collLng) || '<span class="sv-meta">Локация не указана</span>'}</div>
+    </div>
+    <div class="sv-box">
+      <div class="sv-title"><span>Предприятие</span></div>
+      <div style="font-size:13px;margin-bottom:8px;"><span class="sv-meta">Дата открытия по удостоверению: </span><b>${openDate ? safe(openDate) : '—'}</b></div>
+      <div class="sv-flags">${flags.join('') || '<span class="sv-meta">Признаки не отмечены</span>'}</div>
+      ${last.comment ? `<div style="font-size:13px;margin-top:8px;word-break:break-word;">${safe(last.comment)}</div>` : ''}
+    </div>
+    ${history}
+    ${btn}`;
+}
+
+let nplSurveyDraft = null;
+
+function openNplSurveyForm(contractEnc, keyEnc) {
+  if (!nplCanCollectSurvey()) return;
+  const contractId = decodeURIComponent(contractEnc);
+  const key = decodeURIComponent(keyEnc);
+  const group = nplGroupsByKey[key];
+  const last = (allNplSurveys[contractId] || [])[0] || {};
+  nplSurveyDraft = {
+    contractId: contractId, key: key, clientName: group ? group.clientName : '',
+    biz:  { keep: (last.bizPhotos || []).slice(), photos: [], lat: last.bizLat === '' ? '' : (last.bizLat ?? ''), lng: last.bizLng === '' ? '' : (last.bizLng ?? '') },
+    coll: { keep: (last.collPhotos || []).slice(), photos: [], lat: last.collLat === '' ? '' : (last.collLat ?? ''), lng: last.collLng === '' ? '' : (last.collLng ?? '') },
+    openDate: last.openDate || '', bizExists: !!last.bizExists, fictitious: !!last.fictitious, finDifficulty: !!last.finDifficulty,
+    comment: last.comment || '', saving: false
+  };
+  openNplModal('Сбор данных · анкета № ' + contractId, renderNplSurveyForm());
+}
+
+function svBlockHtml(which, title) {
+  const d = nplSurveyDraft[which];
+  const total = d.keep.length + d.photos.length;
+  const thumbs = d.keep.map((u, i) => `<div class="sv-photo"><img src="${safe(u)}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','keep',${i})" aria-label="Убрать фото">×</button></div>`).join('') +
+    d.photos.map((p, i) => `<div class="sv-photo"><img src="${p.dataUrl}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','photos',${i})" aria-label="Убрать фото">×</button></div>`).join('');
+  const hasLoc = d.lat !== '' && d.lng !== '' && d.lat !== null && d.lng !== null;
+  return `
+    <div class="sv-box" style="margin-top:0;margin-bottom:12px;">
+      <div class="sv-title"><span>${title}</span><span class="sv-meta">Фото: ${total} из 6</span></div>
+      <div class="sv-photos" id="svThumbs_${which}">${thumbs}</div>
+      <div class="sv-btns">
+        <label class="btn btn-secondary"><input type="file" accept="image/*" capture="environment" style="display:none;" onchange="svAddPhotos('${which}', this)">📷 Снять</label>
+        <label class="btn btn-secondary"><input type="file" accept="image/*" multiple style="display:none;" onchange="svAddPhotos('${which}', this)">🖼 Из галереи</label>
+        <button type="button" class="btn btn-secondary" onclick="svTakeLocation('${which}')">📍 Моя локация</button>
+      </div>
+      <input type="text" class="input" id="svCoords_${which}" placeholder="Или вставьте координаты: 42.4531, 59.6103" value="${hasLoc ? safe(d.lat + ', ' + d.lng) : ''}" onchange="svParseCoords('${which}', this.value)" style="width:100%;font-size:13px;">
+      <div class="sv-meta" id="svGeo_${which}" style="margin-top:6px;">${hasLoc ? 'Локация: ' + svMapLink(d.lat, d.lng) : 'Локация не указана'}</div>
+    </div>`;
+}
+
+function renderNplSurveyForm() {
+  const d = nplSurveyDraft;
+  return `
+    ${svBlockHtml('biz', 'Бизнес')}
+    ${svBlockHtml('coll', 'Залог')}
+    <div class="sv-box" style="margin-top:0;">
+      <div class="sv-title"><span>Предприятие</span></div>
+      <div style="margin-bottom:8px;">
+        <div class="sv-meta" style="margin-bottom:4px;">Дата открытия по удостоверению</div>
+        <input type="date" class="input" id="svOpenDate" value="${safe(d.openDate)}" onchange="nplSurveyDraft.openDate=this.value">
+      </div>
+      <label class="sv-chk"><input type="checkbox" id="svBizExists" ${d.bizExists ? 'checked' : ''} onchange="nplSurveyDraft.bizExists=this.checked">Бизнес есть</label>
+      <label class="sv-chk"><input type="checkbox" id="svFict" ${d.fictitious ? 'checked' : ''} onchange="nplSurveyDraft.fictitious=this.checked">Фиктивный бизнес</label>
+      <label class="sv-chk" style="border-bottom:none;"><input type="checkbox" id="svFin" ${d.finDifficulty ? 'checked' : ''} onchange="nplSurveyDraft.finDifficulty=this.checked">Бизнес имеет финансовое затруднение</label>
+      <textarea class="input" id="svComment" placeholder="Что увидели на месте" style="width:100%;min-height:70px;margin-top:8px;" oninput="nplSurveyDraft.comment=this.value">${safe(d.comment)}</textarea>
+    </div>
+    <button type="button" class="btn" style="width:100%;margin-top:14px;" id="svSaveBtn" onclick="svSave()">Сохранить</button>
+    <div id="svStatus" style="font-size:12.5px;color:var(--muted);margin-top:8px;text-align:center;"></div>`;
+}
+
+function svRefreshBlock(which) {
+  // Перерисовываем только блок фото/локации, чтобы не потерять введённое в других полях.
+  const box = document.getElementById('svThumbs_' + which);
+  if (!box) return;
+  const d = nplSurveyDraft[which];
+  box.innerHTML = d.keep.map((u, i) => `<div class="sv-photo"><img src="${safe(u)}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','keep',${i})" aria-label="Убрать фото">×</button></div>`).join('') +
+    d.photos.map((p, i) => `<div class="sv-photo"><img src="${p.dataUrl}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','photos',${i})" aria-label="Убрать фото">×</button></div>`).join('');
+  const hdr = box.parentElement.querySelector('.sv-title .sv-meta');
+  if (hdr) hdr.innerText = 'Фото: ' + (d.keep.length + d.photos.length) + ' из 6';
+}
+
+function svRemovePhoto(which, kind, i) {
+  nplSurveyDraft[which][kind].splice(i, 1);
+  svRefreshBlock(which);
+}
+
+function svSetStatus(text, bad) {
+  const el = document.getElementById('svStatus');
+  if (el) { el.innerText = text || ''; el.style.color = bad ? 'var(--red)' : 'var(--muted)'; }
+}
+
+function svSetGeo(which) {
+  const d = nplSurveyDraft[which];
+  const el = document.getElementById('svGeo_' + which);
+  const inp = document.getElementById('svCoords_' + which);
+  const has = d.lat !== '' && d.lng !== '';
+  if (el) el.innerHTML = has ? 'Локация: ' + svMapLink(d.lat, d.lng) : 'Локация не указана';
+  if (inp && has) inp.value = d.lat + ', ' + d.lng;
+}
+
+function svTakeLocation(which) {
+  const el = document.getElementById('svGeo_' + which);
+  if (!navigator.geolocation) { if (el) el.innerText = 'Геолокация не поддерживается этим браузером'; return; }
+  if (el) el.innerText = 'Определяем местоположение…';
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      nplSurveyDraft[which].lat = Math.round(pos.coords.latitude * 1e6) / 1e6;
+      nplSurveyDraft[which].lng = Math.round(pos.coords.longitude * 1e6) / 1e6;
+      svSetGeo(which);
+    },
+    function(err) { if (el) el.innerText = 'Не удалось определить местоположение: ' + err.message; },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
+}
+
+function svParseCoords(which, text) {
+  const el = document.getElementById('svGeo_' + which);
+  const t = String(text || '').trim();
+  if (!t) {
+    nplSurveyDraft[which].lat = ''; nplSurveyDraft[which].lng = '';
+    svSetGeo(which); return;
+  }
+  // "42.4531, 59.6103", "42.4531,59.6103", "42,4531 59,6103" (запятая как десятичный знак)
+  const parts = /[\s;]/.test(t) ? t.split(/[\s;]+/).filter(Boolean) : t.split(',');
+  const lat = Number(String(parts[0] || '').replace(/,$/, '').replace(',', '.'));
+  const lng = Number(String(parts[1] || '').replace(',', '.'));
+  if (parts.length < 2 || !isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+    if (el) el.innerText = 'Не удалось разобрать координаты. Пример: 42.4531, 59.6103';
+    return;
+  }
+  nplSurveyDraft[which].lat = lat; nplSurveyDraft[which].lng = lng;
+  svSetGeo(which);
+}
+
+// Уменьшает фото и наносит водяной знак: дата/время, координаты, ФИО, анкета.
+function svProcessPhoto(file, which) {
+  return new Promise((resolve, reject) => {
+    const d = nplSurveyDraft;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const maxW = 1280;
+        if (w > maxW) { h = Math.round(h * (maxW / w)); w = maxW; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const blk = d[which];
+        const has = blk.lat !== '' && blk.lng !== '';
+        const who = (currentUser && (currentUser.fullName || currentUser.login)) || '—';
+        const lines = [new Date().toLocaleString('ru-RU') + ' · ' + (which === 'biz' ? 'Бизнес' : 'Залог'),
+          has ? Number(blk.lat).toFixed(6) + ', ' + Number(blk.lng).toFixed(6) : 'GPS не указан',
+          who + ' · Анкета ' + d.contractId];
+        const barH = 22 * lines.length + 12;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, h - barH, w, barH);
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px sans-serif';
+        lines.forEach((line, i) => ctx.fillText(line, 10, h - barH + 20 + i * 22));
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+        resolve({ dataUrl: dataUrl, base64: dataUrl.split(',')[1] });
+      };
+      img.onerror = () => reject(new Error('Не удалось прочитать изображение'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Не удалось прочитать файл'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function svAddPhotos(which, input) {
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (!files.length || !nplSurveyDraft) return;
+  const blk = nplSurveyDraft[which];
+  const room = 6 - (blk.keep.length + blk.photos.length);
+  if (room <= 0) { svSetStatus('Максимум 6 фото в блоке', true); return; }
+  svSetStatus('Обработка фото…');
+  for (const f of files.slice(0, room)) {
+    try { blk.photos.push(await svProcessPhoto(f, which)); }
+    catch (e) { svSetStatus(e.message, true); console.error(e); }
+  }
+  if (files.length > room) svSetStatus('Добавлено только ' + room + ' — максимум 6 фото в блоке', true);
+  else svSetStatus('');
+  svRefreshBlock(which);
+}
+
+async function svSave() {
+  const d = nplSurveyDraft;
+  if (!d || d.saving) return;
+  const hasAnything = d.biz.keep.length || d.biz.photos.length || d.coll.keep.length || d.coll.photos.length ||
+    d.biz.lat !== '' || d.coll.lat !== '' || d.openDate || d.bizExists || d.fictitious || d.finDifficulty || String(d.comment || '').trim();
+  if (!hasAnything) { svSetStatus('Добавьте хотя бы фото, локацию, дату или отметку', true); return; }
+  if (d.openDate && !/^\d{4}-\d{2}-\d{2}$/.test(d.openDate)) { svSetStatus('Укажите дату открытия полностью', true); return; }
+  d.saving = true;
+  const btn = document.getElementById('svSaveBtn');
+  if (btn) btn.disabled = true;
+  svSetStatus('Сохраняем… фото загружаются, это может занять до минуты');
+  try {
+    const result = await postWebAction({
+      webAction: 'saveNplLoanSurvey',
+      sessionId: localStorage.getItem('msbSessionId'),
+      contractId: d.contractId, key: d.key, clientName: d.clientName,
+      bizPhotos: d.biz.photos.map((p, i) => ({ base64: p.base64, mimeType: 'image/jpeg', fileName: 'biz_' + (i + 1) + '.jpg' })),
+      collPhotos: d.coll.photos.map((p, i) => ({ base64: p.base64, mimeType: 'image/jpeg', fileName: 'coll_' + (i + 1) + '.jpg' })),
+      keepBizUrls: d.biz.keep.join(', '), keepCollUrls: d.coll.keep.join(', '),
+      bizLat: d.biz.lat, bizLng: d.biz.lng, collLat: d.coll.lat, collLng: d.coll.lng,
+      openDate: d.openDate, bizExists: d.bizExists, fictitious: d.fictitious, finDifficulty: d.finDifficulty,
+      comment: d.comment
+    });
+    if (!result.success) { svSetStatus(result.message || 'Не удалось сохранить', true); return; }
+    allNplSurveys[d.contractId] = result.surveys || [];
+    const key = d.key, contractId = d.contractId;
+    nplSurveyDraft = null;
+    closeNplModal();
+    if (result.warning) alert('Данные сохранены, но часть фото не загрузилась: ' + result.warning);
+    if (currentNplClientKey) {
+      openNplClientDetail(encodeURIComponent(currentNplClientKey));
+      const grp = nplGroupsByKey[key];
+      const idx = grp ? grp.loans.findIndex(l => String(l.contractId) === String(contractId)) : -1;
+      if (idx >= 0) setTimeout(function() { toggleNplLoanDetail('nplLoan_' + encodeURIComponent(key) + '_' + idx); }, 0);
+    }
+    if (isVzShell() && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
+  } catch (e) {
+    svSetStatus('Не удалось связаться с сервером', true);
+    console.error(e);
+  } finally {
+    if (nplSurveyDraft) nplSurveyDraft.saving = false;
+    const b2 = document.getElementById('svSaveBtn');
+    if (b2) b2.disabled = false;
+  }
+}
+// =================== /СБОР ДАННЫХ ПО АНКЕТЕ ===================
 
 function switchNplDetailTab(tab) {
   ['anketi', 'legal'].forEach(function(t) {
