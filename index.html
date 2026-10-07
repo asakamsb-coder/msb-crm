@@ -998,6 +998,14 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 }
 .kpi-accent-neutral{border-left:4px solid var(--line);}
 .kpi-accent-orange{border-left:4px solid var(--orange);}
+.kpi-accent-red{border-left:4px solid var(--red, #d92d20);}
+.risk-badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;}
+.risk-fpd{background:#fee4e2;color:#b42318;}
+.risk-fail{background:#ffead5;color:#b93815;}
+.risk-exp{background:#fef0c7;color:#b54708;}
+.risk-npl{background:#eaecf0;color:#344054;}
+.dash-chip{border:1px solid var(--border, #d0d5dd);background:transparent;color:var(--text);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;}
+.dash-chip.active{background:var(--text);color:var(--bg, #fff);border-color:var(--text);}
 .kpi-accent-green{border-left:4px solid var(--green);}
 .kpi-accent-red{border-left:4px solid var(--red);}
 .btn-link{background:none;border:none;color:var(--brand);font-weight:700;font-size:13px;cursor:pointer;padding:0;text-decoration:underline;}
@@ -1731,24 +1739,36 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 
     <div id="nplTabPanelDash">
       <h2 style="font-size:16px;margin:0 0 14px;">1. Дашборд</h2>
-      <section class="kpi npl-kpi" style="margin-bottom:28px;">
+      <section class="kpi npl-kpi" style="margin-bottom:24px;">
         <div class="card">
-          <div class="card-label">NPL общий ОД (итог)</div>
+          <div class="card-label">Всего текущий портфель</div>
+          <div class="card-value npl-kpi-value" id="nplPortfolioAmount">...</div>
+          <div class="npl-kpi-sub" id="nplPortfolioCount">...</div>
+        </div>
+        <div class="card">
+          <div class="card-label">NPL 90+ (общий ОД)</div>
           <div class="card-value npl-kpi-value" id="nplTotalOdAmount">...</div>
           <div class="npl-kpi-sub" id="nplTotalOdCount">...</div>
         </div>
         <div class="card">
-          <div class="card-label">Всего задолженность NPL</div>
-          <div class="card-value npl-kpi-value" id="nplTotalDebtAmount">...</div>
-        </div>
-        <div class="card">
           <div class="card-label">Резерв по клиентам NPL</div>
           <div class="card-value npl-kpi-value" id="nplReserveAmount">...</div>
+          <div class="npl-kpi-sub">Всего задолж.: <span id="nplTotalDebtAmount">...</span></div>
         </div>
         <div class="card kpi-accent-orange">
           <div class="card-label">Ожидаемый NPL (60–89 дн.)</div>
           <div class="card-value npl-kpi-value" id="nplExpectedAmount">...</div>
           <div class="npl-kpi-sub" id="nplExpectedCount">...</div>
+        </div>
+        <div class="card kpi-accent-red">
+          <div class="card-label">FPD</div>
+          <div class="card-value npl-kpi-value" id="nplFpdAmount">...</div>
+          <div class="npl-kpi-sub" id="nplFpdCount">...</div>
+        </div>
+        <div class="card kpi-accent-orange">
+          <div class="card-label">Провал до 6 мес.</div>
+          <div class="card-value npl-kpi-value" id="nplFailAmount">...</div>
+          <div class="npl-kpi-sub" id="nplFailCount">...</div>
         </div>
         <div class="card">
           <div class="card-label">Юридический NPL (90+)</div>
@@ -1762,45 +1782,33 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
         </div>
       </section>
 
-      <h3 style="font-size:14px;margin:0 0 6px;">NPL — юридические лица (90+), поимённо</h3>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Только клиенты, которые уже в NPL (просрочка 90+) — все поля из выгрузки, прокрутка вправо.</p>
+      <h3 style="font-size:14px;margin:0 0 6px;">Поимённая база: юридические лица по категориям риска</h3>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Физические лица здесь не показываются — только в карточках выше и во вкладке «Физические лица».</p>
+      <div id="nplDashChips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-        <input id="nplLegalSearchInput" class="input" placeholder="Поиск по названию, ИНН, ID клиента" style="max-width:320px;flex:1 1 200px;" oninput="renderNplPage()">
+        <input id="nplLegalSearchInput" class="input" placeholder="Поиск по названию, ИНН, ID клиента" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('dash')">
       </div>
       <div class="client-table-wrap" id="nplLegalTableWrap">
-        <table class="mtbl-npl-wide" id="nplLegalTable">
+        <table id="nplLegalTable">
           <thead>
             <tr>
               <th>№</th>
               <th>Клиент</th>
-              <th>ИНН/ПИНФЛ</th>
-              <th>Анкет</th>
+              <th>ИНН</th>
               <th>Всего задолженность</th>
-              <th>Всего задолженность (НПЛ)</th>
-              <th>Текущий остаток</th>
-              <th>Пересмотр. остаток</th>
-              <th>Просроч. остаток</th>
-              <th>Дней просрочки (ОД)</th>
-              <th>Всего проценты</th>
-              <th>Начисл. проценты</th>
-              <th>Просроч. проценты</th>
-              <th>Дней просрочки (%)</th>
-              <th>Дней (макс.)</th>
-              <th>Резерв</th>
-              <th>Ответственный</th>
-              <th>№ приказа суда</th>
-              <th>Дата приказа суда</th>
-              <th>МИБ — дело</th>
-              <th>МИБ — дата</th>
-              <th>Телефон</th>
+              <th>Просрочка</th>
+              <th>Дней</th>
+              <th>Категория риска</th>
+              <th>Взыскатель</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="nplLegalTableBody">
-            <tr><td colspan="23" class="loading">Загрузка...</td></tr>
+            <tr><td colspan="9" class="loading">Загрузка...</td></tr>
           </tbody>
         </table>
       </div>
+      <div id="nplDashPager" style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px;font-size:13px;color:var(--muted);"></div>
     </div>
 
     <div id="nplTabPanelLegalAll" style="margin-top:32px;display:none;">
@@ -6613,6 +6621,9 @@ let allNplCourt = { data: {}, files: {} };
 let allNplArchive = {};
 let allNplStats = [];
 let allNplTransfers = {};
+let allNplPortfolio = null;
+let nplDashFilter = 'all';
+let nplDashPage = 1;
 let vzStatsMode = 'month';
 let vzNoLegalExpanded = false;
 let nplStatsSelectedEmp = null;
@@ -6906,6 +6917,7 @@ async function loadNplRestInBackground() {
     allNplArchive = (rest && rest.archive) || {};
     allNplStats = (rest && rest.stats) || [];
     allNplTransfers = (rest && rest.transfers) || {};
+    allNplPortfolio = (rest && rest.portfolio) || null;
     allNplCollectors = (rest && rest.collectors) || {};
     if (rest && rest.users) allWebUsers = rest.users;
 
@@ -6924,6 +6936,7 @@ async function loadNplRestInBackground() {
       renderVzyskatelHome();
     }
     try { renderNplArchivePanel(); renderNplStatsPanel(); } catch (e) { console.error(e); }
+    try { renderNplPage(); } catch (e) { console.error(e); }
   } catch (error) {
     console.error('Не удалось догрузить доп. данные NPL:', error);
   }
@@ -7012,7 +7025,23 @@ function getNplParserWorker() {
         // переживают вставку/удаление/перестановку любых колонок. Если
         // подходящий заголовок не найден (совсем другой формат файла) —
         // используется старая жёсткая позиция как запасной вариант.
-        let nameColIdx = -1, idColIdx = -1, pinColIdx = -1;
+        let nameColIdx = -1, idColIdx = -1, pinColIdx = -1, openDateColIdx = -1;
+        const portfolioKeys = {};
+        const portfolio = { clients: 0, loans: 0, totalDebt: 0 };
+        const normOpenDate = function(v) {
+          if (v === '' || v == null) return '';
+          if (typeof v === 'number') {
+            if (v > 20000 && v < 80000) return new Date(Math.round((v - 25569) * 86400000)).toISOString().slice(0, 10);
+            return '';
+          }
+          if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString().slice(0, 10);
+          const t = String(v).trim();
+          let m = t.match(/^(\\d{1,2})[.\\/-](\\d{1,2})[.\\/-](\\d{4})/);
+          if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+          m = t.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);
+          if (m) return m[1] + '-' + m[2] + '-' + m[3];
+          return '';
+        };
         // Новый формат выгрузки (с 05.10.2026): две колонки подряд называются
         // "Остаток расчетных счет" — первая содержит НОМЕР счёта, вторая —
         // остаток. Собираем все такие колонки и раздаём по порядку.
@@ -7034,6 +7063,7 @@ function getNplParserWorker() {
             else if (h.indexOf('расчетный счет') !== -1) accountColIdx = c;
             else if (h.indexOf('телефон') !== -1) phoneColIdx = c;
             else if (h.indexOf('адрес') !== -1) addressColIdx = c;
+            else if (h.indexOf('дата открыт') !== -1 || h.indexOf('дата выдач') !== -1) { if (openDateColIdx === -1) openDateColIdx = c; }
             else if (h.indexOf('субъект') !== -1) subjectColIdx = c;
             else if (h.indexOf('ответственн') !== -1) officerColIdx = c;
             else if (h.indexOf('номер приказа') !== -1) courtNumColIdx = c;
@@ -7147,6 +7177,9 @@ function getNplParserWorker() {
           // просрочки нет.
           const hasOverdue = (Number(row[overdueBalanceColIdx]) || 0) + (Number(row[overdueInterestColIdx]) || 0) > 0
             || (Number(row[daysOverdueColIdx]) || 0) > 0 || (Number(row[daysOverdueInterestColIdx]) || 0) > 0;
+          portfolio.loans++;
+          portfolio.totalDebt += Number(row[totalDebtColIdx]) || 0;
+          if (!portfolioKeys[clientKey]) { portfolioKeys[clientKey] = 1; portfolio.clients++; }
           if (!hasOverdue) continue;
 
           loans.push({
@@ -7173,6 +7206,7 @@ function getNplParserWorker() {
             mibDate: mibDateColIdx !== -1 ? String(row[mibDateColIdx] || '').trim() : '',
             phone: String((phoneColIdx !== -1 ? row[phoneColIdx] : '') || '').trim(),
             productType: productTypeColIdx !== -1 ? String(row[productTypeColIdx] || '').trim() : '',
+            openDate: openDateColIdx !== -1 ? normOpenDate(row[openDateColIdx]) : '',
             address: addressColIdx !== -1 ? splitAddressPhone(row[addressColIdx]) : '',
             employeeId: employeeColIdx !== -1 ? String(row[employeeColIdx] || '').trim() : '',
             account: accountColIdx !== -1 ? String(row[accountColIdx] || '').trim() : '',
@@ -7201,7 +7235,7 @@ function getNplParserWorker() {
           }
         }
 
-        self.postMessage({ loans: loans, collectors: collectors });
+        self.postMessage({ loans: loans, collectors: collectors, portfolio: portfolio });
       } catch (err) {
         self.postMessage({ error: err.message || 'Ошибка обработки файла' });
       }
@@ -7235,7 +7269,7 @@ function parseNplFile(file, onProgress) {
           if (msg.data.error) {
             reject(new Error(msg.data.error));
           } else {
-            resolve({ loans: msg.data.loans, collectors: msg.data.collectors || [] });
+            resolve({ loans: msg.data.loans, collectors: msg.data.collectors || [], portfolio: msg.data.portfolio || null });
           }
         };
         const handleError = (err) => {
@@ -7320,7 +7354,8 @@ async function uploadNplFile() {
       webAction: 'uploadNplPortfolio',
       sessionId: localStorage.getItem('msbSessionId'),
       loans: loans,
-      collectors: parsed.collectors
+      collectors: parsed.collectors,
+      portfolio: parsed.portfolio || null
     });
 
     if (result.success) {
@@ -7339,6 +7374,39 @@ async function uploadNplFile() {
 // Дни просрочки клиента/анкеты — берём наибольшее из "Дни просрочки" и
 // "Дни просроч. процентов" (по просьбе: иногда просрочка по процентам
 // больше, чем по основному долгу, и наоборот — нужен худший случай).
+// Категории риска (дашборд). Возраст кредита — по «Дате открытия» из файла.
+// FPD: кредит открыт не более 2 мес. назад и уже есть просрочка.
+// Провал до 6 мес.: кредит открыт не более 6 мес. назад, просрочка 90+.
+// Ожидаемый NPL: 60–89 дней. NPL 90+: остальные от 90 дней.
+function nplLoanAgeDays(l) {
+  const d = String(l.openDate || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  const t = Date.parse(d + 'T00:00:00');
+  if (isNaN(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+function nplRiskCategory(g) {
+  if (g._risk !== undefined) return g._risk;
+  let fpd = false, fail = false;
+  g.loans.forEach(function(l) {
+    const age = nplLoanAgeDays(l);
+    if (age === null || age < 0) return;
+    const days = nplLoanDays(l);
+    if (age <= 61 && days >= 1) fpd = true;
+    else if (age <= 183 && days >= 90) fail = true;
+  });
+  let r = null;
+  if (fpd) r = 'fpd';
+  else if (fail) r = 'fail';
+  else if (g.maxDays >= 90) r = 'npl';
+  else if (g.maxDays >= 60) r = 'exp';
+  g._risk = r;
+  return r;
+}
+const NPL_RISK_LABELS = { fpd: 'FPD', fail: 'Провал до 6 мес.', exp: 'Ожидаемый NPL', npl: 'NPL 90+' };
+const NPL_RISK_ORDER = { fpd: 0, fail: 1, npl: 2, exp: 3 };
+function setNplDashFilter(f) { nplDashFilter = f; nplDashPage = 1; renderNplPage(); }
+
 function nplLoanDays(l) {
   return Math.max(Number(l.daysOverdue) || 0, Number(l.daysOverdueInterest) || 0);
 }
@@ -7439,11 +7507,13 @@ let nplIndivPage = 1;
 function onNplListSearchInput(which) {
   if (which === 'legal') nplLegalAllPage = 1;
   if (which === 'indiv') nplIndivPage = 1;
+  if (which === 'dash') nplDashPage = 1;
   renderNplPage();
 }
 
 function nplGoToPage(which, page) {
   if (which === 'legal') nplLegalAllPage = Math.max(1, page);
+  if (which === 'dash') nplDashPage = Math.max(1, page);
   if (which === 'indiv') nplIndivPage = Math.max(1, page);
   renderNplPage();
 }
@@ -7528,46 +7598,69 @@ function renderNplPage() {
   document.getElementById('nplIndivAmount').innerText = formatMoney(trueIndivNpl.reduce((s, g) => s + g.nplSum, 0));
   document.getElementById('nplIndivCount').innerText = trueIndivNpl.length + ' клиентов';
 
-  // ---- Раздел 2: юр.лица (поимённо, широкая таблица) ----
+  const fpdGroups = allGroups.filter(g => nplRiskCategory(g) === 'fpd');
+  const failGroups = allGroups.filter(g => nplRiskCategory(g) === 'fail');
+  document.getElementById('nplFpdAmount').innerText = formatMoney(fpdGroups.reduce((s, g) => s + g.nplSum, 0));
+  document.getElementById('nplFpdCount').innerText = fpdGroups.length + ' клиентов';
+  document.getElementById('nplFailAmount').innerText = formatMoney(failGroups.reduce((s, g) => s + g.nplSum, 0));
+  document.getElementById('nplFailCount').innerText = failGroups.length + ' клиентов';
+
+  // Весь портфель — из итога последней загрузки (если в файле был весь портфель,
+  // а не только просрочка; иначе показываем прочерк).
+  {
+    const pf = allNplPortfolio;
+    const pfOk = pf && Number(pf.clients) > allGroups.length * 1.2;
+    document.getElementById('nplPortfolioAmount').innerText = pfOk ? formatMoney(pf.totalDebt) : '—';
+    document.getElementById('nplPortfolioCount').innerText = pfOk
+      ? (pf.clients + ' клиентов · NPL ' + nplFmtPct(pf.totalDebt ? trueNplGroups.reduce((s, g) => s + g.totalDebtSum, 0) / pf.totalDebt * 100 : 0) + '%')
+      : 'нет полного файла портфеля';
+  }
+
+  // ---- Дашборд: поимённо только юр.лица по категориям риска ----
   {
     const tbody = document.getElementById('nplLegalTableBody');
-    let clients = legalGroups.slice();
+    let clients = allGroups.filter(g => g.subject === 'J' && nplRiskCategory(g));
+    const counts = { all: clients.length, fpd: 0, fail: 0, exp: 0, npl: 0 };
+    clients.forEach(g => { counts[nplRiskCategory(g)]++; });
+    const chipsEl = document.getElementById('nplDashChips');
+    if (chipsEl) {
+      chipsEl.innerHTML = [['all', 'Все'], ['fpd', 'FPD'], ['fail', 'Провал до 6 мес.'], ['exp', 'Ожидаемый NPL'], ['npl', 'NPL 90+']].map(function(c) {
+        return '<button type="button" class="dash-chip' + (nplDashFilter === c[0] ? ' active' : '') + '" onclick="setNplDashFilter(\'' + c[0] + '\')">' + c[1] + ' · ' + counts[c[0]] + '</button>';
+      }).join('');
+    }
+    if (nplDashFilter !== 'all') clients = clients.filter(g => nplRiskCategory(g) === nplDashFilter);
     const query = normalizeText((document.getElementById('nplLegalSearchInput')?.value || '').trim());
     if (query) {
       clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.displayClientId, c.contractIdsJoined].join(' ')).includes(query));
     }
-    clients.sort((a, b) => b.nplSum - a.nplSum);
+    clients.sort((a, b) => (NPL_RISK_ORDER[nplRiskCategory(a)] - NPL_RISK_ORDER[nplRiskCategory(b)]) || (b.nplSum - a.nplSum));
+
+    const totalPages = Math.max(1, Math.ceil(clients.length / NPL_PAGE_SIZE));
+    if (nplDashPage > totalPages) nplDashPage = totalPages;
+    const pageStart = (nplDashPage - 1) * NPL_PAGE_SIZE;
+    const pageClients = clients.slice(pageStart, pageStart + NPL_PAGE_SIZE);
 
     if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="23" class="loading">Ничего не найдено</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="loading">Ничего не найдено</td></tr>';
     } else {
-      tbody.innerHTML = clients.map((c, i) => `
+      tbody.innerHTML = pageClients.map((c, i) => {
+        const r = nplRiskCategory(c);
+        const emp = String(allNplAssignments[c.key] || '').trim();
+        return `
         <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
-          <td class="nowrap">${i + 1}</td>
+          <td class="nowrap">${pageStart + i + 1}</td>
           <td>${safe(c.clientName)}</td>
           <td class="nowrap">${safe(c.pin) || '—'}</td>
-          <td class="nowrap">${c.loans.length}</td>
           <td class="nowrap">${formatMoney(c.totalDebtSum)}</td>
-          <td class="nowrap">${formatMoney(c.nplSum)}</td>
-          <td class="nowrap">${formatMoney(c.currentBalanceSum)}</td>
-          <td class="nowrap">${formatMoney(c.revisedBalanceSum)}</td>
           <td class="nowrap">${formatMoney(c.overdueBalanceSum)}</td>
-          <td class="nowrap">${c.maxDaysOverdue}</td>
-          <td class="nowrap">${formatMoney(c.totalInterestSum)}</td>
-          <td class="nowrap">${formatMoney(c.accruedInterestSum)}</td>
-          <td class="nowrap">${formatMoney(c.overdueInterestSum)}</td>
-          <td class="nowrap">${c.maxDaysOverdueInterest}</td>
           <td class="nowrap"><b>${c.maxDays}</b></td>
-          <td class="nowrap">${formatMoney(c.reserveSum)}</td>
-          <td class="nowrap">${safe(c.officerJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.courtOrderNumberJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.courtOrderDateJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.mibCaseJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.mibDateJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.phoneJoined) || '—'}</td>
+          <td class="nowrap"><span class="risk-badge risk-${r}">${NPL_RISK_LABELS[r]}</span></td>
+          <td class="nowrap">${emp ? safe(nplCollectorLabel(emp)) : '—'}</td>
           <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
-        </tr>`).join('');
+        </tr>`;
+      }).join('');
     }
+    renderNplPager('nplDashPager', 'dash', nplDashPage, clients.length);
   }
 
   // ---- Пункт 2: юр.лица — ВСЕ, просрочка 1+ (широкая таблица, 50 строк/стр.) ----
