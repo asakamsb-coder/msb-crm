@@ -1001,7 +1001,22 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 .kpi-accent-red{border-left:4px solid var(--red, #d92d20);}
 .risk-badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;}
 .risk-fpd{background:#fee4e2;color:#b42318;}
-.risk-fail{background:#ffead5;color:#b93815;}
+.nd-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0;}
+.nd-card.red{border-left:3px solid #e24b4a;border-radius:0 12px 12px 0;}
+.nd-card.orange{border-left:3px solid #ba7517;border-radius:0 12px 12px 0;}
+.nd-l{font-size:12px;color:var(--muted);margin:0 0 8px;font-weight:600;}
+.nd-v{font-size:22px;font-weight:700;margin:0;line-height:1.2;}
+.nd-s{font-size:12px;color:var(--muted);margin:6px 0 0;}
+.nd-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);}
+.nd-split .n{font-size:11px;color:var(--muted);margin:0 0 2px;}
+.nd-split .a{font-size:14px;font-weight:700;margin:0;}
+.nd-split .c{font-size:11px;color:var(--muted);margin:2px 0 0;}
+.nd-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px;}
+.nd-g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px;}
+@media(max-width:900px){.nd-g3,.nd-g4{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:560px){.nd-g3,.nd-g4{grid-template-columns:minmax(0,1fr);}}
+.risk-p3{background:#ffead5;color:#b93815;}
+.risk-p5{background:#fdeae4;color:#712b13;}
 .risk-exp{background:#fef0c7;color:#b54708;}
 .risk-npl{background:#eaecf0;color:#344054;}
 .dash-chip{border:1px solid var(--border, #d0d5dd);background:transparent;color:var(--text);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;}
@@ -1739,51 +1754,42 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 
     <div id="nplTabPanelDash">
       <h2 style="font-size:16px;margin:0 0 14px;">1. Дашборд</h2>
-      <section class="kpi npl-kpi" style="margin-bottom:24px;">
-        <div class="card">
-          <div class="card-label">Всего текущий портфель</div>
-          <div class="card-value npl-kpi-value" id="nplPortfolioAmount">...</div>
-          <div class="npl-kpi-sub" id="nplPortfolioCount">...</div>
+      <div class="nd-g3">
+        <div class="nd-card">
+          <p class="nd-l">Текущий портфель</p>
+          <p class="nd-v" id="ndPfTotal">...</p>
+          <p class="nd-s" id="ndPfCount"></p>
+          <div class="nd-split">
+            <div><p class="n">Юридические лица</p><p class="a" id="ndPfJ">—</p><p class="c" id="ndPfJc"></p></div>
+            <div><p class="n">Физические лица</p><p class="a" id="ndPfP">—</p><p class="c" id="ndPfPc"></p></div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-label">NPL 90+ (общий ОД)</div>
-          <div class="card-value npl-kpi-value" id="nplTotalOdAmount">...</div>
-          <div class="npl-kpi-sub" id="nplTotalOdCount">...</div>
+        <div class="nd-card">
+          <p class="nd-l">NPL 90+</p>
+          <p class="nd-v" id="ndNplTotal">...</p>
+          <p class="nd-s" id="ndNplCount"></p>
+          <div class="nd-split">
+            <div><p class="n">Юридические лица</p><p class="a" id="ndNplJ">—</p><p class="c" id="ndNplJc"></p></div>
+            <div><p class="n">Физические лица</p><p class="a" id="ndNplP">—</p><p class="c" id="ndNplPc"></p></div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-label">Резерв по клиентам NPL</div>
-          <div class="card-value npl-kpi-value" id="nplReserveAmount">...</div>
-          <div class="npl-kpi-sub">Всего задолж.: <span id="nplTotalDebtAmount">...</span></div>
+        <div class="nd-card">
+          <p class="nd-l">Резерв</p>
+          <p class="nd-v" id="ndReserve">...</p>
+          <p class="nd-s" id="ndReservePct"></p>
         </div>
-        <div class="card kpi-accent-orange">
-          <div class="card-label">Ожидаемый NPL (60–89 дн.)</div>
-          <div class="card-value npl-kpi-value" id="nplExpectedAmount">...</div>
-          <div class="npl-kpi-sub" id="nplExpectedCount">...</div>
-        </div>
-        <div class="card kpi-accent-red">
-          <div class="card-label">FPD</div>
-          <div class="card-value npl-kpi-value" id="nplFpdAmount">...</div>
-          <div class="npl-kpi-sub" id="nplFpdCount">...</div>
-        </div>
-        <div class="card kpi-accent-orange">
-          <div class="card-label">Провал до 6 мес.</div>
-          <div class="card-value npl-kpi-value" id="nplFailAmount">...</div>
-          <div class="npl-kpi-sub" id="nplFailCount">...</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Юридический NPL (90+)</div>
-          <div class="card-value npl-kpi-value" id="nplLegalAmount">...</div>
-          <div class="npl-kpi-sub" id="nplLegalCount">...</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Физический NPL (90+)</div>
-          <div class="card-value npl-kpi-value" id="nplIndivAmount">...</div>
-          <div class="npl-kpi-sub" id="nplIndivCount">...</div>
-        </div>
-      </section>
+      </div>
+      <div class="nd-g4">
+        <div class="nd-card orange"><p class="nd-l">Ожидаемый NPL</p><p class="nd-v" id="ndExp">...</p><p class="nd-s" id="ndExpC"></p></div>
+        <div class="nd-card red"><p class="nd-l">FPD · 1 платёж</p><p class="nd-v" id="ndFpd">...</p><p class="nd-s" id="ndFpdC"></p></div>
+        <div class="nd-card red"><p class="nd-l">Провал 1–3 платежа</p><p class="nd-v" id="ndP3">...</p><p class="nd-s" id="ndP3C"></p></div>
+        <div class="nd-card orange"><p class="nd-l">Провал 3–5 платежей</p><p class="nd-v" id="ndP5">...</p><p class="nd-s" id="ndP5C"></p></div>
+      </div>
 
-      <h3 style="font-size:14px;margin:0 0 6px;">Поимённая база: юридические лица по категориям риска</h3>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Физические лица здесь не показываются — только в карточках выше и во вкладке «Физические лица».</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px;">
+        <h3 style="font-size:14px;margin:0;">Юридические лица по категориям риска</h3>
+        <button type="button" class="btn btn-secondary" onclick="exportNplDashExcel()">Скачать в Excel</button>
+      </div>
       <div id="nplDashChips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input id="nplLegalSearchInput" class="input" placeholder="Поиск по названию, ИНН, ID клиента" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('dash')">
@@ -1795,8 +1801,8 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
               <th>№</th>
               <th>Клиент</th>
               <th>ИНН</th>
-              <th>Всего задолженность</th>
-              <th>Просрочка</th>
+              <th>Портфель</th>
+              <th>NPL</th>
               <th>Дней</th>
               <th>Категория риска</th>
               <th>Взыскатель</th>
@@ -7025,9 +7031,9 @@ function getNplParserWorker() {
         // переживают вставку/удаление/перестановку любых колонок. Если
         // подходящий заголовок не найден (совсем другой формат файла) —
         // используется старая жёсткая позиция как запасной вариант.
-        let nameColIdx = -1, idColIdx = -1, pinColIdx = -1, openDateColIdx = -1;
+        let nameColIdx = -1, idColIdx = -1, pinColIdx = -1, openDateColIdx = -1, portfolioColIdx = -1;
         const portfolioKeys = {};
-        const portfolio = { clients: 0, loans: 0, totalDebt: 0 };
+        const portfolio = { clients: 0, loans: 0, totalDebt: 0, sum: 0, jClients: 0, jSum: 0, pClients: 0, pSum: 0 };
         const normOpenDate = function(v) {
           if (v === '' || v == null) return '';
           if (typeof v === 'number') {
@@ -7070,6 +7076,7 @@ function getNplParserWorker() {
             else if (h.indexOf('дата приказа') !== -1) courtDateColIdx = c;
             else if (h.indexOf('миб возбужд') !== -1) mibCaseColIdx = c;
             else if (h.indexOf('миб дата') !== -1) mibDateColIdx = c;
+            else if (h.indexOf('всего текущий портфель') !== -1) portfolioColIdx = c;
             else if (h.indexOf('всего задолженность') !== -1 && h.indexOf('нпл') !== -1) totalNplColIdx = c;
             else if (h.indexOf('всего задолженность') !== -1) totalDebtColIdx = c;
             else if (h.indexOf('текущий остаток') !== -1) currentBalanceColIdx = c;
@@ -7179,7 +7186,13 @@ function getNplParserWorker() {
             || (Number(row[daysOverdueColIdx]) || 0) > 0 || (Number(row[daysOverdueInterestColIdx]) || 0) > 0;
           portfolio.loans++;
           portfolio.totalDebt += Number(row[totalDebtColIdx]) || 0;
-          if (!portfolioKeys[clientKey]) { portfolioKeys[clientKey] = 1; portfolio.clients++; }
+          const pfVal = portfolioColIdx !== -1 ? (Number(row[portfolioColIdx]) || 0) : (Number(row[totalDebtColIdx]) || 0);
+          portfolio.sum += pfVal;
+          if (subject === 'J') portfolio.jSum += pfVal; else portfolio.pSum += pfVal;
+          if (!portfolioKeys[clientKey]) {
+            portfolioKeys[clientKey] = 1; portfolio.clients++;
+            if (subject === 'J') portfolio.jClients++; else portfolio.pClients++;
+          }
           if (!hasOverdue) continue;
 
           loans.push({
@@ -7207,6 +7220,7 @@ function getNplParserWorker() {
             phone: String((phoneColIdx !== -1 ? row[phoneColIdx] : '') || '').trim(),
             productType: productTypeColIdx !== -1 ? String(row[productTypeColIdx] || '').trim() : '',
             openDate: openDateColIdx !== -1 ? normOpenDate(row[openDateColIdx]) : '',
+            portfolio: portfolioColIdx !== -1 ? (Number(row[portfolioColIdx]) || 0) : 0,
             address: addressColIdx !== -1 ? splitAddressPhone(row[addressColIdx]) : '',
             employeeId: employeeColIdx !== -1 ? String(row[employeeColIdx] || '').trim() : '',
             account: accountColIdx !== -1 ? String(row[accountColIdx] || '').trim() : '',
@@ -7387,24 +7401,68 @@ function nplLoanAgeDays(l) {
 }
 function nplRiskCategory(g) {
   if (g._risk !== undefined) return g._risk;
-  let fpd = false, fail = false;
-  g.loans.forEach(function(l) {
-    const age = nplLoanAgeDays(l);
-    if (age === null || age < 0) return;
-    const days = nplLoanDays(l);
-    if (age <= 61 && days >= 1) fpd = true;
-    else if (age <= 183 && days >= 90) fail = true;
-  });
   let r = null;
-  if (fpd) r = 'fpd';
-  else if (fail) r = 'fail';
-  else if (g.maxDays >= 90) r = 'npl';
-  else if (g.maxDays >= 60) r = 'exp';
+  // FPD / провал платежей — только юридические лица с просрочкой от 1 дня,
+  // по возрасту самого свежего кредита с просрочкой (платёж ежемесячный).
+  if (g.subject === 'J') {
+    let minAge = null;
+    g.loans.forEach(function(l) {
+      if (nplLoanDays(l) < 1) return;
+      const age = nplLoanAgeDays(l);
+      if (age === null || age < 0) return;
+      if (minAge === null || age < minAge) minAge = age;
+    });
+    if (minAge !== null) {
+      const m = minAge / 30.4;
+      if (m <= 1.5) r = 'fpd';
+      else if (m <= 3.5) r = 'p3';
+      else if (m <= 5.5) r = 'p5';
+    }
+  }
+  if (!r) {
+    if (g.maxDays >= 90) r = 'npl';
+    else if (g.maxDays >= 60) r = 'exp';
+  }
   g._risk = r;
   return r;
 }
-const NPL_RISK_LABELS = { fpd: 'FPD', fail: 'Провал до 6 мес.', exp: 'Ожидаемый NPL', npl: 'NPL 90+' };
-const NPL_RISK_ORDER = { fpd: 0, fail: 1, npl: 2, exp: 3 };
+const NPL_RISK_LABELS = { fpd: 'FPD · 1 платёж', p3: 'Провал 1–3 платежа', p5: 'Провал 3–5 платежей', exp: 'Ожидаемый NPL', npl: 'NPL 90+' };
+const NPL_RISK_ORDER = { fpd: 0, p3: 1, p5: 2, npl: 3, exp: 4 };
+function nplDashFilteredClients() {
+  let clients = getNplGroupsCached().filter(g => g.subject === 'J' && nplRiskCategory(g));
+  if (nplDashFilter !== 'all') clients = clients.filter(g => nplRiskCategory(g) === nplDashFilter);
+  const query = normalizeText((document.getElementById('nplLegalSearchInput')?.value || '').trim());
+  if (query) {
+    clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.displayClientId, c.contractIdsJoined].join(' ')).includes(query));
+  }
+  clients.sort((a, b) => (NPL_RISK_ORDER[nplRiskCategory(a)] - NPL_RISK_ORDER[nplRiskCategory(b)]) || (b.nplSum - a.nplSum));
+  return clients;
+}
+
+function exportNplDashExcel() {
+  try {
+    if (typeof XLSX === 'undefined') { alert('Библиотека Excel не загружена. Обновите страницу.'); return; }
+    const clients = nplDashFilteredClients();
+    if (!clients.length) { alert('Нет данных для выгрузки'); return; }
+    const head = ['№', 'Клиент', 'ИНН', 'ID клиента', 'Кредитов', 'Портфель', 'NPL', 'Всего задолженность', 'Просроченный остаток', 'Резерв', 'Дней просрочки', 'Категория риска', 'Взыскатель', 'Телефон'];
+    const rows = clients.map(function(c, i) {
+      const emp = String(allNplAssignments[c.key] || '').trim();
+      return [i + 1, c.clientName || '', c.pin || '', c.displayClientId || '', c.loans.length,
+        Math.round(c.portfolioSum || c.totalDebtSum || 0), Math.round(c.nplSum || 0), Math.round(c.totalDebtSum || 0),
+        Math.round(c.overdueBalanceSum || 0), Math.round(c.reserveSum || 0), c.maxDays,
+        NPL_RISK_LABELS[nplRiskCategory(c)] || '', emp ? nplCollectorLabel(emp) : '', c.phoneJoined || ''];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([head].concat(rows));
+    ws['!cols'] = [6, 38, 14, 12, 9, 18, 18, 18, 18, 16, 10, 22, 24, 16].map(w => ({ wch: w }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Юр. лица');
+    XLSX.writeFile(wb, 'NPL_yur_lica_' + nplLocalDateStr() + '.xlsx');
+  } catch (e) {
+    console.error(e);
+    alert('Не удалось сформировать Excel: ' + e.message);
+  }
+}
+
 function setNplDashFilter(f) { nplDashFilter = f; nplDashPage = 1; renderNplPage(); }
 
 function nplLoanDays(l) {
@@ -7442,7 +7500,7 @@ function groupNplByClient(loans) {
         key: key, clientName: l.clientName, pin: l.pin, subject: l.subject, officer: l.officer, loans: [],
         nplSum: 0, maxDays: 0,
         totalDebtSum: 0, currentBalanceSum: 0, revisedBalanceSum: 0, overdueBalanceSum: 0,
-        totalInterestSum: 0, accruedInterestSum: 0, overdueInterestSum: 0, reserveSum: 0,
+        totalInterestSum: 0, accruedInterestSum: 0, overdueInterestSum: 0, reserveSum: 0, portfolioSum: 0,
         maxDaysOverdue: 0, maxDaysOverdueInterest: 0
       };
     }
@@ -7457,6 +7515,7 @@ function groupNplByClient(loans) {
     g.accruedInterestSum += Number(l.accruedInterest) || 0;
     g.overdueInterestSum += Number(l.overdueInterest) || 0;
     g.reserveSum += Number(l.reserve) || 0;
+    g.portfolioSum += Number(l.portfolio) || 0;
     g.maxDaysOverdue = Math.max(g.maxDaysOverdue, Number(l.daysOverdue) || 0);
     g.maxDaysOverdueInterest = Math.max(g.maxDaysOverdueInterest, Number(l.daysOverdueInterest) || 0);
     g.maxDays = Math.max(g.maxDays, nplLoanDays(l));
@@ -7583,48 +7642,42 @@ function renderNplPage() {
   const expectedGroups = allGroups.filter(g => g.maxDays >= 60 && g.maxDays <= 89);
 
   // ---- Вкладка 1: карточки дашборда (свод по клиентам, не по анкетам) ----
-  document.getElementById('nplTotalOdAmount').innerText = formatMoney(trueNplGroups.reduce((s, g) => s + g.nplSum, 0));
-  document.getElementById('nplTotalOdCount').innerText = trueNplGroups.length + ' клиентов';
-
-  document.getElementById('nplTotalDebtAmount').innerText = formatMoney(trueNplGroups.reduce((s, g) => s + g.totalDebtSum, 0));
-
-  document.getElementById('nplReserveAmount').innerText = formatMoney(trueNplGroups.reduce((s, g) => s + g.reserveSum, 0));
-
-  document.getElementById('nplExpectedAmount').innerText = formatMoney(expectedGroups.reduce((s, g) => s + g.nplSum, 0));
-  document.getElementById('nplExpectedCount').innerText = expectedGroups.length + ' клиентов';
-
-  document.getElementById('nplLegalAmount').innerText = formatMoney(trueLegalNpl.reduce((s, g) => s + g.nplSum, 0));
-  document.getElementById('nplLegalCount').innerText = trueLegalNpl.length + ' клиентов';
-  document.getElementById('nplIndivAmount').innerText = formatMoney(trueIndivNpl.reduce((s, g) => s + g.nplSum, 0));
-  document.getElementById('nplIndivCount').innerText = trueIndivNpl.length + ' клиентов';
-
-  const fpdGroups = allGroups.filter(g => nplRiskCategory(g) === 'fpd');
-  const failGroups = allGroups.filter(g => nplRiskCategory(g) === 'fail');
-  document.getElementById('nplFpdAmount').innerText = formatMoney(fpdGroups.reduce((s, g) => s + g.nplSum, 0));
-  document.getElementById('nplFpdCount').innerText = fpdGroups.length + ' клиентов';
-  document.getElementById('nplFailAmount').innerText = formatMoney(failGroups.reduce((s, g) => s + g.nplSum, 0));
-  document.getElementById('nplFailCount').innerText = failGroups.length + ' клиентов';
-
-  // Весь портфель — из итога последней загрузки (если в файле был весь портфель,
-  // а не только просрочка; иначе показываем прочерк).
   {
+    const fm = formatMoney, sumBy = (arr, f) => arr.reduce((t, g) => t + (Number(f(g)) || 0), 0);
+    const pct = (a, b2) => b2 > 0 ? nplFmtPct(a / b2 * 100) + '%' : '—';
+    const setT = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
     const pf = allNplPortfolio;
-    const pfOk = pf && Number(pf.clients) > allGroups.length * 1.2;
-    document.getElementById('nplPortfolioAmount').innerText = pfOk ? formatMoney(pf.totalDebt) : '—';
-    document.getElementById('nplPortfolioCount').innerText = pfOk
-      ? (pf.clients + ' клиентов · NPL ' + nplFmtPct(pf.totalDebt ? trueNplGroups.reduce((s, g) => s + g.totalDebtSum, 0) / pf.totalDebt * 100 : 0) + '%')
-      : 'нет полного файла портфеля';
+    const pfOk = !!(pf && Number(pf.clients) > allGroups.length * 1.2 && Number(pf.sum) > 0);
+    const nplAll = sumBy(trueNplGroups, g => g.nplSum);
+    const nplJ = sumBy(trueLegalNpl, g => g.nplSum), nplP = sumBy(trueIndivNpl, g => g.nplSum);
+    setT('ndPfTotal', pfOk ? fm(pf.sum) : '—');
+    setT('ndPfCount', pfOk ? pf.clients + ' клиентов' : 'нет полного файла портфеля');
+    setT('ndPfJ', pfOk ? fm(pf.jSum) : '—'); setT('ndPfJc', pfOk ? pf.jClients + ' клиентов' : '');
+    setT('ndPfP', pfOk ? fm(pf.pSum) : '—'); setT('ndPfPc', pfOk ? pf.pClients + ' клиентов' : '');
+    setT('ndNplTotal', fm(nplAll));
+    setT('ndNplCount', trueNplGroups.length + ' клиентов' + (pfOk ? ' · ' + pct(nplAll, pf.sum) + ' портфеля' : ''));
+    setT('ndNplJ', fm(nplJ)); setT('ndNplJc', trueLegalNpl.length + ' клиентов' + (pfOk ? ' · ' + pct(nplJ, pf.jSum) : ''));
+    setT('ndNplP', fm(nplP)); setT('ndNplPc', trueIndivNpl.length + ' клиентов' + (pfOk ? ' · ' + pct(nplP, pf.pSum) : ''));
+    const reserve = sumBy(trueNplGroups, g => g.reserveSum);
+    setT('ndReserve', fm(reserve)); setT('ndReservePct', nplAll > 0 ? pct(reserve, nplAll) + ' от NPL' : '');
+    const pfOf = g => g.portfolioSum || g.totalDebtSum;
+    setT('ndExp', fm(sumBy(expectedGroups, pfOf))); setT('ndExpC', expectedGroups.length + ' клиентов');
+    ['fpd', 'p3', 'p5'].forEach(function(cat) {
+      const arr = allGroups.filter(g => nplRiskCategory(g) === cat);
+      const id = cat === 'fpd' ? 'ndFpd' : cat === 'p3' ? 'ndP3' : 'ndP5';
+      setT(id, fm(sumBy(arr, pfOf))); setT(id + 'C', arr.length + ' юрлиц');
+    });
   }
 
   // ---- Дашборд: поимённо только юр.лица по категориям риска ----
   {
     const tbody = document.getElementById('nplLegalTableBody');
     let clients = allGroups.filter(g => g.subject === 'J' && nplRiskCategory(g));
-    const counts = { all: clients.length, fpd: 0, fail: 0, exp: 0, npl: 0 };
+    const counts = { all: clients.length, fpd: 0, p3: 0, p5: 0, exp: 0, npl: 0 };
     clients.forEach(g => { counts[nplRiskCategory(g)]++; });
     const chipsEl = document.getElementById('nplDashChips');
     if (chipsEl) {
-      chipsEl.innerHTML = [['all', 'Все'], ['fpd', 'FPD'], ['fail', 'Провал до 6 мес.'], ['exp', 'Ожидаемый NPL'], ['npl', 'NPL 90+']].map(function(c) {
+      chipsEl.innerHTML = [['all', 'Все'], ['fpd', 'FPD · 1 платёж'], ['p3', '1–3 платежа'], ['p5', '3–5 платежей'], ['exp', 'Ожидаемый NPL'], ['npl', 'NPL 90+']].map(function(c) {
         return '<button type="button" class="dash-chip' + (nplDashFilter === c[0] ? ' active' : '') + '" onclick="setNplDashFilter(\'' + c[0] + '\')">' + c[1] + ' · ' + counts[c[0]] + '</button>';
       }).join('');
     }
@@ -7651,8 +7704,8 @@ function renderNplPage() {
           <td class="nowrap">${pageStart + i + 1}</td>
           <td>${safe(c.clientName)}</td>
           <td class="nowrap">${safe(c.pin) || '—'}</td>
-          <td class="nowrap">${formatMoney(c.totalDebtSum)}</td>
-          <td class="nowrap">${formatMoney(c.overdueBalanceSum)}</td>
+          <td class="nowrap">${formatMoney(c.portfolioSum || c.totalDebtSum)}</td>
+          <td class="nowrap">${c.nplSum > 0 ? formatMoney(c.nplSum) : '—'}</td>
           <td class="nowrap"><b>${c.maxDays}</b></td>
           <td class="nowrap"><span class="risk-badge risk-${r}">${NPL_RISK_LABELS[r]}</span></td>
           <td class="nowrap">${emp ? safe(nplCollectorLabel(emp)) : '—'}</td>
