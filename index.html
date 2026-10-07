@@ -1790,7 +1790,10 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px;">
         <h3 style="font-size:14px;margin:0;">Юридические лица по категориям риска</h3>
-        <button type="button" class="btn btn-secondary" onclick="exportNplDashExcel()">Скачать в Excel</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" class="btn btn-secondary" id="nplSvodBtn" onclick="exportNplSvodExcel()">Свод NPL (Excel)</button>
+          <button type="button" class="btn btn-secondary" onclick="exportNplDashExcel()">Скачать таблицу</button>
+        </div>
       </div>
       <div id="nplDashChips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
@@ -7524,6 +7527,202 @@ function exportNplDashExcel() {
   } catch (e) {
     console.error(e);
     alert('Не удалось сформировать Excel: ' + e.message);
+  }
+}
+
+// ===================== СВОД NPL В EXCEL (оформленный) =====================
+// Лист 1 «Свод NPL»: юрлица поимённо + итог, физлица сводно по срокам просрочки,
+// общий итог. Лист 2 «FPD · SPD · TPD»: анкеты ранних дефолтов. Оформление
+// (цвета, границы, форматы) делает ExcelJS — подгружается при первом нажатии.
+function nplLoadExcelJs() {
+  return new Promise(function(resolve, reject) {
+    if (window.ExcelJS) { resolve(window.ExcelJS); return; }
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+    sc.onload = function() { window.ExcelJS ? resolve(window.ExcelJS) : reject(new Error('ExcelJS не загрузился')); };
+    sc.onerror = function() { reject(new Error('Не удалось загрузить библиотеку оформления Excel (нужен интернет)')); };
+    document.head.appendChild(sc);
+  });
+}
+
+function nplSvodData() {
+  const groups = getNplGroupsCached();
+  const nplGroups = groups.filter(nplIsNplClient);
+  const legal = nplGroups.filter(g => g.subject === 'J').sort((a, b) => b.nplSum - a.nplSum);
+  const indiv = nplGroups.filter(g => g.subject !== 'J');
+  const buckets = [
+    { label: '90–179 дней', test: d => d < 180 },
+    { label: '180–359 дней', test: d => d >= 180 && d < 360 },
+    { label: '360 дней и более', test: d => d >= 360 }
+  ].map(function(b) {
+    const arr = indiv.filter(g => b.test(g.maxDays));
+    return { label: b.label, clients: arr.length, loans: arr.reduce((t, g) => t + g.loans.length, 0),
+      npl: arr.reduce((t, g) => t + (Number(g.nplSum) || 0), 0), reserve: arr.reduce((t, g) => t + (Number(g.reserveSum) || 0), 0) };
+  });
+  return { legal: legal, buckets: buckets, indiv: indiv };
+}
+
+async function exportNplSvodExcel() {
+  const btn = document.getElementById('nplSvodBtn');
+  const oldText = btn ? btn.innerText : '';
+  try {
+    if (btn) { btn.disabled = true; btn.innerText = 'Формирую файл…'; }
+    const ExcelJS = await nplLoadExcelJs();
+    const d = nplSvodData();
+    if (!d.legal.length && !d.indiv.length) { alert('Нет данных NPL для выгрузки'); return; }
+    const toM = v => Math.round((Number(v) || 0) / 1e5) / 10;
+    const pf = allNplPortfolio;
+    const pfOk = !!(pf && Number(pf.sum) > 0);
+    const today = new Date();
+    const dateRu = nplPad2(today.getDate()) + '.' + nplPad2(today.getMonth() + 1) + '.' + today.getFullYear();
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'MSB CRM'; wb.created = today;
+    const ws = wb.addWorksheet('Свод NPL', {
+      views: [{ state: 'frozen', ySplit: 2, showGridLines: false }],
+      pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } }
+    });
+    ws.columns = [{ width: 6 }, { width: 42 }, { width: 16 }, { width: 11 }, { width: 14 }, { width: 20 }, { width: 18 }, { width: 24 }];
+    const COLS = 8;
+    const RED = 'FFC71F14', DARK = 'FF2C2C2A', SOFT = 'FFFEEEEC', HEAD = 'FFF1EFE8', SUB = 'FFFAEEDA', ALT = 'FFF7F7F5', LINE = 'FFD9D9D4';
+    const thin = { style: 'thin', color: { argb: LINE } };
+    const border = { top: thin, left: thin, bottom: thin, right: thin };
+    const NUM = '#,##0.0', INT = '#,##0';
+    const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: argb } });
+    const styleRow = function(row, opt) {
+      for (let c = 1; c <= COLS; c++) {
+        const cell = row.getCell(c);
+        if (opt.fill) cell.fill = fill(opt.fill);
+        cell.font = Object.assign({ name: 'Calibri', size: 11 }, opt.font || {});
+        if (opt.border !== false) cell.border = border;
+        cell.alignment = { vertical: 'middle', wrapText: !!opt.wrap, indent: c === 8 ? 1 : 0, horizontal: [1, 4, 5].indexOf(c) !== -1 && opt.center ? 'center' : (opt.numCols && opt.numCols.indexOf(c) !== -1 ? 'right' : 'left') };
+      }
+    };
+    const band = function(text, argb, fontOpt, height) {
+      const row = ws.addRow([text]);
+      ws.mergeCells(row.number, 1, row.number, COLS);
+      row.height = height || 22;
+      const cell = row.getCell(1);
+      cell.fill = fill(argb);
+      cell.font = Object.assign({ name: 'Calibri', size: 11 }, fontOpt);
+      cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+      return row;
+    };
+    const gap = () => { ws.addRow([]).height = 8; };
+
+    band('Свод NPL · Asakabank, Нукусский филиал', RED, { size: 16, bold: true, color: { argb: 'FFFFFFFF' } }, 30);
+    band('По состоянию на ' + dateRu + '  ·  суммы в млн сум  ·  NPL = просрочка 90+ дней или «Всего NPL» по файлу', SOFT, { size: 10, italic: true, color: { argb: 'FF712B13' } }, 20);
+    gap();
+
+    // ---- 1. Юридические лица поимённо
+    band('1. Юридические лица — поимённо', DARK, { size: 12, bold: true, color: { argb: 'FFFFFFFF' } }, 24);
+    let r = ws.addRow(['№', 'Клиент', 'ИНН', 'Анкет', 'Дней просрочки', 'NPL, млн сум', 'Резерв, млн сум', 'Взыскатель']);
+    r.height = 32; styleRow(r, { fill: HEAD, font: { bold: true }, center: true, numCols: [6, 7], wrap: true });
+    r.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+    const legalFirst = ws.rowCount + 1;
+    d.legal.forEach(function(g, i) {
+      const emp = String(allNplAssignments[g.key] || '').trim();
+      const row = ws.addRow([i + 1, g.clientName || '', g.pin || '', g.loans.length, g.maxDays, toM(g.nplSum), toM(g.reserveSum), emp ? nplCollectorLabel(emp) : '—']);
+      styleRow(row, { fill: i % 2 ? ALT : null, center: true, numCols: [6, 7] });
+      row.getCell(4).numFmt = INT; row.getCell(5).numFmt = INT; row.getCell(6).numFmt = NUM; row.getCell(7).numFmt = NUM;
+      row.getCell(2).alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+    });
+    const legalLast = ws.rowCount;
+    const lrng = c => d.legal.length ? 'SUM(' + c + legalFirst + ':' + c + legalLast + ')' : '0';
+    const sumLegal = { clients: d.legal.length, loans: d.legal.reduce((t, g) => t + g.loans.length, 0), npl: d.legal.reduce((t, g) => t + toM(g.nplSum), 0), res: d.legal.reduce((t, g) => t + toM(g.reserveSum), 0) };
+    r = ws.addRow(['', 'Итого юридические лица · ' + d.legal.length + ' клиентов', '', { formula: lrng('D'), result: sumLegal.loans }, '', { formula: lrng('F'), result: sumLegal.npl }, { formula: lrng('G'), result: sumLegal.res }, '']);
+    styleRow(r, { fill: SUB, font: { bold: true }, numCols: [4, 6, 7] });
+    r.height = 22; r.getCell(4).numFmt = INT; r.getCell(6).numFmt = NUM; r.getCell(7).numFmt = NUM;
+    const legalTotRow = r.number;
+    gap();
+
+    // ---- 2. Физические лица сводно
+    band('2. Физические лица — сводно, без имён', DARK, { size: 12, bold: true, color: { argb: 'FFFFFFFF' } }, 24);
+    r = ws.addRow(['№', 'Срок просрочки', 'Клиентов', 'Анкет', '', 'NPL, млн сум', 'Резерв, млн сум', '']);
+    r.height = 32; styleRow(r, { fill: HEAD, font: { bold: true }, center: true, numCols: [3, 6, 7], wrap: true });
+    r.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+    const indFirst = ws.rowCount + 1;
+    d.buckets.forEach(function(b, i) {
+      const row = ws.addRow([i + 1, b.label, b.clients, b.loans, '', toM(b.npl), toM(b.reserve), '']);
+      styleRow(row, { fill: i % 2 ? ALT : null, center: true, numCols: [3, 6, 7] });
+      row.getCell(3).numFmt = INT; row.getCell(4).numFmt = INT; row.getCell(6).numFmt = NUM; row.getCell(7).numFmt = NUM;
+      row.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+    });
+    const indLast = ws.rowCount;
+    const irng = c => 'SUM(' + c + indFirst + ':' + c + indLast + ')';
+    const sumInd = { clients: d.buckets.reduce((t, b) => t + b.clients, 0), loans: d.buckets.reduce((t, b) => t + b.loans, 0), npl: d.buckets.reduce((t, b) => t + toM(b.npl), 0), res: d.buckets.reduce((t, b) => t + toM(b.reserve), 0) };
+    r = ws.addRow(['', 'Итого физические лица', { formula: irng('C'), result: sumInd.clients }, { formula: irng('D'), result: sumInd.loans }, '', { formula: irng('F'), result: sumInd.npl }, { formula: irng('G'), result: sumInd.res }, '']);
+    styleRow(r, { fill: SUB, font: { bold: true }, numCols: [3, 4, 6, 7] });
+    r.height = 22; r.getCell(3).numFmt = INT; r.getCell(4).numFmt = INT; r.getCell(6).numFmt = NUM; r.getCell(7).numFmt = NUM;
+    const indTotRow = r.number;
+    gap();
+
+    // ---- 3. Общий итог
+    band('3. Общий итог NPL', DARK, { size: 12, bold: true, color: { argb: 'FFFFFFFF' } }, 24);
+    r = ws.addRow(['', 'Показатель', 'Клиентов', 'Анкет', '', 'NPL, млн сум', 'Резерв, млн сум', '% от портфеля']);
+    r.height = 32; styleRow(r, { fill: HEAD, font: { bold: true }, center: true, numCols: [3, 6, 7, 8], wrap: true });
+    r.getCell(2).alignment = { vertical: 'middle', horizontal: 'left' };
+    const pct = (a, b) => (b > 0 ? a / b : null);
+    const rowJ = ws.addRow(['', 'Юридические лица', sumLegal.clients, { formula: 'D' + legalTotRow, result: sumLegal.loans }, '', { formula: 'F' + legalTotRow, result: sumLegal.npl }, { formula: 'G' + legalTotRow, result: sumLegal.res }, pfOk ? pct(d.legal.reduce((t, g) => t + (Number(g.nplSum) || 0), 0), pf.jSum) : '—']);
+    const rowP = ws.addRow(['', 'Физические лица', { formula: 'C' + indTotRow, result: sumInd.clients }, { formula: 'D' + indTotRow, result: sumInd.loans }, '', { formula: 'F' + indTotRow, result: sumInd.npl }, { formula: 'G' + indTotRow, result: sumInd.res }, pfOk ? pct(d.indiv.reduce((t, g) => t + (Number(g.nplSum) || 0), 0), pf.pSum) : '—']);
+    [rowJ, rowP].forEach(function(row, i) {
+      styleRow(row, { fill: i % 2 ? ALT : null, numCols: [3, 4, 6, 7, 8] });
+      row.getCell(3).numFmt = INT; row.getCell(4).numFmt = INT; row.getCell(6).numFmt = NUM; row.getCell(7).numFmt = NUM; row.getCell(8).numFmt = '0.0%';
+    });
+    const allNpl = d.legal.concat(d.indiv).reduce((t, g) => t + (Number(g.nplSum) || 0), 0);
+    const totRow = ws.addRow(['', 'ОБЩИЙ ИТОГО NPL', { formula: 'C' + rowJ.number + '+C' + rowP.number, result: sumLegal.clients + sumInd.clients },
+      { formula: 'D' + rowJ.number + '+D' + rowP.number, result: sumLegal.loans + sumInd.loans }, '',
+      { formula: 'F' + rowJ.number + '+F' + rowP.number, result: sumLegal.npl + sumInd.npl },
+      { formula: 'G' + rowJ.number + '+G' + rowP.number, result: sumLegal.res + sumInd.res }, pfOk ? pct(allNpl, pf.sum) : '—']);
+    styleRow(totRow, { fill: RED, font: { bold: true, size: 12, color: { argb: 'FFFFFFFF' } }, numCols: [3, 4, 6, 7, 8] });
+    totRow.height = 26;
+    totRow.getCell(3).numFmt = INT; totRow.getCell(4).numFmt = INT; totRow.getCell(6).numFmt = NUM; totRow.getCell(7).numFmt = NUM; totRow.getCell(8).numFmt = '0.0%';
+    if (pfOk) {
+      const note = ws.addRow(['', 'Текущий портфель банка (все кредиты по файлу): ' + toM(pf.sum).toLocaleString('ru-RU') + ' млн сум, ' + pf.clients + ' клиентов']);
+      ws.mergeCells(note.number, 2, note.number, COLS);
+      note.getCell(2).font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF6B7280' } };
+    }
+
+    // ---- Лист 2: анкеты FPD / SPD / TPD
+    const ws2 = wb.addWorksheet('FPD · SPD · TPD', {
+      views: [{ state: 'frozen', ySplit: 1, showGridLines: false }],
+      pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+    });
+    const heads = ['№', 'Клиент', 'ИНН', '№ анкеты', 'Дата выдачи', 'Возраст, дн.', 'Дней просрочки', 'Старт просрочки, дн.', 'Портфель анкеты, млн сум', 'NPL анкеты, млн сум', 'Анкет у клиента', 'Категория', 'EPD до 6 мес.', 'Взыскатель'];
+    ws2.columns = [6, 38, 14, 12, 13, 11, 12, 13, 18, 16, 11, 18, 12, 22].map(w => ({ width: w }));
+    const hr = ws2.addRow(heads);
+    hr.height = 36;
+    hr.eachCell(function(cell) {
+      cell.fill = fill(RED); cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; cell.border = border;
+    });
+    const catFill = { fpd: 'FFFEE4E2', spd: 'FFFFEAD5', tpd: 'FFFDEAE4' };
+    nplDashEarlyLoans('all').forEach(function(x, i) {
+      const emp = String(allNplAssignments[x.g.key] || '').trim();
+      const row = ws2.addRow([i + 1, x.g.clientName || '', x.g.pin || '', x.l.contractId || '', nplFmtDateRu(x.l.openDate), x.e.age, x.e.days, x.e.gap,
+        toM(Number(x.l.portfolio) || Number(x.l.totalDebt) || 0), toM(x.l.totalNpl), x.g.loans.length, NPL_RISK_LABELS[x.e.cat], x.e.epd ? 'да' : 'нет', emp ? nplCollectorLabel(emp) : '—']);
+      row.eachCell(function(cell, c) {
+        cell.font = { name: 'Calibri', size: 11 }; cell.border = border;
+        cell.alignment = { vertical: 'middle', horizontal: c === 2 || c === 14 ? 'left' : (c === 9 || c === 10 ? 'right' : 'center') };
+        if (i % 2) cell.fill = fill(ALT);
+      });
+      row.getCell(9).numFmt = NUM; row.getCell(10).numFmt = NUM;
+      row.getCell(12).fill = fill(catFill[x.e.cat]); row.getCell(12).font = { name: 'Calibri', size: 11, bold: true };
+    });
+    if (ws2.rowCount > 1) ws2.autoFilter = { from: { row: 1, column: 1 }, to: { row: ws2.rowCount, column: heads.length } };
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'NPL_svod_' + nplLocalDateStr() + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+  } catch (e) {
+    console.error(e);
+    alert('Не удалось сформировать свод: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = oldText; }
   }
 }
 
