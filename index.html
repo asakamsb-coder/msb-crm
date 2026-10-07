@@ -1728,6 +1728,7 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
     <div>
       <h1>NPL / ПРОСРОЧКА ПО КЛИЕНТУ</h1>
       <p>Юр. лица — просрочка от 1 дня, физ. лица — только 90+. Несколько кредитов клиента объединяются в одну карточку.</p>
+      <p id="nplPerfNote" style="font-size:11px;color:var(--muted);margin:4px 0 0;"></p>
     </div>
   </div>
 
@@ -1882,7 +1883,7 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
       <h2 style="font-size:16px;margin:0 0 6px;">4. Архив</h2>
       <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Клиенты, у которых просрочка закрыта. Фото, адреса, телефоны и документы сохранены и вернутся, если просрочка появится снова.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-        <input id="nplArchiveSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ" style="max-width:320px;flex:1 1 200px;" oninput="renderNplArchivePanel()">
+        <input id="nplArchiveSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ" style="max-width:320px;flex:1 1 200px;" oninput="nplArchiveSearchDebounced()">
       </div>
       <div id="nplArchiveList"></div>
     </div>
@@ -4437,6 +4438,7 @@ function stopInactivityWatcher() {
 
 function logoutDueToInactivity() {
   stopInactivityWatcher();
+  try { localStorage.removeItem('msbNplCacheV1'); } catch (e) {}
   localStorage.removeItem('msbSessionId');
   localStorage.removeItem('msbUser');
   localStorage.removeItem('msbLastPage');
@@ -4455,6 +4457,7 @@ function logoutDueToInactivity() {
 function logout() {
   if (!confirm('Вы уверены, что хотите выйти?')) return;
   stopInactivityWatcher();
+  try { localStorage.removeItem('msbNplCacheV1'); } catch (e) {}
   localStorage.removeItem('msbSessionId');
   localStorage.removeItem('msbUser');
   localStorage.removeItem('msbLastPage');
@@ -6863,21 +6866,95 @@ function resetDevicePinFromProfile() {
   renderVzyskatelProfile();
 }
 
+// ===================== ЗАГРУЗКА ДАННЫХ NPL (быстрая) =====================
+// 1) Сразу показываем последние сохранённые в браузере данные (если есть),
+// 2) параллельно тремя независимыми запросами берём: список (срочное),
+//    доп. данные (карточка клиента) и статистику; архив — только по клику
+//    на вкладку «Архив». Сбой одного запроса не ломает остальные.
+const NPL_CACHE_KEY = 'msbNplCacheV1';
+let nplPerf = {};
+let nplArchiveLoaded = false;
+let nplArchivePromise = null;
+let allNplArchiveSummary = { closedByEmp: {}, returned: {} };
+let nplActiveTab = 'dashboard';
+let nplRenderTimer = null;
+
+function nplCacheLoad() {
+  try { const t = localStorage.getItem(NPL_CACHE_KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; }
+}
+function nplCacheSave(obj) {
+  try { localStorage.setItem(NPL_CACHE_KEY, JSON.stringify(obj)); }
+  catch (e) { try { localStorage.removeItem(NPL_CACHE_KEY); } catch (e2) {} }
+}
+function nplCacheClear() { try { localStorage.removeItem(NPL_CACHE_KEY); } catch (e) {} }
+
+function nplUpdatePerfNote(extra) {
+  const el = document.getElementById('nplPerfNote');
+  if (!el) return;
+  const f = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' с';
+  const parts = [];
+  if (nplPerf.urgent != null) parts.push('список ' + f(nplPerf.urgent));
+  if (nplPerf.rest != null) parts.push('доп. данные ' + f(nplPerf.rest));
+  if (nplPerf.stats != null) parts.push('статистика ' + f(nplPerf.stats));
+  if (nplPerf.archive != null) parts.push('архив ' + f(nplPerf.archive));
+  el.innerText = (extra ? extra + ' · ' : '') + (parts.length ? 'Загрузка: ' + parts.join(' · ') : '');
+}
+
+async function nplTimedFetch(label, action) {
+  const t0 = performance.now();
+  try { return await fetchJSON(action); }
+  finally { nplPerf[label] = performance.now() - t0; nplUpdatePerfNote(); }
+}
+
+// Одна отложенная перерисовка вместо нескольких подряд (когда ответы приходят вперемешку)
+function nplRenderSoon() {
+  if (nplRenderTimer) return;
+  nplRenderTimer = setTimeout(function() {
+    nplRenderTimer = null;
+    try { if (nplDataLoaded) renderNplPage(); } catch (e) { console.error(e); }
+  }, 60);
+}
+
 async function loadNplData() {
   const emptyState = document.getElementById('nplEmptyState');
   const uploadPanel = document.getElementById('nplUploadPanel');
   const canUpload = currentUser && (currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
   if (uploadPanel) uploadPanel.style.display = canUpload ? 'block' : 'none';
 
+  const login = String((currentUser && currentUser.login) || '');
+  nplPerf = {};
+  let shownFromCache = false;
+
   try {
-    // "Срочная" часть — анкеты + назначения взыскателей — это всё, что
-    // нужно, чтобы сразу показать список. Раньше здесь было 5-6 отдельных
-    // запросов одновременно (nplLoans/nplExtra/nplAssignments/nplAccounts/
-    // nplVisits/users) — каждый со своим "холодным стартом" на сервере;
-    // теперь это один запрос вместо пяти.
-    const urgent = await fetchJSON('nplBundleUrgent');
+    // Мгновенный показ последних данных из памяти браузера
+    if (!nplDataLoaded) {
+      const c = nplCacheLoad();
+      if (c && c.login === login && c.loans && c.loans.length && (Date.now() - (c.ts || 0)) < 86400000) {
+        allNplLoans = c.loans;
+        allNplAssignments = c.assignments || {};
+        allNplPortfolio = c.portfolio || null;
+        allNplArchiveSummary = c.archiveSummary || allNplArchiveSummary;
+        invalidateNplGroupsCache();
+        nplDataLoaded = true;
+        emptyState.style.display = 'none';
+        document.getElementById('nplDashboard').style.display = 'block';
+        renderNplPage();
+        shownFromCache = true;
+        const dt = new Date(c.ts);
+        nplUpdatePerfNote('Показаны данные от ' + nplPad2(dt.getHours()) + ':' + nplPad2(dt.getMinutes()) + ', обновляю…');
+      }
+    }
+
+    // Все запросы стартуют одновременно
+    const restP = loadNplRestInBackground();
+    const statsP = loadNplStatsInBackground();
+    nplArchiveLoaded = false;
+
+    const urgent = await nplTimedFetch('urgent', 'nplBundleUrgent');
     allNplLoans = (urgent && urgent.loans) || [];
     allNplAssignments = (urgent && urgent.assignments) || {};
+    allNplPortfolio = (urgent && urgent.portfolio) || null;
+    allNplArchiveSummary = (urgent && urgent.archiveSummary) || { closedByEmp: {}, returned: {} };
     invalidateNplGroupsCache();
     nplDataLoaded = true;
 
@@ -6885,19 +6962,25 @@ async function loadNplData() {
       emptyState.innerHTML = 'NPL-выгрузка ещё не загружена — загрузите первый файл выше.';
       emptyState.style.display = 'block';
       document.getElementById('nplDashboard').style.display = 'none';
+      nplCacheClear();
       return;
     }
+
+    nplCacheSave({ login: login, ts: Date.now(), loans: allNplLoans, assignments: allNplAssignments, portfolio: allNplPortfolio, archiveSummary: allNplArchiveSummary });
 
     emptyState.style.display = 'none';
     document.getElementById('nplDashboard').style.display = 'block';
     renderNplPage();
-
-    // Телефоны/фото/адрес, расчётные счета, визиты и список сотрудников
-    // нужны только при открытии карточки конкретного клиента — грузим их
-    // в фоне уже ПОСЛЕ того, как список показан, чтобы не задерживать
-    // первую отрисовку экрана.
-    loadNplRestInBackground();
+    nplUpdatePerfNote();
+    if (nplActiveTab === 'archive') renderNplArchivePanel();
+    // доп. данные и статистика могли прийти раньше списка — перерисуем один раз
+    Promise.all([restP, statsP]).then(nplRenderSoon).catch(function() {});
   } catch (error) {
+    if (shownFromCache) {
+      nplUpdatePerfNote('Не удалось обновить данные — показаны сохранённые ранее');
+      console.error(error);
+      return;
+    }
     emptyState.innerHTML = 'Не удалось загрузить данные. <a onclick="loadNplData()" style="color:var(--brand);font-weight:700;cursor:pointer;">Попробовать ещё раз</a>';
     emptyState.style.display = 'block';
     document.getElementById('nplDashboard').style.display = 'none';
@@ -6907,39 +6990,70 @@ async function loadNplData() {
 
 async function loadNplRestInBackground() {
   try {
-    const rest = await fetchJSON('nplBundleRest');
+    const rest = await nplTimedFetch('rest', 'nplBundleRest');
     allNplExtra = (rest && rest.extra) || {};
     allNplAccounts = (rest && rest.accounts) || {};
     allNplVisits = (rest && rest.visits) || {};
     allNplMib = (rest && rest.mib) || { data: {}, files: {} };
     allNplCourt = (rest && rest.court) || { data: {}, files: {} };
-    allNplArchive = (rest && rest.archive) || {};
-    allNplStats = (rest && rest.stats) || [];
-    allNplTransfers = (rest && rest.transfers) || {};
-    allNplPortfolio = (rest && rest.portfolio) || null;
     allNplCollectors = (rest && rest.collectors) || {};
     if (rest && rest.users) allWebUsers = rest.users;
 
     // Если карточка клиента уже открыта, пока грузились доп.данные —
-    // обновим её содержимое (телефоны/фото/счета/визиты/взыскатель),
-    // не заставляя менеджера закрывать и открывать её заново.
+    // обновим её содержимое (телефоны/фото/счета/визиты/взыскатель).
     const overlay = document.getElementById('nplDetailOverlay');
     if (currentNplClientKey && overlay && overlay.classList.contains('active')) {
       openNplClientDetail(encodeURIComponent(currentNplClientKey));
     }
-
-    // История визитов приходит только в "остальных" данных (nplBundleRest) —
-    // если взыскатель уже открыл "Главная" до того, как это догрузилось,
-    // перерисуем блок истории визитов без перезагрузки страницы.
+    // История визитов взыскателя приходит здесь — обновим «Главную».
     if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) {
       renderVzyskatelHome();
     }
-    try { renderNplArchivePanel(); renderNplStatsPanel(); } catch (e) { console.error(e); }
-    try { renderNplPage(); } catch (e) { console.error(e); }
+    nplRenderSoon();
   } catch (error) {
     console.error('Не удалось догрузить доп. данные NPL:', error);
   }
 }
+
+async function loadNplStatsInBackground() {
+  try {
+    const r = await nplTimedFetch('stats', 'nplStatsBundle');
+    allNplStats = (r && r.stats) || [];
+    allNplTransfers = (r && r.transfers) || {};
+    if (currentUser && currentUser.role === 'VZYSKATEL' && document.getElementById('vzyskatelHomeBody')) {
+      renderVzyskatelHome();
+    }
+    if (nplActiveTab === 'stats') { try { renderNplStatsPanel(); } catch (e) { console.error(e); } }
+    nplRenderSoon();
+  } catch (error) {
+    console.error('Не удалось загрузить статистику NPL:', error);
+  }
+}
+
+// Архив — тяжёлый (10 000+ записей), грузится только при открытии вкладки.
+function ensureNplArchive(force) {
+  if (nplArchiveLoaded && !force) return Promise.resolve();
+  if (nplArchivePromise) return nplArchivePromise;
+  nplArchivePromise = nplTimedFetch('archive', 'nplArchive').then(function(r) {
+    allNplArchive = (r && r.archive) || {};
+    nplArchiveLoaded = true;
+  }).finally(function() { nplArchivePromise = null; });
+  return nplArchivePromise;
+}
+
+function nplArchiveEntry(key) {
+  return allNplArchive[key] || ((allNplArchiveSummary && allNplArchiveSummary.returned) || {})[key] || null;
+}
+
+function nplArchiveCountFromSummary() {
+  const isCollector = !!(currentUser && currentUser.role === 'VZYSKATEL');
+  const myEmp = String((currentUser && currentUser.employeeId) || '').trim();
+  const by = (allNplArchiveSummary && allNplArchiveSummary.closedByEmp) || {};
+  if (isCollector) return Number(by[myEmp]) || 0;
+  return Object.keys(by).reduce((t, k) => t + (Number(by[k]) || 0), 0);
+}
+
+function nplTabIs(t) { return nplActiveTab === t; }
 
 // Список "моих" визитов (всех статусов, по всем клиентам, не только
 // назначенным сейчас — история визита не должна пропадать при
@@ -7806,6 +7920,7 @@ function groupNplByClient(loans) {
 function setNplPageTab(tab) {
   const tabs = { dashboard: 'Dash', legal: 'Legal', indiv: 'Indiv', archive: 'Archive', stats: 'Stats' };
   const panels = { dashboard: 'Dash', legal: 'LegalAll', indiv: 'Indiv', archive: 'Archive', stats: 'Stats' };
+  nplActiveTab = tab;
   Object.keys(tabs).forEach(function(k) {
     const b = document.getElementById('nplPageTab' + tabs[k]);
     if (b) b.classList.toggle('active', tab === k);
@@ -7813,7 +7928,8 @@ function setNplPageTab(tab) {
     if (pn) pn.style.display = tab === k ? 'block' : 'none';
   });
   if (tab === 'archive') renderNplArchivePanel();
-  if (tab === 'stats') renderNplStatsPanel();
+  else if (tab === 'stats') renderNplStatsPanel();
+  else if (nplDataLoaded) renderNplPage();
 }
 
 // Пагинация для пунктов 2 и 3 — рендерим в DOM не больше NPL_PAGE_SIZE
@@ -7826,11 +7942,13 @@ let nplIndivPage = 1;
 
 // Сброс страницы на 1 при каждом новом вводе в поиск — иначе после поиска
 // можно "залипнуть" на странице 5-й, на которой уже не будет результатов.
+let nplSearchTimer = null;
 function onNplListSearchInput(which) {
   if (which === 'legal') nplLegalAllPage = 1;
   if (which === 'indiv') nplIndivPage = 1;
   if (which === 'dash') nplDashPage = 1;
-  renderNplPage();
+  clearTimeout(nplSearchTimer);
+  nplSearchTimer = setTimeout(renderNplPage, 250);
 }
 
 function nplGoToPage(which, page) {
@@ -7869,8 +7987,9 @@ function renderNplPage() {
   const myClientsBadge = document.getElementById('nplMyClientsBadge');
   const myClientsCount = document.getElementById('nplMyClientsCount');
   if (dashTabBtn) dashTabBtn.style.display = isCollector ? 'none' : '';
-  if (isCollector && dashTabBtn && dashTabBtn.classList.contains('active')) {
+  if (isCollector && nplActiveTab === 'dashboard') {
     setNplPageTab('indiv');
+    return;
   }
 
   function filterForCollector(groups) {
@@ -7905,7 +8024,7 @@ function renderNplPage() {
   const expectedGroups = allGroups.filter(g => !nplIsNplClient(g) && g.maxDays >= 60 && g.maxDays <= 89);
 
   // ---- Вкладка 1: карточки дашборда (свод по клиентам, не по анкетам) ----
-  {
+  if (nplTabIs('dashboard')) {
     const fm = formatMoney, sumBy = (arr, f) => arr.reduce((t, g) => t + (Number(f(g)) || 0), 0);
     const pct = (a, b2) => b2 > 0 ? nplFmtPct(a / b2 * 100) + '%' : '—';
     const setT = (id, v) => { const el = document.getElementById(id); if (el) el.innerText = v; };
@@ -7936,7 +8055,7 @@ function renderNplPage() {
   }
 
   // ---- Дашборд: юр.лица по категориям риска (FPD/SPD/TPD/EPD — по анкетам) ----
-  {
+  if (nplTabIs('dashboard')) {
     const tbody = document.getElementById('nplLegalTableBody');
     const thead = document.getElementById('nplLegalTableHead');
     const legalRisk = allGroups.filter(g => g.subject === 'J' && nplRiskCategory(g));
@@ -8020,7 +8139,7 @@ function renderNplPage() {
   }
 
   // ---- Пункт 2: юр.лица — ВСЕ, просрочка 1+ (широкая таблица, 50 строк/стр.) ----
-  {
+  if (nplTabIs('legal')) {
     const tbody = document.getElementById('nplLegalAllTableBody');
     let clients = legalAllGroups.slice();
     const query = normalizeText((document.getElementById('nplLegalAllSearchInput')?.value || '').trim());
@@ -8069,7 +8188,7 @@ function renderNplPage() {
   }
 
   // ---- Пункт 3: физ.лица — ВСЕ, просрочка 1+ (короткая сводная таблица, 50 строк/стр.) ----
-  {
+  if (nplTabIs('indiv')) {
     const tbody = document.getElementById('nplIndivTableBody');
     let clients = indivAllGroups.slice();
     const query = normalizeText((document.getElementById('nplIndivSearchInput')?.value || '').trim());
@@ -8105,7 +8224,8 @@ function renderNplPage() {
     const statsTab = document.getElementById('nplPageTabStats');
     const r = currentUser && currentUser.role;
     if (statsTab) statsTab.style.display = (r === 'ADMIN' || r === 'DIRECTOR' || r === 'DEPUTY') ? '' : 'none';
-    renderNplArchivePanel(); renderNplStatsPanel();
+    renderNplArchivePanel();
+    if (nplTabIs('stats')) renderNplStatsPanel();
   } catch (e) { console.error(e); }
 }
 
@@ -8357,10 +8477,23 @@ function getNplArchiveList() {
     .sort((a, b) => nplArchiveSortKey(a) < nplArchiveSortKey(b) ? 1 : -1);
 }
 
+let nplArchiveSearchTimer = null;
+function nplArchiveSearchDebounced() { clearTimeout(nplArchiveSearchTimer); nplArchiveSearchTimer = setTimeout(renderNplArchivePanel, 250); }
+
 function renderNplArchivePanel() {
   const box = document.getElementById('nplArchiveList');
   const tabBtn = document.getElementById('nplPageTabArchive');
   if (!box) return;
+  if (!nplArchiveLoaded) {
+    if (tabBtn) tabBtn.innerText = '4. Архив (' + nplArchiveCountFromSummary() + ')';
+    if (!nplTabIs('archive')) return;
+    box.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:12px 0;">Загружаю архив…</div>';
+    ensureNplArchive().then(renderNplArchivePanel).catch(function(e) {
+      console.error(e);
+      box.innerHTML = '<div style="font-size:13px;color:var(--red);padding:12px 0;">Не удалось загрузить архив. <a onclick="renderNplArchivePanel()" style="cursor:pointer;color:var(--brand);font-weight:700;">Повторить</a></div>';
+    });
+    return;
+  }
   const all = getNplArchiveList();
   if (tabBtn) tabBtn.innerText = '4. Архив (' + all.length + ')';
 
@@ -8854,7 +8987,7 @@ function renderNplClientHeaderMeta(group) {
   const pin = String(group.pin || '').trim();
   const displayClientId = String(group.displayClientId || '').trim();
 
-  const arch = allNplArchive[key] || null;
+  const arch = nplArchiveEntry(key);
   const returnedBadge = (arch && arch.status === 'returned')
     ? `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:#FFF4E0;color:#8A5A00;">вернулся после закрытия${arch.closedAt ? ' ' + safe(arch.closedAt) : ''}</span>` : '';
   const tr = allNplTransfers[key] || null;
