@@ -7045,7 +7045,10 @@ function getNplParserWorker() {
             else if (h.indexOf('текущий остаток') !== -1) currentBalanceColIdx = c;
             else if (h.indexOf('пересмотренный остаток') !== -1) revisedBalanceColIdx = c;
             else if (h.indexOf('просроченный остаток') !== -1 || h.indexOf('просроченный основной') !== -1) overdueBalanceColIdx = c;
-            else if (h === 'npl') totalNplColIdx = c;
+            else if (h.indexOf('npl') !== -1 && h.indexOf('задолж') === -1) totalNplColIdx = c;
+            else if (h.indexOf('просроченный од') !== -1) overdueBalanceColIdx = c;
+            else if (h.indexOf('просроченный') !== -1 && h.indexOf('%') !== -1) overdueInterestColIdx = c;
+            else if (h.indexOf('просроченные дни') !== -1) daysOverdueInterestColIdx = c;
             else if (h.indexOf('вид кредита') !== -1) productTypeColIdx = c;
             else if (h.indexOf('день просроч') !== -1) daysOverdueColIdx = c;
             else if (h.indexOf('дни просроч') !== -1 && h.indexOf('процент') !== -1) daysOverdueInterestColIdx = c;
@@ -7138,6 +7141,13 @@ function getNplParserWorker() {
           } else {
             clientKey = (pin && pin !== '000000000') ? pin : ('NOID:' + clientName.toUpperCase());
           }
+
+          // В полной выгрузке портфеля (с 07.10.2026 — все ~14 000 клиентов) нужны
+          // только клиенты с просрочкой; без этого в NPL попадут и все, у кого
+          // просрочки нет.
+          const hasOverdue = (Number(row[overdueBalanceColIdx]) || 0) + (Number(row[overdueInterestColIdx]) || 0) > 0
+            || (Number(row[daysOverdueColIdx]) || 0) > 0 || (Number(row[daysOverdueInterestColIdx]) || 0) > 0;
+          if (!hasOverdue) continue;
 
           loans.push({
             contractId: String(contractId).trim(),
