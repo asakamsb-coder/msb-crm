@@ -7033,6 +7033,7 @@ function getNplParserWorker() {
         // используется старая жёсткая позиция как запасной вариант.
         let nameColIdx = -1, idColIdx = -1, pinColIdx = -1, openDateColIdx = -1, portfolioColIdx = -1;
         const portfolioKeys = {};
+        const extraPortfolio = {};
         const portfolio = { clients: 0, loans: 0, totalDebt: 0, sum: 0, jClients: 0, jSum: 0, pClients: 0, pSum: 0 };
         const normOpenDate = function(v) {
           if (v === '' || v == null) return '';
@@ -7193,7 +7194,13 @@ function getNplParserWorker() {
             portfolioKeys[clientKey] = 1; portfolio.clients++;
             if (subject === 'J') portfolio.jClients++; else portfolio.pClients++;
           }
-          if (!hasOverdue) continue;
+          const hasNpl = (Number(row[totalNplColIdx]) || 0) > 0;
+          if (!hasOverdue && !hasNpl) {
+            // Кредит без просрочки в базу не берём, но его «текущий портфель»
+            // относится к клиенту — добавим к его просроченным кредитам ниже.
+            if (pfVal) extraPortfolio[clientKey] = (extraPortfolio[clientKey] || 0) + pfVal;
+            continue;
+          }
 
           loans.push({
             contractId: String(contractId).trim(),
@@ -7225,6 +7232,16 @@ function getNplParserWorker() {
             employeeId: employeeColIdx !== -1 ? String(row[employeeColIdx] || '').trim() : '',
             account: accountColIdx !== -1 ? String(row[accountColIdx] || '').trim() : '',
             accountBalance: accountBalanceColIdx !== -1 ? (Number(row[accountBalanceColIdx]) || 0) : null
+          });
+        }
+
+        {
+          // Портфель клиента = все его кредиты (в т.ч. без просрочки): прибавляем
+          // «здоровую» часть к первому кредиту клиента в списке.
+          const firstByKey = {};
+          loans.forEach(function(l) { if (!firstByKey[l.clientKey]) firstByKey[l.clientKey] = l; });
+          Object.keys(extraPortfolio).forEach(function(k) {
+            if (firstByKey[k]) firstByKey[k].portfolio = (Number(firstByKey[k].portfolio) || 0) + extraPortfolio[k];
           });
         }
 
@@ -7399,6 +7416,9 @@ function nplLoanAgeDays(l) {
   if (isNaN(t)) return null;
   return Math.floor((Date.now() - t) / 86400000);
 }
+// Клиент в NPL: по файлу есть «Всего NPL» либо просрочка 90+ дней.
+function nplIsNplClient(g) { return (Number(g.nplSum) || 0) > 0 || g.maxDays >= 90; }
+
 function nplRiskCategory(g) {
   if (g._risk !== undefined) return g._risk;
   let r = null;
@@ -7420,7 +7440,7 @@ function nplRiskCategory(g) {
     }
   }
   if (!r) {
-    if (g.maxDays >= 90) r = 'npl';
+    if (nplIsNplClient(g)) r = 'npl';
     else if (g.maxDays >= 60) r = 'exp';
   }
   g._risk = r;
@@ -7633,13 +7653,13 @@ function renderNplPage() {
 
   // Настоящий порог NPL (для карточек общего дашборда) — 90+ дней, и для
   // юр., и для физ. лиц — тот же порог, что и в списках вкладок 2 и 3.
-  const trueNplGroups = allGroups.filter(g => g.maxDays >= 90);
+  const trueNplGroups = allGroups.filter(nplIsNplClient);
   const trueLegalNpl = trueNplGroups.filter(g => g.subject === 'J');
   const trueIndivNpl = trueNplGroups.filter(g => g.subject === 'P');
 
   // "Ожидаемый NPL" — клиенты (юр. и физ.), у которых просрочка уже 60+,
   // но ещё не дошла до порога NPL (90+) — риск перехода в NPL.
-  const expectedGroups = allGroups.filter(g => g.maxDays >= 60 && g.maxDays <= 89);
+  const expectedGroups = allGroups.filter(g => !nplIsNplClient(g) && g.maxDays >= 60 && g.maxDays <= 89);
 
   // ---- Вкладка 1: карточки дашборда (свод по клиентам, не по анкетам) ----
   {
@@ -11926,7 +11946,8 @@ async function postWebAction(body, retriesLeft) {
       // Сервер ответил, но не JSON (пустой ответ/HTML) — обычно это значит,
       // что в Apps Script не опубликована новая версия Code.gs. Повторять
       // бессмысленно (и опасно для записи) — сообщаем сразу.
-      return { success: false, message: 'Сервер вернул неожиданный ответ. Скорее всего, в Apps Script не опубликована новая версия Code.gs (Развертывание → Управление → Новая версия).' };
+      const snippet = String(text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+      return { success: false, message: 'Сервер вернул неожиданный ответ' + (snippet ? ': «' + snippet + '»' : ' (пустой)') + '. Если там нет понятной ошибки — в Apps Script не опубликована новая версия Code.gs (Развертывание → Управление → Новая версия). Загруженные данные могли сохраниться: обновите страницу и проверьте.' };
     }
   } catch (error) {
     if (retriesLeft > 0) {
