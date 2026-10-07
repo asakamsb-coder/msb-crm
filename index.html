@@ -12709,7 +12709,12 @@ async function postWebAction(body, retriesLeft) {
       // Сервер ответил, но не JSON (пустой ответ/HTML) — обычно это значит,
       // что в Apps Script не опубликована новая версия Code.gs. Повторять
       // бессмысленно (и опасно для записи) — сообщаем сразу.
-      const snippet = String(text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+      // Страница ошибки Google начинается с большого <script> (ppConfig) — убираем
+      // скрипты и стили, берём заголовок и видимый текст, где и написана причина.
+      const rawHtml = String(text || '');
+      const titleM = rawHtml.match(/<title[^>]*>([^<]*)<\/title>/i);
+      const visible = rawHtml.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      const snippet = ((titleM && titleM[1].trim() ? titleM[1].trim() + ' — ' : '') + visible).slice(0, 300);
       return { success: false, message: 'Сервер вернул неожиданный ответ' + (snippet ? ': «' + snippet + '»' : ' (пустой)') + '. Если там нет понятной ошибки — в Apps Script не опубликована новая версия Code.gs (Развертывание → Управление → Новая версия). Загруженные данные могли сохраниться: обновите страницу и проверьте.' };
     }
   } catch (error) {
