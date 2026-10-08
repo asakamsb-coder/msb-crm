@@ -8798,9 +8798,10 @@ function nplFmtPct(x) { return (Math.round((Number(x) || 0) * 10) / 10).toString
 function nplCollectorLabel(empId) {
   const id = String(empId || '').trim();
   if (!id) return 'Не назначен';
-  const name = allNplCollectors[id]
-    || ((allWebUsers || []).find(u => String(u.employeeId || '').trim() === id) || {}).fullName
-    || '';
+  const bad = n => !n || String(n).trim().length < 3 || /^[-—–.\s]+$/.test(String(n));
+  const cName = allNplCollectors[id];
+  const uName = ((allWebUsers || []).find(u => String(u.employeeId || '').trim() === id) || {}).fullName;
+  const name = !bad(cName) ? cName : (!bad(uName) ? uName : '');
   return name ? name : 'ID ' + id;
 }
 
@@ -9147,64 +9148,269 @@ function renderNplArchivedBody(group) {
     <div id="nplDetailTabBody_legal" style="display:none;">${renderNplLegalStatusTab(group)}</div>`;
 }
 
-// ---- Сводка управляющего по всем взыскателям ----
+// ---- Сводка управляющего по всем взыскателям (рейтинг, план/факт, активность) ----
 function selectNplStatsEmp(empEnc) {
-  nplStatsSelectedEmp = empEnc === '__all__' ? null : decodeURIComponent(empEnc);
+  const id = empEnc === '__all__' ? null : decodeURIComponent(empEnc);
+  nplStatsSelectedEmp = (id !== null && id === nplStatsSelectedEmp) ? null : id;
   renderNplStatsPanel();
+}
+
+function stParseDt(s) {
+  const m = String(s || '').match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+function stDayKey(d) { return d.getFullYear() + '-' + nplPad2(d.getMonth() + 1) + '-' + nplPad2(d.getDate()); }
+function stMln(v) { return (Math.round((Number(v) || 0) / 1e5) / 10).toString().replace('.', ','); }
+function stAgo(d) {
+  if (!d) return { txt: 'нет данных', cls: 'bad', dot: '#D93F2F' };
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  const today = stDayKey(d) === stDayKey(new Date());
+  if (today) return { txt: 'сегодня', cls: '', dot: '#1E7B34' };
+  if (days <= 1) return { txt: 'вчера', cls: '', dot: '#E39B16' };
+  return { txt: days + ' дн', cls: 'bad', dot: '#D93F2F' };
+}
+
+// Один раз собираем визиты: по ФИО автора и по клиенту.
+function stBuildVisitIndex() {
+  const byName = {}, lastByKey = {}, perDay = {};
+  Object.keys(allNplVisits || {}).forEach(function(k) {
+    (allNplVisits[k] || []).forEach(function(v, i) {
+      const d = stParseDt(v.addedAt);
+      if (!d) return;
+      const nm = String(v.addedBy || '').trim().toLowerCase();
+      (byName[nm] = byName[nm] || []).push(d);
+      const dk = stDayKey(d);
+      perDay[dk] = (perDay[dk] || 0) + 1;
+      if (!lastByKey[k] || d > lastByKey[k]) lastByKey[k] = d;
+    });
+  });
+  return { byName: byName, lastByKey: lastByKey, perDay: perDay };
+}
+
+function stEmpUser(id) {
+  return (allWebUsers || []).find(u => String(u.employeeId || '').trim() === String(id)) || null;
+}
+
+function stBuildRows(vi) {
+  const month = nplLocalDateStr().slice(0, 7);
+  const now = new Date();
+  const dayOfMonth = now.getDate();
+  const ids = {};
+  allNplStats.filter(r => r.date.slice(0, 7) === month).forEach(r => { ids[r.employeeId] = true; });
+  getNplGroupsCached().forEach(g => { const id = String(allNplAssignments[g.key] || '').trim(); if (id) ids[id] = true; });
+  delete ids[''];
+  delete ids['9999'];
+  const todayKey = stDayKey(now);
+  const rows = Object.keys(ids).map(function(id) {
+    const s = computeNplStats(id);
+    const groups = getNplGroupsCached().filter(g => String(allNplAssignments[g.key] || '').trim() === id);
+    const user = stEmpUser(id);
+    const nameKey = String((user && user.fullName) || '').trim().toLowerCase();
+    const vis = (nameKey && vi.byName[nameKey]) || [];
+    const visMonth = vis.filter(d => stDayKey(d).slice(0, 7) === month).length;
+    const visToday = vis.filter(d => stDayKey(d) === todayKey).length;
+    const last = vis.reduce((m, d) => (!m || d > m) ? d : m, null);
+    const cats = { fpd: 0, spd: 0, tpd: 0, exp: 0, npl: 0 };
+    let noContact = 0, noSurvey = 0;
+    const weekAgo = Date.now() - 7 * 86400000;
+    groups.forEach(function(g) {
+      const c = nplRiskCategory(g);
+      if (c) cats[c]++;
+      if (g.maxDays >= 60 && g.maxDays < 90) { /* ожидаемый NPL считаем по дням */ }
+      const lv = vi.lastByKey[g.key];
+      if (!lv || lv.getTime() < weekAgo) noContact++;
+    });
+    const expNpl = groups.filter(g => g.maxDays >= 60 && g.maxDays < 90).length;
+    const pct = s.assigned ? s.closed / s.assigned * 100 : 0;
+    return {
+      id: id, user: user, name: nplCollectorLabel(id), s: s, pct: pct, groups: groups.length,
+      expNpl: expNpl, cats: cats, noLegal: getNplNoLegalGroups(id).length, noContact: noContact,
+      visMonth: visMonth, visToday: visToday, visAvg: dayOfMonth ? visMonth / dayOfMonth : 0, last: last
+    };
+  }).filter(r => r.s.hasData || r.groups).sort((a, b) => (b.pct - a.pct) || (b.s.assigned - a.s.assigned));
+  return rows;
+}
+
+function stAvatar(r, size) {
+  const photo = r.user && r.user.photoUrl;
+  const ago = stAgo(r.last);
+  const inner = photo
+    ? `<img src="${safe(photo)}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+    : `<span>${safe(vzInitials(r.name) || '•')}</span>`;
+  return `<span class="st-ph" style="width:${size}px;height:${size}px;font-size:${Math.round(size / 3.3)}px;">${inner}<i class="st-dot" style="background:${ago.dot};"></i></span>`;
+}
+
+// Простые SVG-графики (без внешних библиотек).
+function stChart(labels, bars, line, opts) {
+  opts = opts || {};
+  const W = 330, H = 150, pl = 30, pr = 6, pt = 8, pb = 20;
+  const n = labels.length;
+  if (!n) return '<div style="font-size:12px;color:var(--muted);padding:30px 0;text-align:center;">Данных пока нет</div>';
+  const all = (bars || []).concat(line || []).concat(opts.ref ? [opts.ref] : []);
+  let max = Math.max.apply(null, all.concat([1]));
+  let min = opts.min !== undefined ? opts.min : 0;
+  if (max === min) max = min + 1;
+  const iw = W - pl - pr, ih = H - pt - pb;
+  const x = i => pl + iw * (n === 1 ? 0.5 : (i + 0.5) / n);
+  const y = v => pt + ih - (v - min) / (max - min) * ih;
+  let g = '';
+  [0, 0.5, 1].forEach(function(t) {
+    const v = min + (max - min) * t;
+    g += `<line x1="${pl}" x2="${W - pr}" y1="${y(v)}" y2="${y(v)}" stroke="#E4E7EC"/><text x="${pl - 4}" y="${y(v) + 3}" font-size="9" text-anchor="end" fill="#8A93A0">${Math.round(v)}</text>`;
+  });
+  const bw = Math.min(22, iw / n * 0.65);
+  (bars || []).forEach(function(v, i) { g += `<rect x="${x(i) - bw / 2}" y="${y(v)}" width="${bw}" height="${Math.max(0, y(min) - y(v))}" rx="3" fill="${opts.barColor || '#2F7BD9'}"/>`; });
+  if (opts.ref) g += `<line x1="${pl}" x2="${W - pr}" y1="${y(opts.ref)}" y2="${y(opts.ref)}" stroke="#8A93A0" stroke-dasharray="4 3"/>`;
+  if (line && line.length) {
+    g += `<polyline fill="none" stroke="${opts.lineColor || '#E39B16'}" stroke-width="2" stroke-linejoin="round" points="${line.map((v, i) => x(i) + ',' + y(v)).join(' ')}"/>`;
+    line.forEach(function(v, i) { g += `<circle cx="${x(i)}" cy="${y(v)}" r="2.5" fill="${opts.lineColor || '#E39B16'}"/>`; });
+  }
+  const step = Math.ceil(n / 8);
+  labels.forEach(function(l, i) { if (i % step === 0 || i === n - 1) g += `<text x="${x(i)}" y="${H - 6}" font-size="9" text-anchor="middle" fill="#8A93A0">${l}</text>`; });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${safe(opts.aria || 'график')}">${g}</svg>`;
+}
+
+function stDetailHtml(r) {
+  const c = r.cats;
+  const tile = (l, v) => `<div class="st-mini"><span>${l}</span><b>${v}</b></div>`;
+  return `
+    <div class="st-det">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        ${stAvatar(r, 56)}
+        <div style="flex:1;min-width:170px;">
+          <div style="font-size:15px;font-weight:800;">${safe(r.name)}</div>
+          <div style="font-size:12px;color:var(--muted);">ID ${safe(r.id)}${r.user ? ' · ' + safe(r.user.login) : ''} · активность: ${stAgo(r.last).txt}</div>
+        </div>
+      </div>
+      <div class="st-minis">
+        ${tile('FPD / SPD / TPD', c.fpd + ' / ' + c.spd + ' / ' + c.tpd)}
+        ${tile('Ожид. NPL (60–89)', r.expNpl)}
+        ${tile('NPL 90+', c.npl)}
+        ${tile('Визитов за месяц', r.visMonth)}
+        ${tile('Нет суда / МИБ', r.noLegal)}
+        ${tile('Без контакта 7+ дн.', r.noContact)}
+      </div>
+      ${renderNplStatsCard(r.id)}
+      ${renderNplNoLegalCard(getNplNoLegalGroups(r.id))}
+    </div>`;
+}
+
+function exportNplStatsExcel() {
+  if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
+  const rows = stBuildRows(stBuildVisitIndex());
+  const head = ['№', 'Взыскатель', 'ID', 'План (назначено)', 'Факт (осталось)', 'Закрыто', '% закрытия', 'Закрыто сегодня', 'Вернули, млн', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+', 'Визитов за месяц', 'Визитов в день', 'Без контакта 7+ дн.', 'Без суда/МИБ', 'Последняя активность'];
+  const data = rows.map((r, i) => [i + 1, r.name, r.id, r.s.assigned, r.s.open, r.s.closed, Math.round(r.pct * 10) / 10, r.s.today.closed, Math.round(r.s.repaid / 1e5) / 10, r.expNpl, r.cats.fpd, r.cats.spd, r.cats.tpd, r.cats.npl, r.visMonth, Math.round(r.visAvg * 10) / 10, r.noContact, r.noLegal, r.last ? r.last.toLocaleDateString('ru-RU') : '']);
+  const ws = XLSX.utils.aoa_to_sheet([head].concat(data));
+  ws['!cols'] = head.map((h, i) => ({ wch: i === 1 ? 34 : Math.max(10, h.length + 2) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Статистика');
+  XLSX.writeFile(wb, 'Statistika_vzyskateley_' + nplLocalDateStr() + '.xlsx');
 }
 
 function renderNplStatsPanel() {
   const box = document.getElementById('nplStatsBody');
   if (!box) return;
+  const vi = stBuildVisitIndex();
+  const rows = stBuildRows(vi);
+  const now = new Date();
   const month = nplLocalDateStr().slice(0, 7);
-  const ids = {};
-  allNplStats.filter(r => r.date.slice(0, 7) === month).forEach(r => { ids[r.employeeId] = true; });
-  getNplGroupsCached().forEach(g => { const id = String(allNplAssignments[g.key] || '').trim(); if (id) ids[id] = true; });
+  const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 
-  const rows = Object.keys(ids).map(id => {
-    const s = computeNplStats(id);
-    return { id: id, s: s, noLegal: getNplNoLegalGroups(id).length };
-  }).filter(r => r.s.hasData || r.noLegal).sort((a, b) => b.s.assigned - a.s.assigned);
-
+  const T = rows.reduce((a, r) => {
+    a.assigned += r.s.assigned; a.open += r.s.open; a.closed += r.s.closed; a.today += r.s.today.closed;
+    a.arr += r.s.today.arrivals; a.visToday += r.visToday; a.visMonth += r.visMonth; return a;
+  }, { assigned: 0, open: 0, closed: 0, today: 0, arr: 0, visToday: 0, visMonth: 0 });
+  const pct = T.assigned ? T.closed / T.assigned * 100 : 0;
+  const forecast = T.assigned ? Math.min(100, T.closed / Math.max(1, now.getDate()) * daysInMonth / T.assigned * 100) : 0;
   const total = computeNplStats(null);
-  const totalNoLegal = getNplNoLegalGroups(null).length;
-  const cell = 'padding:7px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;';
-  const body = rows.map(r => `
-      <tr class="clickable-row" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')" style="${nplStatsSelectedEmp === r.id ? 'background:#F3F6FF;' : ''}">
-        <td style="padding:7px 4px;border-bottom:1px solid var(--line);">${safe(nplCollectorLabel(r.id))}</td>
-        <td style="${cell}">${r.s.assigned}</td><td style="${cell}">${r.s.closed}</td>
-        <td style="${cell}">${nplFmtPct(r.s.pctClients)}</td><td style="${cell}">${nplFmtPct(r.s.pctSum)}</td><td style="${cell}">${r.noLegal}</td>
-      </tr>`).join('');
+  const yKey = stDayKey(new Date(Date.now() - 86400000));
+  const yClosed = (total.daily.find(d => d.date === yKey) || { closed: 0 }).closed;
+  const perDayClosed = T.closed / Math.max(1, now.getDate());
 
-  const detail = nplStatsSelectedEmp === null ? '' : `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px;">
-        <h3 style="font-size:15px;margin:0;">${safe(nplCollectorLabel(nplStatsSelectedEmp))}</h3>
-        <button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="selectNplStatsEmp('__all__')">Все взыскатели</button>
+  // графики за месяц
+  const dayMap = {};
+  allNplStats.filter(r => r.date.slice(0, 7) === month).forEach(r => {
+    const d = dayMap[r.date] || (dayMap[r.date] = { closed: 0, end: 0 });
+    d.closed += r.closed; d.end += r.endCount;
+  });
+  const dates = Object.keys(dayMap).sort();
+  const labels = dates.map(d => d.slice(8, 10));
+  const chartA = stChart(labels, null, dates.map(d => dayMap[d].end), { ref: T.assigned, lineColor: '#2F7BD9', min: dates.length ? Math.max(0, Math.floor(Math.min.apply(null, dates.map(d => dayMap[d].end)) * 0.9)) : 0, aria: 'Остаток клиентов в просрочке' });
+  const chartB = stChart(labels, dates.map(d => dayMap[d].closed), dates.map(d => vi.perDay[d] || 0), { barColor: '#2F7BD9', lineColor: '#E39B16', aria: 'Закрыто клиентов и визиты по дням' });
+
+  const kpi = (l, v, sub, color) => `<div class="st-k"><span>${l}</span><b${color ? ' style="color:' + color + ';"' : ''}>${v}</b><span>${sub}</span></div>`;
+  const kpis = `
+    <div class="st-kpis">
+      ${kpi('План (назначено)', T.assigned, 'клиентов за ' + monthNames[now.getMonth()])}
+      ${kpi('Факт (осталось)', T.open, 'в просрочке сейчас')}
+      ${kpi('Закрыто', T.closed, nplFmtPct(pct) + '% · ' + nplFmtPct(perDayClosed) + ' в день', '#1E7B34')}
+      ${kpi('Закрыто сегодня', T.today, 'вчера ' + yClosed + ' · новых ' + T.arr)}
+      ${kpi('Прогноз к концу месяца', Math.round(forecast) + '%', 'при текущем темпе')}
+      ${kpi('Визитов сегодня', T.visToday, 'за месяц ' + T.visMonth)}
+    </div>`;
+
+  const body = rows.map(function(r, i) {
+    const tint = r.s.assigned && r.pct < 10 ? 'st-red' : (r.s.assigned && r.pct < 25 ? 'st-amb' : '');
+    const barColor = r.pct < 10 ? '#D93F2F' : r.pct < 25 ? '#E39B16' : '#1E7B34';
+    const ago = stAgo(r.last);
+    const sel = nplStatsSelectedEmp === r.id;
+    return `
+      <div class="st-r ${tint}" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')">
+        <div class="st-n">${i + 1}</div>
+        <div class="st-who">${stAvatar(r, 46)}<div style="min-width:0;"><div class="st-nm">${safe(r.name)}</div><div class="st-sb">Асака банк${r.user && r.user.photoUrl ? '' : ' · нет фото'}</div></div></div>
+        <div>${r.s.assigned}</div><div>${r.s.open}</div><div style="color:#1E7B34;font-weight:700;">${r.s.closed}</div>
+        <div class="st-pct"><div class="st-bar"><i style="width:${Math.min(100, Math.max(2, r.pct))}%;background:${barColor};"></i></div>${nplFmtPct(r.pct)}%</div>
+        <div>${stMln(r.s.repaid)}</div>
+        <div class="${r.expNpl > 10 ? 'bad' : ''}">${r.expNpl}</div>
+        <div class="${r.visAvg < 1 ? 'bad' : ''}">${nplFmtPct(r.visAvg)}</div>
+        <div class="${r.noContact > 10 ? 'bad' : ''}">${r.noContact}</div>
+        <div class="${ago.cls}">${ago.txt}</div>
       </div>
-      ${renderNplStatsCard(nplStatsSelectedEmp)}
-      ${renderNplNoLegalCard(getNplNoLegalGroups(nplStatsSelectedEmp))}`;
+      ${sel ? stDetailHtml(r) : ''}`;
+  }).join('');
 
   box.innerHTML = `
-    <div style="overflow-x:auto;">
-      <table style="width:100%;min-width:420px;font-size:13px;border-collapse:collapse;">
-        <thead><tr style="color:var(--muted);">
-          <th style="text-align:left;font-weight:700;padding:6px 4px;border-bottom:1px solid var(--line);">Взыскатель</th>
-          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Назнач.</th>
-          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Закр.</th>
-          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">% кл.</th>
-          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">% сумм</th>
-          <th style="text-align:right;font-weight:700;border-bottom:1px solid var(--line);">Без юр.</th>
-        </tr></thead>
-        <tbody>${body || '<tr><td colspan="6" style="padding:12px 4px;color:var(--muted);">Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.</td></tr>'}</tbody>
-        <tfoot><tr style="font-weight:800;">
-          <td style="padding:7px 4px;">Всего</td>
-          <td style="text-align:right;">${total.assigned}</td><td style="text-align:right;">${total.closed}</td>
-          <td style="text-align:right;">${nplFmtPct(total.pctClients)}</td><td style="text-align:right;">${nplFmtPct(total.pctSum)}</td><td style="text-align:right;">${totalNoLegal}</td>
-        </tr></tfoot>
-      </table>
+    <style>
+      .st-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+      .st-k{background:#F5F7FA;border-radius:12px;padding:12px 14px}.st-k b{display:block;font-size:24px;font-weight:800;margin:2px 0}.st-k span{font-size:12px;color:var(--muted)}
+      .st-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px}
+      .st-chart{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff}
+      .st-chart h4{margin:0 0 4px;font-size:13px}.st-lg{font-size:11px;color:var(--muted);margin-bottom:4px}
+      .st-lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 8px}.st-lg i:first-child{margin-left:0}
+      .st-table{border:1px solid var(--line);border-radius:14px;overflow-x:auto;background:#fff}
+      .st-in{min-width:1020px}
+      .st-r{display:grid;grid-template-columns:34px minmax(220px,2fr) repeat(3,minmax(54px,.7fr)) minmax(120px,1.2fr) repeat(5,minmax(62px,.8fr));align-items:center;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+      .st-r>div{padding:9px 6px;text-align:right}.st-r:hover{background:#F8FAFF}
+      .st-n{text-align:center!important;color:var(--muted);font-weight:800;font-size:15px}
+      .st-who{display:flex!important;gap:10px;align-items:center;text-align:left!important}
+      .st-nm{font-weight:800;font-size:14px;line-height:1.25}.st-sb{font-size:12px;color:var(--muted)}
+      .st-ph{position:relative;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid #D7DCE3;background:#E8F0FE;color:#1F4E9C;font-weight:800;flex:none}
+      .st-dot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;border:2px solid #fff}
+      .st-hd{color:var(--muted);font-size:12px;font-weight:700;border-bottom:2px solid #111;cursor:default}.st-hd:hover{background:none}
+      .st-red{background:#FDECEA}.st-amb{background:#FFF6E0}
+      .st-pct{display:flex!important;align-items:center;gap:6px}.st-bar{flex:1;height:6px;border-radius:3px;background:#E4E7EC;overflow:hidden}.st-bar i{display:block;height:100%}
+      .bad{color:#C0392B;font-weight:800}
+      .st-det{padding:14px 16px;background:#F7F9FC;border-bottom:1px solid var(--line);cursor:default}
+      .st-minis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+      .st-mini{background:#fff;border-radius:10px;padding:8px 10px;border:1px solid var(--line)}.st-mini b{display:block;font-size:16px}.st-mini span{font-size:11px;color:var(--muted)}
+    </style>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="font-size:13px;color:var(--muted);">За ${monthNames[now.getMonth()]} ${now.getFullYear()}. План — назначено клиентов, факт — осталось в просрочке, закрыто — вышли из просрочки.</div>
+      <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-top:6px;">Нажмите на строку, чтобы открыть статистику взыскателя. «% кл.» — закрыто от назначенных, «% сумм» — погашено от суммы просрочки.</div>
-    ${detail}`;
+    ${kpis}
+    <div class="st-charts">
+      <div class="st-chart"><h4>Клиентов в просрочке: план и остаток</h4><div class="st-lg"><i style="background:#8A93A0"></i>План (пунктир)<i style="background:#2F7BD9"></i>Осталось</div>${chartA}</div>
+      <div class="st-chart"><h4>Закрыто клиентов и визиты по дням</h4><div class="st-lg"><i style="background:#2F7BD9"></i>Закрыто<i style="background:#E39B16"></i>Визиты</div>${chartB}</div>
+    </div>
+    <div class="st-table"><div class="st-in">
+      <div class="st-r st-hd"><div class="st-n">№</div><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План</div><div>Факт</div><div>Закрыто</div><div>% закрытия</div><div>Вернули, млн</div><div>Ожид. NPL</div><div>Визитов/день</div><div>Без контакта 7+</div><div>Активность</div></div>
+      ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.</div>'}
+    </div></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Нажмите на строку — раскроется карточка сотрудника. Точка на фото: зелёная — активность сегодня, жёлтая — вчера, красная — 2+ дня или нет данных. Активность и визиты считаются по визитам, подтверждённым в CRM. Розовая строка — закрытие ниже 10%, жёлтая — ниже 25%.</div>`;
 }
 
 // ---- Подтверждение при резком уменьшении числа клиентов в файле ----
@@ -9683,7 +9889,7 @@ async function copyAndOpenTelegram(phone, msgId) {
 // подтягивается по клику из того же справочника, что и в карточке клиента
 // (allNplCollectors — из листа "взыскатель" файла, allWebUsers — запасной
 // вариант по списку пользователей CRM с ролью "Взыскатель").
-function nplCollectorLabel(employeeId) {
+function nplCollectorNameRaw(employeeId) {
   const id = String(employeeId || '').trim();
   if (!id) return '';
   return allNplCollectors[id]
@@ -9700,7 +9906,7 @@ function renderNplListCollectorCell(group) {
 function revealNplListCollector(el, employeeIdEnc, evt) {
   if (evt) evt.stopPropagation();
   const employeeId = decodeURIComponent(employeeIdEnc);
-  const name = nplCollectorLabel(employeeId);
+  const name = nplCollectorNameRaw(employeeId);
   el.innerHTML = name ? safe(name) : ('ID ' + safe(employeeId) + ' — не найден в справочнике');
   el.style.color = 'var(--text)';
   el.style.fontWeight = '400';
