@@ -7694,6 +7694,13 @@ function getNplParserWorker() {
         const acctLikeCols = [];
         let loanKindColIdx = -1, daysNewColIdx = -1;
         let totalDebtColIdx = -1, totalNplColIdx = -1, currentBalanceColIdx = -1, revisedBalanceColIdx = -1, overdueBalanceColIdx = -1;
+        // Дни просрочки: только целое 0..3650. Дата (Date или Excel-серийный номер,
+        // например 46301 = 06.10.2026), текст и мусор в эту колонку не должны попадать.
+        const cleanDays = (v) => {
+          if (v instanceof Date || v === null || v === undefined || v === '') return 0;
+          const n = Number(v);
+          return (isFinite(n) && n > 0 && n <= 3650) ? Math.round(n) : 0;
+        };
         let daysOverdueColIdx = -1, totalInterestColIdx = -1, accruedInterestColIdx = -1, overdueInterestColIdx = -1;
         let daysOverdueInterestColIdx = -1, reserveColIdx = -1;
         if (headerRowIdx !== -1) {
@@ -7823,7 +7830,7 @@ function getNplParserWorker() {
           // только клиенты с просрочкой; без этого в NPL попадут и все, у кого
           // просрочки нет.
           const hasOverdue = (Number(row[overdueBalanceColIdx]) || 0) + (Number(row[overdueInterestColIdx]) || 0) > 0
-            || (Number(row[daysOverdueColIdx]) || 0) > 0 || (Number(row[daysOverdueInterestColIdx]) || 0) > 0;
+            || cleanDays(row[daysOverdueColIdx]) > 0 || cleanDays(row[daysOverdueInterestColIdx]) > 0;
           portfolio.loans++;
           portfolio.totalDebt += Number(row[totalDebtColIdx]) || 0;
           const pfVal = portfolioColIdx !== -1 ? (Number(row[portfolioColIdx]) || 0) : (Number(row[totalDebtColIdx]) || 0);
@@ -7852,11 +7859,11 @@ function getNplParserWorker() {
             currentBalance: Number(row[currentBalanceColIdx]) || 0,
             revisedBalance: Number(row[revisedBalanceColIdx]) || 0,
             overdueBalance: Number(row[overdueBalanceColIdx]) || 0,
-            daysOverdue: Number(row[daysOverdueColIdx]) || 0,
+            daysOverdue: cleanDays(row[daysOverdueColIdx]),
             totalInterest: Number(row[totalInterestColIdx]) || 0,
             accruedInterest: Number(row[accruedInterestColIdx]) || 0,
             overdueInterest: Number(row[overdueInterestColIdx]) || 0,
-            daysOverdueInterest: Number(row[daysOverdueInterestColIdx]) || 0,
+            daysOverdueInterest: cleanDays(row[daysOverdueInterestColIdx]),
             reserve: Number(row[reserveColIdx]) || 0,
             officer: officerColIdx !== -1 ? String(row[officerColIdx] || '').trim() : '',
             courtOrderNumber: courtNumColIdx !== -1 ? String(row[courtNumColIdx] || '').trim() : '',
@@ -8374,8 +8381,12 @@ async function exportNplSvodExcel() {
 
 function setNplDashFilter(f) { nplDashFilter = f; nplDashPage = 1; renderNplPage(); }
 
+function nplSaneDays(v) {
+  const n = Number(v);
+  return (isFinite(n) && n > 0 && n <= 3650) ? n : 0;
+}
 function nplLoanDays(l) {
-  return Math.max(Number(l.daysOverdue) || 0, Number(l.daysOverdueInterest) || 0);
+  return Math.max(nplSaneDays(l.daysOverdue), nplSaneDays(l.daysOverdueInterest));
 }
 
 // Цветной бейдж анкеты по дням просрочки (пороги подтверждены):
@@ -8425,8 +8436,8 @@ function groupNplByClient(loans) {
     g.overdueInterestSum += Number(l.overdueInterest) || 0;
     g.reserveSum += Number(l.reserve) || 0;
     g.portfolioSum += Number(l.portfolio) || 0;
-    g.maxDaysOverdue = Math.max(g.maxDaysOverdue, Number(l.daysOverdue) || 0);
-    g.maxDaysOverdueInterest = Math.max(g.maxDaysOverdueInterest, Number(l.daysOverdueInterest) || 0);
+    g.maxDaysOverdue = Math.max(g.maxDaysOverdue, nplSaneDays(l.daysOverdue));
+    g.maxDaysOverdueInterest = Math.max(g.maxDaysOverdueInterest, nplSaneDays(l.daysOverdueInterest));
     g.maxDays = Math.max(g.maxDays, nplLoanDays(l));
   });
   Object.values(map).forEach(g => {
@@ -10295,11 +10306,11 @@ function renderNplClientDetailBody(group) {
           <div class="info-card"><div class="info-label">Текущий остаток</div><div class="info-value">${formatMoney(l.currentBalance)}</div></div>
           <div class="info-card"><div class="info-label">Пересмотренный остаток</div><div class="info-value">${formatMoney(l.revisedBalance)}</div></div>
           <div class="info-card"><div class="info-label">Просроченный остаток ОД</div><div class="info-value">${formatMoney(l.overdueBalance)}</div></div>
-          <div class="info-card"><div class="info-label">Дни просрочки</div><div class="info-value">${safe(l.daysOverdue)}</div></div>
+          <div class="info-card"><div class="info-label">Дни просрочки</div><div class="info-value">${safe(nplSaneDays(l.daysOverdue))}</div></div>
           <div class="info-card"><div class="info-label">Всего проценты</div><div class="info-value">${formatMoney(l.totalInterest)}</div></div>
           <div class="info-card"><div class="info-label">Начисленные проценты</div><div class="info-value">${formatMoney(l.accruedInterest)}</div></div>
           <div class="info-card"><div class="info-label">Просроченный остаток %</div><div class="info-value">${formatMoney(l.overdueInterest)}</div></div>
-          <div class="info-card"><div class="info-label">Дни просроч. процентов</div><div class="info-value">${safe(l.daysOverdueInterest)}</div></div>
+          <div class="info-card"><div class="info-label">Дни просроч. процентов</div><div class="info-value">${safe(nplSaneDays(l.daysOverdueInterest))}</div></div>
           <div class="info-card npl-danger-card"><div class="info-label">Всего просрочка</div><div class="info-value">${formatMoney(loanOverdueAll)}</div></div>
           <div class="info-card"><div class="info-label">Резерв</div><div class="info-value">${formatMoney(l.reserve)}</div></div>
           <div class="info-card"><div class="info-label">Ответственный</div><div class="info-value">${safe(l.officer) || '—'}</div></div>
