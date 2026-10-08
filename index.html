@@ -9198,52 +9198,99 @@ function stEmpUser(id) {
 }
 
 let stFileHasIds = false;
+let stTab = 'all';
+let stArchiveAsked = false;
+function stPf(g) { return Number(g.currentBalanceSum) || Number(g.portfolioSum) || Number(g.totalDebtSum) || 0; }
+function stMoney(v) {
+  v = Number(v) || 0;
+  if (Math.abs(v) >= 1e9) return (Math.round(v / 1e8) / 10).toString().replace('.', ',') + ' млрд';
+  if (Math.abs(v) >= 1e6) return (Math.round(v / 1e5) / 10).toString().replace('.', ',') + ' млн';
+  return Math.round(v / 1e3).toString().replace('.', ',') + ' тыс';
+}
+function stPctCls(p) { return p >= 35 ? 'g' : p >= 15 ? 'y' : 'rd'; }
+function stScoreCol(sc) { return sc >= 70 ? ['#3B6D11', '#27500A'] : sc >= 40 ? ['#BA7517', '#633806'] : ['#A32D2D', '#791F1F']; }
+function stArchDate(a) { const d = String(a.closedAt || '').split('.'); return d.length === 3 ? d[2] + '-' + d[1] + '-' + d[0] : ''; }
+
 function stBuildRows(vi) {
   stFileHasIds = (allNplLoans || []).some(l => String(l.employeeId || '').trim());
   const month = nplLocalDateStr().slice(0, 7);
-  const now = new Date();
-  const dayOfMonth = now.getDate();
+  const todayKey = stDayKey(new Date());
+  const dayOfMonth = new Date().getDate();
   const ids = {};
   allNplStats.filter(r => r.date.slice(0, 7) === month).forEach(r => { ids[r.employeeId] = true; });
   getNplGroupsCached().forEach(g => { const id = String(allNplAssignments[g.key] || '').trim(); if (id) ids[id] = true; });
   delete ids[''];
   delete ids['9999'];
-  const todayKey = stDayKey(now);
-  const rows = Object.keys(ids).map(function(id) {
+
+  // закрытые клиенты месяца по архиву: количество и портфель (по взыскателю)
+  const archBy = {};
+  Object.keys(allNplArchive || {}).forEach(function(k) {
+    const a = allNplArchive[k];
+    if (!a || a.status !== 'closed') return;
+    const d = stArchDate(a);
+    if (d.slice(0, 7) !== month) return;
+    const e = archBy[a.employeeId] || (archBy[a.employeeId] = { cnt: 0, pf: 0, dayCnt: 0, dayPf: 0 });
+    e.cnt++; e.pf += Number(a.lastDebt) || 0;
+    if (d === todayKey) { e.dayCnt++; e.dayPf += Number(a.lastDebt) || 0; }
+  });
+  const anyVisits = Object.keys(vi.byName).length > 0;
+  const weekAgo = Date.now() - 7 * 86400000;
+
+  return Object.keys(ids).map(function(id) {
     const s = computeNplStats(id);
-    // Клиент взыскателя: в последней выгрузке за ним закреплён его ID, либо
-    // назначен вручную (старые назначения из прежних выгрузок не считаем).
+    const user = stEmpUser(id);
     const groups = getNplGroupsCached().filter(g => {
       if (String(allNplAssignments[g.key] || '').trim() !== id) return false;
-      if (!stFileHasIds) return true; // выгрузка загружена до обновления — ID в ней не сохранены
+      if (!stFileHasIds) return true;
       if (g.loans.some(l => String(l.employeeId || '').trim() === id)) return true;
       return !!allNplAssignMeta && allNplAssignMeta[g.key] === 'm';
     });
-    const user = stEmpUser(id);
     const nameKey = String((user && user.fullName) || '').trim().toLowerCase();
     const vis = (nameKey && vi.byName[nameKey]) || [];
     const visMonth = vis.filter(d => stDayKey(d).slice(0, 7) === month).length;
     const visToday = vis.filter(d => stDayKey(d) === todayKey).length;
     const last = vis.reduce((m, d) => (!m || d > m) ? d : m, null);
+
+    let openPf = 0, noContact = 0, nplCnt = 0, g90 = 0, g90NoLegal = 0, loansCnt = 0;
     const cats = { fpd: 0, spd: 0, tpd: 0, exp: 0, npl: 0 };
-    let noContact = 0, noSurvey = 0;
-    const weekAgo = Date.now() - 7 * 86400000;
     groups.forEach(function(g) {
+      openPf += stPf(g);
+      loansCnt += g.loans.length;
       const c = nplRiskCategory(g);
       if (c) cats[c]++;
-      if (g.maxDays >= 60 && g.maxDays < 90) { /* ожидаемый NPL считаем по дням */ }
+      if (nplIsNplClient(g)) nplCnt++;
+      if (g.maxDays >= 90) { g90++; if (!nplHasLegalStatus(g)) g90NoLegal++; }
       const lv = vi.lastByKey[g.key];
       if (!lv || lv.getTime() < weekAgo) noContact++;
     });
-    const expNpl = groups.filter(g => g.maxDays >= 60 && g.maxDays < 90).length;
-    const pct = s.assigned ? s.closed / s.assigned * 100 : 0;
+    const ar = archBy[id] || { cnt: 0, pf: 0, dayCnt: 0, dayPf: 0 };
+    const planPf = openPf + ar.pf;
+    const planCnt = Math.max(s.assigned, groups.length + s.closed);
+    const pctCl = planCnt ? s.closed / planCnt * 100 : 0;
+    const pctPf = planPf ? ar.pf / planPf * 100 : 0;
+    const nplShare = groups.length ? nplCnt / groups.length * 100 : 0;
+    const visAvg = dayOfMonth ? visMonth / dayOfMonth : 0;
+
+    // Общий балл 0–100
+    const parts = [
+      { w: 40, v: Math.min(1, pctPf / 40) },
+      { w: 15, v: groups.length ? 1 - noContact / groups.length : 1 },
+      { w: 15, v: 1 - nplShare / 100 },
+      { w: 10, v: g90 ? 1 - g90NoLegal / g90 : 1 }
+    ];
+    if (anyVisits) parts.push({ w: 20, v: Math.min(1, visAvg / 3) });
+    const wsum = parts.reduce((a, p) => a + p.w, 0);
+    const score = Math.round(parts.reduce((a, p) => a + p.w * p.v, 0) / wsum * 100);
+
     return {
-      id: id, user: user, name: nplCollectorLabel(id), s: s, pct: pct, groups: groups.length,
-      expNpl: expNpl, cats: cats, noLegal: getNplNoLegalGroups(id).length, noContact: noContact,
-      visMonth: visMonth, visToday: visToday, visAvg: dayOfMonth ? visMonth / dayOfMonth : 0, last: last
+      id: id, user: user, name: nplCollectorLabel(id), s: s, planCnt: planCnt, groups: groups.length, loansCnt: loansCnt,
+      openPf: openPf, planPf: planPf, retCnt: s.closed, retPf: ar.pf, dayCnt: s.today.closed, dayPf: ar.dayPf,
+      pct: pctCl, pctCl: pctCl, pctPf: pctPf, nplShare: nplShare, nplCnt: nplCnt,
+      cats: cats, expNpl: groups.filter(g => g.maxDays >= 60 && g.maxDays < 90).length,
+      g90NoLegal: g90NoLegal, noLegal: getNplNoLegalGroups(id).length, noContact: noContact,
+      visMonth: visMonth, visToday: visToday, visAvg: visAvg, last: last, score: score, anyVisits: anyVisits
     };
-  }).filter(r => r.s.hasData || r.groups).sort((a, b) => (b.pct - a.pct) || (b.s.assigned - a.s.assigned));
-  return rows;
+  }).filter(r => r.s.hasData || r.groups).sort((a, b) => (b.score - a.score) || (b.pctPf - a.pctPf));
 }
 
 function stAvatar(r, size) {
@@ -9302,7 +9349,7 @@ function stDetailHtml(r) {
         ${tile('Ожид. NPL (60–89)', r.expNpl)}
         ${tile('NPL 90+', c.npl)}
         ${tile('Визитов за месяц', r.visMonth)}
-        ${tile('Нет суда / МИБ', r.noLegal)}
+        ${tile('Нет суда / МИБ (60+)', r.noLegal)}
         ${tile('Без контакта 7+ дн.', r.noContact)}
       </div>
       ${renderNplStatsCard(r.id)}
@@ -9310,13 +9357,16 @@ function stDetailHtml(r) {
     </div>`;
 }
 
+function setNplStatsTab(t) { stTab = t; renderNplStatsPanel(); }
+
 function exportNplStatsExcel() {
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
   const rows = stBuildRows(stBuildVisitIndex()).filter(r => r.groups > 0);
-  const head = ['№', 'Взыскатель', 'ID', 'План (назначено)', 'Факт (осталось)', 'Закрыто', '% закрытия', 'Закрыто сегодня', 'Вернули, млн', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+', 'Визитов за месяц', 'Визитов в день', 'Без контакта 7+ дн.', 'Без суда/МИБ', 'Последняя активность'];
-  const data = rows.map((r, i) => [i + 1, r.name, r.id, r.s.assigned, r.s.open, r.s.closed, Math.round(r.pct * 10) / 10, r.s.today.closed, Math.round(r.s.repaid / 1e5) / 10, r.expNpl, r.cats.fpd, r.cats.spd, r.cats.tpd, r.cats.npl, r.visMonth, Math.round(r.visAvg * 10) / 10, r.noContact, r.noLegal, r.last ? r.last.toLocaleDateString('ru-RU') : '']);
+  const head = ['№', 'Взыскатель', 'ID', 'План, клиентов', 'План, портфель (млн)', 'Возвращено, клиентов', 'Возвращено, портфель (млн)', '% закрытия по клиентам', '% закрытия по портфелю', 'За день, клиентов', 'За день, портфель (млн)', 'Визитов в день', '90+ без МИБ и суда', 'Без контакта 7+ дн.', 'Последняя активность', 'Доля NPL, %', 'Общий балл', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+'];
+  const mln = v => Math.round((Number(v) || 0) / 1e5) / 10;
+  const data = rows.map((r, i) => [i + 1, r.name, r.id, r.planCnt, mln(r.planPf), r.retCnt, mln(r.retPf), Math.round(r.pctCl * 10) / 10, Math.round(r.pctPf * 10) / 10, r.dayCnt, mln(r.dayPf), Math.round(r.visAvg * 10) / 10, r.g90NoLegal, r.noContact, r.last ? r.last.toLocaleDateString('ru-RU') : '', Math.round(r.nplShare * 10) / 10, r.score, r.expNpl, r.cats.fpd, r.cats.spd, r.cats.tpd, r.cats.npl]);
   const ws = XLSX.utils.aoa_to_sheet([head].concat(data));
-  ws['!cols'] = head.map((h, i) => ({ wch: i === 1 ? 34 : Math.max(10, h.length + 2) }));
+  ws['!cols'] = head.map((h, i) => ({ wch: i === 1 ? 34 : Math.max(11, Math.min(24, h.length + 2)) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Статистика');
   XLSX.writeFile(wb, 'Statistika_vzyskateley_' + nplLocalDateStr() + '.xlsx');
@@ -9325,23 +9375,37 @@ function exportNplStatsExcel() {
 function renderNplStatsPanel() {
   const box = document.getElementById('nplStatsBody');
   if (!box) return;
+  // Сумма «возвращено» берётся из архива закрытых клиентов — подгружаем один раз.
+  if (!nplArchiveLoaded && !stArchiveAsked) {
+    stArchiveAsked = true;
+    ensureNplArchive().then(function() { renderNplStatsPanel(); }).catch(function(e) { console.error(e); });
+  }
   const vi = stBuildVisitIndex();
   const rows = stBuildRows(vi);
   const now = new Date();
   const month = nplLocalDateStr().slice(0, 7);
   const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const activeRows = rows.filter(r => r.groups > 0);
+  const archRows = rows.filter(r => r.groups === 0);
 
-  const T = rows.reduce((a, r) => {
-    a.assigned += r.s.assigned; a.open += r.s.open; a.closed += r.s.closed; a.today += r.s.today.closed;
-    a.arr += r.s.today.arrivals; a.visToday += r.visToday; a.visMonth += r.visMonth; return a;
-  }, { assigned: 0, open: 0, closed: 0, today: 0, arr: 0, visToday: 0, visMonth: 0 });
-  const pct = T.assigned ? T.closed / T.assigned * 100 : 0;
-  const forecast = T.assigned ? Math.min(100, T.closed / Math.max(1, now.getDate()) * daysInMonth / T.assigned * 100) : 0;
-  const total = computeNplStats(null);
-  const yKey = stDayKey(new Date(Date.now() - 86400000));
-  const yClosed = (total.daily.find(d => d.date === yKey) || { closed: 0 }).closed;
-  const perDayClosed = T.closed / Math.max(1, now.getDate());
+  const T = activeRows.reduce((a, r) => {
+    a.assigned += r.planCnt; a.closed += r.retCnt; a.openPf += r.openPf; a.retPf += r.retPf; a.planPf += r.planPf;
+    a.clients += r.groups; a.loans += r.loansCnt; a.noContact += r.noContact; a.visToday += r.visToday;
+    if (r.last && stDayKey(r.last) === stDayKey(now)) a.activeToday++;
+    return a;
+  }, { assigned: 0, closed: 0, openPf: 0, retPf: 0, planPf: 0, clients: 0, loans: 0, noContact: 0, visToday: 0, activeToday: 0 });
+  const effPct = T.assigned ? T.closed / T.assigned * 100 : 0;
+  const retShare = T.planPf ? T.retPf / T.planPf * 100 : 0;
+
+  const kpi = (l, v, sub, color) => `<div class="st-k"><span>${l}</span><b${color ? ' style="color:' + color + ';"' : ''}>${v}</b><span>${sub}</span></div>`;
+  const kpis = `
+    <div class="st-kpis">
+      ${kpi('Общий портфель взыскания', stMoney(T.openPf), T.loans + ' анкет · ' + T.clients + ' клиентов')}
+      ${kpi('Сумма возврата (факт)', stMoney(T.retPf), (archRowsLoaded() ? '▲ ' + nplFmtPct(retShare) + '% от портфеля плана' : 'считаю по архиву…'), '#1E7B34')}
+      ${kpi('Эффективность закрытия', nplFmtPct(effPct) + '%', 'закрыто ' + T.closed + ' из ' + T.assigned + ' клиентов')}
+      ${kpi('Проблемная зона', T.noContact, 'без контакта 7+ дней — требуют внимания', T.noContact ? '#C0392B' : '')}
+      ${kpi('Активность сегодня', T.visToday + ' визитов', 'активны ' + T.activeToday + ' из ' + activeRows.length + ' сотрудников')}
+    </div>`;
 
   // графики за месяц
   const dayMap = {};
@@ -9354,19 +9418,50 @@ function renderNplStatsPanel() {
   const chartA = stChart(labels, null, dates.map(d => dayMap[d].end), { ref: T.assigned, lineColor: '#2F7BD9', min: dates.length ? Math.max(0, Math.floor(Math.min.apply(null, dates.map(d => dayMap[d].end)) * 0.9)) : 0, aria: 'Остаток клиентов в просрочке' });
   const chartB = stChart(labels, dates.map(d => dayMap[d].closed), dates.map(d => vi.perDay[d] || 0), { barColor: '#2F7BD9', lineColor: '#E39B16', aria: 'Закрыто клиентов и визиты по дням' });
 
-  const kpi = (l, v, sub, color) => `<div class="st-k"><span>${l}</span><b${color ? ' style="color:' + color + ';"' : ''}>${v}</b><span>${sub}</span></div>`;
-  const kpis = `
-    <div class="st-kpis">
-      ${kpi('План (назначено)', T.assigned, 'клиентов за ' + monthNames[now.getMonth()])}
-      ${kpi('Факт (осталось)', T.open, 'в просрочке сейчас')}
-      ${kpi('Закрыто', T.closed, nplFmtPct(pct) + '% · ' + nplFmtPct(perDayClosed) + ' в день', '#1E7B34')}
-      ${kpi('Закрыто сегодня', T.today, 'вчера ' + yClosed + ' · новых ' + T.arr)}
-      ${kpi('Прогноз к концу месяца', Math.round(forecast) + '%', 'при текущем темпе')}
-      ${kpi('Визитов сегодня', T.visToday, 'за месяц ' + T.visMonth)}
-    </div>`;
+  // табы
+  const byPf = activeRows.slice().sort((a, b) => b.pctPf - a.pctPf);
+  const topIds = {}; byPf.filter(r => r.retCnt > 0).slice(0, 3).forEach(r => { topIds[r.id] = true; });
+  const filters = {
+    all: () => true,
+    top: r => !!topIds[r.id],
+    low: r => r.pctCl < 15,
+    ctl: r => r.noContact >= 5
+  };
+  const counts = {}; Object.keys(filters).forEach(k => { counts[k] = activeRows.filter(filters[k]).length; });
+  const tabDefs = [['all', 'Все'], ['top', 'Топ по сборам'], ['low', 'Отстающие'], ['ctl', 'Нужен контроль (без контакта 7+)']];
+  const tabsHtml = tabDefs.map(t => `<button type="button" class="st-tab${stTab === t[0] ? ' on' : ''}" onclick="setNplStatsTab('${t[0]}')">${t[1]}<span class="n">${counts[t[0]]}</span></button>`).join('');
+  let shown = activeRows.filter(filters[stTab] || filters.all);
+  if (stTab === 'top') shown = shown.sort((a, b) => b.pctPf - a.pctPf);
+  if (stTab === 'ctl') shown = shown.sort((a, b) => b.noContact - a.noContact);
+  if (stTab === 'low') shown = shown.sort((a, b) => a.pctCl - b.pctCl);
 
-  const activeRows = rows.filter(r => r.groups > 0);
-  const archRows = rows.filter(r => r.groups === 0);
+  const dash = '<span class="dash">—</span>';
+  const bad = (v, lim) => v >= lim ? ' class="bad"' : '';
+  const body = shown.map(function(r, i) {
+    const ago = stAgo(r.last);
+    const badge = !r.last ? dash : (ago.txt === 'сегодня' ? '<span class="bd g">сегодня</span>' : ago.txt === 'вчера' ? '<span class="bd y">вчера</span>' : '<span class="bd gr">' + ago.txt + ' назад</span>');
+    const sc = stScoreCol(r.score);
+    const nplCls = r.nplShare < 10 ? 'g' : r.nplShare < 25 ? 'y' : 'rd';
+    const sel = nplStatsSelectedEmp === r.id;
+    const archOk = archRowsLoaded();
+    return `
+      <div class="st-r" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')">
+        <div class="st-n">${i + 1}</div>
+        <div class="st-who">${stAvatar(r, 40)}<div style="min-width:0;"><div class="st-nm">${safe(r.name)}</div>${r.user && r.user.photoUrl ? '' : '<div class="st-sb">нет фото</div>'}</div></div>
+        <div>${r.planCnt}<span class="s2">${stMoney(r.planPf)}</span></div>
+        <div>${r.retCnt}<span class="s2">${archOk ? stMoney(r.retPf) : '…'}</span></div>
+        <div><span class="pg ${stPctCls(r.pctCl)}">${nplFmtPct(r.pctCl)}%</span><span class="s2">${archOk ? nplFmtPct(r.pctPf) + '% по портфелю' : '…'}</span></div>
+        <div>${r.dayCnt ? r.dayCnt : dash}<span class="s2">${r.dayPf ? stMoney(r.dayPf) : ''}</span></div>
+        <div>${r.visAvg ? nplFmtPct(r.visAvg) : dash}</div>
+        <div${bad(r.g90NoLegal, 5)}>${r.g90NoLegal}</div>
+        <div${bad(r.noContact, 5)}>${r.noContact}</div>
+        <div>${badge}</div>
+        <div><span class="pg ${nplCls}">${nplFmtPct(r.nplShare)}%</span></div>
+        <div><span class="st-sc" style="border-color:${sc[0]};color:${sc[1]};">${r.score}</span></div>
+      </div>
+      ${sel ? stDetailHtml(r) : ''}`;
+  }).join('');
+
   const archHtml = archRows.length ? `
     <div style="margin-top:12px;">
       <button type="button" class="btn btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="toggleNplStatsArchive()">${nplStatsArchiveOpen ? '▲' : '▼'} Архив взыскателей (${archRows.length}) — нет клиентов в последней выгрузке</button>
@@ -9376,53 +9471,41 @@ function renderNplStatsPanel() {
           <div style="text-align:right;color:var(--muted);font-size:12px;">закрыто за месяц: <b style="color:#1E7B34;">${r.s.closed}</b></div>
         </div>`).join('')}</div>` : ''}
     </div>` : '';
-  const body = activeRows.map(function(r, i) {
-    const tint = r.s.assigned && r.pct < 10 ? 'st-red' : (r.s.assigned && r.pct < 25 ? 'st-amb' : '');
-    const barColor = r.pct < 10 ? '#D93F2F' : r.pct < 25 ? '#E39B16' : '#1E7B34';
-    const ago = stAgo(r.last);
-    const sel = nplStatsSelectedEmp === r.id;
-    return `
-      <div class="st-r ${tint}" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')">
-        <div class="st-n">${i + 1}</div>
-        <div class="st-who">${stAvatar(r, 46)}<div style="min-width:0;"><div class="st-nm">${safe(r.name)}</div><div class="st-sb">Асака банк${r.user && r.user.photoUrl ? '' : ' · нет фото'}</div></div></div>
-        <div>${r.s.assigned}</div><div>${r.s.open}</div><div style="color:#1E7B34;font-weight:700;">${r.s.closed}</div>
-        <div class="st-pct"><div class="st-bar"><i style="width:${Math.min(100, Math.max(2, r.pct))}%;background:${barColor};"></i></div>${nplFmtPct(r.pct)}%</div>
-        <div>${stMln(r.s.repaid)}</div>
-        <div class="${r.expNpl > 10 ? 'bad' : ''}">${r.expNpl}</div>
-        <div class="${r.visAvg < 1 ? 'bad' : ''}">${nplFmtPct(r.visAvg)}</div>
-        <div class="${r.noContact > 10 ? 'bad' : ''}">${r.noContact}</div>
-        <div class="${ago.cls}">${ago.txt}</div>
-      </div>
-      ${sel ? stDetailHtml(r) : ''}`;
-  }).join('');
 
   box.innerHTML = `
     <style>
-      .st-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
-      .st-k{background:#F5F7FA;border-radius:12px;padding:12px 14px}.st-k b{display:block;font-size:24px;font-weight:800;margin:2px 0}.st-k span{font-size:12px;color:var(--muted)}
+      .st-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+      .st-k{background:#F5F7FA;border-radius:12px;padding:12px 14px}.st-k b{display:block;font-size:22px;font-weight:800;margin:2px 0}.st-k span{font-size:12px;color:var(--muted)}
       .st-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px}
       .st-chart{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff}
       .st-chart h4{margin:0 0 4px;font-size:13px}.st-lg{font-size:11px;color:var(--muted);margin-bottom:4px}
       .st-lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 8px}.st-lg i:first-child{margin-left:0}
       .st-table{border:1px solid var(--line);border-radius:14px;overflow-x:auto;background:#fff}
-      .st-in{min-width:1020px}
-      .st-r{display:grid;grid-template-columns:34px minmax(220px,2fr) repeat(3,minmax(54px,.7fr)) minmax(120px,1.2fr) repeat(5,minmax(62px,.8fr));align-items:center;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
-      .st-r>div{padding:9px 6px;text-align:right}.st-r:hover{background:#F8FAFF}
-      .st-n{text-align:center!important;color:var(--muted);font-weight:800;font-size:15px}
-      .st-who{display:flex!important;gap:10px;align-items:center;text-align:left!important}
-      .st-nm{font-weight:800;font-size:14px;line-height:1.25}.st-sb{font-size:12px;color:var(--muted)}
+      .st-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
+      .st-tab{font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-weight:600}
+      .st-tab.on{background:#111;color:#fff;border-color:#111}.st-tab .n{font-size:11px;opacity:.7;margin-left:5px}
+      .st-in{min-width:1160px}
+      .st-r{display:grid;grid-template-columns:28px minmax(180px,1.6fr) minmax(88px,.9fr) minmax(88px,.9fr) minmax(96px,1fr) minmax(86px,.9fr) minmax(52px,.5fr) minmax(70px,.7fr) minmax(62px,.6fr) minmax(88px,.8fr) minmax(70px,.7fr) minmax(70px,.7fr);align-items:center;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+      .st-r>div{padding:8px 5px;text-align:right;line-height:1.3}.st-r:hover{background:#F8FAFF}
+      .st-n{text-align:center!important;color:var(--muted);font-weight:800;font-size:14px}
+      .st-who{display:flex!important;gap:9px;align-items:center;text-align:left!important}
+      .st-nm{font-weight:800;font-size:13.5px;line-height:1.25}.st-sb{font-size:11.5px;color:var(--muted)}
+      .s2{display:block;font-size:11.5px;color:var(--muted)}
       .st-ph{position:relative;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid #D7DCE3;background:#E8F0FE;color:#1F4E9C;font-weight:800;flex:none}
       .st-dot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;border:2px solid #fff}
-      .st-hd{color:var(--muted);font-size:12px;font-weight:700;border-bottom:2px solid #111;cursor:default}.st-hd:hover{background:none}
-      .st-red{background:#FDECEA}.st-amb{background:#FFF6E0}
-      .st-pct{display:flex!important;align-items:center;gap:6px}.st-bar{flex:1;height:6px;border-radius:3px;background:#E4E7EC;overflow:hidden}.st-bar i{display:block;height:100%}
-      .bad{color:#C0392B;font-weight:800}
+      .st-hd{color:var(--muted);font-size:11.5px;font-weight:700;border-bottom:2px solid #111;cursor:default;align-items:end}.st-hd:hover{background:none}
+      .pg{font-weight:800;padding:2px 8px;border-radius:8px;font-size:12px;display:inline-block}
+      .pg.g{background:#EAF3DE;color:#27500A}.pg.y{background:#FAEEDA;color:#633806}.pg.rd{background:#FCEBEB;color:#791F1F}
+      .bd{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:8px;font-weight:700}
+      .bd.g{background:#EAF3DE;color:#27500A}.bd.y{background:#FAEEDA;color:#633806}.bd.gr{background:#F1F3F5;color:#5F6B7A}
+      .dash{color:#B0B7C3}.bad{color:#C0392B;font-weight:800}
+      .st-sc{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;font-weight:800;font-size:14px;border:3px solid}
       .st-det{padding:14px 16px;background:#F7F9FC;border-bottom:1px solid var(--line);cursor:default}
       .st-minis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
       .st-mini{background:#fff;border-radius:10px;padding:8px 10px;border:1px solid var(--line)}.st-mini b{display:block;font-size:16px}.st-mini span{font-size:11px;color:var(--muted)}
     </style>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <div style="font-size:13px;color:var(--muted);">За ${monthNames[now.getMonth()]} ${now.getFullYear()}. План — назначено клиентов, факт — осталось в просрочке, закрыто — вышли из просрочки.</div>
+      <div style="font-size:13px;color:var(--muted);">За ${monthNames[now.getMonth()]} ${now.getFullYear()}. План — назначено клиентов на начало месяца, возвращено — вышли из просрочки.</div>
       <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button>
     </div>
     ${kpis}
@@ -9430,13 +9513,21 @@ function renderNplStatsPanel() {
       <div class="st-chart"><h4>Клиентов в просрочке: план и остаток</h4><div class="st-lg"><i style="background:#8A93A0"></i>План (пунктир)<i style="background:#2F7BD9"></i>Осталось</div>${chartA}</div>
       <div class="st-chart"><h4>Закрыто клиентов и визиты по дням</h4><div class="st-lg"><i style="background:#2F7BD9"></i>Закрыто<i style="background:#E39B16"></i>Визиты</div>${chartB}</div>
     </div>
-    <div class="st-table"><div class="st-in">
-      <div class="st-r st-hd"><div class="st-n">№</div><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План</div><div>Факт</div><div>Закрыто</div><div>% закрытия</div><div>Вернули, млн</div><div>Ожид. NPL</div><div>Визитов/день</div><div>Без контакта 7+</div><div>Активность</div></div>
-      ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.</div>'}
-    </div></div>
+    <div class="st-table">
+      <div class="st-tabs">${tabsHtml}</div>
+      <div style="overflow-x:auto"><div class="st-in">
+        <div class="st-r st-hd"><div class="st-n">№</div><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План<span class="s2">клиентов / портфель</span></div><div>Возвращено<span class="s2">клиентов / портфель</span></div><div>% закрытия<span class="s2">клиенты / портфель</span></div><div>За день<span class="s2">клиентов / портфель</span></div><div>Визитов в день</div><div>90+ без МИБ и суда</div><div>Без контакта 7+</div><div>Последняя активность</div><div>Доля NPL</div><div>Эффектив-ность<span class="s2">балл 0–100</span></div></div>
+        ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">' + (activeRows.length ? 'В этой группе никого нет.' : 'Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.') + '</div>'}
+      </div></div>
+    </div>
     ${archHtml}
-    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Нажмите на строку — раскроется карточка сотрудника. Точка на фото: зелёная — активность сегодня, жёлтая — вчера, красная — 2+ дня или нет данных. Активность и визиты считаются по визитам, подтверждённым в CRM. Розовая строка — закрытие ниже 10%, жёлтая — ниже 25%.</div>`;
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;">
+      Нажмите на строку — раскроется карточка сотрудника. Цвет % закрытия: зелёный от 35%, жёлтый 15–35%, красный ниже 15%. Доля NPL — клиентов 90+ среди клиентов в работе (зелёный до 10%, красный от 25%).
+      Общий балл (0–100): закрытие по портфелю 40% · визиты в день 20% (если в системе есть визиты) · охват контактом за 7 дней 15% · низкая доля NPL 15% · юридическая готовность (90+ с МИБ или судом) 10%.
+      Портфель — текущий остаток клиентов; «возвращено» — по архиву закрытых клиентов (последний долг). Визиты и активность считаются по визитам, подтверждённым в CRM.
+    </div>`;
 }
+function archRowsLoaded() { return nplArchiveLoaded; }
 
 // ---- Подтверждение при резком уменьшении числа клиентов в файле ----
 let nplUploadConfirmResolve = null;
