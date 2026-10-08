@@ -6686,6 +6686,7 @@ function renderStats(stats) {
 let allNplLoans = [];
 let allNplExtra = {};
 let allNplAssignments = {};
+let allNplAssignMeta = null;
 let allNplAccounts = {};
 let allNplVisits = {};
 let allNplMib = { data: {}, files: {} };
@@ -7528,6 +7529,7 @@ async function loadNplRestInBackground() {
     allNplMib = (rest && rest.mib) || { data: {}, files: {} };
     allNplCourt = (rest && rest.court) || { data: {}, files: {} };
     allNplSurveys = (rest && rest.surveys) || {};
+    allNplAssignMeta = (rest && rest.assignMeta) || null;
     allNplCollectors = (rest && rest.collectors) || {};
     if (rest && rest.users) allWebUsers = rest.users;
 
@@ -9207,7 +9209,13 @@ function stBuildRows(vi) {
   const todayKey = stDayKey(now);
   const rows = Object.keys(ids).map(function(id) {
     const s = computeNplStats(id);
-    const groups = getNplGroupsCached().filter(g => String(allNplAssignments[g.key] || '').trim() === id);
+    // Клиент взыскателя: в последней выгрузке за ним закреплён его ID, либо
+    // назначен вручную (старые назначения из прежних выгрузок не считаем).
+    const groups = getNplGroupsCached().filter(g => {
+      if (String(allNplAssignments[g.key] || '').trim() !== id) return false;
+      if (g.loans.some(l => String(l.employeeId || '').trim() === id)) return true;
+      return !!allNplAssignMeta && allNplAssignMeta[g.key] === 'm';
+    });
     const user = stEmpUser(id);
     const nameKey = String((user && user.fullName) || '').trim().toLowerCase();
     const vis = (nameKey && vi.byName[nameKey]) || [];
@@ -9358,7 +9366,7 @@ function renderNplStatsPanel() {
   const archRows = rows.filter(r => r.groups === 0);
   const archHtml = archRows.length ? `
     <div style="margin-top:12px;">
-      <button type="button" class="btn btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="toggleNplStatsArchive()">${nplStatsArchiveOpen ? '▲' : '▼'} Архив взыскателей (${archRows.length}) — нет назначенных клиентов</button>
+      <button type="button" class="btn btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="toggleNplStatsArchive()">${nplStatsArchiveOpen ? '▲' : '▼'} Архив взыскателей (${archRows.length}) — нет клиентов в последней выгрузке</button>
       ${nplStatsArchiveOpen ? `<div class="st-table" style="margin-top:8px;">${archRows.map(r => `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px;">
           ${stAvatar(r, 34)}<div style="flex:1;min-width:0;"><b>${safe(r.name)}</b><div class="st-sb">ID ${safe(r.id)}</div></div>
