@@ -9197,7 +9197,9 @@ function stEmpUser(id) {
   return (allWebUsers || []).find(u => String(u.employeeId || '').trim() === String(id)) || null;
 }
 
+let stFileHasIds = false;
 function stBuildRows(vi) {
+  stFileHasIds = (allNplLoans || []).some(l => String(l.employeeId || '').trim());
   const month = nplLocalDateStr().slice(0, 7);
   const now = new Date();
   const dayOfMonth = now.getDate();
@@ -9213,6 +9215,7 @@ function stBuildRows(vi) {
     // назначен вручную (старые назначения из прежних выгрузок не считаем).
     const groups = getNplGroupsCached().filter(g => {
       if (String(allNplAssignments[g.key] || '').trim() !== id) return false;
+      if (!stFileHasIds) return true; // выгрузка загружена до обновления — ID в ней не сохранены
       if (g.loans.some(l => String(l.employeeId || '').trim() === id)) return true;
       return !!allNplAssignMeta && allNplAssignMeta[g.key] === 'm';
     });
