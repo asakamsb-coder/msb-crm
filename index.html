@@ -9149,6 +9149,8 @@ function renderNplArchivedBody(group) {
 }
 
 // ---- Сводка управляющего по всем взыскателям (рейтинг, план/факт, активность) ----
+let nplStatsArchiveOpen = false;
+function toggleNplStatsArchive() { nplStatsArchiveOpen = !nplStatsArchiveOpen; renderNplStatsPanel(); }
 function selectNplStatsEmp(empEnc) {
   const id = empEnc === '__all__' ? null : decodeURIComponent(empEnc);
   nplStatsSelectedEmp = (id !== null && id === nplStatsSelectedEmp) ? null : id;
@@ -9299,7 +9301,7 @@ function stDetailHtml(r) {
 
 function exportNplStatsExcel() {
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
-  const rows = stBuildRows(stBuildVisitIndex());
+  const rows = stBuildRows(stBuildVisitIndex()).filter(r => r.groups > 0);
   const head = ['№', 'Взыскатель', 'ID', 'План (назначено)', 'Факт (осталось)', 'Закрыто', '% закрытия', 'Закрыто сегодня', 'Вернули, млн', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+', 'Визитов за месяц', 'Визитов в день', 'Без контакта 7+ дн.', 'Без суда/МИБ', 'Последняя активность'];
   const data = rows.map((r, i) => [i + 1, r.name, r.id, r.s.assigned, r.s.open, r.s.closed, Math.round(r.pct * 10) / 10, r.s.today.closed, Math.round(r.s.repaid / 1e5) / 10, r.expNpl, r.cats.fpd, r.cats.spd, r.cats.tpd, r.cats.npl, r.visMonth, Math.round(r.visAvg * 10) / 10, r.noContact, r.noLegal, r.last ? r.last.toLocaleDateString('ru-RU') : '']);
   const ws = XLSX.utils.aoa_to_sheet([head].concat(data));
@@ -9352,7 +9354,18 @@ function renderNplStatsPanel() {
       ${kpi('Визитов сегодня', T.visToday, 'за месяц ' + T.visMonth)}
     </div>`;
 
-  const body = rows.map(function(r, i) {
+  const activeRows = rows.filter(r => r.groups > 0);
+  const archRows = rows.filter(r => r.groups === 0);
+  const archHtml = archRows.length ? `
+    <div style="margin-top:12px;">
+      <button type="button" class="btn btn-secondary" style="font-size:13px;padding:6px 14px;" onclick="toggleNplStatsArchive()">${nplStatsArchiveOpen ? '▲' : '▼'} Архив взыскателей (${archRows.length}) — нет назначенных клиентов</button>
+      ${nplStatsArchiveOpen ? `<div class="st-table" style="margin-top:8px;">${archRows.map(r => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px;">
+          ${stAvatar(r, 34)}<div style="flex:1;min-width:0;"><b>${safe(r.name)}</b><div class="st-sb">ID ${safe(r.id)}</div></div>
+          <div style="text-align:right;color:var(--muted);font-size:12px;">закрыто за месяц: <b style="color:#1E7B34;">${r.s.closed}</b></div>
+        </div>`).join('')}</div>` : ''}
+    </div>` : '';
+  const body = activeRows.map(function(r, i) {
     const tint = r.s.assigned && r.pct < 10 ? 'st-red' : (r.s.assigned && r.pct < 25 ? 'st-amb' : '');
     const barColor = r.pct < 10 ? '#D93F2F' : r.pct < 25 ? '#E39B16' : '#1E7B34';
     const ago = stAgo(r.last);
@@ -9410,6 +9423,7 @@ function renderNplStatsPanel() {
       <div class="st-r st-hd"><div class="st-n">№</div><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План</div><div>Факт</div><div>Закрыто</div><div>% закрытия</div><div>Вернули, млн</div><div>Ожид. NPL</div><div>Визитов/день</div><div>Без контакта 7+</div><div>Активность</div></div>
       ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.</div>'}
     </div></div>
+    ${archHtml}
     <div style="font-size:12px;color:var(--muted);margin-top:8px;">Нажмите на строку — раскроется карточка сотрудника. Точка на фото: зелёная — активность сегодня, жёлтая — вчера, красная — 2+ дня или нет данных. Активность и визиты считаются по визитам, подтверждённым в CRM. Розовая строка — закрытие ниже 10%, жёлтая — ниже 25%.</div>`;
 }
 
