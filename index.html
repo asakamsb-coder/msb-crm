@@ -632,6 +632,53 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 .sv-flag.ok{background:#EAF3DE;color:#27500A;}
 .sv-flag.bad{background:#FCEBEB;color:#791F1F;}
 .sv-flag.warn{background:#FAEEDA;color:#633806;}
+/* ===== Новый дизайн оболочки (мониторинг и взыскатель) ===== */
+body.role-vzyskatel .main{padding:0 0 84px !important;background:#F6F6F8;}
+body.role-vzyskatel .page.active{padding:0;}
+.vzd-hero{background:var(--brand);color:#fff;padding:18px 16px 52px;}
+.vzd-hero .sub{font-size:12px;opacity:.88;}
+.vzd-top{display:flex;align-items:center;gap:12px;}
+.vzd-av{width:44px;height:44px;border-radius:50%;background:#fff;color:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;overflow:hidden;flex:none;}
+.vzd-av img{width:100%;height:100%;object-fit:cover;}
+.vzd-name{font-weight:800;font-size:16px;line-height:1.2;word-break:break-word;}
+.vzd-sw{display:flex;background:rgba(255,255,255,.2);border-radius:12px;padding:3px;margin-top:14px;}
+.vzd-sw button{flex:1;border:none;background:none;color:#fff;font-size:12.5px;font-weight:700;padding:8px 0;border-radius:10px;cursor:pointer;}
+.vzd-sw button.a{background:#fff;color:var(--brand);}
+.vzd-body{padding:0 14px;margin-top:-36px;display:flex;flex-direction:column;gap:12px;}
+.vzd-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;}
+.vzd-h{font-size:14px;font-weight:800;}
+.vzd-t{font-size:12px;color:var(--muted);}
+.vzd-ring{display:flex;gap:14px;align-items:center;}
+.vzd-legend{flex:1;display:flex;flex-direction:column;gap:6px;font-size:12.5px;}
+.vzd-legend div{display:flex;justify-content:space-between;gap:8px;}
+.vzd-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;}
+.vzd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.vzd-stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;cursor:pointer;text-align:left;}
+.vzd-stat .row{display:flex;gap:10px;align-items:center;}
+.vzd-ico{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;}
+.vzd-num{font-size:22px;font-weight:800;line-height:1;}
+.vzd-bar{height:5px;border-radius:3px;background:#F0F0F2;overflow:hidden;margin-top:10px;}
+.vzd-bar i{display:block;height:100%;border-radius:3px;}
+.vzd-q{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.vzd-q button{border:none;background:none;cursor:pointer;font-size:12px;color:var(--text);padding:0;text-align:center;}
+.vzd-q .vzd-ico{width:48px;height:48px;border-radius:16px;margin:0 auto 6px;}
+.vzd-item{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:11px 12px;cursor:pointer;}
+.vzd-stripe{width:4px;align-self:stretch;border-radius:2px;flex:none;}
+.vzd-bd{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:9px;white-space:nowrap;display:inline-block;}
+.vzd-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+.vzd-chip{border:none;font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:16px;background:#fff;border:1px solid var(--line);color:var(--muted);white-space:nowrap;cursor:pointer;}
+.vzd-chip.a{background:var(--brand);border-color:var(--brand);color:#fff;}
+.vzd-page{padding:16px 14px 0;display:flex;flex-direction:column;gap:12px;}
+.vzd-excel{border:none;background:#E3F4E8;color:#1E6B3A;font-weight:800;font-size:12.5px;padding:8px 12px;border-radius:12px;cursor:pointer;}
+.vzd-btn{display:block;width:100%;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;text-align:center;text-decoration:none;}
+.vzd-btn.p{background:var(--brand);color:#fff;}
+.vzd-btn.s{background:#F0F0F2;color:var(--text);}
+.vzd-reco{background:#FFF6E6;border:1px solid #F3D9A0;border-radius:18px;padding:12px 14px;display:flex;gap:10px;}
+.vzd-c-red{background:#FBE6E3;color:#B3261E;}.vzd-c-amb{background:#FDF0D5;color:#8A5A00;}.vzd-c-grn{background:#E3F4E8;color:#1E6B3A;}.vzd-c-blu{background:#E3EEFB;color:#1A5BA8;}.vzd-c-pur{background:#EDE7FA;color:#5B3FB0;}.vzd-c-dk{background:#F2D6D3;color:#7A1710;}
+#vzLoanOverlay{position:fixed;inset:0;background:#F6F6F8;z-index:60;display:none;overflow-y:auto;padding-bottom:30px;}
+#vzLoanOverlay.active{display:block;}
+.vzd-sheet-opt{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer;}
+body.role-vzyskatel #nplPage.active{padding:16px;}
 /* Панель быстрых действий в карточке клиента NPL (Позвонить/Написать/
    Маршрут/Визит) — один тап вместо поиска нужной кнопки в длинной
    карточке. Те же классы, что и у vz-quick-action, но своя сетка на 4
@@ -1757,7 +1804,7 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
     <div id="nplUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
   </div>
 
-  <div id="nplEmptyState" class="loading">NPL-выгрузка ещё не загружена — загрузите первый файл выше.</div>
+  <div id="nplEmptyState" class="loading">Загружаю данные NPL…</div>
 
   <div id="nplDashboard" style="display:none;">
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
@@ -1997,6 +2044,11 @@ body.role-vzyskatel .vzyskatel-navbar{display:flex;}
 <section id="vzyskatelProfilePage" class="page">
   <div id="vzyskatelProfileBody"></div>
 </section>
+
+<section id="vzClientsPage" class="page">
+  <div id="vzClientsBody"></div>
+</section>
+<div id="vzLoanOverlay"></div>
 
 <section id="slaPage" class="page">
   <div class="header">
@@ -6696,7 +6748,8 @@ function vzyskatelGoTo(tab) {
     renderVzyskatelHome();
     showPage('vzyskatelHomePage');
   } else if (tab === 'clients') {
-    showPage('nplPage');
+    renderVzClients();
+    showPage('vzClientsPage');
   } else if (tab === 'profile') {
     renderVzyskatelProfile();
     showPage('vzyskatelProfilePage');
@@ -6733,73 +6786,505 @@ function isVzShell() {
 
 function getMyNplGroups() {
   if (nplMobileMonitor()) {
-    return getNplGroupsCached().filter(g => g.subject === 'J' && g.maxDays >= 1);
+    const legal = getNplGroupsCached().filter(g => g.subject === 'J' && g.maxDays >= 1);
+    const emp = String((currentUser && currentUser.employeeId) || '').trim();
+    if (vzScope === 'all' || !emp) return legal;
+    return legal.filter(g => String(allNplAssignments[g.key] || '').trim() === emp);
   }
   const myEmployeeId = String((currentUser && currentUser.employeeId) || '').trim();
   if (!myEmployeeId) return [];
   return getNplGroupsCached().filter(g => String(allNplAssignments[g.key] || '').trim() === myEmployeeId);
 }
 
+// ===================== НОВЫЙ ДИЗАЙН ОБОЛОЧКИ (мониторинг + взыскатель) =====================
+const VZ_CAT = {
+  fpd: { label: 'FPD · 1 платёж', short: 'FPD', color: '#D93F2F', cls: 'vzd-c-red', ico: 'alert' },
+  spd: { label: 'SPD · 2 платёж', short: 'SPD', color: '#E39B16', cls: 'vzd-c-amb', ico: 'alert' },
+  tpd: { label: 'TPD · 3 платёж', short: 'TPD', color: '#7A5BD6', cls: 'vzd-c-pur', ico: 'alert' },
+  exp: { label: 'Ожидаемый NPL', short: 'Ожид. NPL', color: '#2F7BD9', cls: 'vzd-c-blu', ico: 'check' },
+  npl: { label: 'NPL 90+', short: 'NPL 90+', color: '#9F1D14', cls: 'vzd-c-dk', ico: 'alert' }
+};
+let vzScope = 'mine';
+try { vzScope = sessionStorage.getItem('vzScope') || 'mine'; } catch (e) {}
+let vzFilter = 'all', vzQuery = '', vzLimit = 30, vzQueryTimer = null;
+let vzLoanCtx = null;
+
+function vzSetScope(s) {
+  vzScope = s;
+  try { sessionStorage.setItem('vzScope', s); } catch (e) {}
+  vzLimit = 30;
+  renderVzyskatelHome();
+  if (document.getElementById('vzClientsPage') && document.getElementById('vzClientsPage').classList.contains('active')) renderVzClients();
+}
+
+function vzPf(l) { return Number(l.portfolio) || Number(l.totalDebt) || 0; }
+function vzGroupPf(g) { return Number(g.portfolioSum) || Number(g.totalDebtSum) || 0; }
+function vzFmt(v) { return formatMoney(v); }
+function vzInitials(name) { return String(name || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase(); }
+function vzEnsureIndex() { getNplGroupsCached().forEach(g => { nplGroupsByKey[g.key] = g; }); }
+
+// Категория анкеты: ранний дефолт (юрлица) → иначе по дням просрочки.
+function vzLoanCat(l) {
+  const e = nplLoanEarlyInfo(l);
+  if (e) return e.cat;
+  const d = nplLoanDays(l);
+  return d >= 90 ? 'npl' : d >= 60 ? 'exp' : null;
+}
+
+// Рекомендация по анкете (та же логика, что в Excel).
+function nplRecommendation(cat, epd, days, portfolio) {
+  const parts = [];
+  if (portfolio >= 1e9) parts.push('Крупная сумма — взять на контроль руководителя.');
+  if (cat === 'fpd') {
+    if (days <= 5) parts.push('Возможна техническая просрочка: проверить поступление платежа, связаться с клиентом в течение 2 дней.');
+    else if (epd) parts.push('Первый платёж не внесён: связаться, выяснить причину, выезд на бизнес и залог в течение недели.');
+    else parts.push('Платежей нет с начала срока: срочный выезд, проверить, работает ли бизнес, оценить залог, готовить претензию.');
+  } else if (cat === 'spd') {
+    parts.push('Пропущен и второй платёж: выезд, проверка бизнеса и залога, зафиксировать письменный график погашения.');
+  } else if (cat === 'tpd') {
+    parts.push('Системные пропуски: направить претензию, оценить залог, готовить документы для суда и МИБ.');
+  } else if (cat === 'npl') {
+    parts.push('NPL 90+: проверить статус суда и МИБ, актуальность залога, обновить данные о бизнесе и согласовать план взыскания.');
+  } else if (cat === 'exp') {
+    parts.push('Клиент близок к NPL 90+: контакт и выезд до перехода в NPL, получить обещание оплаты.');
+  } else {
+    parts.push('Контролировать оплату, при необходимости связаться с клиентом.');
+  }
+  if (days >= 60 && days < 90) parts.push('До NPL 90+ осталось ' + (90 - days) + ' дн.');
+  return parts.join(' ');
+}
+
+function vzRing(parts, center) {
+  const R = 28, C = 2 * Math.PI * R;
+  const total = parts.reduce((t, p) => t + (p.value > 0 ? p.value : 0), 0);
+  let off = 0;
+  const segs = total > 0 ? parts.filter(p => p.value > 0).map(p => {
+    const len = Math.max(0, p.value / total * C);
+    const s = `<circle cx="37" cy="37" r="${R}" fill="none" stroke="${p.color}" stroke-width="10" stroke-dasharray="${len.toFixed(1)} ${(C - len).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 37 37)"/>`;
+    off += len; return s;
+  }).join('') : '';
+  return `<svg width="78" height="78" viewBox="0 0 74 74" role="img" aria-label="Структура клиентов"><circle cx="37" cy="37" r="${R}" fill="none" stroke="#EEEBEB" stroke-width="10"/>${segs}<text x="37" y="42" text-anchor="middle" font-size="15" font-weight="800" fill="#1B1B1F">${center}</text></svg>`;
+}
+
+function vzStatCard(key, count, sub, maxCount) {
+  const c = VZ_CAT[key];
+  const pct = maxCount > 0 ? Math.max(count > 0 ? 8 : 0, Math.round(count / maxCount * 100)) : 0;
+  return `<button type="button" class="vzd-stat" onclick="vzOpenClients('${key}')">
+    <div class="row"><div class="vzd-ico ${c.cls}">${appIcon(c.ico, 19)}</div><div style="min-width:0;"><div class="vzd-t">${safe(c.label)}</div><div class="vzd-num">${count}</div></div></div>
+    <div class="vzd-t" style="margin-top:6px;">${sub}</div>
+    <div class="vzd-bar"><i style="width:${pct}%;background:${c.color};"></i></div></button>`;
+}
+
 function renderVzyskatelHome() {
   const box = document.getElementById('vzyskatelHomeBody');
   if (!box || !currentUser) return;
-
-  const myGroups = getMyNplGroups();
-  const totalOverdue = myGroups.reduce((s, g) => s + (Number(g.overdueBalanceSum) || 0) + (Number(g.overdueInterestSum) || 0), 0);
-  const attention = myGroups.slice().sort((a, b) => b.maxDays - a.maxDays).slice(0, 5);
+  vzEnsureIndex();
   const isMon = nplMobileMonitor();
-  const monSurveyCount = isMon ? myGroups.reduce((t, g) => t + g.loans.filter(l => allNplSurveys[l.contractId] && allNplSurveys[l.contractId].length).length, 0) : 0;
+  const groups = getMyNplGroups();
+  const name = currentUser.fullName || currentUser.login || '';
+  const roleLabel = isMon ? 'Юридический мониторинг' : 'Взыскатель · ID ' + (safe(currentUser.employeeId) || '—');
 
-  const photoHtml = currentUser.photoUrl
-    ? `<img src="${safe(currentUser.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-    : appIcon('user', 22);
+  // Сводка по клиентам
+  const cnt = { fpd: 0, spd: 0, tpd: 0 }, sum = { fpd: 0, spd: 0, tpd: 0 };
+  const byRisk = { exp: [], npl: [], early: [], other: [] };
+  let overdueAll = 0, surveyed = 0, loansTotal = 0;
+  groups.forEach(g => {
+    overdueAll += (Number(g.overdueBalanceSum) || 0) + (Number(g.overdueInterestSum) || 0);
+    const r = nplRiskCategory(g);
+    if (r === 'fpd' || r === 'spd' || r === 'tpd') byRisk.early.push(g);
+    else if (r === 'npl') byRisk.npl.push(g);
+    else if (r === 'exp') byRisk.exp.push(g);
+    else byRisk.other.push(g);
+    g.loans.forEach(l => {
+      loansTotal++;
+      const e = nplLoanEarlyInfo(l);
+      if (e) { cnt[e.cat]++; sum[e.cat] += vzPf(l); }
+      if (allNplSurveys[l.contractId] && allNplSurveys[l.contractId].length) surveyed++;
+    });
+  });
+  const pfOf = arr => arr.reduce((t, g) => t + vzGroupPf(g), 0);
+  const hasLegal = isMon || groups.some(g => g.subject === 'J');
+
+  const ringParts = [
+    { label: 'Ранние дефолты', value: pfOf(byRisk.early), color: '#E39B16', n: byRisk.early.length },
+    { label: 'NPL 90+', value: pfOf(byRisk.npl), color: '#9F1D14', n: byRisk.npl.length },
+    { label: 'Ожидаемый NPL', value: pfOf(byRisk.exp), color: '#2F7BD9', n: byRisk.exp.length },
+    { label: 'Остальные', value: pfOf(byRisk.other), color: '#CFCBCB', n: byRisk.other.length }
+  ];
+  const legend = ringParts.filter(p => hasLegal || p.label !== 'Ранние дефолты').map(p => `<div><span><span class="vzd-dot" style="background:${p.color};"></span>${p.label}</span><b>${p.n}</b></div>`).join('');
+  const totalPf = pfOf(groups);
+
+  let cards;
+  if (hasLegal) {
+    const mx = Math.max(cnt.fpd, cnt.spd, cnt.tpd, byRisk.exp.length, 1);
+    cards = vzStatCard('fpd', cnt.fpd, cnt.fpd ? vzFmt(sum.fpd) : 'нет анкет', mx) +
+      vzStatCard('spd', cnt.spd, cnt.spd ? vzFmt(sum.spd) : 'нет анкет', mx) +
+      vzStatCard('tpd', cnt.tpd, cnt.tpd ? vzFmt(sum.tpd) : 'нет анкет', mx) +
+      vzStatCard('exp', byRisk.exp.length, 'клиентов · 60–89 дн.', mx);
+  } else {
+    const n90 = groups.filter(g => g.maxDays >= 90 && g.maxDays < 180).length;
+    const n180 = groups.filter(g => g.maxDays >= 180 && g.maxDays < 360).length;
+    const n360 = groups.filter(g => g.maxDays >= 360).length;
+    let prom = 0; try { prom = getMyPromises().filter(x => x.overdue || x.today).length; } catch (e) {}
+    const mk = (ico, cls, label, n, sub, color, mx) => `<button type="button" class="vzd-stat" onclick="vzOpenClients('all')"><div class="row"><div class="vzd-ico ${cls}">${appIcon(ico, 19)}</div><div><div class="vzd-t">${label}</div><div class="vzd-num">${n}</div></div></div><div class="vzd-t" style="margin-top:6px;">${sub}</div><div class="vzd-bar"><i style="width:${mx ? Math.round(n / mx * 100) : 0}%;background:${color};"></i></div></button>`;
+    const mx = Math.max(n90, n180, n360, 1);
+    cards = mk('alert', 'vzd-c-red', '90–179 дней', n90, 'клиентов', '#D93F2F', mx) +
+      mk('alert', 'vzd-c-amb', '180–359 дней', n180, 'клиентов', '#E39B16', mx) +
+      mk('alert', 'vzd-c-pur', '360+ дней', n360, 'клиентов', '#7A5BD6', mx) +
+      `<button type="button" class="vzd-stat" onclick="openPromises()"><div class="row"><div class="vzd-ico vzd-c-grn">${appIcon('check', 19)}</div><div><div class="vzd-t">Обещания</div><div class="vzd-num">${prom}</div></div></div><div class="vzd-t" style="margin-top:6px;">срочных</div><div class="vzd-bar"><i style="width:${prom ? 100 : 0}%;background:#2E9E5B;"></i></div></button>`;
+  }
+
+  const order = { fpd: 0, spd: 1, tpd: 2, npl: 3, exp: 4 };
+  const attention = groups.slice().sort((a, b) => {
+    const ra = order[nplRiskCategory(a)], rb = order[nplRiskCategory(b)];
+    return ((ra === undefined ? 9 : ra) - (rb === undefined ? 9 : rb)) || (b.maxDays - a.maxDays);
+  }).slice(0, 5);
+
+  const photoHtml = currentUser.photoUrl ? `<img src="${safe(currentUser.photoUrl)}" alt="">` : safe(vzInitials(name) || '•');
+  const sw = isMon ? `<div class="vzd-sw"><button type="button" class="${vzScope === 'mine' ? 'a' : ''}" onclick="vzSetScope('mine')">Мои клиенты</button><button type="button" class="${vzScope === 'all' ? 'a' : ''}" onclick="vzSetScope('all')">Все юр. лица</button></div>` : '';
+  const noId = isMon && vzScope === 'mine' && !String(currentUser.employeeId || '').trim()
+    ? `<div class="vzd-t" style="margin-top:8px;color:#fff;opacity:.9;">ID сотрудника не указан — показаны все юр. лица.</div>` : '';
+
+  const tileA = isMon
+    ? `<div class="vzd-card"><div class="vzd-t">Собрано данных</div><div class="vzd-num" style="margin-top:4px;">${surveyed}<span class="vzd-t" style="font-weight:400;"> из ${loansTotal}</span></div></div>`
+    : `<div class="vzd-card"><div class="vzd-t">Закрыто за ${nplMonthNameGen()}</div><div class="vzd-num" style="margin-top:4px;">${vzMonthClosed()}</div></div>`;
 
   box.innerHTML = `
-    <div class="vz-card">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-        <div class="onboard-avatar" style="width:44px;height:44px;font-size:14px;">${photoHtml}</div>
-        <div style="flex:1;min-width:0;">
-          <div style="font-weight:800;font-size:15px;">${safe(currentUser.fullName || currentUser.login)}</div>
-          <div style="font-size:12px;color:var(--muted);">${isMon ? 'Юридический мониторинг' : 'Взыскатель · ID ' + (safe(currentUser.employeeId) || '—')}</div>
-        </div>
-      </div>
-      <div class="vz-summary-grid">
-        <div class="vz-summary-tile">
-          <div class="label">${isMon ? 'Юр. клиентов' : 'Активных клиентов'}</div>
-          <div class="value">${myGroups.length}</div>
-        </div>
-        ${isMon ? `<div class="vz-summary-tile">
-          <div class="label">Собрано данных по анкетам</div>
-          <div class="value">${monSurveyCount}</div>
-        </div>` : `<div class="vz-summary-tile">
-          <div class="label">Закрыто за ${nplMonthNameGen()}</div>
-          <div class="value">${vzMonthClosed()}</div>
-        </div>`}
-        <div class="vz-summary-tile danger" style="grid-column:span 2;">
-          <div class="label">Общая просрочка</div>
-          <div class="value">${formatMoney(totalOverdue)}</div>
-        </div>
-      </div>
-      <div class="vz-quick-actions">
-        <button type="button" class="vz-quick-action" onclick="vzyskatelGoTo('clients')"><div class="icon">${appIcon('users', 20)}</div>Клиенты</button>
-        <button type="button" class="vz-quick-action" onclick="openNearby()"><div class="icon">${appIcon('mappin', 20)}</div>Клиенты рядом</button>
-        <button type="button" class="vz-quick-action" onclick="openMyTasks()"><div class="icon">${appIcon('check', 20)}</div>План визитов</button>
-        <button type="button" class="vz-quick-action" onclick="openPromises()"><div class="icon">${appIcon('alert', 20)}</div>Обещания оплат${vzPromiseBadge()}</button>
-      </div>
-      <div style="font-size:13px;font-weight:800;margin-bottom:4px;">Требуют внимания</div>
-      ${attention.length ? attention.map(g => `
-        <div class="vz-attention-row" onclick="openNplClientDetail('${encodeURIComponent(g.key)}')">
-          <div class="onboard-avatar" style="width:32px;height:32px;font-size:11px;">${safe(g.clientName).trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase()}</div>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:700;">${safe(g.clientName)}</div>
-            <div style="font-size:11.5px;color:var(--muted);">Просрочка ${g.maxDays} дн.</div>
-          </div>
-          <span style="color:var(--muted);">${appIcon('chevron', 16)}</span>
-        </div>`).join('') : `<div style="font-size:13px;color:var(--muted);padding:10px 0;">Пока нет назначенных клиентов</div>`}
+    <div class="vzd-hero">
+      <div class="vzd-top"><div class="vzd-av">${photoHtml}</div><div style="min-width:0;"><div class="vzd-name">${safe(name)}</div><div class="sub">${roleLabel}</div></div></div>
+      ${sw}${noId}
     </div>
-    ${isMon ? '' : renderVzStatsBlocks()}
-    ${isMon ? '' : renderVzVisitsHistory()}`;
+    <div class="vzd-body">
+      <div class="vzd-card vzd-ring">${vzRing(ringParts, groups.length)}<div class="vzd-legend"><div class="vzd-t" style="display:block;">Клиентов · портфель ${vzFmt(totalPf)}</div>${legend}</div></div>
+      <div class="vzd-grid">${cards}</div>
+      <div class="vzd-grid">${tileA}<div class="vzd-card" style="background:#FCEBEB;border-color:#F3C9C5;"><div class="vzd-t">Общая просрочка</div><div class="vzd-num" style="margin-top:4px;font-size:18px;">${vzFmt(overdueAll)}</div></div></div>
+      <div class="vzd-q">
+        <button type="button" onclick="vzyskatelGoTo('clients')"><div class="vzd-ico vzd-c-red">${appIcon('users', 22)}</div>Клиенты</button>
+        <button type="button" onclick="openNearby()"><div class="vzd-ico vzd-c-blu">${appIcon('mappin', 22)}</div>Рядом</button>
+        <button type="button" onclick="openMyTasks()"><div class="vzd-ico vzd-c-grn">${appIcon('check', 22)}</div>Визиты</button>
+        <button type="button" onclick="openPromises()"><div class="vzd-ico vzd-c-amb">${appIcon('alert', 22)}</div>Обещания${vzPromiseBadge()}</button>
+      </div>
+      <div class="vzd-h">Требуют внимания</div>
+      ${attention.length ? attention.map(g => vzClientRowHtml(g)).join('') : '<div class="vzd-card vzd-t">Пока нет назначенных клиентов</div>'}
+      ${isMon ? '' : renderVzStatsBlocks()}
+      ${isMon ? '' : renderVzVisitsHistory()}
+    </div>`;
 }
+
+// Строка клиента (карточка с цветной полосой по категории)
+function vzClientRowHtml(g) {
+  const r = nplRiskCategory(g);
+  const c = r ? VZ_CAT[r] : null;
+  const color = c ? c.color : '#CFCBCB';
+  const bd = c ? `<span class="vzd-bd ${c.cls}">${safe(c.short)}</span>` : `<span class="vzd-bd" style="background:#F0F0F2;color:var(--muted);">${g.maxDays} дн.</span>`;
+  const pct = Math.min(100, Math.round(g.maxDays / 90 * 100));
+  return `<div class="vzd-item" onclick="openNplClientDetail('${encodeURIComponent(g.key)}')">
+    <div class="vzd-stripe" style="background:${color};"></div>
+    <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:13.5px;word-break:break-word;">${safe(g.clientName)}</div>
+      <div class="vzd-t">анкет: ${g.loans.length} · просрочка ${g.maxDays} дн.</div>
+      <div class="vzd-bar" style="margin-top:7px;"><i style="width:${pct}%;background:${color};"></i></div></div>
+    <div style="text-align:right;"><div style="font-weight:800;font-size:13px;">${vzFmt(vzGroupPf(g) || g.nplSum)}</div>${bd}</div></div>`;
+}
+
+// Строка анкеты (для FPD/SPD/TPD)
+function vzLoanRowHtml(g, l, e) {
+  const c = VZ_CAT[e.cat];
+  const pct = Math.min(100, Math.round(e.days / 90 * 100));
+  const has = allNplSurveys[l.contractId] && allNplSurveys[l.contractId].length;
+  return `<div class="vzd-item" onclick="openVzLoan('${encodeURIComponent(String(l.contractId))}','${encodeURIComponent(g.key)}')">
+    <div class="vzd-stripe" style="background:${c.color};"></div>
+    <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:13.5px;word-break:break-word;">${safe(g.clientName)}</div>
+      <div class="vzd-t">№ ${safe(l.contractId)} · выдана ${nplFmtDateRu(l.openDate)}</div>
+      <div class="vzd-t">${e.days} дн. просрочки · анкет у клиента: ${g.loans.length}${has ? ' · данные собраны' : ''}</div>
+      <div class="vzd-bar" style="margin-top:7px;"><i style="width:${pct}%;background:${c.color};"></i></div></div>
+    <div style="text-align:right;"><div style="font-weight:800;font-size:13px;">${vzFmt(vzPf(l))}</div><span class="vzd-bd ${c.cls}">${c.short}</span>${e.epd ? '<div class="vzd-t" style="margin-top:3px;">EPD</div>' : ''}</div></div>`;
+}
+
+function vzOpenClients(filter) {
+  vzFilter = filter || 'all'; vzQuery = ''; vzLimit = 30;
+  vzyskatelGoTo('clients');
+}
+
+function vzClientsData() {
+  vzEnsureIndex();
+  const groups = getMyNplGroups();
+  const q = vzQuery.trim().toLowerCase();
+  const match = g => !q || String(g.clientName || '').toLowerCase().includes(q) || String(g.pin || '').toLowerCase().includes(q) ||
+    String(g.key || '').toLowerCase().includes(q) || g.loans.some(l => String(l.contractId).toLowerCase().includes(q));
+  const counts = { all: groups.length, fpd: 0, spd: 0, tpd: 0, exp: 0, npl: 0 };
+  groups.forEach(g => {
+    const r = nplRiskCategory(g);
+    if (r === 'exp') counts.exp++; else if (r === 'npl') counts.npl++;
+    g.loans.forEach(l => { const e = nplLoanEarlyInfo(l); if (e) counts[e.cat]++; });
+  });
+  let rows = [];
+  if (['fpd', 'spd', 'tpd'].indexOf(vzFilter) !== -1) {
+    groups.filter(match).forEach(g => g.loans.forEach(l => { const e = nplLoanEarlyInfo(l); if (e && e.cat === vzFilter) rows.push({ g: g, l: l, e: e }); }));
+    rows.sort((a, b) => (b.e.days - a.e.days) || (vzPf(b.l) - vzPf(a.l)));
+  } else {
+    const order = { fpd: 0, spd: 1, tpd: 2, npl: 3, exp: 4 };
+    rows = groups.filter(match).filter(g => vzFilter === 'all' || nplRiskCategory(g) === vzFilter)
+      .sort((a, b) => ((order[nplRiskCategory(a)] === undefined ? 9 : order[nplRiskCategory(a)]) - (order[nplRiskCategory(b)] === undefined ? 9 : order[nplRiskCategory(b)])) || (b.maxDays - a.maxDays))
+      .map(g => ({ g: g }));
+  }
+  return { rows: rows, counts: counts, groups: groups };
+}
+
+function renderVzClients() {
+  const box = document.getElementById('vzClientsBody');
+  if (!box) return;
+  const d = vzClientsData();
+  const isMon = nplMobileMonitor();
+  const chipDefs = [['all', 'Все'], ['fpd', 'FPD'], ['spd', 'SPD'], ['tpd', 'TPD'], ['exp', 'Ожид.'], ['npl', 'NPL']];
+  const chips = chipDefs.filter(c => c[0] === 'all' || d.counts[c[0]] > 0 || c[0] === vzFilter || isMon)
+    .map(c => `<button type="button" class="vzd-chip ${vzFilter === c[0] ? 'a' : ''}" onclick="vzSetFilter('${c[0]}')">${c[1]} ${d.counts[c[0]]}</button>`).join('');
+  const shown = d.rows.slice(0, vzLimit);
+  const list = shown.map(r => r.l ? vzLoanRowHtml(r.g, r.l, r.e) : vzClientRowHtml(r.g)).join('') ||
+    '<div class="vzd-card vzd-t" style="text-align:center;">Ничего не найдено</div>';
+  const more = d.rows.length > vzLimit ? `<button type="button" class="vzd-btn s" onclick="vzLimit+=30;renderVzClients()">Показать ещё (${d.rows.length - vzLimit})</button>` : '';
+  const scope = isMon ? `<div class="vzd-sw" style="background:#E9E9EC;margin-top:0;"><button type="button" style="color:var(--muted);" class="${vzScope === 'mine' ? 'a' : ''}" onclick="vzSetScope('mine')">Мои клиенты</button><button type="button" style="color:var(--muted);" class="${vzScope === 'all' ? 'a' : ''}" onclick="vzSetScope('all')">Все юр. лица</button></div>` : '';
+  const hasFocus = document.activeElement && document.activeElement.id === 'vzSearchInput';
+  box.innerHTML = `
+    <div class="vzd-page">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font-size:22px;font-weight:800;">Клиенты</span>
+        <span style="display:flex;gap:8px;">${isMon ? '<button type="button" class="vzd-excel" onclick="openVzExcelSheet()">⬇ Excel</button>' : ''}<button type="button" class="vzd-excel" style="background:#F0F0F2;color:var(--text);" onclick="showPage('nplPage');setNplPageTab('archive')">Архив</button></span></div>
+      ${scope}
+      <input id="vzSearchInput" class="input" placeholder="Название, ИНН, № анкеты" value="${String(vzQuery).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" oninput="vzOnSearch(this.value)" style="border-radius:14px;">
+      <div class="vzd-chips">${chips}</div>
+      <div class="vzd-t">${d.rows.length} ${d.rows[0] && d.rows[0].l ? 'анкет' : 'клиентов'}</div>
+      ${list}${more}
+    </div>`;
+  if (hasFocus) { const el = document.getElementById('vzSearchInput'); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} } }
+}
+
+function vzSetFilter(f) { vzFilter = f; vzLimit = 30; renderVzClients(); }
+function vzOnSearch(v) {
+  vzQuery = v; vzLimit = 30;
+  clearTimeout(vzQueryTimer);
+  vzQueryTimer = setTimeout(renderVzClients, 250);
+}
+
+// ---------------- Экран анкеты ----------------
+function openVzLoan(cEnc, kEnc) {
+  vzLoanCtx = { contractId: decodeURIComponent(cEnc), key: decodeURIComponent(kEnc) };
+  renderVzLoan();
+  document.getElementById('vzLoanOverlay').classList.add('active');
+}
+function closeVzLoan() { document.getElementById('vzLoanOverlay').classList.remove('active'); vzLoanCtx = null; }
+
+function renderVzLoan() {
+  const box = document.getElementById('vzLoanOverlay');
+  if (!box || !vzLoanCtx) return;
+  vzEnsureIndex();
+  const g = nplGroupsByKey[vzLoanCtx.key];
+  const l = g ? g.loans.find(x => String(x.contractId) === String(vzLoanCtx.contractId)) : null;
+  if (!l) { box.innerHTML = '<div class="vzd-page"><div class="vzd-card">Анкета не найдена</div></div>'; return; }
+  const e = nplLoanEarlyInfo(l);
+  const cat = vzLoanCat(l);
+  const days = nplLoanDays(l);
+  const c = cat ? VZ_CAT[cat] : null;
+  const pf = vzPf(l);
+  const kEnc = encodeURIComponent(g.key), cEnc = encodeURIComponent(String(l.contractId));
+
+  // Путь анкеты: выдача → первый пропуск → сегодня
+  let path = '';
+  const age = nplLoanAgeDays(l);
+  if (e && age > 0) {
+    const gap = e.gap;
+    const x2 = 16 + Math.min(1, gap / age) * 248;
+    const missDate = new Date(Date.parse(String(l.openDate).slice(0, 10) + 'T00:00:00') + gap * 86400000);
+    const md = nplPad2(missDate.getDate()) + '.' + nplPad2(missDate.getMonth() + 1);
+    const od = nplFmtDateRu(l.openDate).slice(0, 5);
+    path = `<div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Путь анкеты</div>
+      <svg viewBox="0 0 280 54" width="100%" role="img" aria-label="Выдача, начало просрочки, сегодня"><line x1="16" y1="18" x2="264" y2="18" stroke="#E4E1E1" stroke-width="4" stroke-linecap="round"/><line x1="16" y1="18" x2="${x2.toFixed(0)}" y2="18" stroke="#2E9E5B" stroke-width="4" stroke-linecap="round"/><line x1="${x2.toFixed(0)}" y1="18" x2="264" y2="18" stroke="${c.color}" stroke-width="4" stroke-linecap="round"/><circle cx="16" cy="18" r="7" fill="#2E9E5B"/><circle cx="${x2.toFixed(0)}" cy="18" r="7" fill="${c.color}"/><circle cx="264" cy="18" r="7" fill="#1B1B1F"/><text x="16" y="44" font-size="11" text-anchor="start" fill="#6B7280">${od}</text>${(264 - x2) > 60 ? `<text x="${x2.toFixed(0)}" y="44" font-size="11" text-anchor="middle" fill="#6B7280">${md}</text>` : ''}<text x="264" y="44" font-size="11" text-anchor="end" fill="#6B7280">сегодня</text></svg>
+      <div class="vzd-t">Выдана → через ${gap} дн. первый пропуск → ${days} дн. просрочки${e.epd ? ' · EPD (первые 6 месяцев)' : ''}</div></div>`;
+  }
+
+  const reco = nplRecommendation(cat, e ? e.epd : false, days, pf);
+  const sv = (allNplSurveys[l.contractId] || [])[0];
+  const flags = sv ? [sv.bizExists ? '<span class="vzd-bd vzd-c-grn">Бизнес есть</span>' : '', sv.fictitious ? '<span class="vzd-bd vzd-c-red">Фиктивный бизнес</span>' : '', sv.finDifficulty ? '<span class="vzd-bd vzd-c-amb">Фин. затруднение</span>' : '',
+    sv.openDate ? `<span class="vzd-bd" style="background:#F0F0F2;color:var(--text);">С ${safe(nplFmtDateRu(sv.openDate))}</span>` : ''].filter(Boolean).join(' ') : '';
+  const bizTxt = sv ? `${(sv.bizPhotos || []).length} фото${sv.bizLat !== '' && sv.bizLat !== undefined ? ' · есть GPS' : ''}` : 'нет данных';
+  const colTxt = sv ? `${(sv.collPhotos || []).length} фото${sv.collLat !== '' && sv.collLat !== undefined ? ' · есть GPS' : ''}` : 'нет данных';
+  const canCollect = nplCanCollectSurvey() && g.subject === 'J';
+  const phone = String(l.phone || '').replace(/[^\d+]/g, '');
+
+  box.innerHTML = `
+    <div class="vzd-hero" style="padding-bottom:58px;">
+      <div class="vzd-top"><button type="button" onclick="closeVzLoan()" aria-label="Назад" style="border:none;background:rgba(255,255,255,.2);color:#fff;width:38px;height:38px;border-radius:12px;font-size:20px;cursor:pointer;">‹</button>
+        <div style="min-width:0;"><div class="vzd-name">Анкета № ${safe(l.contractId)}</div><div class="sub">${safe(g.clientName)} · ${vzFmt(pf)}</div></div></div>
+      <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+        ${c ? `<span class="vzd-bd" style="background:#fff;color:var(--brand);">${safe(c.label)}</span>` : ''}
+        <span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">${days} дн. просрочки</span>
+        ${l.openDate ? `<span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">выдана ${safe(nplFmtDateRu(l.openDate))}</span>` : ''}
+      </div></div>
+    <div class="vzd-body">
+      ${path}
+      <div class="vzd-reco"><div class="vzd-ico vzd-c-amb">${appIcon('alert', 19)}</div><div><div class="vzd-h" style="color:#633806;">Рекомендация</div><div class="vzd-t" style="color:#7A5200;">${safe(reco)}</div></div></div>
+      <div class="vzd-grid">
+        <div class="vzd-card"><div class="row" style="display:flex;gap:8px;align-items:center;"><div class="vzd-ico vzd-c-blu">${appIcon('home', 19)}</div><div><div class="vzd-h">Бизнес</div><div class="vzd-t">${bizTxt}</div></div></div></div>
+        <div class="vzd-card"><div class="row" style="display:flex;gap:8px;align-items:center;"><div class="vzd-ico vzd-c-grn">${appIcon('mappin', 19)}</div><div><div class="vzd-h">Залог</div><div class="vzd-t">${colTxt}</div></div></div></div>
+      </div>
+      ${flags ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${flags}</div>` : ''}
+      ${sv && ((sv.bizPhotos || []).length || (sv.collPhotos || []).length) ? `<div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Фото</div>${svPhotosHtml((sv.bizPhotos || []).concat(sv.collPhotos || []))}</div>` : ''}
+      ${sv && sv.comment ? `<div class="vzd-card vzd-t" style="word-break:break-word;">${safe(sv.comment)}</div>` : ''}
+      <div class="vzd-grid" style="grid-template-columns:repeat(2,1fr);">
+        <div class="vzd-card"><div class="vzd-t">Портфель</div><div class="vzd-h">${vzFmt(pf)}</div></div>
+        <div class="vzd-card"><div class="vzd-t">NPL анкеты</div><div class="vzd-h">${vzFmt(l.totalNpl)}</div></div>
+      </div>
+      ${canCollect ? `<button type="button" class="vzd-btn p" onclick="openNplSurveyForm('${cEnc}','${kEnc}')">${sv ? 'Обновить данные' : 'Сбор данных'}</button>` : ''}
+      ${phone ? `<a class="vzd-btn s" href="tel:${safe(phone)}">Позвонить клиенту</a>` : ''}
+      <button type="button" class="vzd-btn s" onclick="openNplClientDetail('${kEnc}')">Карточка клиента</button>
+    </div>`;
+}
+
+// ---------------- Excel из мобильной версии ----------------
+function openVzExcelSheet() {
+  const d = vzClientsData();
+  const early = d.counts.fpd + d.counts.spd + d.counts.tpd;
+  const filterLabel = vzFilter === 'all' ? 'Все клиенты' : VZ_CAT[vzFilter].label;
+  const opt = (mode, ico, title, sub) => `<div class="vzd-sheet-opt" onclick="exportVzExcel('${mode}')"><div class="vzd-ico vzd-c-${ico}">${appIcon(ico === 'red' ? 'search' : ico === 'amb' ? 'alert' : 'users', 19)}</div><div style="flex:1;"><div class="vzd-h">${title}</div><div class="vzd-t">${sub}</div></div></div>`;
+  openNplModal('Скачать Excel',
+    opt('filter', 'red', 'Текущий фильтр', safe(filterLabel) + ' · ' + vzExcelRows('filter').length + ' анкет') +
+    opt('early', 'amb', 'Все ранние дефолты', 'FPD, SPD, TPD · ' + early + ' анкет') +
+    opt('all', 'blu', 'Все мои клиенты', d.groups.length + ' клиентов · все анкеты') +
+    '<div class="vzd-t">В файле: сводка, анкеты, рекомендации и колонка для комментария</div><div id="vzExcelStatus" class="vzd-t" style="margin-top:8px;"></div>');
+}
+
+function vzExcelRows(mode) {
+  const out = [];
+  vzEnsureIndex();
+  getMyNplGroups().forEach(g => g.loans.forEach(l => {
+    const e = nplLoanEarlyInfo(l);
+    const cat = vzLoanCat(l);
+    if (mode === 'early' && !e) return;
+    if (mode === 'filter' && vzFilter !== 'all') {
+      if (['fpd', 'spd', 'tpd'].indexOf(vzFilter) !== -1) { if (!e || e.cat !== vzFilter) return; }
+      else if (nplRiskCategory(g) !== vzFilter) return;
+    }
+    out.push({ g: g, l: l, e: e, cat: cat });
+  }));
+  const order = { fpd: 0, spd: 1, tpd: 2, npl: 3, exp: 4 };
+  out.sort((a, b) => ((order[a.cat] === undefined ? 9 : order[a.cat]) - (order[b.cat] === undefined ? 9 : order[b.cat])) || (nplLoanDays(b.l) - nplLoanDays(a.l)) || (vzPf(b.l) - vzPf(a.l)));
+  return out;
+}
+
+async function exportVzExcel(mode) {
+  const st = document.getElementById('vzExcelStatus');
+  try {
+    if (st) st.innerText = 'Формируем файл…';
+    const rows = vzExcelRows(mode);
+    if (!rows.length) { if (st) st.innerText = 'Нет анкет для выгрузки'; return; }
+    const ExcelJS = await nplLoadExcelJs();
+    const wb = new ExcelJS.Workbook();
+    const NAVY = 'FF1F3A5F', BLUE = 'FF2F5D8C', ALT = 'FFF2F6FA';
+    const thin = { style: 'thin', color: { argb: 'FFD0D5DD' } };
+    const border = { top: thin, left: thin, bottom: thin, right: thin };
+    const fill = a => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: a } });
+    const catFill = { fpd: 'FFFDE8E8', spd: 'FFFFF1DC', tpd: 'FFEDE7FA', npl: 'FFF2D6D3', exp: 'FFE3EEFB' };
+    const who = (currentUser && (currentUser.fullName || currentUser.login)) || '';
+    const title = (ws, text, sub, n) => {
+      ws.mergeCells(1, 1, 1, n); const c1 = ws.getCell(1, 1); c1.value = text; c1.font = { name: 'Calibri', size: 15, bold: true, color: { argb: 'FFFFFFFF' } }; c1.fill = fill(NAVY); c1.alignment = { vertical: 'middle', indent: 1 }; ws.getRow(1).height = 32;
+      ws.mergeCells(2, 1, 2, n); const c2 = ws.getCell(2, 1); c2.value = sub; c2.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF666666' } }; c2.alignment = { wrapText: true, vertical: 'top', indent: 1 }; ws.getRow(2).height = 30;
+    };
+    const head = (ws, r, heads) => { const row = ws.getRow(r); heads.forEach((h, i) => { const c = row.getCell(i + 1); c.value = h; c.font = { name: 'Calibri', bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = fill(BLUE); c.border = border; c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; }); row.height = 34; };
+
+    // Лист «Сводка»
+    const ws = wb.addWorksheet('Сводка');
+    title(ws, 'Юридический мониторинг · ' + (vzScope === 'all' ? 'все юр. лица' : 'мои клиенты'), 'Выгрузка от ' + nplLocalDateStr() + (who ? ' · ' + who : '') + ' · категория по срокам просрочки (ориентировочно)', 5);
+    head(ws, 4, ['Категория', 'Анкет', 'Клиентов', 'Портфель, млн сум', 'Из них EPD']);
+    let r = 5; const tot = [0, 0, 0, 0];
+    ['fpd', 'spd', 'tpd', 'npl', 'exp'].forEach(k => {
+      const rs = rows.filter(x => x.cat === k);
+      if (!rs.length) return;
+      const vals = [VZ_CAT[k].label, rs.length, new Set(rs.map(x => x.g.key)).size, Math.round(rs.reduce((t, x) => t + vzPf(x.l), 0) / 1e6), rs.filter(x => x.e && x.e.epd).length];
+      vals.forEach((v, i) => { const c = ws.getRow(r).getCell(i + 1); c.value = v; c.border = border; c.fill = fill(catFill[k]); c.alignment = { horizontal: i ? 'right' : 'left', indent: i ? 0 : 1 }; if (i === 3) c.numFmt = '#,##0'; });
+      for (let i = 0; i < 4; i++) tot[i] += vals[i + 1]; r++;
+    });
+    ['Итого'].concat(tot).forEach((v, i) => { const c = ws.getRow(r).getCell(i + 1); c.value = v; c.font = { name: 'Calibri', bold: true }; c.border = border; c.fill = fill('FFDCE6F2'); c.alignment = { horizontal: i ? 'right' : 'left', indent: i ? 0 : 1 }; if (i === 3) c.numFmt = '#,##0'; });
+    r += 2;
+    ws.mergeCells(r, 1, r, 5); const th = ws.getCell(r, 1); th.value = 'Что делать по категориям'; th.font = { name: 'Calibri', bold: true, size: 12, color: { argb: 'FFFFFFFF' } }; th.fill = fill(NAVY); th.alignment = { indent: 1 };
+    [['fpd', 'Связаться в течение 2 дней, выяснить причину; если анкета новая — проверить целевое использование, выезд на бизнес и залог.'],
+     ['spd', 'Выезд, проверка бизнеса и залога, письменный график погашения, взять на контроль.'],
+     ['tpd', 'Претензия, оценка залога, подготовка документов для суда и МИБ.'],
+     ['npl', 'Проверить суд и МИБ, актуальность залога, обновить данные о бизнесе, согласовать план взыскания.'],
+     ['exp', 'Контакт и выезд до перехода в NPL 90+, получить обещание оплаты.']].forEach(t => {
+      r++; const a = ws.getCell(r, 1); a.value = VZ_CAT[t[0]].label; a.fill = fill(catFill[t[0]]); a.border = border; a.alignment = { vertical: 'middle', indent: 1, wrapText: true };
+      ws.mergeCells(r, 2, r, 5); const b = ws.getCell(r, 2); b.value = t[1]; b.border = border; b.alignment = { wrapText: true, vertical: 'middle', indent: 1 }; ws.getRow(r).height = 44;
+    });
+    [26, 12, 12, 20, 12].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+
+    // Лист «Анкеты»
+    const ws2 = wb.addWorksheet('Анкеты');
+    const heads = ['№', 'Клиент', 'ИНН', '№ анкеты', 'Дата выдачи', 'Возраст, дн.', 'Дней просрочки', 'Старт просрочки, дн.', 'Портфель, млн сум', 'Анкет у клиента', 'Категория', 'EPD (до 6 мес.)', 'Рекомендация', 'Комментарий'];
+    title(ws2, 'Анкеты · юридические лица', 'Отсортировано по категории и просрочке. Колонка «Комментарий» заполнена данными сбора, если они есть, — её можно дополнять вручную.', heads.length);
+    head(ws2, 4, heads);
+    rows.forEach((x, i) => {
+      const l = x.l, e = x.e, days = nplLoanDays(l), pf = vzPf(l);
+      const sv = (allNplSurveys[l.contractId] || [])[0];
+      const note = sv ? [sv.bizExists ? 'бизнес есть' : '', sv.fictitious ? 'фиктивный бизнес' : '', sv.finDifficulty ? 'финансовое затруднение' : '', sv.openDate ? 'открыт ' + nplFmtDateRu(sv.openDate) : '', sv.comment || ''].filter(Boolean).join('; ') : '';
+      const od = /^\d{4}-\d{2}-\d{2}/.test(String(l.openDate || '')) ? new Date(Date.UTC(+String(l.openDate).slice(0, 4), +String(l.openDate).slice(5, 7) - 1, +String(l.openDate).slice(8, 10))) : '';
+      const row = ws2.getRow(5 + i);
+      [i + 1, x.g.clientName || '', x.g.pin || '', String(l.contractId), od, e ? e.age : (nplLoanAgeDays(l) === null ? '' : nplLoanAgeDays(l)), days, e ? e.gap : '', Math.round(pf / 1e6), x.g.loans.length,
+        x.cat ? VZ_CAT[x.cat].label : '—', e ? (e.epd ? 'да' : 'нет') : '', nplRecommendation(x.cat, e ? e.epd : false, days, pf), note].forEach((v, k) => {
+        const c = row.getCell(k + 1); c.value = v; c.border = border; c.font = { name: 'Calibri', size: k === 12 ? 10 : 11 };
+        c.alignment = { vertical: 'middle', wrapText: k === 1 || k === 12 || k === 13, horizontal: k === 1 || k === 2 || k === 3 || k === 12 || k === 13 ? 'left' : k === 8 ? 'right' : 'center', indent: k === 1 || k === 2 || k === 3 || k === 12 || k === 13 ? 1 : 0 };
+        if (i % 2) c.fill = fill(ALT);
+      });
+      row.getCell(5).numFmt = 'dd.mm.yyyy'; row.getCell(9).numFmt = '#,##0';
+      if (x.cat) row.getCell(11).fill = fill(catFill[x.cat]);
+      row.height = 46;
+    });
+    [5, 38, 14, 13, 13, 11, 12, 14, 16, 11, 18, 12, 58, 34].forEach((w, i) => { ws2.getColumn(i + 1).width = w; });
+    ws2.views = [{ state: 'frozen', ySplit: 4 }];
+    ws2.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + rows.length, column: heads.length } };
+    ws2.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'Monitoring_' + nplLocalDateStr() + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+    if (st) st.innerText = 'Файл сформирован: ' + rows.length + ' анкет';
+  } catch (e) {
+    console.error(e);
+    if (st) { st.style.color = 'var(--red)'; st.innerText = 'Не удалось сформировать файл: ' + e.message; }
+  }
+}
+
+function renderVzyskatelProfile() {
+  const box = document.getElementById('vzyskatelProfileBody');
+  if (!box || !currentUser) return;
+  const name = currentUser.fullName || currentUser.login || '';
+  const photoHtml = currentUser.photoUrl ? `<img src="${safe(currentUser.photoUrl)}" alt="">` : safe(vzInitials(name) || '•');
+  const rec = getDeviceRecord();
+  const isMon = nplMobileMonitor();
+  const groups = getMyNplGroups();
+  let early = 0, surveyed = 0;
+  groups.forEach(g => g.loans.forEach(l => { if (nplLoanEarlyInfo(l)) early++; if (allNplSurveys[l.contractId] && allNplSurveys[l.contractId].length) surveyed++; }));
+  const row = (cls, ico, text, onclick, color) => `<div class="vzd-item" onclick="${onclick}"><div class="vzd-ico ${cls}">${appIcon(ico, 19)}</div><div style="flex:1;font-weight:800;font-size:14px;${color ? 'color:' + color + ';' : ''}">${text}</div></div>`;
+  box.innerHTML = `
+    <div class="vzd-hero" style="text-align:center;padding-bottom:58px;">
+      <div class="vzd-av" style="width:76px;height:76px;font-size:24px;margin:0 auto 10px;">${photoHtml}</div>
+      <div class="vzd-name">${safe(name)}</div>
+      <div class="sub">${isMon ? 'Юридический мониторинг' : 'Взыскатель'}${isMon ? '' : ' · ID ' + (safe(currentUser.employeeId) || '—')}</div>
+    </div>
+    <div class="vzd-body">
+      <div class="vzd-card" style="display:grid;grid-template-columns:repeat(3,1fr);text-align:center;gap:6px;">
+        <div><div class="vzd-num">${groups.length}</div><div class="vzd-t">клиентов</div></div>
+        <div><div class="vzd-num">${isMon ? surveyed : early}</div><div class="vzd-t">${isMon ? 'с данными' : 'ранних'}</div></div>
+        <div><div class="vzd-num">${isMon ? early : vzMonthClosed()}</div><div class="vzd-t">${isMon ? 'ранних' : 'закрыто'}</div></div>
+      </div>
+      <input type="file" accept="image/*" id="vzProfilePhotoInput" style="display:none;" onchange="handleVzProfilePhotoSelected(event)">
+      ${row('vzd-c-blu', 'camera', 'Изменить фото', "document.getElementById('vzProfilePhotoInput').click()")}
+      <div id="vzProfilePhotoStatus" class="vzd-t"></div>
+      ${rec ? row('vzd-c-grn', 'fingerprint', 'Сбросить вход по PIN/отпечатку', 'resetDevicePinFromProfile()') : ''}
+      ${row('vzd-c-red', 'user', 'Выйти', 'logout()', '#B3261E')}
+    </div>`;
+}
+// =================== /НОВЫЙ ДИЗАЙН ОБОЛОЧКИ ===================
 
 // История всех обходов (визитов), которые сотрудник сам подтвердил —
 // полная история, не только по текущим назначенным клиентам, отдельным
@@ -6826,29 +7311,6 @@ function renderVzVisitsHistory() {
       <div style="font-size:13px;font-weight:800;margin-bottom:4px;">История визитов${visits.length ? ' (' + visits.length + ')' : ''}</div>
       ${rows}
       ${visits.length > shown.length ? `<div style="font-size:12px;color:var(--muted);text-align:center;padding-top:8px;">Показаны последние ${shown.length} из ${visits.length}</div>` : ''}
-    </div>`;
-}
-
-function renderVzyskatelProfile() {
-  const box = document.getElementById('vzyskatelProfileBody');
-  if (!box || !currentUser) return;
-
-  const photoHtml = currentUser.photoUrl
-    ? `<img src="${safe(currentUser.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-    : appIcon('user', 28);
-  const rec = getDeviceRecord();
-
-  box.innerHTML = `
-    <div class="vz-card" style="text-align:center;">
-      <div class="onboard-avatar" style="width:76px;height:76px;font-size:22px;margin:0 auto 12px;">${photoHtml}</div>
-      <div style="font-weight:800;font-size:16px;">${safe(currentUser.fullName || currentUser.login)}</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:2px;">${nplMobileMonitor() ? 'Юридический мониторинг' : 'Взыскатель'}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">${nplMobileMonitor() ? '' : 'ID сотрудника: ' + (safe(currentUser.employeeId) || '—')}</div>
-      <input type="file" accept="image/*" id="vzProfilePhotoInput" style="display:none;" onchange="handleVzProfilePhotoSelected(event)">
-      <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="document.getElementById('vzProfilePhotoInput').click()">Изменить фото</button>
-      <div id="vzProfilePhotoStatus" style="font-size:12px;color:var(--muted);margin-bottom:8px;"></div>
-      ${rec ? `<button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="resetDevicePinFromProfile()">Сбросить вход по PIN/отпечатку на этом телефоне</button>` : ''}
-      <button class="btn btn-secondary" style="width:100%;color:var(--red);" onclick="logout()">Выйти</button>
     </div>`;
 }
 
@@ -6964,6 +7426,15 @@ function nplRenderSoon() {
   nplRenderTimer = setTimeout(function() {
     nplRenderTimer = null;
     try { if (nplDataLoaded) renderNplPage(); } catch (e) { console.error(e); }
+    try {
+      if (isVzShell()) {
+        const cp = document.getElementById('vzClientsPage');
+        if (cp && cp.classList.contains('active')) renderVzClients();
+        const hp = document.getElementById('vzyskatelHomePage');
+        if (hp && hp.classList.contains('active')) renderVzyskatelHome();
+        if (vzLoanCtx) renderVzLoan();
+      }
+    } catch (e) { console.error(e); }
   }, 60);
 }
 
@@ -6976,6 +7447,14 @@ async function loadNplData() {
   const login = String((currentUser && currentUser.login) || '');
   nplPerf = {};
   let shownFromCache = false;
+  // Пока идёт первый запрос, не показываем «выгрузка не загружена» — это
+  // выглядит как потеря данных. Сообщение о пустой выгрузке — только после ответа.
+  if (!nplDataLoaded) {
+    emptyState.innerHTML = 'Загружаю данные NPL… обычно это занимает несколько секунд.';
+    emptyState.style.display = 'block';
+    const dashEl = document.getElementById('nplDashboard');
+    if (dashEl) dashEl.style.display = 'none';
+  }
 
   try {
     // Мгновенный показ последних данных из памяти браузера
@@ -10134,6 +10613,7 @@ async function svSave() {
       if (idx >= 0) setTimeout(function() { toggleNplLoanDetail('nplLoan_' + encodeURIComponent(key) + '_' + idx); }, 0);
     }
     if (isVzShell() && document.getElementById('vzyskatelHomeBody')) renderVzyskatelHome();
+    if (vzLoanCtx) renderVzLoan();
   } catch (e) {
     svSetStatus('Не удалось связаться с сервером', true);
     console.error(e);
