@@ -9679,7 +9679,7 @@ const ST_VIS_RESULTS = ['Контакт с клиентом', 'Контакт с
 const ST_VIS_PERIODS = [['month', 'Этот месяц'], ['prev', 'Прошлый месяц'], ['week', '7 дней'], ['today', 'Сегодня']];
 const ST_SPEED_BAD = 60, ST_SPEED_WARN = 30;   // км/ч по городу
 const ST_SAME_GPS_M = 20;                      // две отметки ближе этого — «одна точка»
-const ST_FLAG_W = { impossible: 4, samegps: 4, far: 2, nophoto: 1, nogps: 1, night: 1, fast: 1 };
+const ST_FLAG_W = { dup: 1, impossible: 4, samegps: 4, far: 2, nophoto: 1, nogps: 1, night: 1, fast: 1 };
 
 function stEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -9769,7 +9769,8 @@ function stVisAll() {
         key: k, client: String(v.clientName || gname[k] || ''), who: who, whoKey: who.toLowerCase(), dt: d,
         status: String(v.status || ''), lat: lat, lng: lng, dist: num(v.distance), susp: !!v.suspicious,
         photo: String(v.photoUrl || '').trim(), promiseDate: String(v.promiseDate || '').trim(),
-        promiseAmount: Number(v.promiseAmount) || 0, comment: String(v.comment || '')
+        promiseAmount: Number(v.promiseAmount) || 0, comment: String(v.comment || ''),
+        id: v.id, editedBy: String(v.editedBy || ''), editedAt: String(v.editedAt || '')
       });
     });
   });
@@ -9794,6 +9795,7 @@ function stVisAnalyze(list) {
       if (v.lat === null) v.flags.push({ t: 'nogps', txt: 'нет GPS' });
       else if (v.dist !== null && v.dist > NPL_VISIT_GEOFENCE_METERS) v.flags.push({ t: 'far', txt: 'отметка в ' + Math.round(v.dist) + ' м от адреса' });
       if (!v.photo) v.flags.push({ t: 'nophoto', txt: 'нет фото' });
+      for (let j = 0; j < i; j++) { if (arr[j].key === v.key) { v.flags.push({ t: 'dup', txt: 'повторный визит к этому клиенту в тот же день' }); break; } }
       if (i > 0) {
         const p = arr[i - 1];
         const gapMin = (v.dt - p.dt) / 60000;
@@ -9877,7 +9879,7 @@ function stVisPromise(v) {
   return '<span class="pg y" style="white-space:nowrap;">' + (v.promiseAmount ? stMoney(v.promiseAmount) : '') + (v.promiseDate ? ' до ' + stEsc(v.promiseDate.slice(0, 10)) : '') + '</span>';
 }
 function stVisFlagsHtml(v) {
-  return v.flags.filter(f => f.t !== 'night' || true).map(f => '<span class="pg ' + (['impossible', 'samegps'].indexOf(f.t) >= 0 ? 'rd' : f.t === 'far' ? 'rd' : 'y') + '" style="margin:2px 4px 0 0;font-weight:600;" title="' + stEsc(f.txt) + '">' + stEsc(f.t === 'impossible' ? 'невозможный переезд' : f.t === 'samegps' ? 'один GPS' : f.t === 'far' ? 'далеко от адреса' : f.t === 'fast' ? 'быстрый переезд' : f.t === 'nophoto' ? 'нет фото' : f.t === 'nogps' ? 'нет GPS' : 'ночью') + '</span>').join('');
+  return v.flags.filter(f => f.t !== 'night' || true).map(f => '<span class="pg ' + (['impossible', 'samegps'].indexOf(f.t) >= 0 ? 'rd' : f.t === 'far' ? 'rd' : 'y') + '" style="margin:2px 4px 0 0;font-weight:600;" title="' + stEsc(f.txt) + '">' + stEsc(f.t === 'impossible' ? 'невозможный переезд' : f.t === 'samegps' ? 'один GPS' : f.t === 'far' ? 'далеко от адреса' : f.t === 'fast' ? 'быстрый переезд' : f.t === 'dup' ? 'повтор клиента' : f.t === 'nophoto' ? 'нет фото' : f.t === 'nogps' ? 'нет GPS' : 'ночью') + '</span>').join('');
 }
 
 function stVisPhotoLinks(photo) {
@@ -9952,6 +9954,7 @@ function stVisHistoryHtml(vs, g) {
       </div>
       <div style="margin-top:6px;">${stVisPhotoLinks(v.photo)}</div>
       ${v.comment ? '<div style="margin-top:6px;word-break:break-word;">💬 ' + stEsc(v.comment) + '</div>' : '<div style="margin-top:6px;color:var(--muted);">Комментарий не заполнен</div>'}
+      ${v.editedBy ? '<div style="margin-top:4px;font-size:12px;color:#B7791F;">✎ изменён: ' + stEsc(v.editedBy) + ', ' + stEsc(v.editedAt) + '</div>' : ''}
       ${leg}
     </div>`;
   }).join('');
@@ -12329,13 +12332,33 @@ function renderNplVisitBlock(key) {
       <input type="radio" name="nplVisitStatus_${keyEnc}" value="${safe(s)}" ${i === 0 ? 'checked' : ''}> ${safe(s)}
     </label>`).join('');
 
+  const todayV = visits.find(nplVisitIsToday) || null;
   const historyHtml = visits.length
     ? visits.map(v => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
-        <span>${safe(v.addedAt)} · ${safe(v.addedBy)} · ${safe(v.status)}${v.comment ? ' — ' + safe(v.comment) : ''}</span>
-        ${v.suspicious ? '<span class="status status-orange" style="margin-left:8px;">сомнительный</span>' : ''}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;">
+        <span>${safe(v.addedAt)} · ${safe(v.addedBy)} · ${safe(v.status)}${v.comment ? ' — ' + safe(v.comment) : ''}${v.editedBy ? ' <span class="status status-orange" title="Изменён ' + safe(v.editedAt) + '">изменён · ' + safe(v.editedBy) + '</span>' : ''}</span>
+        <span style="display:flex;gap:6px;align-items:center;flex:none;">
+          ${v.suspicious ? '<span class="status status-orange">сомнительный</span>' : ''}
+          ${v.id && nplCanEditVisit(v) ? '<button type="button" class="btn btn-secondary" style="padding:3px 10px;font-size:12px;" onclick="nplVisitEditOpen(\'' + keyEnc + '\',\'' + encodeURIComponent(v.id) + '\')">Изменить</button>' : ''}
+        </span>
       </div>`).join('')
     : '<div style="color:var(--muted);font-size:13px;">Визитов ещё не было</div>';
+
+  if (todayV) {
+    return `
+    <div class="panel" style="background:#FAFAFA;margin-top:14px;" id="nplVisitBlock_${keyEnc}">
+      <h2 style="font-size:15px;margin-bottom:12px;">📍 Подтверждение визита</h2>
+      <div style="background:#EAF6EC;border-radius:10px;padding:10px 12px;font-size:13px;">
+        <b>Сегодня визит уже внесён</b> · ${safe(todayV.addedAt)} · ${safe(todayV.addedBy)} · ${safe(todayV.status)}
+        <div style="color:var(--muted);margin-top:4px;">Один визит к клиенту в день. Если ошиблись — нажмите «Изменить».</div>
+        ${todayV.id && nplCanEditVisit(todayV) ? '<button type="button" class="btn btn-secondary" style="margin-top:8px;padding:4px 12px;font-size:13px;" onclick="nplVisitEditOpen(\'' + keyEnc + '\',\'' + encodeURIComponent(todayV.id) + '\')">Изменить визит</button>' : '<div style="color:var(--muted);margin-top:6px;font-size:12px;">Изменить может ' + safe(todayV.addedBy) + ' или руководитель.</div>'}
+      </div>
+      <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:12px;">
+        <div class="mp-label">История визитов (${visits.length})</div>
+        ${historyHtml}
+      </div>
+    </div>`;
+  }
 
   return `
     <div class="panel" style="background:#FAFAFA;margin-top:14px;" id="nplVisitBlock_${keyEnc}">
@@ -12447,6 +12470,76 @@ function captureNplVisitPhoto(keyEnc, input) {
   reader.readAsDataURL(file);
 }
 
+function nplVisitIsToday(v) {
+  try { const d = stParseDt(v.addedAt); return !!d && stDayKey(d) === stDayKey(new Date()); } catch (e) { return false; }
+}
+function nplCanEditVisit(v) {
+  const me = String((currentUser && (currentUser.fullName || currentUser.login)) || '').trim().toLowerCase();
+  const role = currentUser && currentUser.role;
+  return (!!me && String(v.addedBy || '').trim().toLowerCase() === me) || role === 'ADMIN' || role === 'DIRECTOR';
+}
+
+let nplVisitEditCtx = null;
+function nplVisitEditClose() {
+  const m = document.getElementById('nplVisitEditModal');
+  if (m) m.style.display = 'none';
+}
+function nplVisitEditOpen(keyEnc, idEnc) {
+  const key = decodeURIComponent(keyEnc), id = decodeURIComponent(idEnc);
+  const v = (allNplVisits[key] || []).find(x => String(x.id) === id);
+  if (!v) { alert('Визит не найден — обновите страницу'); return; }
+  nplVisitEditCtx = { key: key, id: id };
+  let m = document.getElementById('nplVisitEditModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'nplVisitEditModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:10060;background:rgba(17,24,39,.5);display:none;overflow-y:auto;padding:24px 12px;';
+    document.body.appendChild(m);
+  }
+  const pd = String(v.promiseDate || '').slice(0, 10);
+  m.innerHTML = `<div style="max-width:480px;margin:0 auto;background:#fff;border-radius:16px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="font-weight:800;font-size:15px;margin-bottom:4px;">Изменить визит</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">${safe(v.addedAt)} · ${safe(v.addedBy)}. Время, место и фото изменить нельзя — только результат, обещание и комментарий. Прежние значения сохраняются.</div>
+    <div style="margin-bottom:10px;">${NPL_VISIT_STATUSES.map(st => `<label style="display:flex;align-items:center;gap:6px;font-size:14px;margin:0 0 8px;"><input type="radio" name="nplVisitEditStatus" value="${safe(st)}" ${st === v.status ? 'checked' : ''}> ${safe(st)}</label>`).join('')}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <input type="date" id="nplVisitEditPromiseDate" class="input" style="max-width:170px;" value="${nplAttr(pd)}">
+      <input type="number" id="nplVisitEditPromiseAmount" class="input" placeholder="Сумма обещания" style="max-width:170px;" value="${nplAttr(v.promiseAmount || '')}">
+    </div>
+    <textarea id="nplVisitEditComment" class="input" placeholder="Комментарий" style="width:100%;min-height:70px;margin-bottom:10px;">${safe(v.comment || '') === '-' ? '' : safe(v.comment || '')}</textarea>
+    <div id="nplVisitEditMsg" style="font-size:12px;margin-bottom:8px;color:var(--muted);"></div>
+    <div style="display:flex;gap:8px;">
+      <button type="button" class="btn btn-primary" style="flex:1;" onclick="nplVisitEditSave()">Сохранить</button>
+      <button type="button" class="btn btn-secondary" onclick="nplVisitEditClose()">Отмена</button>
+    </div></div>`;
+  m.style.display = 'block';
+}
+async function nplVisitEditSave() {
+  if (!nplVisitEditCtx) return;
+  const msg = document.getElementById('nplVisitEditMsg');
+  const st = document.querySelector('input[name="nplVisitEditStatus"]:checked');
+  if (!st) { msg.style.color = 'var(--red)'; msg.innerText = 'Выберите результат визита'; return; }
+  msg.style.color = 'var(--muted)'; msg.innerText = 'Сохранение...';
+  try {
+    const r = await postWebAction({
+      webAction: 'updateNplVisit', sessionId: localStorage.getItem('msbSessionId'),
+      id: nplVisitEditCtx.id, status: st.value,
+      promiseDate: document.getElementById('nplVisitEditPromiseDate').value,
+      promiseAmount: document.getElementById('nplVisitEditPromiseAmount').value,
+      comment: document.getElementById('nplVisitEditComment').value.trim()
+    });
+    if (!r.success) { msg.style.color = 'var(--red)'; msg.innerText = r.message || 'Не удалось сохранить'; return; }
+    const key = nplVisitEditCtx.key;
+    allNplVisits = (await fetchJSON('nplVisits')) || {};
+    nplVisitEditClose();
+    if (document.getElementById('nplVisitBlock_' + encodeURIComponent(key))) openNplClientDetail(encodeURIComponent(key));
+    nplRenderSoon();
+    if (nplActiveTab === 'stats' && document.getElementById('nplStatsBody')) renderNplStatsPanel();
+  } catch (e) {
+    console.error(e);
+    msg.style.color = 'var(--red)'; msg.innerText = 'Не удалось связаться с сервером';
+  }
+}
+
 async function confirmNplVisitUi(keyEnc) {
   const key = decodeURIComponent(keyEnc);
   const statusEl = document.getElementById('nplVisitConfirmStatus_' + keyEnc);
@@ -12466,6 +12559,8 @@ async function confirmNplVisitUi(keyEnc) {
   const comment = document.getElementById('nplVisitComment_' + keyEnc).value.trim();
   const suspicious = draft.distance !== undefined && draft.distance !== '' && draft.distance > NPL_VISIT_GEOFENCE_METERS;
 
+  if (nplVisitSaving) return;
+  nplVisitSaving = true;
   statusEl.style.color = 'var(--muted)';
   statusEl.innerText = 'Сохранение...';
 
@@ -12491,6 +12586,10 @@ async function confirmNplVisitUi(keyEnc) {
       const updatedVisits = await fetchJSON('nplVisits');
       allNplVisits = updatedVisits || {};
       openNplClientDetail(keyEnc);
+    } else if (result.duplicate) {
+      statusEl.style.color = 'var(--red)';
+      statusEl.innerText = result.message;
+      try { allNplVisits = (await fetchJSON('nplVisits')) || {}; openNplClientDetail(keyEnc); } catch (e) {}
     } else {
       statusEl.style.color = 'var(--red)';
       statusEl.innerText = result.message || 'Не удалось сохранить визит';
@@ -12499,8 +12598,11 @@ async function confirmNplVisitUi(keyEnc) {
     statusEl.style.color = 'var(--red)';
     statusEl.innerText = 'Не удалось связаться с сервером';
     console.error(error);
+  } finally {
+    nplVisitSaving = false;
   }
 }
+let nplVisitSaving = false;
 // =================== /NPL: ПОДТВЕРЖДЕНИЕ ВИЗИТА ======================
 
 function closeNplClientDetail() {
