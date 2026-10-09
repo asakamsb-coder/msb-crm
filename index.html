@@ -7676,7 +7676,13 @@ function nplUpdatePerfNote(extra) {
   const f = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' с';
   const parts = [];
   if (nplPerf.urgent != null) parts.push('список ' + f(nplPerf.urgent));
-  if (nplPerf.rest != null) parts.push('доп. данные ' + f(nplPerf.rest));
+  if (nplPerf.rest != null) {
+    const rp = nplPerf.restParts || {};
+    const det = Object.keys(rp).map(k => k + ' ' + f(rp[k])).join(', ');
+    parts.push('доп. данные ' + f(nplPerf.rest) + (det ? ' (' + det + ')' : ''));
+  } else if (nplPerf.restParts && Object.keys(nplPerf.restParts).length) {
+    parts.push('доп. данные: ' + Object.keys(nplPerf.restParts).map(k => k + ' ' + f(nplPerf.restParts[k])).join(', ') + ' …');
+  }
   if (nplPerf.stats != null) parts.push('статистика ' + f(nplPerf.stats));
   if (nplPerf.archive != null) parts.push('архив ' + f(nplPerf.archive));
   el.innerText = (extra ? extra + ' · ' : '') + (parts.length ? 'Загрузка: ' + parts.join(' · ') : '');
@@ -7787,21 +7793,24 @@ async function loadNplData() {
   }
 }
 
-async function loadNplRestInBackground() {
-  try {
-    const rest = await nplTimedFetch('rest', 'nplBundleRest');
-    allNplExtra = (rest && rest.extra) || {};
-    allNplAccounts = (rest && rest.accounts) || {};
-    allNplVisits = (rest && rest.visits) || {};
-    allNplMib = (rest && rest.mib) || { data: {}, files: {} };
-    allNplCourt = (rest && rest.court) || { data: {}, files: {} };
-    allNplSurveys = (rest && rest.surveys) || {};
-    allNplAssignMeta = (rest && rest.assignMeta) || null;
-    allNplCollectors = (rest && rest.collectors) || {};
-    if (rest && rest.users) allWebUsers = rest.users;
+function nplApplyRest(rest, part) {
+  if (!rest) return;
+  const has = k => (part ? rest[k] !== undefined : true);
+  if (has('extra')) allNplExtra = rest.extra || {};
+  if (has('accounts')) allNplAccounts = rest.accounts || {};
+  if (has('visits')) allNplVisits = rest.visits || {};
+  if (has('mib')) allNplMib = rest.mib || { data: {}, files: {} };
+  if (has('court')) allNplCourt = rest.court || { data: {}, files: {} };
+  if (has('surveys')) allNplSurveys = rest.surveys || {};
+  if (has('assignMeta')) allNplAssignMeta = rest.assignMeta || null;
+  if (has('collectors')) allNplCollectors = rest.collectors || {};
+  if (rest.users) allWebUsers = rest.users;
+}
 
-    // Если карточка клиента уже открыта, пока грузились доп.данные —
-    // обновим её содержимое (телефоны/фото/счета/визиты/взыскатель).
+function nplAfterRestPart() {
+  // Если карточка клиента уже открыта, пока грузились доп.данные —
+  // обновим её содержимое (телефоны/фото/счета/визиты/взыскатель).
+  try {
     const overlay = document.getElementById('nplDetailOverlay');
     if (currentNplClientKey && overlay && overlay.classList.contains('active')) {
       openNplClientDetail(encodeURIComponent(currentNplClientKey));
@@ -7810,7 +7819,41 @@ async function loadNplRestInBackground() {
     if (isVzShell() && document.getElementById('vzyskatelHomeBody')) {
       renderVzyskatelHome();
     }
-    nplRenderSoon();
+    if (nplActiveTab === 'stats' && document.getElementById('nplStatsBody')) renderNplStatsPanel();
+  } catch (e) { console.error(e); }
+  nplRenderSoon();
+}
+
+// «Остальное» грузится тремя параллельными запросами (визиты и пользователи /
+// доп. данные и счета / МИБ, суд, анкеты) — общее время = самая медленная часть.
+// Если сервер ещё старой версии (без этих действий) — один общий запрос, как раньше.
+async function loadNplRestInBackground() {
+  try {
+    const t0 = performance.now();
+    const parts = ['nplRestV', 'nplRestE', 'nplRestM'];
+    const marks = { nplRestV: 'V', nplRestE: 'E', nplRestM: 'M' };
+    const names = { nplRestV: 'визиты', nplRestE: 'адреса', nplRestM: 'МИБ/суд/анкеты' };
+    let legacy = false;
+    nplPerf.restParts = {};
+    const jobs = parts.map(function(act) {
+      return fetchJSON(act).then(function(r) {
+        nplPerf.restParts[names[act]] = performance.now() - t0;
+        if (!r || r._part !== marks[act]) { legacy = true; return; }
+        if (r._t) { try { console.info('[NPL ' + act + ']', JSON.stringify(r._t)); } catch (e) {} }
+        nplApplyRest(r, true);
+        nplAfterRestPart();
+        nplUpdatePerfNote();
+      });
+    });
+    try { await Promise.all(jobs); } catch (e) { legacy = true; console.error(e); }
+    if (legacy) {
+      const rest = await nplTimedFetch('rest', 'nplBundleRest');
+      nplApplyRest(rest, false);
+      nplAfterRestPart();
+    } else {
+      nplPerf.rest = performance.now() - t0;
+      nplUpdatePerfNote();
+    }
   } catch (error) {
     console.error('Не удалось догрузить доп. данные NPL:', error);
   }
@@ -9631,7 +9674,7 @@ function stDetailHtml(r) {
 // достоверности: время между визитами, расстояние и скорость переезда, отметка
 // далеко от адреса, один GPS у разных клиентов, визиты без фото/GPS.
 let stVisMode = 'clients', stVisEmp = '', stVisPeriod = 'month', stVisRes = '', stVisFilter = 'all';
-let stVisLimit = 50, stVisOpenKey = null, stVisOpenDays = {}, stChkEmp = '', stChkDay = '';
+let stVisLimit = 50, stVisOpenDays = {}, stChkEmp = '', stChkDay = '';
 const ST_VIS_RESULTS = ['Контакт с клиентом', 'Контакт с третьим лицом', 'Нет дома', 'Не проживает/съехал'];
 const ST_VIS_PERIODS = [['month', 'Этот месяц'], ['prev', 'Прошлый месяц'], ['week', '7 дней'], ['today', 'Сегодня']];
 const ST_SPEED_BAD = 60, ST_SPEED_WARN = 30;   // км/ч по городу
@@ -9651,11 +9694,51 @@ function stVisSet(name, val) {
   stVisLimit = 50;
   renderNplStatsPanel();
 }
-function stVisToggleKey(kEnc) {
-  const k = decodeURIComponent(kEnc);
-  stVisOpenKey = stVisOpenKey === k ? null : k;
-  try { renderNplStatsPanel(); } catch (e) { console.error(e); stVisOpenKey = null; try { renderNplStatsPanel(); } catch (e2) {} alert('Не удалось открыть карточку: ' + (e && e.message)); }
+function stVisCloseCard() {
+  const m = document.getElementById('stVisModal');
+  if (m) m.style.display = 'none';
+  document.body.style.overflow = '';
 }
+function stVisOpenCard(key) {
+  let m = document.getElementById('stVisModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'stVisModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(17,24,39,.5);display:none;overflow-y:auto;padding:24px 12px;';
+    m.addEventListener('click', function(ev) { if (ev.target === m) stVisCloseCard(); });
+    document.body.appendChild(m);
+  }
+  let inner = '';
+  let title = key;
+  try {
+    const g = getNplGroupsCached().find(x => x.key === key);
+    if (!g) throw new Error('клиент не найден в списке');
+    title = g.clientName;
+    const D = stVisData();
+    const vs = D.scope.filter(v => v.key === key);
+    inner = vs.length
+      ? stVisSafeCard(vs, g)
+      : '<div class="st-det" style="padding:10px 14px;"><div style="color:var(--muted);font-size:13px;margin-bottom:8px;">За выбранный период визитов нет.</div>' + stVisSurveyHtml(g) + '</div>';
+  } catch (e) {
+    console.error(e);
+    inner = '<div style="padding:14px;color:#C0392B;">Не удалось открыть карточку: ' + stEsc(e.message) + '</div>';
+  }
+  m.innerHTML = '<div style="max-width:860px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:1;">' +
+    '<b style="font-size:15px;word-break:break-word;">' + stEsc(title) + '</b>' +
+    '<button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;flex:none;" onclick="stVisCloseCard()">Закрыть ✕</button></div>' + inner + '</div>';
+  m.style.display = 'block';
+  m.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+// Один обработчик на весь документ: не зависит от перерисовки таблицы и экранирования ключей
+document.addEventListener('click', function(ev) {
+  const row = ev.target && ev.target.closest ? ev.target.closest('tr.stv-row[data-vk]') : null;
+  if (!row) return;
+  if (ev.target.closest('a')) return;
+  stVisOpenCard(row.getAttribute('data-vk'));
+});
+document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') stVisCloseCard(); });
 function stVisToggleDay(d) { stVisOpenDays[d] = !stVisOpenDays[d]; renderNplStatsPanel(); }
 function stVisMore() { stVisLimit += 50; renderNplStatsPanel(); }
 function stVisOpenRoute(emp, day) { stVisMode = 'check'; stChkEmp = emp; stChkDay = day; renderNplStatsPanel(); }
@@ -9875,60 +9958,46 @@ function stVisHistoryHtml(vs, g) {
   return '<div class="st-det" style="padding:10px 14px;">' +
     '<div style="font-weight:800;font-size:13px;margin-bottom:2px;">История визитов (' + vs.length + ')</div>' + visits +
     (g ? '<div style="font-weight:800;font-size:13px;margin:14px 0 6px;">Данные, собранные по клиенту</div>' + stVisSurveyHtml(g) +
-      '<button type="button" class="btn btn-secondary" style="margin-top:10px;font-size:13px;padding:6px 14px;" onclick="event.stopPropagation();openNplClientDetail(\'' + kEnc + '\')">Открыть карточку клиента</button>' : '') +
+      '<button type="button" class="btn btn-secondary" style="margin-top:10px;font-size:13px;padding:6px 14px;" onclick="event.stopPropagation();stVisCloseCard();openNplClientDetail(\'' + kEnc + '\')">Открыть карточку клиента</button>' : '') +
     '</div>';
 }
 
+const ST_VIS_MAX_CLIENTS = 50;
 function stVisClientsHtml(D, groups) {
   const gm = {};
   groups.forEach(g => { gm[g.key] = g; });
   const byKey = {};
   D.list.forEach(v => { (byKey[v.key] = byKey[v.key] || []).push(v); });
-  const lastAny = {};
-  D.all.forEach(v => { if (!lastAny[v.key] || v.dt > lastAny[v.key]) lastAny[v.key] = v.dt; });
-  // область клиентов: у выбранного сотрудника — его клиенты; иначе все
-  let scope = groups;
-  if (stVisEmp) {
-    const u = (allWebUsers || []).find(x => String(x.fullName || '').trim().toLowerCase() === stVisEmp);
-    const id = u ? String(u.employeeId || '').trim() : '';
-    scope = groups.filter(g => (id && String(allNplAssignments[g.key] || '').trim() === id) || (byKey[g.key] || []).length);
-  }
-  const rows = scope.map(function(g) {
-    const vs = byKey[g.key] || [];
-    const last = vs.length ? vs.reduce((a, b) => (a.dt > b.dt ? a : b)) : null;
+  // Только клиенты, у которых за период был визит — без визита не показываем (лишняя нагрузка)
+  const rows = Object.keys(byKey).filter(k => gm[k]).map(function(k) {
+    const vs = byKey[k];
+    const last = vs.reduce((a, b) => (a.dt > b.dt ? a : b));
     const prom = vs.slice().reverse().find(v => v.promiseDate || v.promiseAmount) || null;
-    return { g: g, vs: vs, last: last, prom: prom, bad: vs.some(stBad), lastAny: lastAny[g.key] || null };
+    return { g: gm[k], vs: vs, last: last, prom: prom, bad: vs.some(stBad) };
   });
-  const cnt = {
-    all: rows.length, seen: rows.filter(r => r.vs.length).length, none: rows.filter(r => !r.vs.length).length,
-    promise: rows.filter(r => r.prom).length, bad: rows.filter(r => r.bad).length
-  };
-  const f = stVisFilter;
-  let shown = rows.filter(r => f === 'seen' ? r.vs.length : f === 'none' ? !r.vs.length : f === 'promise' ? r.prom : f === 'bad' ? r.bad : true);
-  shown.sort((a, b) => f === 'none' ? (b.g.maxDays - a.g.maxDays) : ((b.last ? b.last.dt : 0) - (a.last ? a.last.dt : 0)) || (b.g.maxDays - a.g.maxDays));
-  const chip = (k, label, cls) => `<button type="button" class="st-tab${f === k ? ' on' : ''}" style="font-size:12px;padding:4px 10px;" onclick="stVisSet('filter','${k}')">${label} <span class="n">${cnt[k]}</span></button>`;
-  const body = shown.slice(0, stVisLimit).map(function(r) {
+  const cnt = { all: rows.length, promise: rows.filter(r => r.prom).length, bad: rows.filter(r => r.bad).length };
+  const f = (stVisFilter === 'promise' || stVisFilter === 'bad') ? stVisFilter : 'all';
+  const shown = rows.filter(r => f === 'promise' ? r.prom : f === 'bad' ? r.bad : true);
+  shown.sort((a, b) => b.last.dt - a.last.dt);
+  const chip = (k, label) => `<button type="button" class="st-tab${f === k ? ' on' : ''}" style="font-size:12px;padding:4px 10px;" onclick="stVisSet('filter','${k}')">${label} <span class="n">${cnt[k]}</span></button>`;
+  const body = shown.slice(0, ST_VIS_MAX_CLIENTS).map(function(r) {
     const g = r.g;
     const rc = nplRiskCategory(g);
     const cat = rc && VZ_CAT[rc] ? VZ_CAT[rc].short : '';
-    const open = stVisOpenKey === g.key;
-    const stale = !r.vs.length;
-    const lastTxt = r.last ? stFmtDm(r.last.dt) + ' · ' + stFmtTm(r.last.dt) : (r.lastAny ? '<span style="color:var(--muted);">' + stFmtDm(r.lastAny) + ' (раньше)</span>' : '<span class="dash">нет визитов</span>');
-    return `<tr style="cursor:pointer;" onclick="stVisToggleKey('${encodeURIComponent(g.key).replace(/'/g, '%27')}')">
+    return `<tr class="stv-row" data-vk="${stEsc(g.key)}" style="cursor:pointer;">
       <td><b>${stEsc(g.clientName)}</b><div class="s2" style="text-align:left;">${stEsc(cat)}${cat ? ' · ' : ''}${g.maxDays} дн.</div></td>
-      <td>${r.last ? stEsc(r.last.who) : stEsc(allNplAssignments[g.key] ? nplCollectorLabel(allNplAssignments[g.key]) : '—')}</td>
-      <td class="r${stale ? ' bad' : ''}">${r.vs.length}</td>
-      <td>${lastTxt}</td>
-      <td>${r.last ? stVisPill(r.last) : '<span class="dash">—</span>'}</td>
+      <td>${stEsc(r.last.who)}</td>
+      <td class="r">${r.vs.length}</td>
+      <td>${stFmtDm(r.last.dt)} · ${stFmtTm(r.last.dt)}</td>
+      <td>${stVisPill(r.last)}</td>
       <td>${r.prom ? stVisPromise(r.prom) : '<span class="dash">—</span>'}${r.bad ? ' <span class="pg rd" style="font-weight:600;">сомнит.</span>' : ''}</td>
-      <td class="r">${g.maxDays} дн.</td><td class="r">${stMoney(stPf(g))}</td></tr>
-      ${open ? '<tr><td colspan="8" style="padding:0;">' + (r.vs.length ? stVisSafeCard(r.vs, g) : '<div class="st-det" style="padding:10px 14px;"><div style="color:var(--muted);font-size:13px;margin-bottom:8px;">За выбранный период визитов нет.</div>' + stVisSurveyHtml(g) + '</div>') + '</td></tr>' : ''}`;
+      <td class="r">${g.maxDays} дн.</td><td class="r">${stMoney(stPf(g))}</td></tr>`;
   }).join('');
   return `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${chip('all', 'Все', '')}${chip('seen', 'Были', '')}${chip('none', 'Без визита', '')}${chip('promise', 'С обещанием', '')}${chip('bad', 'Сомнительные', '')}</div>
-    <div style="overflow-x:auto;"><table class="stv-t"><thead><tr><th>Клиент</th><th>Взыскатель</th><th class="r">Визитов</th><th>Последний</th><th>Результат</th><th>Обещание</th><th class="r">Просрочка</th><th class="r">Портфель</th></tr></thead><tbody>${body || '<tr><td colspan="8" style="padding:14px;color:var(--muted);">Никого нет.</td></tr>'}</tbody></table></div>
-    ${shown.length > stVisLimit ? `<div style="text-align:center;margin-top:8px;"><button type="button" class="btn btn-secondary" style="padding:6px 16px;font-size:13px;" onclick="stVisMore()">Показать ещё (${shown.length - stVisLimit})</button></div>` : ''}
-    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Нажмите на клиента — откроется вся история визитов: дата, результат, расстояние до адреса, фото, комментарий.</div>`;
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${chip('all', 'С визитами')}${chip('promise', 'С обещанием')}${chip('bad', 'Сомнительные')}</div>
+    <div style="overflow-x:auto;"><table class="stv-t"><thead><tr><th>Клиент</th><th>Взыскатель</th><th class="r">Визитов</th><th>Последний</th><th>Результат</th><th>Обещание</th><th class="r">Просрочка</th><th class="r">Портфель</th></tr></thead><tbody>${body || '<tr><td colspan="8" style="padding:14px;color:var(--muted);">За выбранный период визитов нет.</td></tr>'}</tbody></table></div>
+    ${shown.length > ST_VIS_MAX_CLIENTS ? `<div style="text-align:center;margin-top:8px;font-size:12.5px;color:var(--muted);">Показаны последние ${ST_VIS_MAX_CLIENTS} из ${shown.length} клиентов. Выберите взыскателя, период или результат, чтобы сузить список.</div>` : ''}
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Нажмите на клиента — откроется вся история визитов: дата, результат, расстояние до адреса, фото, комментарий. Клиенты без визитов не показываются.</div>`;
 }
 
 function stVisDaysHtml(D) {
