@@ -679,6 +679,82 @@ body.role-vzyskatel .page.active{padding:0;}
 #vzLoanOverlay.active{display:block;}
 .vzd-sheet-opt{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer;}
 body.role-vzyskatel #nplPage.active{padding:16px;}
+/* ===== Тёмно-красный стиль мобильной оболочки (утверждённый макет) ===== */
+body.role-vzyskatel{--brand:#C4231A;--brand-dark:#B71F17;--brand-soft:#FBE4E1;}
+body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
+.vzd-hero{background:#B71F17;padding:16px 16px 56px;}
+.vzd-hero .sub{opacity:1;color:#FAD4D0;}
+.vzd-name{font-weight:600;}
+.vzd-card,.vzd-stat{border:none;border-radius:20px;}
+.vzd-item{border:none;border-radius:18px;position:relative;overflow:hidden;padding-left:16px;}
+.vzd-stripe{position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:0;align-self:auto;}
+.vzd-h{font-weight:600;}
+.vzd-num{font-weight:600;}
+.vzd-q .vzd-ico,.vzd-stat .vzd-ico{background:#C4231A;color:#fff;}
+.vzd-q button{font-weight:500;}
+.vzd-btn{border-radius:16px;padding:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;}
+.vzd-legal .vzd-ico{background:#C4231A;color:#fff;}
+.vzd-btn.p{background:#141414;color:#fff;}
+.vzd-btn.s{background:#FBE4E1;color:#A81E16;}
+.vzd-chip{border:none;font-weight:500;color:#141414;}
+.vzd-chip.a{background:#141414;color:#fff;}
+.vzd-reco{background:#fff;border:none;border-radius:20px;}
+.vzd-c-amb{background:#FFF1D6;color:#B76E00;}
+.vzd-sw{background:rgba(255,255,255,.18);}
+.vzd-excel{background:#FBE4E1;color:#A81E16;}
+.vzd-tel{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;background:#F5F6F8;border-radius:14px;padding:10px 12px;margin-top:8px;font-size:14px;}
+.vzd-telc{width:34px;height:34px;border-radius:50%;background:#E8F6EE;color:#1E9E5A;display:flex;align-items:center;justify-content:center;flex:none;}
+.vzd-legal{display:flex;align-items:center;gap:10px;cursor:pointer;}
+.vzd-tile{display:flex;align-items:center;gap:8px;}
+.vzd-tile .vzd-ico{background:#C4231A;color:#fff;width:34px;height:34px;}
+.vzyskatel-navbar{border-top:none;box-shadow:0 -4px 18px rgba(0,0,0,.06);}
+.vzyskatel-nav-btn{font-weight:500;}
+body.role-vzyskatel .input{background:#F5F6F8;border:none;border-radius:14px;}
+/* --- экран «Сбор данных» --- */
+#vzCollectOverlay{position:fixed;inset:0;background:#B71F17;z-index:70;display:none;overflow-y:auto;}
+#vzCollectOverlay.active{display:block;}
+.vzc-wrap{padding:14px 12px 40px;display:flex;flex-direction:column;gap:10px;max-width:560px;margin:0 auto;}
+.vzc-top{display:flex;justify-content:space-between;align-items:center;gap:10px;color:#fff;padding:4px 2px;}
+.vzc-x{width:38px;height:38px;border-radius:50%;border:none;background:#fff;color:#C4231A;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
+.vzc-w{background:#fff;border-radius:20px;padding:14px;color:#141414;}
+.vzc-hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.vzc-ic{width:40px;height:40px;border-radius:12px;background:#C4231A;color:#fff;display:flex;align-items:center;justify-content:center;flex:none;}
+.vzc-t{font-size:15px;font-weight:600;line-height:1.2;}
+.vzc-m{font-size:12px;color:#8A8A8E;}
+.vzc-in{box-sizing:border-box;width:100%;background:#F5F6F8;border:none;border-radius:14px;height:44px;padding:0 12px;font-size:14px;color:#141414;font-family:inherit;}
+textarea.vzc-in{height:auto;min-height:70px;padding:10px 12px;}
+.vzc-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.vzc-b2{display:flex;align-items:center;justify-content:center;gap:5px;background:#FBE4E1;color:#A81E16;border:none;border-radius:14px;font-size:13px;padding:11px 0;font-weight:600;cursor:pointer;font-family:inherit;}
+.vzc-b2.r{background:#C4231A;color:#fff;}
+.vzc-photos{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.vzc-w .sv-photo{width:62px;height:62px;border-radius:14px;border:none;background:#FBE4E1;}
+.vzc-chip{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:14px;margin-bottom:8px;font-size:14px;background:#F5F6F8;cursor:pointer;}
+.vzc-cb{width:24px;height:24px;border-radius:50%;border:1.5px solid #C9CACE;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;}
+.vzc-chip.on{background:#141414;color:#fff;}
+.vzc-chip.on .vzc-cb{background:#C4231A;border-color:#C4231A;}
+.vzc-chip.on .vzc-cb:after{content:"✓";}
+.vzc-chip.r.on{background:#FBE4E1;color:#7F150E;font-weight:600;}
+.vzc-tel{display:flex;align-items:center;gap:10px;background:#F5F6F8;border-radius:14px;padding:10px 12px;margin-bottom:8px;}
+.vzc-telb{flex:1;min-width:0;font-size:14px;}
+.vzc-tag{font-size:11px;padding:2px 8px;border-radius:8px;background:#fff;color:#6B6B70;border:0.5px solid #E1E2E5;display:inline-block;margin-top:3px;}
+.vzc-tag.p{background:#FBE4E1;color:#A81E16;border-color:#FBE4E1;}
+.vzc-call{width:34px;height:34px;border-radius:50%;background:#E8F6EE;color:#1E9E5A;display:flex;align-items:center;justify-content:center;text-decoration:none;flex:none;}
+.vzc-del{border:none;background:none;color:#8A8A8E;cursor:pointer;padding:4px;display:flex;}
+.vzc-roles{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;}
+.vzc-role{font-size:12px;padding:7px 12px;border-radius:14px;background:#F5F6F8;border:none;cursor:pointer;font-family:inherit;color:#141414;}
+.vzc-role.on{background:#C4231A;color:#fff;}
+.vzc-save{width:100%;background:#141414;color:#fff;border:none;border-radius:16px;height:52px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;}
+.vzc-st{font-size:12.5px;color:#FAD4D0;text-align:center;}
+details.vzc-w>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;}
+details.vzc-w>summary::-webkit-details-marker{display:none;}
+details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
+.vzc-chev{transition:transform .15s;color:#C4231A;display:flex;}
+#vzcLegalBody{margin-top:12px;border-top:0.5px solid #E4E5E9;padding-top:4px;}
+#vzcLegalBody .btn{border-radius:14px;display:flex;align-items:center;justify-content:center;gap:6px;border:none;font-weight:600;}
+#vzcLegalBody .btn-secondary{background:#FBE4E1;color:#A81E16;}
+#vzcLegalBody .btn-primary{background:#C4231A;color:#fff;}
+#vzcLegalBody .input,#vzcLegalBody .select{background:#F5F6F8;border:none;border-radius:14px;}
+
 /* Панель быстрых действий в карточке клиента NPL (Позвонить/Написать/
    Маршрут/Визит) — один тап вместо поиска нужной кнопки в длинной
    карточке. Те же классы, что и у vz-quick-action, но своя сетка на 4
@@ -2049,6 +2125,7 @@ body.role-vzyskatel #nplPage.active{padding:16px;}
   <div id="vzClientsBody"></div>
 </section>
 <div id="vzLoanOverlay"></div>
+<div id="vzCollectOverlay"></div>
 
 <section id="slaPage" class="page">
   <div class="header">
@@ -3868,6 +3945,14 @@ function appIcon(name, size) {
     mappin: '<path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z" />',
     chevron: '<path d="M9 6l6 6l-6 6" />',
     alert: '<path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" />',
+    phone: '<path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />',
+    plus: '<path d="M12 5v14" /><path d="M5 12h14" />',
+    x: '<path d="M18 6l-12 12" /><path d="M6 6l12 12" />',
+    gavel: '<path d="M13 10l7.383 7.418c.823 .82 .823 2.148 0 2.967a2.11 2.11 0 0 1 -2.976 0l-7.407 -7.385" /><path d="M6 9l4 4" /><path d="M13 10l-4 -4" /><path d="M3 21h7" /><path d="M6.793 15.793l-3.586 -3.586a1 1 0 0 1 0 -1.414l2.293 -2.293l.5 .5l3 -3l-.5 -.5l2.293 -2.293a1 1 0 0 1 1.414 0l3.586 3.586a1 1 0 0 1 0 1.414l-2.293 2.293l-.5 -.5l-3 3l.5 .5l-2.293 2.293a1 1 0 0 1 -1.414 0z" />',
+    briefcase: '<path d="M3 9a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9" /><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2" /><path d="M3 13a20 20 0 0 0 18 0" />',
+    bank: '<path d="M3 21l18 0" /><path d="M3 10l18 0" /><path d="M5 6l7 -3l7 3" /><path d="M4 10l0 11" /><path d="M20 10l0 11" /><path d="M8 14l0 3" /><path d="M12 14l0 3" /><path d="M16 14l0 3" />',
+    upload: '<path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 9l5 -5l5 5" /><path d="M12 4l0 12" />',
+    trash: '<path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />',
     logout: '<path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" /><path d="M9 12h12l-3 -3" /><path d="M18 15l3 -3" />'
   };
   return `<svg xmlns="http://www.w3.org/2000/svg" ${common}>${paths[name] || ''}</svg>`;
@@ -6979,7 +7064,7 @@ function vzClientRowHtml(g) {
   const color = c ? c.color : '#CFCBCB';
   const bd = c ? `<span class="vzd-bd ${c.cls}">${safe(c.short)}</span>` : `<span class="vzd-bd" style="background:#F0F0F2;color:var(--muted);">${g.maxDays} дн.</span>`;
   const pct = Math.min(100, Math.round(g.maxDays / 90 * 100));
-  return `<div class="vzd-item" onclick="openNplClientDetail('${encodeURIComponent(g.key)}')">
+  return `<div class="vzd-item" onclick="openVzClient('${encodeURIComponent(g.key)}')">
     <div class="vzd-stripe" style="background:${color};"></div>
     <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:13.5px;word-break:break-word;">${safe(g.clientName)}</div>
       <div class="vzd-t">анкет: ${g.loans.length} · просрочка ${g.maxDays} дн.</div>
@@ -7071,7 +7156,94 @@ function openVzLoan(cEnc, kEnc) {
   renderVzLoan();
   document.getElementById('vzLoanOverlay').classList.add('active');
 }
-function closeVzLoan() { document.getElementById('vzLoanOverlay').classList.remove('active'); vzLoanCtx = null; }
+let vzFromClient = null;
+function closeVzLoan() {
+  if (vzFromClient && vzLoanCtx) { const k = vzFromClient; vzLoanCtx = null; renderVzClient(k); return; }
+  document.getElementById('vzLoanOverlay').classList.remove('active'); vzLoanCtx = null; vzFromClient = null;
+}
+function closeVzClient() { document.getElementById('vzLoanOverlay').classList.remove('active'); vzLoanCtx = null; vzFromClient = null; }
+
+// Клиент: одна анкета — сразу карточка анкеты, несколько — обзор клиента со списком анкет.
+function openVzClient(kEnc) {
+  vzEnsureIndex();
+  const key = decodeURIComponent(kEnc);
+  const g = nplGroupsByKey[key];
+  if (!g) { openNplClientDetail(kEnc); return; }
+  vzFromClient = null;
+  const worst = g.loans.slice().sort((a, b) => nplLoanDays(b) - nplLoanDays(a))[0];
+  openVzLoan(encodeURIComponent(String(worst.contractId)), kEnc);
+}
+function vzSwitchLoan(cEnc) {
+  if (!vzLoanCtx) return;
+  vzLoanCtx.contractId = decodeURIComponent(cEnc);
+  renderVzLoan();
+  const o = document.getElementById('vzLoanOverlay'); if (o) o.scrollTop = 0;
+}
+
+function renderVzClient(key) {
+  const box = document.getElementById('vzLoanOverlay');
+  const g = nplGroupsByKey[key];
+  if (!box || !g) return;
+  vzFromClient = key;
+  const kEnc = encodeURIComponent(key);
+  const cat = nplRiskCategory(g);
+  const c = cat ? VZ_CAT[cat] : null;
+  const extra = allNplExtra[key] || {};
+  const phoneRaw = String(g.phoneJoined || '').split(/[;,]/)[0] || '';
+  const phone = phoneRaw.replace(/[^\d+]/g, '');
+  const empId = String(allNplAssignments[key] || '').trim();
+  const money = v => (Number(v) || 0) > 0 ? vzFmt(v) : '';
+  const row = (label, val) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #EEE;font-size:13px;"><span style="color:#6B7280;">${label}</span><b style="text-align:right;word-break:break-word;">${val}</b></div>`;
+  const items = [
+    [g.subject === 'J' ? 'ИНН' : 'ПИНФЛ', safe(g.pin) === '—' ? '' : safe(g.pin)],
+    ['Адрес', extra.address ? safe(extra.address) : ''],
+    ['Телефон', phoneRaw ? safe(phoneRaw) : ''],
+    ['Взыскатель', empId ? safe(nplCollectorLabel(empId)) : ''],
+    ['Портфель', money(vzGroupPf(g))],
+    ['Всего задолженность', money(g.totalDebtSum)],
+    ['Текущий остаток', money(g.currentBalanceSum)],
+    ['Просроченный основной долг', money(g.overdueBalanceSum)],
+    ['Просроченные проценты', money(g.overdueInterestSum)],
+    ['Резерв', money(g.reserveSum)],
+    ['NPL', money(g.nplSum)],
+    ['Приказ суда', g.courtOrderNumberJoined ? safe(g.courtOrderNumberJoined) : ''],
+    ['МИБ', g.mibCaseJoined ? safe(g.mibCaseJoined) : '']
+  ].filter(x => x[1] !== '');
+  const loans = g.loans.slice().sort((a, b) => nplLoanDays(b) - nplLoanDays(a));
+  const loanRows = loans.map(l => {
+    const e = nplLoanEarlyInfo(l);
+    const lc = vzLoanCat(l);
+    const cc = lc ? VZ_CAT[lc] : null;
+    const color = cc ? cc.color : '#CFCBCB';
+    const d = nplLoanDays(l);
+    return `<div class="vzd-item" onclick="openVzLoan('${encodeURIComponent(String(l.contractId))}','${kEnc}')">
+      <div class="vzd-stripe" style="background:${color};"></div>
+      <div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:13.5px;">№ ${safe(l.contractId)}</div>
+        <div class="vzd-t">${l.openDate ? 'выдана ' + safe(nplFmtDateRu(l.openDate)) + ' · ' : ''}${d} дн. просрочки</div>
+        <div class="vzd-bar" style="margin-top:7px;"><i style="width:${Math.min(100, Math.round(d / 90 * 100))}%;background:${color};"></i></div></div>
+      <div style="text-align:right;"><div style="font-weight:800;font-size:13px;">${vzFmt(vzPf(l))}</div>${cc ? `<span class="vzd-bd ${cc.cls}">${cc.short}</span>` : ''}</div></div>`;
+  }).join('');
+  const worst = loans[0];
+  const we = worst ? nplLoanEarlyInfo(worst) : null;
+  const reco = worst ? nplRecommendation(worst ? vzLoanCat(worst) : null, we ? we.epd : false, nplLoanDays(worst), vzGroupPf(g)) : '';
+
+  box.innerHTML = `
+    <div class="vzd-hero" style="padding-bottom:58px;">
+      <div class="vzd-top"><button type="button" onclick="closeVzClient()" aria-label="Назад" style="border:none;background:rgba(255,255,255,.2);color:#fff;width:38px;height:38px;border-radius:12px;font-size:20px;cursor:pointer;">‹</button>
+        <div style="min-width:0;"><div class="vzd-name">${safe(g.clientName)}</div><div class="sub">${g.subject === 'J' ? 'Юрлицо' : 'Физлицо'} · ${vzFmt(vzGroupPf(g) || g.nplSum)}</div></div></div>
+      <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
+        ${c ? `<span class="vzd-bd" style="background:#fff;color:var(--brand);">${safe(c.label)}</span>` : ''}
+        <span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">${g.maxDays} дн. просрочки</span>
+        <span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">анкет: ${g.loans.length}</span>
+      </div></div>
+    <div class="vzd-body">
+      ${reco ? `<div class="vzd-reco"><div class="vzd-ico vzd-c-amb">${appIcon('alert', 19)}</div><div><div class="vzd-h" style="color:#633806;">Рекомендация</div><div class="vzd-t" style="color:#7A5200;">${safe(reco)}</div></div></div>` : ''}
+      <div class="vzd-card"><div class="vzd-h" style="margin-bottom:4px;">Данные клиента</div>${items.map(x => row(x[0], x[1])).join('')}</div>
+      <div class="vzd-card" style="padding-bottom:6px;"><div class="vzd-h" style="margin-bottom:8px;">Анкеты (${g.loans.length})</div>${loanRows}</div>
+      ${phone ? `<a class="vzd-btn s" href="tel:${safe(phone)}">Позвонить клиенту</a>` : ''}
+      <button type="button" class="vzd-btn s" onclick="openNplClientDetail('${kEnc}')">Полная карточка клиента</button>
+    </div>`;
+}
 
 function renderVzLoan() {
   const box = document.getElementById('vzLoanOverlay');
@@ -7104,36 +7276,78 @@ function renderVzLoan() {
   const reco = nplRecommendation(cat, e ? e.epd : false, days, pf);
   const sv = (allNplSurveys[l.contractId] || [])[0];
   const flags = sv ? [sv.bizExists ? '<span class="vzd-bd vzd-c-grn">Бизнес есть</span>' : '', sv.fictitious ? '<span class="vzd-bd vzd-c-red">Фиктивный бизнес</span>' : '', sv.finDifficulty ? '<span class="vzd-bd vzd-c-amb">Фин. затруднение</span>' : '',
+    sv.bankrupt ? '<span class="vzd-bd vzd-c-red">Банкрот</span>' : '', sv.stopped ? '<span class="vzd-bd vzd-c-red">Бизнес остановлен</span>' : '', sv.other ? '<span class="vzd-bd vzd-c-blu">' + safe(sv.otherText || 'Другое') + '</span>' : '',
     sv.openDate ? `<span class="vzd-bd" style="background:#F0F0F2;color:var(--text);">С ${safe(nplFmtDateRu(sv.openDate))}</span>` : ''].filter(Boolean).join(' ') : '';
   const bizTxt = sv ? `${(sv.bizPhotos || []).length} фото${sv.bizLat !== '' && sv.bizLat !== undefined ? ' · есть GPS' : ''}` : 'нет данных';
   const colTxt = sv ? `${(sv.collPhotos || []).length} фото${sv.collLat !== '' && sv.collLat !== undefined ? ' · есть GPS' : ''}` : 'нет данных';
   const canCollect = nplCanCollectSurvey() && g.subject === 'J';
+  // Кредитные данные из выгрузки (пустые и нулевые значения не показываем)
+  const crRow = (label, val) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #EEE;font-size:13px;"><span style="color:#6B7280;">${label}</span><b style="text-align:right;word-break:break-word;">${val}</b></div>`;
+  const money = v => (Number(v) || 0) > 0 ? vzFmt(v) : '';
+  const crItems = [
+    ['Текущий остаток', money(l.currentBalance)],
+    ['Всего задолженность', money(l.totalDebt)],
+    ['Пересмотренный остаток', money(l.revisedBalance)],
+    ['Просроченный основной долг', money(l.overdueBalance)],
+    ['Просроченные проценты', money(l.overdueInterest)],
+    ['Начисленные проценты', money(l.accruedInterest)],
+    ['Всего проценты', money(l.totalInterest)],
+    ['Резерв', money(l.reserve)],
+    ['Дни просрочки (основной долг)', nplSaneDays(l.daysOverdue) ? nplSaneDays(l.daysOverdue) + ' дн' : ''],
+    ['Дни просрочки (проценты)', nplSaneDays(l.daysOverdueInterest) ? nplSaneDays(l.daysOverdueInterest) + ' дн' : ''],
+    ['Тип кредита', safe(l.productType || '') === '—' ? '' : safe(l.productType || '')],
+    ['Дата выдачи', l.openDate ? safe(nplFmtDateRu(l.openDate)) : ''],
+    ['Приказ суда', l.courtOrderNumber ? safe(l.courtOrderNumber) + (l.courtOrderDate ? ' · ' + safe(l.courtOrderDate) : '') : ''],
+    ['МИБ', l.mibCase ? safe(l.mibCase) + (l.mibDate ? ' · ' + safe(l.mibDate) : '') : '']
+  ].filter(x => x[1] !== '');
+  const credit = `<div class="vzd-card"><div class="vzd-h" style="margin-bottom:4px;">Кредитные данные</div>${crItems.length ? crItems.map(x => crRow(x[0], x[1])).join('') : '<div class="vzd-t">В выгрузке нет кредитных данных по этой анкете</div>'}</div>`;
   const phone = String(l.phone || '').replace(/[^\d+]/g, '');
+
+  const key = g.key;
+  vzEnsureIndex();
+  const sortedLoans = g.loans.slice().sort((x, y) => nplLoanDays(y) - nplLoanDays(x));
+  const switcher = g.loans.length > 1
+    ? `<div class="vzd-card" style="padding:10px 12px;"><div class="vzd-chips">${sortedLoans.map(x => `<button type="button" class="vzd-chip ${String(x.contractId) === String(l.contractId) ? 'a' : ''}" onclick="vzSwitchLoan('${encodeURIComponent(String(x.contractId))}')">№ ${safe(x.contractId)} · ${nplLoanDays(x)} дн.</button>`).join('')}</div></div>` : '';
+  // Телефоны: из выгрузки + добавленные вручную
+  const filePh = String(g.phoneJoined || '').split(/[;,]/).map(x => x.trim()).filter(Boolean);
+  const exPh = (allNplExtra[key] && allNplExtra[key].phones) || [];
+  const telRow = (num, label) => `<a class="vzd-tel" href="tel:${safe(String(num).replace(/[^\d+]/g, ''))}"><div class="vzd-telc">${appIcon('phone', 16)}</div><div style="flex:1;min-width:0;"><b>${safe(num)}</b><div class="vzd-t">${safe(label)}</div></div></a>`;
+  const phonesCard = `<div class="vzd-card"><div class="vzd-tile" style="margin-bottom:2px;"><div class="vzd-ico">${appIcon('phone', 18)}</div><div style="flex:1;"><div class="vzd-h">Телефоны</div><div class="vzd-t">${filePh.length + exPh.length ? 'Номеров: ' + (filePh.length + exPh.length) : 'Номера не добавлены'}</div></div></div>` +
+    filePh.map(n => telRow(n, 'Клиент · из выгрузки')).join('') +
+    exPh.map(p => telRow(p.phone, (p.label || 'Другое') + (p.addedBy ? ' · ' + p.addedBy : ''))).join('') + `</div>`;
+  const ls = vzLegalSummary(g);
+  const legalCard = `<div class="vzd-card vzd-legal" onclick="openNplSurveyForm('${cEnc}','${kEnc}','legal')"><div class="vzd-ico">${appIcon('gavel', 18)}</div><div style="flex:1;min-width:0;"><div class="vzd-h">Юридический статус</div><div class="vzd-t">${safe(ls.sub)}</div></div><span class="vzd-bd ${ls.hasCourt && ls.hasMib ? 'vzd-c-grn' : 'vzd-c-red'}">${safe(ls.chip)}</span></div>`;
+  const tileOpen = `onclick="openNplSurveyForm('${cEnc}','${kEnc}')"`;
+  const tiles = `<div class="vzd-grid">
+        <div class="vzd-card" ${tileOpen} style="cursor:pointer;padding:12px;"><div class="vzd-tile"><div class="vzd-ico">${appIcon('home', 18)}</div><div><div class="vzd-h">Бизнес</div><div class="vzd-t">${bizTxt}</div></div></div></div>
+        <div class="vzd-card" ${tileOpen} style="cursor:pointer;padding:12px;"><div class="vzd-tile"><div class="vzd-ico">${appIcon('mappin', 18)}</div><div><div class="vzd-h">Залог</div><div class="vzd-t">${colTxt}</div></div></div></div>
+      </div>`;
 
   box.innerHTML = `
     <div class="vzd-hero" style="padding-bottom:58px;">
-      <div class="vzd-top"><button type="button" onclick="closeVzLoan()" aria-label="Назад" style="border:none;background:rgba(255,255,255,.2);color:#fff;width:38px;height:38px;border-radius:12px;font-size:20px;cursor:pointer;">‹</button>
+      <div class="vzd-top"><button type="button" onclick="closeVzLoan()" aria-label="Назад" style="border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;">‹</button>
         <div style="min-width:0;"><div class="vzd-name">Анкета № ${safe(l.contractId)}</div><div class="sub">${safe(g.clientName)} · ${vzFmt(pf)}</div></div></div>
       <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;">
-        ${c ? `<span class="vzd-bd" style="background:#fff;color:var(--brand);">${safe(c.label)}</span>` : ''}
+        ${c ? `<span class="vzd-bd" style="background:#fff;color:#C4231A;">${safe(c.label)}</span>` : ''}
         <span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">${days} дн. просрочки</span>
         ${l.openDate ? `<span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">выдана ${safe(nplFmtDateRu(l.openDate))}</span>` : ''}
       </div></div>
     <div class="vzd-body">
+      ${switcher}
       ${path}
-      <div class="vzd-reco"><div class="vzd-ico vzd-c-amb">${appIcon('alert', 19)}</div><div><div class="vzd-h" style="color:#633806;">Рекомендация</div><div class="vzd-t" style="color:#7A5200;">${safe(reco)}</div></div></div>
-      <div class="vzd-grid">
-        <div class="vzd-card"><div class="row" style="display:flex;gap:8px;align-items:center;"><div class="vzd-ico vzd-c-blu">${appIcon('home', 19)}</div><div><div class="vzd-h">Бизнес</div><div class="vzd-t">${bizTxt}</div></div></div></div>
-        <div class="vzd-card"><div class="row" style="display:flex;gap:8px;align-items:center;"><div class="vzd-ico vzd-c-grn">${appIcon('mappin', 19)}</div><div><div class="vzd-h">Залог</div><div class="vzd-t">${colTxt}</div></div></div></div>
-      </div>
+      <div class="vzd-reco"><div class="vzd-ico vzd-c-amb">${appIcon('alert', 19)}</div><div><div class="vzd-h">Рекомендация</div><div class="vzd-t" style="color:#5A5A5E;">${safe(reco)}</div></div></div>
+      ${phonesCard}
+      ${tiles}
       ${flags ? `<div style="display:flex;gap:6px;flex-wrap:wrap;">${flags}</div>` : ''}
       ${sv && ((sv.bizPhotos || []).length || (sv.collPhotos || []).length) ? `<div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Фото</div>${svPhotosHtml((sv.bizPhotos || []).concat(sv.collPhotos || []))}</div>` : ''}
       ${sv && sv.comment ? `<div class="vzd-card vzd-t" style="word-break:break-word;">${safe(sv.comment)}</div>` : ''}
+      ${legalCard}
+      ${credit}
       <div class="vzd-grid" style="grid-template-columns:repeat(2,1fr);">
         <div class="vzd-card"><div class="vzd-t">Портфель</div><div class="vzd-h">${vzFmt(pf)}</div></div>
         <div class="vzd-card"><div class="vzd-t">NPL анкеты</div><div class="vzd-h">${vzFmt(l.totalNpl)}</div></div>
       </div>
-      ${canCollect ? `<button type="button" class="vzd-btn p" onclick="openNplSurveyForm('${cEnc}','${kEnc}')">${sv ? 'Обновить данные' : 'Сбор данных'}</button>` : ''}
+      <button type="button" class="vzd-btn p" ${tileOpen}>${appIcon('plus', 16)} Сбор данных</button>
       ${phone ? `<a class="vzd-btn s" href="tel:${safe(phone)}">Позвонить клиенту</a>` : ''}
       <button type="button" class="vzd-btn s" onclick="openNplClientDetail('${kEnc}')">Карточка клиента</button>
     </div>`;
@@ -7223,7 +7437,7 @@ async function exportVzExcel(mode) {
     rows.forEach((x, i) => {
       const l = x.l, e = x.e, days = nplLoanDays(l), pf = vzPf(l);
       const sv = (allNplSurveys[l.contractId] || [])[0];
-      const note = sv ? [sv.bizExists ? 'бизнес есть' : '', sv.fictitious ? 'фиктивный бизнес' : '', sv.finDifficulty ? 'финансовое затруднение' : '', sv.openDate ? 'открыт ' + nplFmtDateRu(sv.openDate) : '', sv.comment || ''].filter(Boolean).join('; ') : '';
+      const note = sv ? [sv.bizExists ? 'бизнес есть' : '', sv.fictitious ? 'фиктивный бизнес' : '', sv.finDifficulty ? 'финансовое затруднение' : '', sv.bankrupt ? 'банкрот' : '', sv.stopped ? 'бизнес остановлен' : '', sv.other ? (sv.otherText || 'другое') : '', sv.openDate ? 'открыт ' + nplFmtDateRu(sv.openDate) : '', sv.comment || ''].filter(Boolean).join('; ') : '';
       const od = /^\d{4}-\d{2}-\d{2}/.test(String(l.openDate || '')) ? new Date(Date.UTC(+String(l.openDate).slice(0, 4), +String(l.openDate).slice(5, 7) - 1, +String(l.openDate).slice(8, 10))) : '';
       const row = ws2.getRow(5 + i);
       [i + 1, x.g.clientName || '', x.g.pin || '', String(l.contractId), od, e ? e.age : (nplLoanAgeDays(l) === null ? '' : nplLoanAgeDays(l)), days, e ? e.gap : '', Math.round(pf / 1e6), x.g.loans.length,
@@ -10228,11 +10442,11 @@ function canDeleteNplFile() {
 }
 
 function canEditNplMib() {
-  return !!currentUser && (currentUser.role === 'VZYSKATEL' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'MIB_OFFICER');
+  return !!currentUser && (currentUser.role === 'VZYSKATEL' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'MIB_OFFICER' || currentUser.role === 'CREDIT_MONITOR');
 }
 
 function canEditNplCourt() {
-  return !!currentUser && (currentUser.role === 'VZYSKATEL' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'LAWYER');
+  return !!currentUser && (currentUser.role === 'VZYSKATEL' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'LAWYER' || currentUser.role === 'CREDIT_MONITOR');
 }
 
 function fileToBase64(file) {
@@ -10349,12 +10563,12 @@ function renderNplLegalStatusTab(group) {
 
   const mibFields = canEditMib ? `
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
-      <div><label style="font-size:11px;color:var(--muted);">ИЖРО ID</label><input type="text" class="input" id="nplMibCaseId_${keyEnc}" value="${safe(mib.caseId)}"></div>
-      <div><label style="font-size:11px;color:var(--muted);">Номер дела</label><input type="text" class="input" id="nplMibCaseNumber_${keyEnc}" value="${safe(mib.caseNumber)}"></div>
-      <div><label style="font-size:11px;color:var(--muted);">Дата передачи в МИБ</label><input type="text" class="input" id="nplMibDate_${keyEnc}" value="${safe(mib.mibDate)}" placeholder="дд.мм.гггг"></div>
-      <div><label style="font-size:11px;color:var(--muted);">Остаток по делу</label><input type="text" class="input" id="nplMibDebt_${keyEnc}" value="${safe(mib.debtRemaining)}"></div>
-      <div><label style="font-size:11px;color:var(--muted);">Инспектор МИБ (ФИО)</label><input type="text" class="input" id="nplMibInspector_${keyEnc}" value="${safe(mib.inspectorName)}"></div>
-      <div><label style="font-size:11px;color:var(--muted);">Телефон инспектора</label><input type="text" class="input" id="nplMibInspectorPhone_${keyEnc}" value="${safe(mib.inspectorPhone)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">ИЖРО ID</label><input type="text" class="input" id="nplMibCaseId_${keyEnc}" value="${nplAttr(mib.caseId)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Номер дела</label><input type="text" class="input" id="nplMibCaseNumber_${keyEnc}" value="${nplAttr(mib.caseNumber)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Дата передачи в МИБ</label><input type="text" class="input" id="nplMibDate_${keyEnc}" value="${nplAttr(mib.mibDate)}" placeholder="дд.мм.гггг"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Остаток по делу</label><input type="text" class="input" id="nplMibDebt_${keyEnc}" value="${nplAttr(mib.debtRemaining)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Инспектор МИБ (ФИО)</label><input type="text" class="input" id="nplMibInspector_${keyEnc}" value="${nplAttr(mib.inspectorName)}"></div>
+      <div><label style="font-size:11px;color:var(--muted);">Телефон инспектора</label><input type="text" class="input" id="nplMibInspectorPhone_${keyEnc}" value="${nplAttr(mib.inspectorPhone)}"></div>
       <button type="button" class="btn btn-primary" style="margin-top:4px;" onclick="saveNplMibFieldsUi('${keyEnc}')">Сохранить</button>
       <div id="nplMibFieldsStatus_${keyEnc}" style="font-size:12px;color:var(--muted);"></div>
     </div>` : `
@@ -10423,7 +10637,7 @@ async function uploadNplMibFile(keyEnc, input) {
       if (!result.recognized && result.ocrError) {
         alert('Автораспознавание не сработало.\n\nПричина: ' + result.ocrError);
       }
-      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+      nplRefreshLegal(group);
     } else {
       if (status) { status.style.color = 'var(--red)'; status.innerText = result.message || 'Ошибка загрузки'; }
     }
@@ -10458,7 +10672,7 @@ async function saveNplMibFieldsUi(keyEnc) {
         debtRemaining: payload.debtRemaining, inspectorName: payload.inspectorName, inspectorPhone: payload.inspectorPhone
       });
       if (status) { status.style.color = 'var(--green)'; status.innerText = 'Сохранено'; }
-      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+      nplRefreshLegal(group);
     } else {
       if (status) { status.style.color = 'var(--red)'; status.innerText = result.message || 'Ошибка сохранения'; }
     }
@@ -10480,7 +10694,7 @@ async function deleteNplMibFileUi(keyEnc, urlEnc) {
     });
     if (result.success) {
       allNplMib.files[key] = (allNplMib.files[key] || []).filter(f => f.url !== url);
-      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+      nplRefreshLegal(group);
     } else {
       alert(result.message || 'Не удалось удалить файл');
     }
@@ -10511,7 +10725,7 @@ async function uploadNplCourtFile(keyEnc, input) {
     if (result.success) {
       allNplCourt.files[key] = allNplCourt.files[key] || [];
       allNplCourt.files[key].unshift({ url: result.fileUrl, name: file.name, uploadedAt: new Date().toLocaleString('ru-RU'), uploadedBy: ((currentUser && (currentUser.fullName || currentUser.login)) || '') });
-      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+      nplRefreshLegal(group);
     } else {
       if (status) { status.style.color = 'var(--red)'; status.innerText = result.message || 'Ошибка загрузки'; }
     }
@@ -10556,7 +10770,7 @@ async function deleteNplCourtFileUi(keyEnc, urlEnc) {
     });
     if (result.success) {
       allNplCourt.files[key] = (allNplCourt.files[key] || []).filter(f => f.url !== url);
-      document.getElementById('nplDetailTabBody_legal').innerHTML = renderNplLegalStatusTab(group);
+      nplRefreshLegal(group);
     } else {
       alert(result.message || 'Не удалось удалить файл');
     }
@@ -10730,6 +10944,9 @@ function renderNplLoanSurvey(l, group, rowId) {
   if (last.bizExists) flags.push('<span class="sv-flag ok">Бизнес есть</span>');
   if (last.fictitious) flags.push('<span class="sv-flag bad">Фиктивный бизнес</span>');
   if (last.finDifficulty) flags.push('<span class="sv-flag warn">Финансовое затруднение</span>');
+  if (last.bankrupt) flags.push('<span class="sv-flag bad">Банкрот</span>');
+  if (last.stopped) flags.push('<span class="sv-flag bad">Бизнес остановлен</span>');
+  if (last.other) flags.push('<span class="sv-flag warn">' + safe(last.otherText || 'Другое') + '</span>');
   const openDate = last.openDate ? nplFmtDateRu(last.openDate) : '';
   const history = list.length > 1 ? `<div class="sv-meta" style="margin-top:8px;">Всего записей: ${list.length}. ${list.slice(1, 4).map(h => safe(svFmtWhen(h.addedAt)) + ' · ' + safe(h.addedBy)).join(' · ')}</div>` : '';
   return `
@@ -10755,60 +10972,188 @@ function renderNplLoanSurvey(l, group, rowId) {
 
 let nplSurveyDraft = null;
 
-function openNplSurveyForm(contractEnc, keyEnc) {
-  if (!nplCanCollectSurvey()) return;
+function openNplSurveyForm(contractEnc, keyEnc, section) {
   const contractId = decodeURIComponent(contractEnc);
   const key = decodeURIComponent(keyEnc);
+  vzEnsureIndex();
   const group = nplGroupsByKey[key];
   const last = (allNplSurveys[contractId] || [])[0] || {};
+  const can = nplCanCollectSurvey();
   nplSurveyDraft = {
-    contractId: contractId, key: key, clientName: group ? group.clientName : '',
+    contractId: contractId, key: key, clientName: group ? group.clientName : '', readonly: !can,
     biz:  { keep: (last.bizPhotos || []).slice(), photos: [], lat: last.bizLat === '' ? '' : (last.bizLat ?? ''), lng: last.bizLng === '' ? '' : (last.bizLng ?? '') },
     coll: { keep: (last.collPhotos || []).slice(), photos: [], lat: last.collLat === '' ? '' : (last.collLat ?? ''), lng: last.collLng === '' ? '' : (last.collLng ?? '') },
     openDate: last.openDate || '', bizExists: !!last.bizExists, fictitious: !!last.fictitious, finDifficulty: !!last.finDifficulty,
-    comment: last.comment || '', saving: false
+    bankrupt: !!last.bankrupt, stopped: !!last.stopped, other: !!last.other, otherText: last.otherText || '',
+    comment: last.comment || '', saving: false, openLegal: section === 'legal'
   };
-  openNplModal('Сбор данных · анкета № ' + contractId, renderNplSurveyForm());
+  if (isVzShell()) vzcOpen(renderNplSurveyForm(true));
+  else if (can) openNplModal('Сбор данных · анкета № ' + contractId, renderNplSurveyForm(false));
 }
 
-function svBlockHtml(which, title) {
+function nplAttr(v) {
+  return (v === null || v === undefined) ? '' : String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function vzcOpen(html) {
+  const o = document.getElementById('vzCollectOverlay');
+  if (!o) return;
+  o.innerHTML = html;
+  o.classList.add('active');
+  o.scrollTop = 0;
+}
+
+function vzcClose() {
+  const o = document.getElementById('vzCollectOverlay');
+  if (o) { o.classList.remove('active'); o.innerHTML = ''; }
+  nplSurveyDraft = null;
+  if (vzLoanCtx) renderVzLoan();
+}
+
+function svBlockHtml(which, title, iconName) {
   const d = nplSurveyDraft[which];
   const total = d.keep.length + d.photos.length;
   const thumbs = d.keep.map((u, i) => `<div class="sv-photo"><img src="${safe(u)}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','keep',${i})" aria-label="Убрать фото">×</button></div>`).join('') +
     d.photos.map((p, i) => `<div class="sv-photo"><img src="${p.dataUrl}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','photos',${i})" aria-label="Убрать фото">×</button></div>`).join('');
   const hasLoc = d.lat !== '' && d.lng !== '' && d.lat !== null && d.lng !== null;
   return `
-    <div class="sv-box" style="margin-top:0;margin-bottom:12px;">
-      <div class="sv-title"><span>${title}</span><span class="sv-meta">Фото: ${total} из 6</span></div>
-      <div class="sv-photos" id="svThumbs_${which}">${thumbs}</div>
-      <div class="sv-btns">
-        <label class="btn btn-secondary"><input type="file" accept="image/*" capture="environment" style="display:none;" onchange="svAddPhotos('${which}', this)">📷 Снять</label>
-        <label class="btn btn-secondary"><input type="file" accept="image/*" multiple style="display:none;" onchange="svAddPhotos('${which}', this)">🖼 Из галереи</label>
-        <button type="button" class="btn btn-secondary" onclick="svTakeLocation('${which}')">📍 Моя локация</button>
+    <div class="vzc-w">
+      <div class="vzc-hd"><div class="vzc-ic">${appIcon(iconName, 20)}</div><div style="flex:1;"><div class="vzc-t">${title}</div><div class="vzc-m vzc-meta">Фото: ${total} из 6</div></div></div>
+      <div class="vzc-photos sv-photos" id="svThumbs_${which}">${thumbs}</div>
+      <div class="vzc-g3">
+        <label class="vzc-b2 r"><input type="file" accept="image/*" capture="environment" style="display:none;" onchange="svAddPhotos('${which}', this)">${appIcon('camera', 16)} Снять</label>
+        <label class="vzc-b2"><input type="file" accept="image/*" multiple style="display:none;" onchange="svAddPhotos('${which}', this)">${appIcon('photo', 16)} Галерея</label>
+        <button type="button" class="vzc-b2" onclick="svTakeLocation('${which}')">${appIcon('mappin', 16)} Локация</button>
       </div>
-      <input type="text" class="input" id="svCoords_${which}" placeholder="Или вставьте координаты: 42.4531, 59.6103" value="${hasLoc ? safe(d.lat + ', ' + d.lng) : ''}" onchange="svParseCoords('${which}', this.value)" style="width:100%;font-size:13px;">
-      <div class="sv-meta" id="svGeo_${which}" style="margin-top:6px;">${hasLoc ? 'Локация: ' + svMapLink(d.lat, d.lng) : 'Локация не указана'}</div>
+      <input type="text" class="vzc-in" id="svCoords_${which}" placeholder="Или координаты: 42.4531, 59.6103" value="${hasLoc ? safe(d.lat + ', ' + d.lng) : ''}" onchange="svParseCoords('${which}', this.value)" style="margin-top:10px;font-size:13px;">
+      <div class="vzc-m" id="svGeo_${which}" style="margin-top:8px;">${hasLoc ? 'Локация: ' + svMapLink(d.lat, d.lng) : 'Локация не указана'}</div>
     </div>`;
 }
 
-function renderNplSurveyForm() {
-  const d = nplSurveyDraft;
+const SV_ENT_FIELDS = [
+  ['bizExists', 'Бизнес есть', 'r'], ['fictitious', 'Фиктивный бизнес', ''], ['finDifficulty', 'Финансовое затруднение', ''],
+  ['bankrupt', 'Банкрот', ''], ['stopped', 'Бизнес остановлен', ''], ['other', 'Другое', '']
+];
+
+function svToggle(field, el) {
+  if (!nplSurveyDraft) return;
+  nplSurveyDraft[field] = !nplSurveyDraft[field];
+  if (el) el.classList.toggle('on', !!nplSurveyDraft[field]);
+  const n = SV_ENT_FIELDS.filter(f => nplSurveyDraft[f[0]]).length;
+  const c = document.getElementById('svEntCount');
+  if (c) c.innerText = n ? 'Выбрано ' + n : 'Ничего не выбрано';
+  if (field === 'other') {
+    const w = document.getElementById('svOtherWrap');
+    if (w) w.style.display = nplSurveyDraft.other ? 'block' : 'none';
+  }
+}
+
+function vzcPhonesInner(key) {
+  const keyEnc = encodeURIComponent(key);
+  const g = nplGroupsByKey[key] || {};
+  const fileP = String(g.phoneJoined || '').split(/[;,]/).map(x => x.trim()).filter(Boolean);
+  const ex = (allNplExtra[key] && allNplExtra[key].phones) || [];
+  const tel = n => 'tel:' + String(n).replace(/[^\d+]/g, '');
+  const rows = fileP.map(n => `
+    <div class="vzc-tel"><div class="vzc-telb"><b>${safe(n)}</b><div><span class="vzc-tag p">Клиент</span> <span class="vzc-tag">из выгрузки</span></div></div>
+      <a class="vzc-call" href="${tel(n)}" aria-label="Позвонить">${appIcon('phone', 16)}</a></div>`).join('') +
+    ex.map((p, i) => `
+    <div class="vzc-tel"><div class="vzc-telb"><b>${safe(p.phone)}</b><div><span class="vzc-tag">${safe(p.label || 'Другое')}</span>${p.addedBy ? ' <span class="vzc-tag">добавил ' + safe(p.addedBy) + '</span>' : ''}</div></div>
+      <a class="vzc-call" href="${tel(p.phone)}" aria-label="Позвонить">${appIcon('phone', 16)}</a>
+      ${canDeleteNplItem(p) ? `<button type="button" class="vzc-del" onclick="deleteNplPhoneUi('${keyEnc}', ${i})" aria-label="Удалить номер">${appIcon('trash', 18)}</button>` : ''}</div>`).join('');
+  const roles = ['Клиент', 'Директор', 'Бухгалтер', 'Родственник', 'Коллега', 'Сосед', 'Другое'];
   return `
-    ${svBlockHtml('biz', 'Бизнес')}
-    ${svBlockHtml('coll', 'Залог')}
-    <div class="sv-box" style="margin-top:0;">
-      <div class="sv-title"><span>Предприятие</span></div>
-      <div style="margin-bottom:8px;">
-        <div class="sv-meta" style="margin-bottom:4px;">Дата открытия по удостоверению</div>
-        <input type="date" class="input" id="svOpenDate" value="${safe(d.openDate)}" onchange="nplSurveyDraft.openDate=this.value">
-      </div>
-      <label class="sv-chk"><input type="checkbox" id="svBizExists" ${d.bizExists ? 'checked' : ''} onchange="nplSurveyDraft.bizExists=this.checked">Бизнес есть</label>
-      <label class="sv-chk"><input type="checkbox" id="svFict" ${d.fictitious ? 'checked' : ''} onchange="nplSurveyDraft.fictitious=this.checked">Фиктивный бизнес</label>
-      <label class="sv-chk" style="border-bottom:none;"><input type="checkbox" id="svFin" ${d.finDifficulty ? 'checked' : ''} onchange="nplSurveyDraft.finDifficulty=this.checked">Бизнес имеет финансовое затруднение</label>
-      <textarea class="input" id="svComment" placeholder="Что увидели на месте" style="width:100%;min-height:70px;margin-top:8px;" oninput="nplSurveyDraft.comment=this.value">${safe(d.comment)}</textarea>
-    </div>
-    <button type="button" class="btn" style="width:100%;margin-top:14px;" id="svSaveBtn" onclick="svSave()">Сохранить</button>
-    <div id="svStatus" style="font-size:12.5px;color:var(--muted);margin-top:8px;text-align:center;"></div>`;
+    <div class="vzc-hd"><div class="vzc-ic">${appIcon('phone', 20)}</div><div style="flex:1;"><div class="vzc-t">Телефоны</div><div class="vzc-m">${fileP.length + ex.length ? 'Номеров: ' + (fileP.length + ex.length) : 'Номера не добавлены'}</div></div></div>
+    ${rows}
+    <div style="border-top:0.5px solid #E4E5E9;margin-top:10px;padding-top:10px;">
+      <div class="vzc-m" style="margin-bottom:6px;">Новый номер</div>
+      <input type="tel" class="vzc-in" id="nplNewPhoneNumber_${keyEnc}" placeholder="+998 __ ___ __ __">
+      <input type="hidden" id="nplNewPhoneLabel_${keyEnc}" value="">
+      <div class="vzc-roles">${roles.map(r => `<button type="button" class="vzc-role" onclick="vzcPickRole('${keyEnc}','${r}',this)">${r}</button>`).join('')}</div>
+      <div id="nplContactOtherWrap_${keyEnc}" style="display:none;margin-bottom:8px;"><input type="text" class="vzc-in" id="nplContactOtherInput_${keyEnc}" placeholder="Кто это"></div>
+      <button type="button" class="vzc-b2" style="width:100%;" onclick="addNplPhoneUi('${keyEnc}')">${appIcon('plus', 16)} Добавить номер</button>
+    </div>`;
+}
+
+function vzcPickRole(keyEnc, role, el) {
+  const hidden = document.getElementById('nplNewPhoneLabel_' + keyEnc);
+  const wrap = document.getElementById('nplContactOtherWrap_' + keyEnc);
+  const inp = document.getElementById('nplContactOtherInput_' + keyEnc);
+  if (!hidden) return;
+  Array.from(el.parentElement.children).forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  if (role === 'Другое') {
+    if (wrap) wrap.style.display = 'block';
+    hidden.value = inp ? inp.value.trim() : '';
+    if (inp) inp.oninput = () => { hidden.value = inp.value.trim(); };
+  } else {
+    if (wrap) wrap.style.display = 'none';
+    hidden.value = role;
+  }
+}
+
+function nplPhonesChanged(keyEnc) {
+  const key = decodeURIComponent(keyEnc);
+  const box = document.getElementById('vzcPhones');
+  if (box) box.innerHTML = vzcPhonesInner(key);
+  else openNplExtraModal(keyEnc);
+}
+
+function nplRefreshLegal(group) {
+  const html = renderNplLegalStatusTab(group);
+  ['nplDetailTabBody_legal', 'vzcLegalBody'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function vzLegalSummary(g) {
+  const court = allNplCourt.data[g.key] || {};
+  const mib = allNplMib.data[g.key] || {};
+  const hasCourt = !!(court.caseStatus || g.courtOrderNumberJoined || (allNplCourt.files[g.key] || []).length);
+  const hasMib = !!(mib.caseId || mib.caseNumber || g.mibCaseJoined || (allNplMib.files[g.key] || []).length);
+  const chip = hasCourt && hasMib ? 'Суд и МИБ есть' : hasCourt ? 'Суд есть, МИБ нет' : hasMib ? 'МИБ есть, суда нет' : 'Суда и МИБ нет';
+  const sub = court.caseStatus ? court.caseStatus : (g.courtOrderNumberJoined ? 'Приказ № ' + g.courtOrderNumberJoined : 'Данных пока нет');
+  return { hasCourt: hasCourt, hasMib: hasMib, chip: chip, sub: sub };
+}
+
+function renderNplSurveyForm(asScreen) {
+  const d = nplSurveyDraft;
+  const key = d.key;
+  const g = nplGroupsByKey[key];
+  const can = !d.readonly;
+  const nSel = SV_ENT_FIELDS.filter(f => d[f[0]]).length;
+  const chips = SV_ENT_FIELDS.map(f => `<div class="vzc-chip ${f[2]} ${d[f[0]] ? 'on' : ''}" onclick="svToggle('${f[0]}', this)"><span>${f[1]}</span><span class="vzc-cb"></span></div>`).join('');
+  const top = asScreen ? `
+    <div class="vzc-top"><div style="min-width:0;"><div style="font-size:22px;font-weight:600;">Сбор данных</div><div style="font-size:12px;color:#FAD4D0;word-break:break-word;">Анкета № ${safe(d.contractId)} · ${safe(d.clientName)}</div></div>
+      <button type="button" class="vzc-x" onclick="vzcClose()" aria-label="Закрыть">${appIcon('x', 18)}</button></div>` : '';
+  const ls = g ? vzLegalSummary(g) : null;
+  const legal = g ? `
+    <details class="vzc-w" ${d.openLegal ? 'open' : ''}>
+      <summary><div class="vzc-ic">${appIcon('gavel', 20)}</div><div style="flex:1;min-width:0;"><div class="vzc-t">Юридический статус</div><div class="vzc-m">${safe(ls.chip)}</div></div><span class="vzc-chev">${appIcon('chevron', 20)}</span></summary>
+      <div id="vzcLegalBody">${renderNplLegalStatusTab(g)}</div>
+    </details>` : '';
+  const survey = can ? `
+    ${svBlockHtml('biz', 'Бизнес', 'home')}
+    ${svBlockHtml('coll', 'Залог', 'bank')}
+    <div class="vzc-w">
+      <div class="vzc-hd"><div class="vzc-ic">${appIcon('briefcase', 20)}</div><div style="flex:1;"><div class="vzc-t">Предприятие</div><div class="vzc-m" id="svEntCount">${nSel ? 'Выбрано ' + nSel : 'Ничего не выбрано'}</div></div></div>
+      ${chips}
+      <div id="svOtherWrap" style="display:${d.other ? 'block' : 'none'};margin-bottom:8px;"><input type="text" class="vzc-in" id="svOtherText" placeholder="Что именно" value="${nplAttr(d.otherText)}" oninput="nplSurveyDraft.otherText=this.value"></div>
+      <div class="vzc-m" style="margin:6px 0 4px;">Дата открытия по удостоверению</div>
+      <input type="date" class="vzc-in" id="svOpenDate" value="${nplAttr(d.openDate)}" onchange="nplSurveyDraft.openDate=this.value" style="margin-bottom:8px;">
+      <textarea class="vzc-in" id="svComment" placeholder="Комментарий: что увидели на месте" oninput="nplSurveyDraft.comment=this.value">${nplAttr(d.comment)}</textarea>
+    </div>` : '';
+  const foot = can
+    ? `<button type="button" class="vzc-save" id="svSaveBtn" onclick="svSave()">Сохранить</button><div class="vzc-st" id="svStatus"></div>`
+    : (asScreen ? `<button type="button" class="vzc-save" onclick="vzcClose()">Готово</button>` : '');
+  return `<div class="vzc-wrap">
+    ${top}
+    <div class="vzc-w" id="vzcPhones">${vzcPhonesInner(key)}</div>
+    ${survey}
+    ${legal}
+    ${foot}
+  </div>`;
 }
 
 function svRefreshBlock(which) {
@@ -10818,7 +11163,7 @@ function svRefreshBlock(which) {
   const d = nplSurveyDraft[which];
   box.innerHTML = d.keep.map((u, i) => `<div class="sv-photo"><img src="${safe(u)}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','keep',${i})" aria-label="Убрать фото">×</button></div>`).join('') +
     d.photos.map((p, i) => `<div class="sv-photo"><img src="${p.dataUrl}" alt=""><button type="button" class="sv-x" onclick="svRemovePhoto('${which}','photos',${i})" aria-label="Убрать фото">×</button></div>`).join('');
-  const hdr = box.parentElement.querySelector('.sv-title .sv-meta');
+  const hdr = box.parentElement.querySelector('.vzc-meta');
   if (hdr) hdr.innerText = 'Фото: ' + (d.keep.length + d.photos.length) + ' из 6';
 }
 
@@ -10934,7 +11279,7 @@ async function svSave() {
   const d = nplSurveyDraft;
   if (!d || d.saving) return;
   const hasAnything = d.biz.keep.length || d.biz.photos.length || d.coll.keep.length || d.coll.photos.length ||
-    d.biz.lat !== '' || d.coll.lat !== '' || d.openDate || d.bizExists || d.fictitious || d.finDifficulty || String(d.comment || '').trim();
+    d.biz.lat !== '' || d.coll.lat !== '' || d.openDate || d.bizExists || d.fictitious || d.finDifficulty || d.bankrupt || d.stopped || d.other || String(d.comment || '').trim();
   if (!hasAnything) { svSetStatus('Добавьте хотя бы фото, локацию, дату или отметку', true); return; }
   if (d.openDate && !/^\d{4}-\d{2}-\d{2}$/.test(d.openDate)) { svSetStatus('Укажите дату открытия полностью', true); return; }
   d.saving = true;
@@ -10951,6 +11296,7 @@ async function svSave() {
       keepBizUrls: d.biz.keep.join(', '), keepCollUrls: d.coll.keep.join(', '),
       bizLat: d.biz.lat, bizLng: d.biz.lng, collLat: d.coll.lat, collLng: d.coll.lng,
       openDate: d.openDate, bizExists: d.bizExists, fictitious: d.fictitious, finDifficulty: d.finDifficulty,
+      bankrupt: d.bankrupt, stopped: d.stopped, other: d.other, otherText: d.other ? String(d.otherText || '') : '',
       comment: d.comment
     });
     if (!result.success) { svSetStatus(result.message || 'Не удалось сохранить', true); return; }
@@ -10958,6 +11304,8 @@ async function svSave() {
     const key = d.key, contractId = d.contractId;
     nplSurveyDraft = null;
     closeNplModal();
+    const vco = document.getElementById('vzCollectOverlay');
+    if (vco) { vco.classList.remove('active'); vco.innerHTML = ''; }
     if (result.warning) alert('Данные сохранены, но часть фото не загрузилась: ' + result.warning);
     if (currentNplClientKey) {
       openNplClientDetail(encodeURIComponent(currentNplClientKey));
@@ -11240,7 +11588,7 @@ async function addNplPhoneUi(keyEnc) {
     if (result.success) {
       allNplExtra[key] = allNplExtra[key] || {};
       allNplExtra[key].phones = result.phones;
-      openNplExtraModal(keyEnc);
+      nplPhonesChanged(keyEnc);
     } else {
       alert(result.message || 'Не удалось добавить телефон');
     }
@@ -11306,7 +11654,7 @@ async function deleteNplPhoneUi(keyEnc, index) {
     if (result.success) {
       allNplExtra[key] = allNplExtra[key] || {};
       allNplExtra[key].phones = result.phones;
-      openNplExtraModal(keyEnc);
+      nplPhonesChanged(keyEnc);
     } else {
       alert(result.message || 'Не удалось удалить телефон');
     }
