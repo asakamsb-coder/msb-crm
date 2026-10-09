@@ -9711,11 +9711,11 @@ function stVisOpenCard(key) {
   let inner = '';
   let title = key;
   try {
-    const g = getNplGroupsCached().find(x => x.key === key);
+    const g = getNplGroupsCached().find(x => String(x.key) === String(key));
     if (!g) throw new Error('клиент не найден в списке');
     title = g.clientName;
     const D = stVisData();
-    const vs = D.scope.filter(v => v.key === key);
+    const vs = D.scope.filter(v => String(v.key) === String(key));
     inner = vs.length
       ? stVisSafeCard(vs, g)
       : '<div class="st-det" style="padding:10px 14px;"><div style="color:var(--muted);font-size:13px;margin-bottom:8px;">За выбранный период визитов нет.</div>' + stVisSurveyHtml(g) + '</div>';
