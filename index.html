@@ -9793,14 +9793,80 @@ function stVisFlagsHtml(v) {
   return v.flags.filter(f => f.t !== 'night' || true).map(f => '<span class="pg ' + (['impossible', 'samegps'].indexOf(f.t) >= 0 ? 'rd' : f.t === 'far' ? 'rd' : 'y') + '" style="margin:2px 4px 0 0;font-weight:600;" title="' + stEsc(f.txt) + '">' + stEsc(f.t === 'impossible' ? 'невозможный переезд' : f.t === 'samegps' ? 'один GPS' : f.t === 'far' ? 'далеко от адреса' : f.t === 'fast' ? 'быстрый переезд' : f.t === 'nophoto' ? 'нет фото' : f.t === 'nogps' ? 'нет GPS' : 'ночью') + '</span>').join('');
 }
 
-function stVisHistoryHtml(vs) {
-  return '<div class="st-det" style="padding:10px 14px;">' + vs.slice().sort((a, b) => b.dt - a.dt).map(v => `
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;">
-      <b style="min-width:84px;">${stFmtDm(v.dt)} · ${stFmtTm(v.dt)}</b><span style="min-width:120px;">${stEsc(v.who)}</span>${stVisPill(v)}${stVisPromise(v)}
-      <span style="color:var(--muted);">${v.dist !== null ? Math.round(v.dist) + ' м от адреса' : 'расстояние не определено'}</span>
-      ${v.photo ? '<a href="' + stEsc(v.photo.split(',')[0].trim()) + '" target="_blank" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:700;">фото</a>' : ''}
-      ${v.comment ? '<span style="color:var(--muted);">«' + stEsc(v.comment) + '»</span>' : ''}${stVisFlagsHtml(v)}
-    </div>`).join('') + '</div>';
+function stVisPhotoLinks(photo) {
+  const urls = String(photo || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (!urls.length) return '<span class="pg y" style="font-weight:600;">нет фото</span>';
+  return '<span style="display:inline-flex;gap:6px;flex-wrap:wrap;">' + urls.map(u => `<a href="${stEsc(u)}" target="_blank" onclick="event.stopPropagation()"><img src="${stEsc(u)}" loading="lazy" alt="" style="width:74px;height:74px;object-fit:cover;border-radius:10px;border:1px solid var(--line);"></a>`).join('') + '</span>';
+}
+function stVisMapLink(lat, lng) {
+  if (lat === null || lng === null || lat === undefined) return '<span class="pg y" style="font-weight:600;">GPS не передан</span>';
+  return `<a href="https://www.google.com/maps?q=${encodeURIComponent(lat + ',' + lng)}" target="_blank" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:700;">📍 ${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}</a>`;
+}
+
+// Данные сотрудника по анкетам клиента: что заполнено и чего не хватает
+function stVisSurveyHtml(g) {
+  const todo = [];
+  const key = g.key;
+  const ex = allNplExtra[key] || {};
+  const phs = (ex.phones || []);
+  const blocks = g.loans.map(function(l) {
+    const last = (allNplSurveys[l.contractId] || [])[0];
+    if (!last) { todo.push('анкета № ' + l.contractId + ': сбор данных не проводился'); return `<div class="sv-box"><div class="sv-title"><span>Анкета № ${safe(l.contractId)}</span></div><div class="sv-meta">Данные не собраны.</div></div>`; }
+    const fl = [];
+    if (last.bizExists) fl.push('<span class="sv-flag ok">Бизнес есть</span>');
+    if (last.fictitious) fl.push('<span class="sv-flag bad">Фиктивный бизнес</span>');
+    if (last.finDifficulty) fl.push('<span class="sv-flag warn">Финансовое затруднение</span>');
+    if (last.bankrupt) fl.push('<span class="sv-flag bad">Банкрот</span>');
+    if (last.stopped) fl.push('<span class="sv-flag bad">Бизнес остановлен</span>');
+    if (last.other) fl.push('<span class="sv-flag warn">' + safe(last.otherText || 'Другое') + '</span>');
+    if (!(last.bizPhotos || []).length) todo.push('анкета № ' + l.contractId + ': нет фото бизнеса');
+    if (last.bizLat === '' || last.bizLat === null || last.bizLat === undefined) todo.push('анкета № ' + l.contractId + ': нет локации бизнеса');
+    if (!(last.collPhotos || []).length) todo.push('анкета № ' + l.contractId + ': нет фото залога');
+    if (last.collLat === '' || last.collLat === null || last.collLat === undefined) todo.push('анкета № ' + l.contractId + ': нет локации залога');
+    if (!fl.length) todo.push('анкета № ' + l.contractId + ': не отмечено состояние предприятия');
+    if (!last.comment) todo.push('анкета № ' + l.contractId + ': нет комментария');
+    return `<div class="sv-box">
+      <div class="sv-title"><span>Анкета № ${safe(l.contractId)}</span><span class="sv-meta">${safe(svFmtWhen(last.addedAt))} · ${safe(last.addedBy)}</span></div>
+      <div class="sv-meta" style="margin:4px 0;">Бизнес</div>${svPhotosHtml(last.bizPhotos)}<div>${svMapLink(last.bizLat, last.bizLng) || '<span class="sv-meta">Локация не указана</span>'}</div>
+      <div class="sv-meta" style="margin:8px 0 4px;">Залог</div>${svPhotosHtml(last.collPhotos)}<div>${svMapLink(last.collLat, last.collLng) || '<span class="sv-meta">Локация не указана</span>'}</div>
+      <div class="sv-flags" style="margin-top:8px;">${fl.join('') || '<span class="sv-meta">Признаки не отмечены</span>'}</div>
+      ${last.openDate ? `<div class="sv-meta" style="margin-top:6px;">Дата открытия по удостоверению: <b>${safe(nplFmtDateRu(last.openDate))}</b></div>` : ''}
+      ${last.comment ? `<div style="font-size:13px;margin-top:8px;word-break:break-word;">${safe(last.comment)}</div>` : ''}
+    </div>`;
+  }).join('');
+  if (!phs.length) todo.push('не добавлен ни один номер телефона');
+  let legal = '';
+  try { const ls = vzLegalSummary(g); legal = `<div class="sv-meta" style="margin-top:8px;">Юридический статус: <b>${safe(ls.sub)}</b></div>`; } catch (e) {}
+  const phonesHtml = phs.length ? `<div class="sv-meta" style="margin-top:8px;">Номера, добавленные сотрудниками: ${phs.map(p => '<b>' + safe(p.phone) + '</b> (' + safe(p.label || 'Другое') + (p.addedBy ? ', ' + safe(p.addedBy) : '') + ')').join('; ')}</div>` : '';
+  const todoHtml = todo.length
+    ? `<div style="background:#FFF4E5;border:1px solid #F5D9A8;border-radius:10px;padding:8px 12px;margin-top:10px;font-size:12.5px;"><b>Что ещё нужно заполнить сотруднику:</b><ul style="margin:4px 0 0 16px;padding:0;">${todo.map(t => '<li>' + safe(t) + '</li>').join('')}</ul></div>`
+    : `<div style="background:#EAF6EC;border-radius:10px;padding:8px 12px;margin-top:10px;font-size:12.5px;color:#1E7B34;font-weight:600;">Всё заполнено</div>`;
+  return blocks + phonesHtml + legal + todoHtml;
+}
+
+function stVisHistoryHtml(vs, g) {
+  const kEnc = g ? encodeURIComponent(g.key) : '';
+  const visits = vs.slice().sort((a, b) => b.dt - a.dt).map(function(v) {
+    const leg = v.leg
+      ? `<div style="font-size:12px;margin-top:4px;color:${v.leg.lvl === 'bad' ? '#C0392B' : v.leg.lvl === 'warn' ? '#B7791F' : 'var(--muted)'};">⏱ от предыдущего визита (${stEsc(v.leg.prev.client || '—')}): ${stFmtMin(v.leg.gapMin)}${v.leg.distM !== null ? ' · ' + stFmtKm(v.leg.distM) : ''}${v.leg.speed !== null && isFinite(v.leg.speed) ? ' · ≈ ' + Math.round(v.leg.speed) + ' км/ч' : ''}</div>` : '';
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <b>${stFmtDm(v.dt)}.${v.dt.getFullYear()} · ${stFmtTm(v.dt)}</b><span>${stEsc(v.who)}</span>${stVisPill(v)}${stVisPromise(v)}${stVisFlagsHtml(v)}
+      </div>
+      <div style="margin-top:6px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
+        ${stVisMapLink(v.lat, v.lng)}
+        <span style="color:var(--muted);">${v.dist !== null ? Math.round(v.dist) + ' м от адреса клиента' : 'расстояние до адреса не определено'}</span>
+      </div>
+      <div style="margin-top:6px;">${stVisPhotoLinks(v.photo)}</div>
+      ${v.comment ? '<div style="margin-top:6px;word-break:break-word;">💬 ' + stEsc(v.comment) + '</div>' : '<div style="margin-top:6px;color:var(--muted);">Комментарий не заполнен</div>'}
+      ${leg}
+    </div>`;
+  }).join('');
+  return '<div class="st-det" style="padding:10px 14px;">' +
+    '<div style="font-weight:800;font-size:13px;margin-bottom:2px;">История визитов (' + vs.length + ')</div>' + visits +
+    (g ? '<div style="font-weight:800;font-size:13px;margin:14px 0 6px;">Данные, собранные по клиенту</div>' + stVisSurveyHtml(g) +
+      '<button type="button" class="btn btn-secondary" style="margin-top:10px;font-size:13px;padding:6px 14px;" onclick="event.stopPropagation();openNplClientDetail(\'' + kEnc + '\')">Открыть карточку клиента</button>' : '') +
+    '</div>';
 }
 
 function stVisClientsHtml(D, groups) {
@@ -9846,7 +9912,7 @@ function stVisClientsHtml(D, groups) {
       <td>${r.last ? stVisPill(r.last) : '<span class="dash">—</span>'}</td>
       <td>${r.prom ? stVisPromise(r.prom) : '<span class="dash">—</span>'}${r.bad ? ' <span class="pg rd" style="font-weight:600;">сомнит.</span>' : ''}</td>
       <td class="r">${g.maxDays} дн.</td><td class="r">${stMoney(stPf(g))}</td></tr>
-      ${open ? '<tr><td colspan="8" style="padding:0;">' + (r.vs.length ? stVisHistoryHtml(r.vs) : '<div class="st-det" style="padding:10px 14px;color:var(--muted);font-size:13px;">За выбранный период визитов нет.</div>') + '</td></tr>' : ''}`;
+      ${open ? '<tr><td colspan="8" style="padding:0;">' + (r.vs.length ? stVisHistoryHtml(r.vs, g) : '<div class="st-det" style="padding:10px 14px;"><div style="color:var(--muted);font-size:13px;margin-bottom:8px;">За выбранный период визитов нет.</div>' + stVisSurveyHtml(g) + '</div>') + '</td></tr>' : ''}`;
   }).join('');
   return `
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${chip('all', 'Все', '')}${chip('seen', 'Были', '')}${chip('none', 'Без визита', '')}${chip('promise', 'С обещанием', '')}${chip('bad', 'Сомнительные', '')}</div>
