@@ -694,6 +694,18 @@ body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
 .vzd-q button{font-weight:500;}
 .vzd-btn{border-radius:16px;padding:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;}
 .vzd-legal .vzd-ico{background:#C4231A;color:#fff;}
+#vzCallSheet{position:fixed;inset:0;z-index:90;display:none;}
+#vzCallSheet.active{display:block;}
+.vzcs-bg{position:absolute;inset:0;background:rgba(0,0,0,.5);}
+.vzcs-box{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:18px 14px calc(16px + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;}
+.vzcs-h{font-size:18px;font-weight:600;}
+.vzcs-s{font-size:12px;color:#8A8A8E;margin:2px 0 12px;}
+.vzcs-row{display:flex;align-items:center;gap:12px;background:#F5F6F8;border-radius:16px;padding:12px;margin-bottom:8px;text-decoration:none;color:#141414;font-size:15px;}
+.vzcs-row b{display:block;font-weight:600;}
+.vzcs-l{display:block;font-size:12px;color:#8A8A8E;}
+.vzcs-ic{width:38px;height:38px;border-radius:50%;background:#E8F6EE;color:#1E9E5A;display:flex;align-items:center;justify-content:center;flex:none;}
+.vzcs-cancel{width:100%;border:none;background:#FBE4E1;color:#A81E16;border-radius:16px;height:48px;font-size:15px;font-weight:600;margin-top:4px;cursor:pointer;font-family:inherit;}
+
 .vzd-btn.p{background:#141414;color:#fff;}
 .vzd-btn.s{background:#FBE4E1;color:#A81E16;}
 .vzd-chip{border:none;font-weight:500;color:#141414;}
@@ -7323,6 +7335,10 @@ function renderVzLoan() {
         <div class="vzd-card" ${tileOpen} style="cursor:pointer;padding:12px;"><div class="vzd-tile"><div class="vzd-ico">${appIcon('mappin', 18)}</div><div><div class="vzd-h">Залог</div><div class="vzd-t">${colTxt}</div></div></div></div>
       </div>`;
 
+  const callNums = vzCallNumbers(g, l);
+  const callBtn = callNums.length > 1 && exPh.length
+    ? `<button type="button" class="vzd-btn s" onclick="vzCallPick('${kEnc}','${cEnc}')">${appIcon('phone', 16)} Позвонить клиенту</button>`
+    : (callNums.length ? `<a class="vzd-btn s" href="tel:${safe(callNums[0].num.replace(/[^\d+]/g, ''))}">${appIcon('phone', 16)} Позвонить клиенту</a>` : '');
   box.innerHTML = `
     <div class="vzd-hero" style="padding-bottom:58px;">
       <div class="vzd-top"><button type="button" onclick="closeVzLoan()" aria-label="Назад" style="border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;">‹</button>
@@ -7348,9 +7364,46 @@ function renderVzLoan() {
         <div class="vzd-card"><div class="vzd-t">NPL анкеты</div><div class="vzd-h">${vzFmt(l.totalNpl)}</div></div>
       </div>
       <button type="button" class="vzd-btn p" ${tileOpen}>${appIcon('plus', 16)} Сбор данных</button>
-      ${phone ? `<a class="vzd-btn s" href="tel:${safe(phone)}">Позвонить клиенту</a>` : ''}
+      ${callBtn}
       <button type="button" class="vzd-btn s" onclick="openNplClientDetail('${kEnc}')">Карточка клиента</button>
     </div>`;
+}
+
+// Все номера клиента: из выгрузки (по группе и по анкете) + добавленные вручную; без дублей.
+function vzCallNumbers(g, l) {
+  const out = [], seen = {};
+  const add = (num, label) => {
+    const n = String(num || '').trim();
+    const d = n.replace(/\D/g, '');
+    if (!d || seen[d]) return;
+    seen[d] = 1;
+    out.push({ num: n, label: label });
+  };
+  String(g.phoneJoined || '').split(/[;,]/).forEach(x => add(x, 'Клиент · из выгрузки'));
+  if (l) add(l.phone, 'Клиент · из выгрузки');
+  const ex = (allNplExtra[g.key] && allNplExtra[g.key].phones) || [];
+  ex.forEach(p => add(p.phone, (p.label || 'Другое') + (p.addedBy ? ' · ' + p.addedBy : '')));
+  return out;
+}
+
+// Выбор номера перед звонком (когда у клиента есть добавленные вручную номера)
+function vzCallPick(kEnc, cEnc) {
+  vzEnsureIndex();
+  const g = nplGroupsByKey[decodeURIComponent(kEnc)];
+  if (!g) return;
+  const l = g.loans.find(x => String(x.contractId) === decodeURIComponent(cEnc));
+  const list = vzCallNumbers(g, l);
+  let sh = document.getElementById('vzCallSheet');
+  if (!sh) { sh = document.createElement('div'); sh.id = 'vzCallSheet'; document.body.appendChild(sh); }
+  sh.innerHTML = `<div class="vzcs-bg" onclick="vzCallClose()"></div>
+    <div class="vzcs-box"><div class="vzcs-h">Кому позвонить?</div><div class="vzcs-s">${safe(g.clientName)}</div>
+      ${list.map(x => `<a class="vzcs-row" href="tel:${safe(x.num.replace(/[^\d+]/g, ''))}" onclick="setTimeout(vzCallClose,300)"><span class="vzcs-ic">${appIcon('phone', 18)}</span><span style="flex:1;min-width:0;"><b>${safe(x.num)}</b><span class="vzcs-l">${safe(x.label)}</span></span></a>`).join('')}
+      <button type="button" class="vzcs-cancel" onclick="vzCallClose()">Отмена</button></div>`;
+  sh.classList.add('active');
+}
+function vzCallClose() {
+  const sh = document.getElementById('vzCallSheet');
+  if (sh) { sh.classList.remove('active'); sh.innerHTML = ''; }
 }
 
 // ---------------- Excel из мобильной версии ----------------
