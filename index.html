@@ -9651,7 +9651,11 @@ function stVisSet(name, val) {
   stVisLimit = 50;
   renderNplStatsPanel();
 }
-function stVisToggleKey(kEnc) { const k = decodeURIComponent(kEnc); stVisOpenKey = stVisOpenKey === k ? null : k; renderNplStatsPanel(); }
+function stVisToggleKey(kEnc) {
+  const k = decodeURIComponent(kEnc);
+  stVisOpenKey = stVisOpenKey === k ? null : k;
+  try { renderNplStatsPanel(); } catch (e) { console.error(e); stVisOpenKey = null; try { renderNplStatsPanel(); } catch (e2) {} alert('Не удалось открыть карточку: ' + (e && e.message)); }
+}
 function stVisToggleDay(d) { stVisOpenDays[d] = !stVisOpenDays[d]; renderNplStatsPanel(); }
 function stVisMore() { stVisLimit += 50; renderNplStatsPanel(); }
 function stVisOpenRoute(emp, day) { stVisMode = 'check'; stChkEmp = emp; stChkDay = day; renderNplStatsPanel(); }
@@ -9844,8 +9848,14 @@ function stVisSurveyHtml(g) {
   return blocks + phonesHtml + legal + todoHtml;
 }
 
+function stVisSafeCard(vs, g) {
+  try { return stVisHistoryHtml(vs, g); } catch (e) {
+    console.error(e);
+    try { return stVisHistoryHtml(vs, null) + '<div class="st-det" style="padding:0 14px 10px;color:#C0392B;font-size:12.5px;">Данные анкеты показать не удалось: ' + stEsc(e.message) + '</div>'; } catch (e2) { return '<div class="st-det" style="padding:10px 14px;color:#C0392B;">Ошибка: ' + stEsc(e2.message) + '</div>'; }
+  }
+}
 function stVisHistoryHtml(vs, g) {
-  const kEnc = g ? encodeURIComponent(g.key) : '';
+  const kEnc = g ? encodeURIComponent(g.key).replace(/'/g, '%27') : '';
   const visits = vs.slice().sort((a, b) => b.dt - a.dt).map(function(v) {
     const leg = v.leg
       ? `<div style="font-size:12px;margin-top:4px;color:${v.leg.lvl === 'bad' ? '#C0392B' : v.leg.lvl === 'warn' ? '#B7791F' : 'var(--muted)'};">⏱ от предыдущего визита (${stEsc(v.leg.prev.client || '—')}): ${stFmtMin(v.leg.gapMin)}${v.leg.distM !== null ? ' · ' + stFmtKm(v.leg.distM) : ''}${v.leg.speed !== null && isFinite(v.leg.speed) ? ' · ≈ ' + Math.round(v.leg.speed) + ' км/ч' : ''}</div>` : '';
@@ -9904,7 +9914,7 @@ function stVisClientsHtml(D, groups) {
     const open = stVisOpenKey === g.key;
     const stale = !r.vs.length;
     const lastTxt = r.last ? stFmtDm(r.last.dt) + ' · ' + stFmtTm(r.last.dt) : (r.lastAny ? '<span style="color:var(--muted);">' + stFmtDm(r.lastAny) + ' (раньше)</span>' : '<span class="dash">нет визитов</span>');
-    return `<tr style="cursor:pointer;" onclick="stVisToggleKey('${encodeURIComponent(g.key)}')">
+    return `<tr style="cursor:pointer;" onclick="stVisToggleKey('${encodeURIComponent(g.key).replace(/'/g, '%27')}')">
       <td><b>${stEsc(g.clientName)}</b><div class="s2" style="text-align:left;">${stEsc(cat)}${cat ? ' · ' : ''}${g.maxDays} дн.</div></td>
       <td>${r.last ? stEsc(r.last.who) : stEsc(allNplAssignments[g.key] ? nplCollectorLabel(allNplAssignments[g.key]) : '—')}</td>
       <td class="r${stale ? ' bad' : ''}">${r.vs.length}</td>
@@ -9912,7 +9922,7 @@ function stVisClientsHtml(D, groups) {
       <td>${r.last ? stVisPill(r.last) : '<span class="dash">—</span>'}</td>
       <td>${r.prom ? stVisPromise(r.prom) : '<span class="dash">—</span>'}${r.bad ? ' <span class="pg rd" style="font-weight:600;">сомнит.</span>' : ''}</td>
       <td class="r">${g.maxDays} дн.</td><td class="r">${stMoney(stPf(g))}</td></tr>
-      ${open ? '<tr><td colspan="8" style="padding:0;">' + (r.vs.length ? stVisHistoryHtml(r.vs, g) : '<div class="st-det" style="padding:10px 14px;"><div style="color:var(--muted);font-size:13px;margin-bottom:8px;">За выбранный период визитов нет.</div>' + stVisSurveyHtml(g) + '</div>') + '</td></tr>' : ''}`;
+      ${open ? '<tr><td colspan="8" style="padding:0;">' + (r.vs.length ? stVisSafeCard(r.vs, g) : '<div class="st-det" style="padding:10px 14px;"><div style="color:var(--muted);font-size:13px;margin-bottom:8px;">За выбранный период визитов нет.</div>' + stVisSurveyHtml(g) + '</div>') + '</td></tr>' : ''}`;
   }).join('');
   return `
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${chip('all', 'Все', '')}${chip('seen', 'Были', '')}${chip('none', 'Без визита', '')}${chip('promise', 'С обещанием', '')}${chip('bad', 'Сомнительные', '')}</div>
