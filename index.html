@@ -9626,9 +9626,421 @@ function stDetailHtml(r) {
     </div>`;
 }
 
+// ===================== СТАТИСТИКА: ВКЛАДКА «ВИЗИТЫ» =====================
+// Три режима: «Все клиенты» (по клиентам), «По дням» и «Проверка» — анализ
+// достоверности: время между визитами, расстояние и скорость переезда, отметка
+// далеко от адреса, один GPS у разных клиентов, визиты без фото/GPS.
+let stVisMode = 'clients', stVisEmp = '', stVisPeriod = 'month', stVisRes = '', stVisFilter = 'all';
+let stVisLimit = 50, stVisOpenKey = null, stVisOpenDays = {}, stChkEmp = '', stChkDay = '';
+const ST_VIS_RESULTS = ['Контакт с клиентом', 'Контакт с третьим лицом', 'Нет дома', 'Не проживает/съехал'];
+const ST_VIS_PERIODS = [['month', 'Этот месяц'], ['prev', 'Прошлый месяц'], ['week', '7 дней'], ['today', 'Сегодня']];
+const ST_SPEED_BAD = 60, ST_SPEED_WARN = 30;   // км/ч по городу
+const ST_SAME_GPS_M = 20;                      // две отметки ближе этого — «одна точка»
+const ST_FLAG_W = { impossible: 4, samegps: 4, far: 2, nophoto: 1, nogps: 1, night: 1, fast: 1 };
+
+function stEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+function stVisSet(name, val) {
+  if (name === 'mode') stVisMode = val;
+  else if (name === 'emp') { stVisEmp = val; stChkEmp = ''; stChkDay = ''; }
+  else if (name === 'period') { stVisPeriod = val; stChkDay = ''; }
+  else if (name === 'res') stVisRes = val;
+  else if (name === 'filter') stVisFilter = val;
+  else if (name === 'chkEmp') { stChkEmp = val; stChkDay = ''; }
+  else if (name === 'chkDay') stChkDay = val;
+  stVisLimit = 50;
+  renderNplStatsPanel();
+}
+function stVisToggleKey(kEnc) { const k = decodeURIComponent(kEnc); stVisOpenKey = stVisOpenKey === k ? null : k; renderNplStatsPanel(); }
+function stVisToggleDay(d) { stVisOpenDays[d] = !stVisOpenDays[d]; renderNplStatsPanel(); }
+function stVisMore() { stVisLimit += 50; renderNplStatsPanel(); }
+function stVisOpenRoute(emp, day) { stVisMode = 'check'; stChkEmp = emp; stChkDay = day; renderNplStatsPanel(); }
+
+function stVisRange() {
+  const now = new Date();
+  const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (stVisPeriod === 'today') return { from: sod(now), to: new Date(sod(now).getTime() + 86400000), label: 'сегодня' };
+  if (stVisPeriod === 'week') return { from: new Date(sod(now).getTime() - 6 * 86400000), to: new Date(sod(now).getTime() + 86400000), label: 'за 7 дней' };
+  if (stVisPeriod === 'prev') return { from: new Date(now.getFullYear(), now.getMonth() - 1, 1), to: new Date(now.getFullYear(), now.getMonth(), 1), label: 'за прошлый месяц' };
+  return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: new Date(now.getFullYear(), now.getMonth() + 1, 1), label: 'за месяц' };
+}
+
+// Все визиты в нормальном виде, по возрастанию времени
+function stVisAll() {
+  const out = [];
+  const gname = {};
+  try { getNplGroupsCached().forEach(g => { gname[g.key] = g.clientName; }); } catch (e) {}
+  Object.keys(allNplVisits || {}).forEach(function(k) {
+    (allNplVisits[k] || []).forEach(function(v) {
+      const d = stParseDt(v.addedAt);
+      if (!d) return;
+      const num = x => (x === '' || x === null || x === undefined) ? null : (isFinite(Number(x)) ? Number(x) : null);
+      let lat = num(v.lat), lng = num(v.lng);
+      if (lat === null || lng === null || (lat === 0 && lng === 0)) { lat = null; lng = null; }
+      const who = String(v.addedBy || '').trim();
+      out.push({
+        key: k, client: String(v.clientName || gname[k] || ''), who: who, whoKey: who.toLowerCase(), dt: d,
+        status: String(v.status || ''), lat: lat, lng: lng, dist: num(v.distance), susp: !!v.suspicious,
+        photo: String(v.photoUrl || '').trim(), promiseDate: String(v.promiseDate || '').trim(),
+        promiseAmount: Number(v.promiseAmount) || 0, comment: String(v.comment || '')
+      });
+    });
+  });
+  out.sort((a, b) => a.dt - b.dt);
+  return out;
+}
+
+// Анализ достоверности: заполняет v.flags и v.leg (переезд от предыдущего визита того же сотрудника в тот же день)
+function stVisAnalyze(list) {
+  const byDay = {};
+  list.forEach(function(v) {
+    v.flags = []; v.leg = null;
+    const k = v.whoKey + '|' + stDayKey(v.dt);
+    (byDay[k] = byDay[k] || []).push(v);
+  });
+  Object.keys(byDay).forEach(function(k) {
+    const arr = byDay[k];
+    for (let i = 0; i < arr.length; i++) {
+      const v = arr[i];
+      const h = v.dt.getHours();
+      if (h < 7 || h >= 21) v.flags.push({ t: 'night', txt: 'ночное время' });
+      if (v.lat === null) v.flags.push({ t: 'nogps', txt: 'нет GPS' });
+      else if (v.dist !== null && v.dist > NPL_VISIT_GEOFENCE_METERS) v.flags.push({ t: 'far', txt: 'отметка в ' + Math.round(v.dist) + ' м от адреса' });
+      if (!v.photo) v.flags.push({ t: 'nophoto', txt: 'нет фото' });
+      if (i > 0) {
+        const p = arr[i - 1];
+        const gapMin = (v.dt - p.dt) / 60000;
+        let distM = null, speed = null, lvl = 'ok';
+        if (v.lat !== null && p.lat !== null) {
+          distM = Math.round(haversineMeters(p.lat, p.lng, v.lat, v.lng));
+          speed = gapMin > 0 ? distM / 1000 / (gapMin / 60) : Infinity;
+        }
+        if (distM !== null && distM > 1000) {
+          if (gapMin < 5 || speed > ST_SPEED_BAD) lvl = 'bad'; else if (speed > ST_SPEED_WARN) lvl = 'warn';
+        } else if (distM === null && gapMin < 2 && p.key !== v.key) lvl = 'warn';
+        v.leg = { prev: p, gapMin: gapMin, distM: distM, speed: speed, lvl: lvl };
+        if (lvl === 'bad') v.flags.push({ t: 'impossible', txt: 'невозможный переезд: ' + stFmtMin(gapMin) + ', ' + stFmtKm(distM) + (isFinite(speed) ? ' — нужно ' + Math.round(speed) + ' км/ч' : '') });
+        else if (lvl === 'warn') v.flags.push({ t: 'fast', txt: 'быстрый переезд: ' + stFmtMin(gapMin) + (distM !== null ? ', ' + stFmtKm(distM) : '') });
+      }
+    }
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = i + 1; j < arr.length; j++) {
+        const a = arr[i], b = arr[j];
+        if (a.key === b.key || a.lat === null || b.lat === null) continue;
+        if (haversineMeters(a.lat, a.lng, b.lat, b.lng) > ST_SAME_GPS_M) continue;
+        const ea = allNplExtra[a.key] || {}, eb = allNplExtra[b.key] || {};
+        const known = ea.lat && ea.lng && eb.lat && eb.lng;
+        const far = known ? haversineMeters(Number(ea.lat), Number(ea.lng), Number(eb.lat), Number(eb.lng)) > 200 : true;
+        if (!far) continue;
+        a.flags.push({ t: 'samegps', txt: 'GPS совпадает с визитом к «' + b.client + '»' });
+        b.flags.push({ t: 'samegps', txt: 'GPS совпадает с визитом к «' + a.client + '»' });
+      }
+    }
+  });
+}
+
+function stFmtMin(m) {
+  if (m < 1) return 'меньше минуты';
+  if (m < 60) return Math.round(m) + ' мин';
+  return Math.floor(m / 60) + ' ч ' + Math.round(m % 60) + ' мин';
+}
+function stFmtKm(m) { return m === null ? '—' : (m < 1000 ? m + ' м' : (Math.round(m / 100) / 10).toString().replace('.', ',') + ' км'); }
+function stFmtTm(d) { return nplPad2(d.getHours()) + ':' + nplPad2(d.getMinutes()); }
+function stFmtDm(d) { return nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1); }
+const ST_WD = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+
+function stVisScore(list) {
+  if (!list.length) return null;
+  let pts = 0;
+  list.forEach(v => v.flags.forEach(f => { pts += ST_FLAG_W[f.t] || 0; }));
+  return Math.max(0, Math.round(100 - pts / list.length * 35));
+}
+function stScoreCls(sc) { return sc === null ? 'gr' : sc >= 80 ? 'g' : sc >= 50 ? 'y' : 'rd'; }
+function stResCls(s) { return s === 'Контакт с клиентом' ? 'g' : s === 'Контакт с третьим лицом' ? 'y' : s ? 'rd' : 'gr'; }
+function stResShort(s) { return s === 'Контакт с третьим лицом' ? 'Третье лицо' : s === 'Не проживает/съехал' ? 'Съехал' : (s || '—'); }
+function stBad(v) { return v.flags.some(f => f.t === 'impossible' || f.t === 'samegps' || f.t === 'far'); }
+
+// Данные по текущим фильтрам
+function stVisData() {
+  const rng = stVisRange();
+  const all = stVisAll();
+  const empNames = {};
+  all.forEach(v => { if (v.who) empNames[v.whoKey] = v.who; });
+  const inScope = all.filter(v => v.dt >= rng.from && v.dt < rng.to && (!stVisEmp || v.whoKey === stVisEmp));
+  stVisAnalyze(inScope);
+  const filtered = stVisRes ? inScope.filter(v => v.status === stVisRes) : inScope;
+  return { rng: rng, all: all, scope: inScope, list: filtered, empNames: empNames };
+}
+
+function stVisCount() {
+  const rng = stVisRange();
+  let n = 0;
+  Object.keys(allNplVisits || {}).forEach(k => (allNplVisits[k] || []).forEach(v => {
+    const d = stParseDt(v.addedAt);
+    if (d && d >= rng.from && d < rng.to && (!stVisEmp || String(v.addedBy || '').trim().toLowerCase() === stVisEmp)) n++;
+  }));
+  return n;
+}
+
+function stVisPill(v) {
+  return v.status ? '<span class="pg ' + stResCls(v.status) + '" style="white-space:nowrap;">' + stEsc(stResShort(v.status)) + '</span>' : '<span class="dash">—</span>';
+}
+function stVisPromise(v) {
+  if (!v.promiseDate && !v.promiseAmount) return '<span class="dash">—</span>';
+  return '<span class="pg y" style="white-space:nowrap;">' + (v.promiseAmount ? stMoney(v.promiseAmount) : '') + (v.promiseDate ? ' до ' + stEsc(v.promiseDate.slice(0, 10)) : '') + '</span>';
+}
+function stVisFlagsHtml(v) {
+  return v.flags.filter(f => f.t !== 'night' || true).map(f => '<span class="pg ' + (['impossible', 'samegps'].indexOf(f.t) >= 0 ? 'rd' : f.t === 'far' ? 'rd' : 'y') + '" style="margin:2px 4px 0 0;font-weight:600;" title="' + stEsc(f.txt) + '">' + stEsc(f.t === 'impossible' ? 'невозможный переезд' : f.t === 'samegps' ? 'один GPS' : f.t === 'far' ? 'далеко от адреса' : f.t === 'fast' ? 'быстрый переезд' : f.t === 'nophoto' ? 'нет фото' : f.t === 'nogps' ? 'нет GPS' : 'ночью') + '</span>').join('');
+}
+
+function stVisHistoryHtml(vs) {
+  return '<div class="st-det" style="padding:10px 14px;">' + vs.slice().sort((a, b) => b.dt - a.dt).map(v => `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;">
+      <b style="min-width:84px;">${stFmtDm(v.dt)} · ${stFmtTm(v.dt)}</b><span style="min-width:120px;">${stEsc(v.who)}</span>${stVisPill(v)}${stVisPromise(v)}
+      <span style="color:var(--muted);">${v.dist !== null ? Math.round(v.dist) + ' м от адреса' : 'расстояние не определено'}</span>
+      ${v.photo ? '<a href="' + stEsc(v.photo.split(',')[0].trim()) + '" target="_blank" onclick="event.stopPropagation()" style="color:var(--brand);font-weight:700;">фото</a>' : ''}
+      ${v.comment ? '<span style="color:var(--muted);">«' + stEsc(v.comment) + '»</span>' : ''}${stVisFlagsHtml(v)}
+    </div>`).join('') + '</div>';
+}
+
+function stVisClientsHtml(D, groups) {
+  const gm = {};
+  groups.forEach(g => { gm[g.key] = g; });
+  const byKey = {};
+  D.list.forEach(v => { (byKey[v.key] = byKey[v.key] || []).push(v); });
+  const lastAny = {};
+  D.all.forEach(v => { if (!lastAny[v.key] || v.dt > lastAny[v.key]) lastAny[v.key] = v.dt; });
+  // область клиентов: у выбранного сотрудника — его клиенты; иначе все
+  let scope = groups;
+  if (stVisEmp) {
+    const u = (allWebUsers || []).find(x => String(x.fullName || '').trim().toLowerCase() === stVisEmp);
+    const id = u ? String(u.employeeId || '').trim() : '';
+    scope = groups.filter(g => (id && String(allNplAssignments[g.key] || '').trim() === id) || (byKey[g.key] || []).length);
+  }
+  const rows = scope.map(function(g) {
+    const vs = byKey[g.key] || [];
+    const last = vs.length ? vs.reduce((a, b) => (a.dt > b.dt ? a : b)) : null;
+    const prom = vs.slice().reverse().find(v => v.promiseDate || v.promiseAmount) || null;
+    return { g: g, vs: vs, last: last, prom: prom, bad: vs.some(stBad), lastAny: lastAny[g.key] || null };
+  });
+  const cnt = {
+    all: rows.length, seen: rows.filter(r => r.vs.length).length, none: rows.filter(r => !r.vs.length).length,
+    promise: rows.filter(r => r.prom).length, bad: rows.filter(r => r.bad).length
+  };
+  const f = stVisFilter;
+  let shown = rows.filter(r => f === 'seen' ? r.vs.length : f === 'none' ? !r.vs.length : f === 'promise' ? r.prom : f === 'bad' ? r.bad : true);
+  shown.sort((a, b) => f === 'none' ? (b.g.maxDays - a.g.maxDays) : ((b.last ? b.last.dt : 0) - (a.last ? a.last.dt : 0)) || (b.g.maxDays - a.g.maxDays));
+  const chip = (k, label, cls) => `<button type="button" class="st-tab${f === k ? ' on' : ''}" style="font-size:12px;padding:4px 10px;" onclick="stVisSet('filter','${k}')">${label} <span class="n">${cnt[k]}</span></button>`;
+  const body = shown.slice(0, stVisLimit).map(function(r) {
+    const g = r.g;
+    const rc = nplRiskCategory(g);
+    const cat = rc && VZ_CAT[rc] ? VZ_CAT[rc].short : '';
+    const open = stVisOpenKey === g.key;
+    const stale = !r.vs.length;
+    const lastTxt = r.last ? stFmtDm(r.last.dt) + ' · ' + stFmtTm(r.last.dt) : (r.lastAny ? '<span style="color:var(--muted);">' + stFmtDm(r.lastAny) + ' (раньше)</span>' : '<span class="dash">нет визитов</span>');
+    return `<tr style="cursor:pointer;" onclick="stVisToggleKey('${encodeURIComponent(g.key)}')">
+      <td><b>${stEsc(g.clientName)}</b><div class="s2" style="text-align:left;">${stEsc(cat)}${cat ? ' · ' : ''}${g.maxDays} дн.</div></td>
+      <td>${r.last ? stEsc(r.last.who) : stEsc(allNplAssignments[g.key] ? nplCollectorLabel(allNplAssignments[g.key]) : '—')}</td>
+      <td class="r${stale ? ' bad' : ''}">${r.vs.length}</td>
+      <td>${lastTxt}</td>
+      <td>${r.last ? stVisPill(r.last) : '<span class="dash">—</span>'}</td>
+      <td>${r.prom ? stVisPromise(r.prom) : '<span class="dash">—</span>'}${r.bad ? ' <span class="pg rd" style="font-weight:600;">сомнит.</span>' : ''}</td>
+      <td class="r">${g.maxDays} дн.</td><td class="r">${stMoney(stPf(g))}</td></tr>
+      ${open ? '<tr><td colspan="8" style="padding:0;">' + (r.vs.length ? stVisHistoryHtml(r.vs) : '<div class="st-det" style="padding:10px 14px;color:var(--muted);font-size:13px;">За выбранный период визитов нет.</div>') + '</td></tr>' : ''}`;
+  }).join('');
+  return `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">${chip('all', 'Все', '')}${chip('seen', 'Были', '')}${chip('none', 'Без визита', '')}${chip('promise', 'С обещанием', '')}${chip('bad', 'Сомнительные', '')}</div>
+    <div style="overflow-x:auto;"><table class="stv-t"><thead><tr><th>Клиент</th><th>Взыскатель</th><th class="r">Визитов</th><th>Последний</th><th>Результат</th><th>Обещание</th><th class="r">Просрочка</th><th class="r">Портфель</th></tr></thead><tbody>${body || '<tr><td colspan="8" style="padding:14px;color:var(--muted);">Никого нет.</td></tr>'}</tbody></table></div>
+    ${shown.length > stVisLimit ? `<div style="text-align:center;margin-top:8px;"><button type="button" class="btn btn-secondary" style="padding:6px 16px;font-size:13px;" onclick="stVisMore()">Показать ещё (${shown.length - stVisLimit})</button></div>` : ''}
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;">Нажмите на клиента — откроется вся история визитов: дата, результат, расстояние до адреса, фото, комментарий.</div>`;
+}
+
+function stVisDaysHtml(D) {
+  const days = {};
+  D.list.forEach(v => { (days[stDayKey(v.dt)] = days[stDayKey(v.dt)] || []).push(v); });
+  const keys = Object.keys(days).sort().reverse();
+  const mx = Math.max.apply(null, keys.map(k => days[k].length).concat([1]));
+  if (!keys.length) return '<div style="padding:14px;color:var(--muted);font-size:13px;">За выбранный период визитов нет.</div>';
+  return keys.map(function(k) {
+    const vs = days[k];
+    const d = vs[0].dt;
+    const contact = vs.filter(v => v.status === 'Контакт с клиентом').length;
+    const bad = vs.filter(stBad).length;
+    const open = !!stVisOpenDays[k];
+    const emps = {};
+    vs.forEach(v => { emps[v.whoKey] = 1; });
+    const detail = open ? `<div style="overflow-x:auto;"><table class="stv-t"><thead><tr><th>Время</th><th>Клиент</th><th>Взыскатель</th><th>Результат</th><th>Обещание</th><th class="r">До адреса</th><th>Проверка</th></tr></thead><tbody>${
+      vs.slice().sort((a, b) => a.dt - b.dt).map(v => `<tr><td>${stFmtTm(v.dt)}</td><td>${stEsc(v.client)}</td><td>${stEsc(v.who)}</td><td>${stVisPill(v)}</td><td>${stVisPromise(v)}</td><td class="r${v.dist !== null && v.dist > NPL_VISIT_GEOFENCE_METERS ? ' bad' : ''}">${v.dist !== null ? stFmtKm(Math.round(v.dist)) : '—'}</td><td>${stVisFlagsHtml(v)}</td></tr>`).join('')
+    }</tbody></table></div>` : '';
+    return `<div style="border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden;background:#fff;">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer;flex-wrap:wrap;" onclick="stVisToggleDay('${k}')">
+        <b style="min-width:150px;">${stFmtDm(d)}, ${ST_WD[d.getDay()]}</b>
+        <div class="st-rbar" style="flex:1;min-width:80px;"><i style="width:${Math.round(vs.length / mx * 100)}%;background:#C4231A;"></i></div>
+        <span style="font-size:13px;"><b>${vs.length}</b> визитов</span><span class="pg g">контакт ${contact}</span>
+        ${bad ? '<span class="pg rd">сомнит. ' + bad + '</span>' : ''}<span style="font-size:12px;color:var(--muted);">${Object.keys(emps).length} взыск.</span>
+      </div>${detail}</div>`;
+  }).join('');
+}
+
+function stVisCheckHtml(D) {
+  const byEmp = {};
+  D.scope.forEach(v => { (byEmp[v.whoKey] = byEmp[v.whoKey] || []).push(v); });
+  const emps = Object.keys(byEmp).map(function(k) {
+    const vs = byEmp[k];
+    const legs = vs.filter(v => v.leg);
+    const gaps = legs.map(v => v.leg.gapMin).filter(x => x < 600);
+    const dists = legs.map(v => v.leg.distM).filter(x => x !== null);
+    const cntF = t => vs.filter(v => v.flags.some(f => f.t === t)).length;
+    return {
+      key: k, name: vs[0].who, vs: vs, score: stVisScore(vs),
+      avgGap: gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : null,
+      avgDist: dists.length ? dists.reduce((a, b) => a + b, 0) / dists.length : null,
+      imp: cntF('impossible'), far: cntF('far'), same: cntF('samegps'), nophoto: cntF('nophoto'), nogps: cntF('nogps')
+    };
+  }).sort((a, b) => a.score - b.score);
+  const total = D.scope.length;
+  const nBad = D.scope.filter(stBad).length;
+  const nWarn = D.scope.filter(v => !stBad(v) && v.flags.some(f => f.t === 'fast' || f.t === 'night')).length;
+  const nProof = D.scope.filter(v => v.flags.some(f => f.t === 'nophoto' || f.t === 'nogps')).length;
+  const nOk = total - nBad - nWarn;
+  const kpi = (l, v, sub, col) => `<div class="st-k"><span>${l}</span><b${col ? ' style="color:' + col + ';"' : ''}>${v}</b><span>${sub}</span></div>`;
+  const pc = x => total ? Math.round(x / total * 100) + '%' : '—';
+  const kpis = `<div class="st-kpis">${kpi('Проверено визитов', total, 'с GPS ' + D.scope.filter(v => v.lat !== null).length)}${kpi('Достоверных', nOk, pc(nOk), '#1E7B34')}${kpi('Под сомнением', nWarn, pc(nWarn), '#BA7517')}${kpi('Нарушения', nBad, pc(nBad), '#C0392B')}${kpi('Без GPS или фото', nProof, pc(nProof))}</div>`;
+
+  const table = `<div style="overflow-x:auto;"><table class="stv-t"><thead><tr><th>Взыскатель</th><th class="r">Визитов</th><th class="r">Среднее между визитами</th><th class="r">Среднее расстояние</th><th class="r">Невозможные переезды</th><th class="r">Далеко от адреса</th><th class="r">Один GPS у разных</th><th class="r">Без фото</th><th class="r">Индекс</th></tr></thead><tbody>${
+    emps.map(e => `<tr style="cursor:pointer;" onclick="stVisSet('chkEmp','${stEsc(e.key).replace(/'/g, '&#39;')}')"><td><b>${stEsc(e.name)}</b></td><td class="r">${e.vs.length}</td><td class="r">${e.avgGap === null ? '—' : stFmtMin(e.avgGap)}</td><td class="r">${e.avgDist === null ? '—' : stFmtKm(Math.round(e.avgDist))}</td><td class="r${e.imp ? ' bad' : ''}">${e.imp}</td><td class="r${e.far ? ' bad' : ''}">${e.far}</td><td class="r${e.same ? ' bad' : ''}">${e.same}</td><td class="r">${e.nophoto}</td><td class="r"><span class="pg ${stScoreCls(e.score)}" style="min-width:34px;text-align:center;">${e.score}</span></td></tr>`).join('') ||
+    '<tr><td colspan="9" style="padding:14px;color:var(--muted);">Визитов за период нет.</td></tr>'}</tbody></table></div>`;
+
+  // подозрительные события (самые свежие)
+  const events = [];
+  D.scope.forEach(v => v.flags.forEach(f => {
+    if (['impossible', 'samegps', 'far', 'fast'].indexOf(f.t) >= 0) events.push({ v: v, f: f });
+  }));
+  events.sort((a, b) => ((['impossible', 'samegps'].indexOf(b.f.t) >= 0 ? 1 : 0) - (['impossible', 'samegps'].indexOf(a.f.t) >= 0 ? 1 : 0)) || (b.v.dt - a.v.dt));
+  const evHtml = events.slice(0, 30).map(function(e) {
+    const hard = e.f.t === 'impossible' || e.f.t === 'samegps' || e.f.t === 'far';
+    const lbl = e.f.t === 'impossible' ? 'Невозможный переезд' : e.f.t === 'samegps' ? 'Один GPS у двух клиентов' : e.f.t === 'far' ? 'Далеко от адреса' : 'Быстрый переезд';
+    return `<div style="border:1px solid ${hard ? '#F3C9C5' : '#F3D9A0'};border-radius:12px;padding:10px 12px;margin-bottom:8px;background:#fff;cursor:pointer;" onclick="stVisOpenRoute('${stEsc(e.v.whoKey).replace(/'/g, '&#39;')}','${stDayKey(e.v.dt)}')">
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b>${stEsc(e.v.who)} · ${stFmtDm(e.v.dt)} ${stFmtTm(e.v.dt)}</b><span class="pg ${hard ? 'rd' : 'y'}">${lbl}</span></div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">${stEsc(e.v.client)}: ${stEsc(e.f.txt)}</div></div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:13px;padding:6px 0;">Подозрительных визитов за период не найдено.</div>';
+
+  // маршрут за день
+  const empList = emps.map(e => e.key);
+  const curEmp = empList.indexOf(stChkEmp) >= 0 ? stChkEmp : (empList[0] || '');
+  const eObj = emps.find(e => e.key === curEmp);
+  let route = '';
+  if (eObj) {
+    const dayKeys = {};
+    eObj.vs.forEach(v => { dayKeys[stDayKey(v.dt)] = 1; });
+    const dks = Object.keys(dayKeys).sort().reverse();
+    const curDay = dks.indexOf(stChkDay) >= 0 ? stChkDay : dks[0];
+    const dv = eObj.vs.filter(v => stDayKey(v.dt) === curDay).sort((a, b) => a.dt - b.dt);
+    const dsc = stVisScore(dv);
+    let km = 0, ride = 0;
+    dv.forEach(v => { if (v.leg && v.leg.distM !== null) km += v.leg.distM; });
+    if (dv.length > 1) ride = (dv[dv.length - 1].dt - dv[0].dt) / 60000;
+    const steps = dv.map(function(v, i) {
+      const lg = v.leg;
+      const hop = lg ? `<div style="margin:2px 0 6px 28px;padding:6px 10px;border-radius:10px;font-size:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;background:${lg.lvl === 'bad' ? '#FCEBEB' : lg.lvl === 'warn' ? '#FAEEDA' : '#F1F3F5'};color:${lg.lvl === 'bad' ? '#791F1F' : lg.lvl === 'warn' ? '#633806' : '#444'};">
+        <span>⏱ ${stFmtMin(lg.gapMin)}</span><span>↔ ${stFmtKm(lg.distM)}</span><span>${lg.speed !== null && isFinite(lg.speed) ? '≈ ' + Math.round(lg.speed) + ' км/ч' : (lg.distM === null ? 'расстояние неизвестно (нет GPS)' : '')}</span>
+        <span class="pg ${lg.lvl === 'bad' ? 'rd' : lg.lvl === 'warn' ? 'y' : 'g'}">${lg.lvl === 'bad' ? 'невозможно' : lg.lvl === 'warn' ? 'быстро: проверить' : 'норма'}</span></div>` : '';
+      const mark = v.flags.length ? '#C0392B' : '#1E7B34';
+      return `${hop}<div style="display:flex;gap:10px;align-items:flex-start;"><span style="width:12px;height:12px;border-radius:50%;background:${mark};margin-top:4px;flex:none;"></span>
+        <div style="flex:1;min-width:0;"><b>${stFmtTm(v.dt)} · ${stEsc(v.client)}</b>
+          <div style="font-size:12px;color:var(--muted);">${stEsc(v.status || '—')} · ${v.dist !== null ? Math.round(v.dist) + ' м от адреса' : 'расстояние до адреса неизвестно'} · ${v.photo ? 'фото есть' : 'без фото'}</div>
+          ${v.flags.length ? '<div>' + stVisFlagsHtml(v) + '</div>' : ''}</div></div>`;
+    }).join('');
+    route = `
+      <div style="font-size:14px;font-weight:800;margin:18px 0 8px;">Маршрут за день</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+        <select class="select" style="width:auto;" onchange="stVisSet('chkEmp',this.value)">${emps.map(e => `<option value="${stEsc(e.key)}"${e.key === curEmp ? ' selected' : ''}>${stEsc(e.name)}</option>`).join('')}</select>
+        <select class="select" style="width:auto;" onchange="stVisSet('chkDay',this.value)">${dks.map(k => { const dd = stParseDt(k.split('-').reverse().join('.')); return `<option value="${k}"${k === curDay ? ' selected' : ''}>${stFmtDm(dd)}, ${ST_WD[dd.getDay()]}</option>`; }).join('')}</select>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:#fff;">${steps}
+        <div class="st-minis" style="margin:12px 0 0;">
+          <div class="st-mini"><span>Визитов за день</span><b>${dv.length}</b></div>
+          <div class="st-mini"><span>Между клиентами по GPS</span><b>${stFmtKm(Math.round(km))}</b></div>
+          <div class="st-mini"><span>От первого до последнего</span><b>${dv.length > 1 ? stFmtMin(ride) : '—'}</b></div>
+          <div class="st-mini"><span>Индекс дня</span><b style="color:${dsc === null ? '' : dsc >= 80 ? '#1E7B34' : dsc >= 50 ? '#BA7517' : '#C0392B'};">${dsc === null ? '—' : dsc}</b></div>
+        </div></div>`;
+  }
+
+  return `${kpis}
+    <div style="font-size:14px;font-weight:800;margin:6px 0 8px;">Индекс достоверности по взыскателям</div>${table}
+    <div style="font-size:14px;font-weight:800;margin:18px 0 8px;">Подозрительные визиты</div>${evHtml}
+    ${route}
+    <div style="font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6;">
+      Что проверяется: переезд между визитами одного сотрудника за день по GPS (меньше 5 минут при расстоянии больше 1 км или скорость выше ${ST_SPEED_BAD} км/ч — «невозможно», выше ${ST_SPEED_WARN} км/ч — «быстро»);
+      отметка дальше ${NPL_VISIT_GEOFENCE_METERS} м от адреса клиента; одна и та же точка (до ${ST_SAME_GPS_M} м) у разных клиентов с разными адресами; визит без фото или без GPS; ночное время (до 07:00 и после 21:00).
+      Индекс 0–100: штрафы за нарушения делятся на число визитов (≥80 зелёный, 50–79 жёлтый, ниже 50 красный). Это подсказка для проверки, а не доказательство — GPS в здании и в плотной застройке бывает неточным.
+    </div>`;
+}
+
+function stVisitsHtml() {
+  const D = stVisData();
+  const groups = getNplGroupsCached();
+  const empOpts = Object.keys(D.empNames).sort((a, b) => D.empNames[a].localeCompare(D.empNames[b], 'ru'));
+  const modeBtn = (m, label) => `<button type="button" class="st-tab${stVisMode === m ? ' on' : ''}" onclick="stVisSet('mode','${m}')">${label}</button>`;
+  const sel = (id, cur, opts, onch) => `<select class="select" style="width:auto;" onchange="${onch}">${opts.map(o => `<option value="${stEsc(o[0])}"${String(o[0]) === String(cur) ? ' selected' : ''}>${stEsc(o[1])}</option>`).join('')}</select>`;
+  const L = D.list;
+  const clientsSeen = {};
+  L.forEach(v => { clientsSeen[v.key] = 1; });
+  const contact = L.filter(v => v.status === 'Контакт с клиентом').length;
+  const prom = L.filter(v => v.promiseDate || v.promiseAmount);
+  const promSum = prom.reduce((a, v) => a + v.promiseAmount, 0);
+  const susp = L.filter(stBad).length;
+  const lastByKey = {};
+  D.all.forEach(v => { if (!lastByKey[v.key] || v.dt > lastByKey[v.key]) lastByKey[v.key] = v.dt; });
+  const limit = Date.now() - 14 * 86400000;
+  const noVisit14 = groups.filter(g => !lastByKey[g.key] || lastByKey[g.key].getTime() < limit).length;
+  const kpi = (l, v, sub, col) => `<div class="st-k"><span>${l}</span><b${col ? ' style="color:' + col + ';"' : ''}>${v}</b><span>${sub}</span></div>`;
+  const kpis = stVisMode === 'check' ? '' : `<div class="st-kpis">
+    ${kpi('Визитов', L.length, D.rng.label)}${kpi('Клиентов посещено', Object.keys(clientsSeen).length, 'из ' + groups.length + ' в работе')}
+    ${kpi('Контакт с клиентом', L.length ? Math.round(contact / L.length * 100) + '%' : '—', contact + ' визитов')}${kpi('Обещаний оплаты', prom.length, promSum ? 'на ' + stMoney(promSum) : 'сумма не указана')}
+    ${kpi('Сомнительных', susp, 'далеко от адреса или нарушение', susp ? '#C0392B' : '')}${kpi('Без визита 14+ дн.', noVisit14, 'клиентов', noVisit14 ? '#C0392B' : '')}</div>`;
+  const resFilter = stVisMode === 'check' ? '' : sel('r', stVisRes, [['', 'Все результаты']].concat(ST_VIS_RESULTS.map(r => [r, r])), "stVisSet('res',this.value)");
+  const body = stVisMode === 'days' ? stVisDaysHtml(D) : stVisMode === 'check' ? stVisCheckHtml(D) : stVisClientsHtml(D, groups);
+  return `
+    <style>.stv-t{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}.stv-t th{font-weight:600;color:var(--muted);text-align:left;padding:8px 8px;border-bottom:2px solid #111;font-size:11.5px;white-space:nowrap}.stv-t td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}.stv-t td.r,.stv-t th.r{text-align:right}.stv-t tr:hover td{background:#F8FAFF}</style>
+    <div style="padding:12px 14px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <div style="display:flex;gap:4px;">${modeBtn('clients', 'Все клиенты')}${modeBtn('days', 'По дням')}${modeBtn('check', 'Проверка')}</div>
+        ${sel('e', stVisEmp, [['', 'Все взыскатели']].concat(empOpts.map(k => [k, D.empNames[k]])), "stVisSet('emp',this.value)")}
+        ${sel('p', stVisPeriod, ST_VIS_PERIODS, "stVisSet('period',this.value)")}${resFilter}
+      </div>
+      ${kpis}${body}
+    </div>`;
+}
+
+function exportNplVisitsExcel() {
+  if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
+  const D = stVisData();
+  const head = ['Дата', 'Время', 'Взыскатель', 'Клиент', 'Результат', 'Широта', 'Долгота', 'До адреса, м', 'От предыдущего визита, мин', 'От предыдущего, м', 'Скорость, км/ч', 'Фото', 'Обещание, дата', 'Обещание, сумма', 'Комментарий', 'Замечания'];
+  const rows = D.scope.map(v => [stFmtDm(v.dt) + '.' + v.dt.getFullYear(), stFmtTm(v.dt), v.who, v.client, v.status, v.lat === null ? '' : v.lat, v.lng === null ? '' : v.lng,
+    v.dist === null ? '' : Math.round(v.dist), v.leg ? Math.round(v.leg.gapMin) : '', v.leg && v.leg.distM !== null ? v.leg.distM : '', v.leg && v.leg.speed !== null && isFinite(v.leg.speed) ? Math.round(v.leg.speed) : '',
+    v.photo ? 'есть' : 'нет', v.promiseDate, v.promiseAmount || '', v.comment, v.flags.map(f => f.txt).join('; ')]);
+  const ws = XLSX.utils.aoa_to_sheet([head].concat(rows));
+  ws['!cols'] = head.map((h, i) => ({ wch: i === 3 ? 34 : i === 15 ? 60 : Math.max(10, Math.min(24, h.length + 2)) }));
+  const byEmp = {};
+  D.scope.forEach(v => { (byEmp[v.whoKey] = byEmp[v.whoKey] || []).push(v); });
+  const head2 = ['Взыскатель', 'Визитов', 'Невозможные переезды', 'Далеко от адреса', 'Один GPS у разных', 'Без фото', 'Без GPS', 'Индекс достоверности'];
+  const cnt = (vs, t) => vs.filter(v => v.flags.some(f => f.t === t)).length;
+  const rows2 = Object.keys(byEmp).map(k => { const vs = byEmp[k]; return [vs[0].who, vs.length, cnt(vs, 'impossible'), cnt(vs, 'far'), cnt(vs, 'samegps'), cnt(vs, 'nophoto'), cnt(vs, 'nogps'), stVisScore(vs)]; }).sort((a, b) => a[7] - b[7]);
+  const ws2 = XLSX.utils.aoa_to_sheet([head2].concat(rows2));
+  ws2['!cols'] = head2.map((h, i) => ({ wch: i === 0 ? 34 : 16 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Визиты');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Достоверность');
+  XLSX.writeFile(wb, 'Vizity_' + nplLocalDateStr() + '.xlsx');
+}
+
+
+
 function setNplStatsTab(t) { stTab = t; renderNplStatsPanel(); }
 
 function exportNplStatsExcel() {
+  if (stTab === 'vis') return exportNplVisitsExcel();
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
   const rows = stBuildRows(stBuildVisitIndex()).filter(r => r.groups > 0);
   const head = ['№', 'Взыскатель', 'ID', 'План, клиентов', 'План, портфель (млн)', 'Возвращено, клиентов', 'Возвращено, портфель (млн)', '% закрытия по клиентам', '% закрытия по портфелю', 'За день, клиентов', 'За день, портфель (млн)', 'Визитов за месяц', 'Визитов сегодня', 'Визитов в день (среднее)', '90+ без МИБ и суда', 'Без контакта 7+ дн.', 'Последняя активность', 'Доля NPL, %', 'Общий балл', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+'];
@@ -9686,7 +10098,8 @@ function renderNplStatsPanel() {
     ctl: r => r.noContact >= 5
   };
   const counts = {}; Object.keys(filters).forEach(k => { counts[k] = activeRows.filter(filters[k]).length; });
-  const tabDefs = [['all', 'Все'], ['top', 'Топ по сборам'], ['low', 'Отстающие'], ['ctl', 'Нужен контроль (без контакта 7+)']];
+  counts.vis = stVisCount();
+  const tabDefs = [['all', 'Все'], ['top', 'Топ по сборам'], ['low', 'Отстающие'], ['ctl', 'Нужен контроль (без контакта 7+)'], ['vis', 'Визиты']];
   const tabsHtml = tabDefs.map(t => `<button type="button" class="st-tab${stTab === t[0] ? ' on' : ''}" onclick="setNplStatsTab('${t[0]}')">${t[1]}<span class="n">${counts[t[0]]}</span></button>`).join('');
   let shown = activeRows.filter(filters[stTab] || filters.all);
   if (stTab === 'top') shown = shown.sort((a, b) => b.pctPf - a.pctPf);
@@ -9798,17 +10211,18 @@ function renderNplStatsPanel() {
       <div style="font-size:13px;color:var(--muted);">За ${monthNames[now.getMonth()]} ${now.getFullYear()}. План — назначено клиентов на начало месяца, возвращено — вышли из просрочки.</div>
       <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button>
     </div>
-    ${kpis}
-    ${ratingHtml}
+    ${stTab === 'vis' ? '' : kpis}
+    ${stTab === 'vis' ? '' : ratingHtml}
     <div class="st-table">
       <div class="st-tabs">${tabsHtml}</div>
-      <div style="overflow-x:auto"><div class="st-in">
+      ${stTab === 'vis' ? stVisitsHtml() : ''}
+      <div style="overflow-x:auto;${stTab === 'vis' ? 'display:none;' : ''}"><div class="st-in">
         <div class="st-r st-hd"><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План<span class="s2">клиентов / портфель</span></div><div>Возвращено<span class="s2">клиентов / портфель</span></div><div>% закрытия<span class="s2">клиенты / портфель</span></div><div>За день<span class="s2">клиентов / портфель</span></div><div>Визитов<span class="s2">за месяц / сегодня</span></div><div>90+ без МИБ и суда</div><div>Без контакта 7+</div><div>Последняя активность</div><div>Доля NPL</div></div>
         ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">' + (activeRows.length ? 'В этой группе никого нет.' : 'Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.') + '</div>'}
       </div></div>
     </div>
-    ${archHtml}
-    <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;">
+    ${stTab === 'vis' ? '' : archHtml}
+    <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;${stTab === 'vis' ? 'display:none;' : ''}">
       Нажмите на строку — раскроется карточка сотрудника. Цвет % закрытия: зелёный от 35%, жёлтый 15–35%, красный ниже 15%. Доля NPL — клиентов 90+ среди клиентов в работе (зелёный до 10%, красный от 25%).
       Общий балл (0–100): закрытие по портфелю 40% · визиты в день 20% (если в системе есть визиты) · охват контактом за 7 дней 15% · низкая доля NPL 15% · юридическая готовность (90+ с МИБ или судом) 10%.
       Портфель — текущий остаток клиентов; «возвращено» — по архиву закрытых клиентов (последний долг). Визиты и активность считаются по визитам, подтверждённым в CRM.
