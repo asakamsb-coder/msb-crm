@@ -9199,6 +9199,8 @@ function stEmpUser(id) {
 
 let stFileHasIds = false;
 let stTab = 'all';
+let stRatingAll = false;
+function toggleNplStatsRating() { stRatingAll = !stRatingAll; renderNplStatsPanel(); }
 let stArchiveAsked = false;
 function stPf(g) { return Number(g.currentBalanceSum) || Number(g.portfolioSum) || Number(g.totalDebtSum) || 0; }
 function stMoney(v) {
@@ -9362,9 +9364,9 @@ function setNplStatsTab(t) { stTab = t; renderNplStatsPanel(); }
 function exportNplStatsExcel() {
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
   const rows = stBuildRows(stBuildVisitIndex()).filter(r => r.groups > 0);
-  const head = ['№', 'Взыскатель', 'ID', 'План, клиентов', 'План, портфель (млн)', 'Возвращено, клиентов', 'Возвращено, портфель (млн)', '% закрытия по клиентам', '% закрытия по портфелю', 'За день, клиентов', 'За день, портфель (млн)', 'Визитов в день', '90+ без МИБ и суда', 'Без контакта 7+ дн.', 'Последняя активность', 'Доля NPL, %', 'Общий балл', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+'];
+  const head = ['№', 'Взыскатель', 'ID', 'План, клиентов', 'План, портфель (млн)', 'Возвращено, клиентов', 'Возвращено, портфель (млн)', '% закрытия по клиентам', '% закрытия по портфелю', 'За день, клиентов', 'За день, портфель (млн)', 'Визитов за месяц', 'Визитов сегодня', 'Визитов в день (среднее)', '90+ без МИБ и суда', 'Без контакта 7+ дн.', 'Последняя активность', 'Доля NPL, %', 'Общий балл', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+'];
   const mln = v => Math.round((Number(v) || 0) / 1e5) / 10;
-  const data = rows.map((r, i) => [i + 1, r.name, r.id, r.planCnt, mln(r.planPf), r.retCnt, mln(r.retPf), Math.round(r.pctCl * 10) / 10, Math.round(r.pctPf * 10) / 10, r.dayCnt, mln(r.dayPf), Math.round(r.visAvg * 10) / 10, r.g90NoLegal, r.noContact, r.last ? r.last.toLocaleDateString('ru-RU') : '', Math.round(r.nplShare * 10) / 10, r.score, r.expNpl, r.cats.fpd, r.cats.spd, r.cats.tpd, r.cats.npl]);
+  const data = rows.map((r, i) => [i + 1, r.name, r.id, r.planCnt, mln(r.planPf), r.retCnt, mln(r.retPf), Math.round(r.pctCl * 10) / 10, Math.round(r.pctPf * 10) / 10, r.dayCnt, mln(r.dayPf), r.visMonth, r.visToday, Math.round(r.visAvg * 10) / 10, r.g90NoLegal, r.noContact, r.last ? r.last.toLocaleDateString('ru-RU') : '', Math.round(r.nplShare * 10) / 10, r.score, r.expNpl, r.cats.fpd, r.cats.spd, r.cats.tpd, r.cats.npl]);
   const ws = XLSX.utils.aoa_to_sheet([head].concat(data));
   ws['!cols'] = head.map((h, i) => ({ wch: i === 1 ? 34 : Math.max(11, Math.min(24, h.length + 2)) }));
   const wb = XLSX.utils.book_new();
@@ -9407,17 +9409,6 @@ function renderNplStatsPanel() {
       ${kpi('Активность сегодня', T.visToday + ' визитов', 'активны ' + T.activeToday + ' из ' + activeRows.length + ' сотрудников')}
     </div>`;
 
-  // графики за месяц
-  const dayMap = {};
-  allNplStats.filter(r => r.date.slice(0, 7) === month).forEach(r => {
-    const d = dayMap[r.date] || (dayMap[r.date] = { closed: 0, end: 0 });
-    d.closed += r.closed; d.end += r.endCount;
-  });
-  const dates = Object.keys(dayMap).sort();
-  const labels = dates.map(d => d.slice(8, 10));
-  const chartA = stChart(labels, null, dates.map(d => dayMap[d].end), { ref: T.assigned, lineColor: '#2F7BD9', min: dates.length ? Math.max(0, Math.floor(Math.min.apply(null, dates.map(d => dayMap[d].end)) * 0.9)) : 0, aria: 'Остаток клиентов в просрочке' });
-  const chartB = stChart(labels, dates.map(d => dayMap[d].closed), dates.map(d => vi.perDay[d] || 0), { barColor: '#2F7BD9', lineColor: '#E39B16', aria: 'Закрыто клиентов и визиты по дням' });
-
   // табы
   const byPf = activeRows.slice().sort((a, b) => b.pctPf - a.pctPf);
   const topIds = {}; byPf.filter(r => r.retCnt > 0).slice(0, 3).forEach(r => { topIds[r.id] = true; });
@@ -9435,6 +9426,35 @@ function renderNplStatsPanel() {
   if (stTab === 'ctl') shown = shown.sort((a, b) => b.noContact - a.noContact);
   if (stTab === 'low') shown = shown.sort((a, b) => a.pctCl - b.pctCl);
 
+  // Рейтинг сотрудников по общему баллу
+  const ranked = activeRows.slice().sort((a, b) => (b.score - a.score) || (b.pctPf - a.pctPf));
+  const ratingShown = stRatingAll ? ranked : ranked.slice(0, 5);
+  const ratingRows = ratingShown.map(function(r, i) {
+    const sc = stScoreCol(r.score);
+    const plc = i === 0 ? ' p1' : i === 1 ? ' p2' : i === 2 ? ' p3' : '';
+    return `
+      <div class="st-rk" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')">
+        <div class="st-pl${plc}">${i + 1}</div>
+        ${stAvatar(r, 38)}
+        <div style="min-width:0;"><div class="st-nm">${safe(r.name)}</div><div class="st-sb">${r.groups} клиентов · ${stMoney(r.openPf)}</div></div>
+        <div class="st-rbar"><i style="width:${Math.max(3, r.score)}%;background:${sc[0]};"></i></div>
+        <div class="st-rmt">${nplFmtPct(r.pctCl)}%</div>
+        <div class="st-rsc" style="color:${sc[1]};">${r.score}</div>
+      </div>`;
+  }).join('');
+  const ratingHtml = `
+    <div class="st-table" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
+        <b style="font-size:15px;">Рейтинг сотрудников</b>
+        <span style="font-size:12px;color:var(--muted);">по общему баллу · ${stRatingAll ? 'все ' + ranked.length : 'топ-' + ratingShown.length + ' из ' + ranked.length}</span>
+      </div>
+      ${ratingRows || '<div style="padding:12px 14px;color:var(--muted);font-size:13px;">Данных пока нет.</div>'}
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">
+        <span>Балл 0–100: закрытие по портфелю 40% · визиты 20% · охват контактом 15% · низкая доля NPL 15% · юридическая готовность 10%. Справа от полосы — % закрытия.</span>
+        ${ranked.length > 5 ? `<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="toggleNplStatsRating()">${stRatingAll ? 'Свернуть' : 'Показать всех'}</button>` : ''}
+      </div>
+    </div>`;
+
   const dash = '<span class="dash">—</span>';
   const bad = (v, lim) => v >= lim ? ' class="bad"' : '';
   const body = shown.map(function(r, i) {
@@ -9446,18 +9466,16 @@ function renderNplStatsPanel() {
     const archOk = archRowsLoaded();
     return `
       <div class="st-r" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')">
-        <div class="st-n">${i + 1}</div>
         <div class="st-who">${stAvatar(r, 40)}<div style="min-width:0;"><div class="st-nm">${safe(r.name)}</div>${r.user && r.user.photoUrl ? '' : '<div class="st-sb">нет фото</div>'}</div></div>
         <div>${r.planCnt}<span class="s2">${stMoney(r.planPf)}</span></div>
         <div>${r.retCnt}<span class="s2">${archOk ? stMoney(r.retPf) : '…'}</span></div>
         <div><span class="pg ${stPctCls(r.pctCl)}">${nplFmtPct(r.pctCl)}%</span><span class="s2">${archOk ? nplFmtPct(r.pctPf) + '% по портфелю' : '…'}</span></div>
         <div>${r.dayCnt ? r.dayCnt : dash}<span class="s2">${r.dayPf ? stMoney(r.dayPf) : ''}</span></div>
-        <div>${r.visAvg ? nplFmtPct(r.visAvg) : dash}</div>
+        <div>${r.visMonth ? r.visMonth : dash}<span class="s2">${r.visToday ? 'сегодня ' + r.visToday : (r.visMonth ? 'сегодня 0' : '')}</span></div>
         <div${bad(r.g90NoLegal, 5)}>${r.g90NoLegal}</div>
         <div${bad(r.noContact, 5)}>${r.noContact}</div>
         <div>${badge}</div>
         <div><span class="pg ${nplCls}">${nplFmtPct(r.nplShare)}%</span></div>
-        <div><span class="st-sc" style="border-color:${sc[0]};color:${sc[1]};">${r.score}</span></div>
       </div>
       ${sel ? stDetailHtml(r) : ''}`;
   }).join('');
@@ -9476,6 +9494,11 @@ function renderNplStatsPanel() {
     <style>
       .st-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
       .st-k{background:#F5F7FA;border-radius:12px;padding:12px 14px}.st-k b{display:block;font-size:22px;font-weight:800;margin:2px 0}.st-k span{font-size:12px;color:var(--muted)}
+      .st-rk{display:grid;grid-template-columns:30px 42px minmax(140px,1.4fr) minmax(110px,1.5fr) 56px 40px;gap:10px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);cursor:pointer}.st-rk:hover{background:#F8FAFF}
+      .st-pl{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:#F1F3F5;color:#5F6B7A}
+      .st-pl.p1{background:#FAC775;color:#633806}.st-pl.p2{background:#D3D1C7;color:#2C2C2A}.st-pl.p3{background:#F5C4B3;color:#712B13}
+      .st-rbar{height:7px;border-radius:4px;background:#E4E7EC;overflow:hidden}.st-rbar i{display:block;height:100%;border-radius:4px}
+      .st-rmt{font-size:12.5px;text-align:right;color:var(--muted)}.st-rsc{font-size:17px;font-weight:800;text-align:right}
       .st-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px}
       .st-chart{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff}
       .st-chart h4{margin:0 0 4px;font-size:13px}.st-lg{font-size:11px;color:var(--muted);margin-bottom:4px}
@@ -9484,8 +9507,8 @@ function renderNplStatsPanel() {
       .st-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
       .st-tab{font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-weight:600}
       .st-tab.on{background:#111;color:#fff;border-color:#111}.st-tab .n{font-size:11px;opacity:.7;margin-left:5px}
-      .st-in{min-width:1160px}
-      .st-r{display:grid;grid-template-columns:28px minmax(180px,1.6fr) minmax(88px,.9fr) minmax(88px,.9fr) minmax(96px,1fr) minmax(86px,.9fr) minmax(52px,.5fr) minmax(70px,.7fr) minmax(62px,.6fr) minmax(88px,.8fr) minmax(70px,.7fr) minmax(70px,.7fr);align-items:center;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+      .st-in{min-width:1040px}
+      .st-r{display:grid;grid-template-columns:minmax(190px,1.7fr) minmax(88px,.9fr) minmax(88px,.9fr) minmax(96px,1fr) minmax(86px,.9fr) minmax(70px,.7fr) minmax(70px,.7fr) minmax(62px,.6fr) minmax(88px,.8fr) minmax(66px,.7fr);align-items:center;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
       .st-r>div{padding:8px 5px;text-align:right;line-height:1.3}.st-r:hover{background:#F8FAFF}
       .st-n{text-align:center!important;color:var(--muted);font-weight:800;font-size:14px}
       .st-who{display:flex!important;gap:9px;align-items:center;text-align:left!important}
@@ -9509,14 +9532,11 @@ function renderNplStatsPanel() {
       <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button>
     </div>
     ${kpis}
-    <div class="st-charts">
-      <div class="st-chart"><h4>Клиентов в просрочке: план и остаток</h4><div class="st-lg"><i style="background:#8A93A0"></i>План (пунктир)<i style="background:#2F7BD9"></i>Осталось</div>${chartA}</div>
-      <div class="st-chart"><h4>Закрыто клиентов и визиты по дням</h4><div class="st-lg"><i style="background:#2F7BD9"></i>Закрыто<i style="background:#E39B16"></i>Визиты</div>${chartB}</div>
-    </div>
+    ${ratingHtml}
     <div class="st-table">
       <div class="st-tabs">${tabsHtml}</div>
       <div style="overflow-x:auto"><div class="st-in">
-        <div class="st-r st-hd"><div class="st-n">№</div><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План<span class="s2">клиентов / портфель</span></div><div>Возвращено<span class="s2">клиентов / портфель</span></div><div>% закрытия<span class="s2">клиенты / портфель</span></div><div>За день<span class="s2">клиентов / портфель</span></div><div>Визитов в день</div><div>90+ без МИБ и суда</div><div>Без контакта 7+</div><div>Последняя активность</div><div>Доля NPL</div><div>Эффектив-ность<span class="s2">балл 0–100</span></div></div>
+        <div class="st-r st-hd"><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План<span class="s2">клиентов / портфель</span></div><div>Возвращено<span class="s2">клиентов / портфель</span></div><div>% закрытия<span class="s2">клиенты / портфель</span></div><div>За день<span class="s2">клиентов / портфель</span></div><div>Визитов<span class="s2">за месяц / сегодня</span></div><div>90+ без МИБ и суда</div><div>Без контакта 7+</div><div>Последняя активность</div><div>Доля NPL</div></div>
         ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">' + (activeRows.length ? 'В этой группе никого нет.' : 'Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.') + '</div>'}
       </div></div>
     </div>
