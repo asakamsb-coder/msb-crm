@@ -6792,6 +6792,7 @@ let allNplSurveys = {};
 let allNplArchive = {};
 let allNplStats = [];
 let allNplTransfers = {};
+let allNplStages = [];
 let allNplPortfolio = null;
 let nplDashFilter = 'all';
 let nplDashPage = 1;
@@ -7864,6 +7865,7 @@ async function loadNplStatsInBackground() {
     const r = await nplTimedFetch('stats', 'nplStatsBundle');
     allNplStats = (r && r.stats) || [];
     allNplTransfers = (r && r.transfers) || {};
+    allNplStages = (r && r.stages) || [];
     if (isVzShell() && document.getElementById('vzyskatelHomeBody')) {
       renderVzyskatelHome();
     }
@@ -10264,6 +10266,7 @@ function exportNplStatsExcel() {
   ws['!cols'] = head.map((h, i) => ({ wch: i === 1 ? 34 : Math.max(11, Math.min(24, h.length + 2)) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Статистика');
+  try { stExportLegalSheets(wb, stBuildRows(stBuildVisitIndex()), rows, stStatRange()); } catch (e) { console.error(e); }
   XLSX.writeFile(wb, 'Statistika_vzyskateley_' + nplLocalDateStr() + '.xlsx');
 }
 
@@ -10286,6 +10289,273 @@ function stToolbarHtml(rowsAll, range) {
     <span style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted);">с <input type="date" style="${sel}" max="${today}" value="${range.from}" onchange="stSetDate('from',this.value)"> по <input type="date" style="${sel}" max="${today}" value="${range.to}" onchange="stSetDate('to',this.value)"></span>
   </div>`;
 }
+
+// ======================= Юридический статус / Стадии / Погашения =======================
+let stLegAll = false, stLegLast = null, stRepDay = '';
+function stLegToggleAll() { stLegAll = !stLegAll; renderNplStatsPanel(); }
+function stRepToggleDay(d) { stRepDay = (stRepDay === d) ? '' : d; renderNplStatsPanel(); }
+function stSigned(v, digits) {
+  v = Number(v) || 0;
+  if (!v) return '0';
+  return (v > 0 ? '+' : '−') + (digits ? Math.abs(v) : stMoney(Math.abs(v)));
+}
+function stGroupBelongs(g, id) {
+  if (String(allNplAssignments[g.key] || '').trim() !== id) return false;
+  if (!stFileHasIds) return true;
+  if (g.loans.some(l => String(l.employeeId || '').trim() === id)) return true;
+  return !!allNplAssignMeta && allNplAssignMeta[g.key] === 'm';
+}
+// Юридические признаки клиента: суд / приказ / МИБ
+function stLegalFlags(g) {
+  const court = (allNplCourt.data || {})[g.key];
+  const cs = court && court.caseStatus ? String(court.caseStatus) : '';
+  const mibD = (allNplMib.data || {})[g.key];
+  const mib = !!(g.mibCaseJoined || cs === 'Передано в МИБ' ||
+    (mibD && (mibD.caseId || mibD.inspectorName || (mibD.actions && mibD.actions.length))) ||
+    ((allNplMib.files || {})[g.key] || []).length);
+  const order = !!(g.courtOrderNumberJoined || cs === 'Решение вынесено' || cs === 'Обжаловано');
+  const courtAny = !!(g.courtOrderNumberJoined || cs || ((allNplCourt.files || {})[g.key] || []).length);
+  return { mib: mib, order: order, courtAny: courtAny || order || mib };
+}
+function stLegalCalc(activeRows) {
+  const byId = {};
+  activeRows.forEach(r => { byId[r.id] = { id: r.id, name: r.name, no60: [], no80: [], no90: [], with90: [], seg: { none: [], court: [], order: [], mib: [] }, all90: 0 }; });
+  const tot = { no60: [], no80: [], no90: [], with90: [], seg: { none: [], court: [], order: [], mib: [] } };
+  getNplGroupsCached().forEach(function(g) {
+    const id = String(allNplAssignments[g.key] || '').trim();
+    const e = byId[id];
+    if (!e || !stGroupBelongs(g, id)) return;
+    const d = Number(g.maxDays) || 0;
+    if (d < 60) return;
+    const f = stLegalFlags(g);
+    const put = (k) => { e[k].push(g); tot[k].push(g); };
+    if (!f.courtAny) put('no60');
+    if (d >= 80 && !f.order && !f.mib) put('no80');
+    if (d >= 90) {
+      e.all90++;
+      if (!f.mib) put('no90'); else put('with90');
+      const s = f.mib ? 'mib' : f.order ? 'order' : f.courtAny ? 'court' : 'none';
+      e.seg[s].push(g); tot.seg[s].push(g);
+    }
+  });
+  const list = Object.keys(byId).map(k => byId[k]).filter(e => e.no60.length + e.no80.length + e.all90 > 0);
+  list.forEach(e => { e.ready = e.all90 ? e.with90.length / e.all90 * 100 : null; e.bad = e.no60.length + e.no80.length + e.no90.length; });
+  list.sort((a, b) => (b.bad - a.bad) || a.name.localeCompare(b.name));
+  return { list: list, tot: tot };
+}
+function stLegSum(gs) { return gs.reduce((a, g) => a + stPf(g), 0); }
+
+const ST_LEG_TITLES = {
+  no60: '60+ дней — не передано в суд', no80: '80+ дней — нет приказа суда', no90: '90+ дней — нет МИБ', with90: '90+ дней — МИБ есть',
+  'seg:none': '90+: суда нет', 'seg:court': '90+: суд идёт', 'seg:order': '90+: приказ есть', 'seg:mib': '90+: МИБ'
+};
+function stLegOpen(kind, idEnc) {
+  if (!stLegLast) return;
+  const id = idEnc ? decodeURIComponent(idEnc) : '';
+  const src = id ? (stLegLast.list.find(e => e.id === id) || null) : stLegLast.tot;
+  if (!src) return;
+  let gs;
+  if (kind.indexOf('seg:') === 0) gs = src.seg[kind.slice(4)] || []; else gs = src[kind] || [];
+  gs = gs.slice().sort((a, b) => (b.maxDays - a.maxDays) || (stPf(b) - stPf(a)));
+  let m = document.getElementById('stLegModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'stLegModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:10050;background:rgba(17,24,39,.5);display:none;overflow-y:auto;padding:24px 12px;';
+    m.addEventListener('click', function(ev) { if (ev.target === m) stLegClose(); });
+    document.body.appendChild(m);
+  }
+  const nameOf = k => { const e = stLegLast.list.find(x => x.id === String(allNplAssignments[k] || '').trim()); return e ? e.name : ''; };
+  const MAXN = 300;
+  const rowsHtml = gs.slice(0, MAXN).map(g => `<div class="stl-row" data-k="${encodeURIComponent(g.key)}" style="display:grid;grid-template-columns:minmax(150px,2fr) 60px 90px minmax(100px,1.2fr);gap:8px;padding:9px 14px;border-top:1px solid var(--line);font-size:13px;cursor:pointer;align-items:center;">
+      <b style="min-width:0;">${stEsc(g.clientName || g.key)}</b><span style="text-align:right;color:#C0392B;font-weight:800;">${g.maxDays} дн.</span><span style="text-align:right;">${stMoney(stPf(g))}</span><span style="color:var(--muted);font-size:12px;">${stEsc(nameOf(g.key))}</span></div>`).join('');
+  m.innerHTML = '<div style="max-width:760px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;position:sticky;top:0;background:#fff;z-index:1;">' +
+    '<div><b style="font-size:15px;">' + stEsc(ST_LEG_TITLES[kind] || kind) + '</b><div style="font-size:12px;color:var(--muted);">' + (id ? stEsc(src.name) + ' · ' : '') + gs.length + ' клиентов · ' + stMoney(stLegSum(gs)) + '</div></div>' +
+    '<button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;flex:none;" onclick="stLegClose()">Закрыть ✕</button></div>' +
+    (rowsHtml || '<div style="padding:14px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);">Список пуст.</div>') +
+    (gs.length > MAXN ? '<div style="padding:10px 14px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);">Показаны первые ' + MAXN + ' из ' + gs.length + '. Остальные — в выгрузке Excel.</div>' : '') + '</div>';
+  m.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function stLegClose() {
+  const m = document.getElementById('stLegModal');
+  if (m && m.style.display !== 'none') { m.style.display = 'none'; if (!document.getElementById('stVisModal') || document.getElementById('stVisModal').style.display === 'none') document.body.style.overflow = ''; }
+}
+document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') stLegClose(); });
+document.addEventListener('click', function(ev) {
+  const row = ev.target && ev.target.closest ? ev.target.closest('.stl-row') : null;
+  if (!row) return;
+  const k = row.getAttribute('data-k');
+  stLegClose();
+  try { openNplClientDetail(k); } catch (e) { console.error(e); }
+});
+
+function stLegalHtml(activeRows) {
+  const C = stLegalCalc(activeRows);
+  stLegLast = C;
+  const T = C.tot;
+  const card = (kind, label, gs, color) => `<div class="st-k" style="cursor:pointer;" onclick="stLegOpen('${kind}','')"><span>${label}</span><b style="color:${color};">${gs.length}</b><span>клиентов · ${stMoney(stLegSum(gs))}</span></div>`;
+  const kp = `<div class="st-kpis" style="padding:0 14px;margin-bottom:10px;">
+    ${card('no60', '60+ не передано в суд', T.no60, '#C0392B')}
+    ${card('no80', '80+ нет приказа суда', T.no80, '#BA7517')}
+    ${card('no90', '90+ нет МИБ', T.no90, '#791F1F')}
+  </div>`;
+  const segDef = [['none', 'Нет суда', '#E24B4A'], ['court', 'Суд идёт', '#EF9F27'], ['order', 'Приказ есть', '#378ADD'], ['mib', 'МИБ', '#3B6D11']];
+  const n90 = segDef.reduce((a, s) => a + T.seg[s[0]].length, 0);
+  const seg = n90 ? `<div style="padding:0 14px 12px;">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:5px;">Путь клиентов 90+ (${n90}): суд → приказ → МИБ</div>
+    <div style="display:flex;height:26px;border-radius:8px;overflow:hidden;background:#E4E7EC;">
+      ${segDef.map(s => { const n = T.seg[s[0]].length; return n ? `<div title="${s[1]}: ${n}" onclick="stLegOpen('seg:${s[0]}','')" style="flex:${n};background:${s[2]};color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:26px;">${n}</div>` : ''; }).join('')}
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:5px;font-size:11.5px;color:var(--muted);">${segDef.map(s => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${s[2]};margin-right:4px;"></i>${s[1]} ${T.seg[s[0]].length}</span>`).join('')}</div>
+  </div>` : '';
+  const shown = stLegAll ? C.list : C.list.slice(0, 6);
+  const num = (kind, e, arr, cls) => arr.length ? `<a href="javascript:void(0)" onclick="stLegOpen('${kind}','${encodeURIComponent(e.id)}')" class="${cls}" style="text-decoration:none;font-weight:800;">${arr.length}</a>` : '<span class="dash">0</span>';
+  const rowsHtml = shown.map(function(e) {
+    const rd = e.ready == null ? '<span class="dash">—</span>' : `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;"><div style="width:54px;height:7px;border-radius:4px;background:#E4E7EC;overflow:hidden;"><i style="display:block;height:100%;width:${Math.round(e.ready)}%;background:${e.ready >= 50 ? '#3B6D11' : e.ready >= 20 ? '#BA7517' : '#A32D2D'};"></i></div><b>${Math.round(e.ready)}%</b></div>`;
+    return `<div class="stl-t"><div style="text-align:left;font-weight:700;">${stEsc(e.name)}</div><div>${num('no60', e, e.no60, 'bad')}</div><div>${num('no80', e, e.no80, 'bad')}</div><div>${num('no90', e, e.no90, 'bad')}</div><div>${num('with90', e, e.with90, '')}</div><div>${rd}</div></div>`;
+  }).join('');
+  return `<div class="st-table" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
+      <b style="font-size:15px;">Юридический статус портфеля</b>
+      <span style="font-size:12px;color:var(--muted);">по данным МИБ и суда, внесённым сотрудниками · нажмите на число — список клиентов</span>
+    </div>
+    ${kp}${seg}
+    <style>.stl-t{display:grid;grid-template-columns:minmax(150px,2fr) repeat(4,minmax(60px,.8fr)) minmax(110px,1.2fr);gap:6px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:13px;text-align:right}.stl-t.h{font-size:11.5px;color:var(--muted);font-weight:700}</style>
+    <div style="overflow-x:auto;"><div style="min-width:600px;">
+      <div class="stl-t h"><div style="text-align:left;">Взыскатель</div><div>60+ без суда</div><div>80+ без приказа</div><div>90+ без МИБ</div><div>90+ с МИБ</div><div>Юр. готовность</div></div>
+      ${rowsHtml || '<div style="padding:12px 14px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);">Клиентов 60+ нет.</div>'}
+    </div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">
+      <span>Юр. готовность = доля клиентов 90+, переданных в МИБ. Таблица отсортирована от худших. «Приказ» — внесён номер приказа или статус «Решение вынесено».</span>
+      ${C.list.length > 6 ? `<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="stLegToggleAll()">${stLegAll ? 'Свернуть' : 'Показать всех (' + C.list.length + ')'}</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ---- Просрочка по стадиям ----
+const ST_STAGE_DEF = [['soft', 'Soft', '1–59 дн.', '#378ADD'], ['hard', 'Hard', '60–89 дн.', '#EF9F27'], ['legal', 'Legal', '90+ дн.', '#E24B4A']];
+function stStagesCalc(range) {
+  const selIds = Object.keys(stSelEmps);
+  const rows = (allNplStages || []).filter(r => r.employeeId && r.employeeId !== '9999' && (!selIds.length || stSelEmps[r.employeeId]));
+  const out = { has: rows.length > 0, first: rows.length ? rows.reduce((m, r) => (!m || r.date < m) ? r.date : m, '') : '', st: {} };
+  ST_STAGE_DEF.forEach(function(d) {
+    const k = d[0];
+    const last = {};
+    rows.forEach(r => { if (r.date <= range.to && (!last[r.employeeId] || r.date > last[r.employeeId].date)) last[r.employeeId] = r; });
+    let n = 0, sum = 0, inn = 0, outc = 0;
+    Object.keys(last).forEach(id => { n += last[id][k].n; sum += last[id][k].sum; });
+    rows.forEach(r => { if (r.date >= range.from && r.date <= range.to) { inn += r[k].inn; outc += r[k].out; } });
+    out.st[k] = { n: n, sum: sum, inn: inn, out: outc };
+  });
+  return out;
+}
+function stStagesHtml(range) {
+  const S = stStagesCalc(range);
+  const card = d => {
+    const s = S.st[d[0]];
+    const net = s.inn - s.out;
+    const netCol = d[0] === 'legal' || d[0] === 'hard' ? (net > 0 ? '#C0392B' : net < 0 ? '#1E7B34' : 'var(--muted)') : 'var(--muted)';
+    return `<div class="st-k" style="border-top:3px solid ${d[3]};"><span><b style="display:inline;font-size:13px;color:#111;">${d[1]}</b> · ${d[2]}</span><b>${s.n}</b><span>клиентов · ${stMoney(s.sum)}</span>
+      ${S.has ? `<div style="margin-top:6px;font-size:12px;line-height:1.5;"><div><span style="color:#C0392B;">▲ вошло</span> <b style="display:inline;font-size:13px;">${s.inn}</b></div><div><span style="color:#1E7B34;">▼ вышло</span> <b style="display:inline;font-size:13px;">${s.out}</b></div><div style="border-top:1px solid var(--line);margin-top:3px;padding-top:3px;"><span>итого</span> <b style="display:inline;font-size:13px;color:${netCol};">${net > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net)}</b></div></div>` : ''}
+    </div>`;
+  };
+  const note = !S.has
+    ? 'История по стадиям начнёт копиться с первой загрузки выгрузки после обновления — сейчас данных нет.'
+    : 'Состояние на ' + range.to.split('-').reverse().join('.') + '. «Вошло» — клиенты, перешедшие в стадию за период; «вышло» — ушли из неё (погасили или перешли в другую). История ведётся с ' + S.first.split('-').reverse().join('.') + '.';
+  return `<div class="st-table" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
+      <b style="font-size:15px;">Просрочка по стадиям</b><span style="font-size:12px;color:var(--muted);">за ${range.label}</span></div>
+    <div class="st-kpis" style="padding:0 14px;margin-bottom:8px;">${ST_STAGE_DEF.map(card).join('')}</div>
+    <div style="padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">${note}</div>
+  </div>`;
+}
+
+// ---- Погашение по дням ----
+function stRepaySeries() {
+  const selIds = Object.keys(stSelEmps);
+  const days = {};
+  (allNplStats || []).forEach(function(r) {
+    const id = String(r.employeeId || '');
+    if (!id || id === '9999') return;
+    if (selIds.length && !stSelEmps[id]) return;
+    const d = String(r.date).slice(0, 10);
+    const e = days[d] || (days[d] = { date: d, closed: 0, repaid: 0, endSum: 0, emps: [] });
+    e.closed += Number(r.closed) || 0; e.repaid += Number(r.repaid) || 0; e.endSum += Number(r.endSum) || 0;
+    e.emps.push({ id: id, closed: Number(r.closed) || 0, repaid: Number(r.repaid) || 0 });
+  });
+  const arr = Object.keys(days).sort().map(k => days[k]);
+  arr.forEach((e, i) => { const p = arr[i - 1]; e.dClosed = p ? e.closed - p.closed : null; e.dPort = p ? e.endSum - p.endSum : null; });
+  return arr;
+}
+function stRepayCalc(range) {
+  const all = stRepaySeries();
+  const inR = all.filter(e => e.date >= range.from && e.date <= range.to);
+  const tot = inR.reduce((a, e) => { a.closed += e.closed; a.repaid += e.repaid; return a; }, { closed: 0, repaid: 0 });
+  const n = inR.length;
+  const today = stIso(new Date());
+  const cur = all.filter(e => e.date <= today).pop() || null;
+  const prev = cur ? (all[all.indexOf(cur) - 1] || null) : null;
+  return { all: all, rows: inR, tot: tot, n: n, avgC: n ? tot.closed / n : 0, avgS: n ? tot.repaid / n : 0, cur: cur, prev: prev, today: today };
+}
+function stRuDate(iso) { return iso.split('-').reverse().join('.'); }
+function stRepayHtml(range, nameOf) {
+  const R = stRepayCalc(range);
+  const dCol = (v, goodUp) => v == null || v === 0 ? 'var(--muted)' : ((v > 0) === goodUp ? '#1E7B34' : '#C0392B');
+  const cur = R.cur, prev = R.prev;
+  const curLbl = cur ? (cur.date === R.today ? 'сегодня' : stRuDate(cur.date)) : '';
+  const cards = cur ? `<div class="st-kpis" style="padding:0 14px;margin-bottom:10px;">
+      <div class="st-k"><span>Погашено ${curLbl}</span><b>${cur.closed} кл.</b><span>${stMoney(cur.repaid)}</span></div>
+      <div class="st-k"><span>К ${prev ? stRuDate(prev.date) : 'пред. дню'}</span><b style="color:${dCol(prev ? cur.closed - prev.closed : null, true)};">${prev ? stSigned(cur.closed - prev.closed, true) + ' кл.' : '—'}</b><span>${prev ? stSigned(cur.repaid - prev.repaid) + ' по сумме' : 'нет данных за пред. день'}</span></div>
+      <div class="st-k"><span>В среднем в день</span><b>${nplFmtPct(R.avgC)} кл.</b><span>${stMoney(R.avgS)} · ${R.n} дн. с данными</span></div>
+    </div>` : '';
+  const dayRow = function(e) {
+    const open = stRepDay === e.date;
+    const sub = open ? `<div style="padding:6px 14px 10px 30px;background:#F7F9FC;border-top:1px solid var(--line);">${e.emps.filter(x => x.closed || x.repaid).sort((a, b) => b.repaid - a.repaid).map(x => `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:3px 0;"><span>${stEsc(nameOf(x.id))}</span><span><b>${x.closed}</b> кл. · ${stMoney(x.repaid)}</span></div>`).join('') || '<div style="font-size:12.5px;color:var(--muted);">В этот день погашений нет.</div>'}</div>` : '';
+    return `<div class="str-t" onclick="stRepToggleDay('${e.date}')" style="cursor:pointer;"><div style="text-align:left;font-weight:700;">${open ? '▾' : '▸'} ${stRuDate(e.date)}</div><div>${e.closed}</div><div>${stMoney(e.repaid)}</div><div style="color:${dCol(e.dClosed, true)};font-weight:700;">${e.dClosed == null ? '<span class="dash">—</span>' : stSigned(e.dClosed, true)}</div><div style="color:${dCol(e.dPort, false)};font-weight:700;">${e.dPort == null ? '<span class="dash">—</span>' : stSigned(e.dPort)}</div></div>${sub}`;
+  };
+  const body = R.rows.slice().reverse().map(dayRow).join('');
+  const foot = R.n ? `<div class="str-t" style="background:#F5F7FA;font-weight:800;"><div style="text-align:left;">Итого за период</div><div>${R.tot.closed}</div><div>${stMoney(R.tot.repaid)}</div><div></div><div></div></div>
+    <div class="str-t" style="background:#F5F7FA;font-weight:700;"><div style="text-align:left;">В среднем в день</div><div>${nplFmtPct(R.avgC)}</div><div>${stMoney(R.avgS)}</div><div></div><div></div></div>` : '';
+  return `<div class="st-table" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
+      <b style="font-size:15px;">Погашение по дням</b><span style="font-size:12px;color:var(--muted);">за ${range.label} · нажмите на день — по взыскателям</span></div>
+    ${cards}
+    <style>.str-t{display:grid;grid-template-columns:minmax(110px,1.2fr) repeat(4,minmax(80px,1fr));gap:6px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:13px;text-align:right}.str-t.h{font-size:11.5px;color:var(--muted);font-weight:700}</style>
+    <div style="overflow-x:auto;"><div style="min-width:560px;">
+      <div class="str-t h"><div style="text-align:left;">День</div><div>Погашено клиентов</div><div>Сумма</div><div>К пред. дню, клиентов</div><div>Портфель ± к пред. дню</div></div>
+      ${body || '<div style="padding:12px 14px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);">За выбранный период данных нет.</div>'}
+      ${foot}
+    </div></div>
+    <div style="padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">Сумма — погашенная просрочка (основной долг + проценты). «Портфель ±» — изменение общего остатка портфеля к предыдущему дню с данными: минус (зелёный) — портфель уменьшился, плюс (красный) — вырос.</div>
+  </div>`;
+}
+function stNameOfEmp(rowsAll) {
+  const m = {}; rowsAll.forEach(r => { m[r.id] = r.name; });
+  return id => m[id] || ((stEmpUser(id) || {}).fullName) || ('ID ' + id);
+}
+function stExportLegalSheets(wb, rowsAll, rows, range) {
+  const nameOf = stNameOfEmp(rowsAll);
+  const act = rows.filter(r => r.groups > 0);
+  const C = stLegalCalc(act);
+  const mln = v => Math.round((Number(v) || 0) / 1e5) / 10;
+  const h1 = ['Взыскатель', '60+ без суда', 'Сумма (млн)', '80+ без приказа', 'Сумма (млн)', '90+ без МИБ', 'Сумма (млн)', '90+ с МИБ', 'Юр. готовность, %'];
+  const d1 = C.list.map(e => [e.name, e.no60.length, mln(stLegSum(e.no60)), e.no80.length, mln(stLegSum(e.no80)), e.no90.length, mln(stLegSum(e.no90)), e.with90.length, e.ready == null ? '' : Math.round(e.ready)]);
+  d1.push(['ВСЕГО', C.tot.no60.length, mln(stLegSum(C.tot.no60)), C.tot.no80.length, mln(stLegSum(C.tot.no80)), C.tot.no90.length, mln(stLegSum(C.tot.no90)), C.tot.with90.length, '']);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([h1].concat(d1)), 'Юр. статус');
+  const S = stStagesCalc(range);
+  const h2 = ['Стадия', 'Клиентов', 'Портфель (млн)', 'Вошло', 'Вышло', 'Итого ±'];
+  const d2 = ST_STAGE_DEF.map(d => { const s = S.st[d[0]]; return [d[1] + ' ' + d[2], s.n, mln(s.sum), s.inn, s.out, s.inn - s.out]; });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([h2].concat(d2)), 'Стадии');
+  const R = stRepayCalc(range);
+  const h3 = ['День', 'Погашено клиентов', 'Сумма (млн)', 'К пред. дню, клиентов', 'Портфель ± к пред. дню (млн)'];
+  const d3 = R.rows.slice().reverse().map(e => [stRuDate(e.date), e.closed, mln(e.repaid), e.dClosed == null ? '' : e.dClosed, e.dPort == null ? '' : mln(e.dPort)]);
+  d3.push(['Итого за период', R.tot.closed, mln(R.tot.repaid), '', '']);
+  d3.push(['В среднем в день', Math.round(R.avgC * 10) / 10, mln(R.avgS), '', '']);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([h3].concat(d3)), 'Погашения по дням');
+}
+// ===================== /Юридический статус / Стадии / Погашения =====================
 
 function renderNplStatsPanel() {
   const box = document.getElementById('nplStatsBody');
@@ -10342,34 +10612,10 @@ function renderNplStatsPanel() {
   if (stTab === 'ctl') shown = shown.sort((a, b) => b.noContact - a.noContact);
   if (stTab === 'low') shown = shown.sort((a, b) => a.pctCl - b.pctCl);
 
-  // Рейтинг сотрудников по общему баллу
-  const ranked = activeRows.slice().sort((a, b) => (b.score - a.score) || (b.pctPf - a.pctPf));
-  const ratingShown = stRatingAll ? ranked : ranked.slice(0, 5);
-  const ratingRows = ratingShown.map(function(r, i) {
-    const sc = stScoreCol(r.score);
-    const plc = i === 0 ? ' p1' : i === 1 ? ' p2' : i === 2 ? ' p3' : '';
-    return `
-      <div class="st-rk" onclick="selectNplStatsEmp('${encodeURIComponent(r.id)}')">
-        <div class="st-pl${plc}">${i + 1}</div>
-        ${stAvatar(r, 38)}
-        <div style="min-width:0;"><div class="st-nm">${safe(r.name)}</div><div class="st-sb">${r.groups} клиентов · ${stMoney(r.openPf)}</div></div>
-        <div class="st-rbar"><i style="width:${Math.max(3, r.score)}%;background:${sc[0]};"></i></div>
-        <div class="st-rmt">${nplFmtPct(r.pctCl)}%</div>
-        <div class="st-rsc" style="color:${sc[1]};">${r.score}</div>
-      </div>`;
-  }).join('');
-  const ratingHtml = `
-    <div class="st-table" style="margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
-        <b style="font-size:15px;">Рейтинг сотрудников</b>
-        <span style="font-size:12px;color:var(--muted);">по общему баллу · ${stRatingAll ? 'все ' + ranked.length : 'топ-' + ratingShown.length + ' из ' + ranked.length}</span>
-      </div>
-      ${ratingRows || '<div style="padding:12px 14px;color:var(--muted);font-size:13px;">Данных пока нет.</div>'}
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">
-        <span>Балл 0–100: закрытие по портфелю 40% · визиты 20% · охват контактом 15% · низкая доля NPL 15% · юридическая готовность 10%. Справа от полосы — % закрытия.</span>
-        ${ranked.length > 5 ? `<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="toggleNplStatsRating()">${stRatingAll ? 'Свернуть' : 'Показать всех'}</button>` : ''}
-      </div>
-    </div>`;
+  // Юридический статус портфеля, стадии просрочки, погашения по дням
+  const legalHtml = stLegalHtml(activeRows);
+  const stagesHtml = stStagesHtml(srange);
+  const repayHtml = stRepayHtml(srange, stNameOfEmp(rowsAll));
 
   const dash = '<span class="dash">—</span>';
   const bad = (v, lim) => v >= lim ? ' class="bad"' : '';
@@ -10449,7 +10695,7 @@ function renderNplStatsPanel() {
     </div>
     ${stTab === 'vis' ? '' : stToolbarHtml(rowsAll, srange)}
     ${stTab === 'vis' ? '' : kpis}
-    ${stTab === 'vis' ? '' : ratingHtml}
+    ${stTab === 'vis' ? '' : legalHtml}
     <div class="st-table">
       <div class="st-tabs">${tabsHtml}</div>
       ${stTab === 'vis' ? stVisitsHtml() : ''}
@@ -10458,6 +10704,8 @@ function renderNplStatsPanel() {
         ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">' + (activeRows.length ? 'В этой группе никого нет.' : 'Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.') + '</div>'}
       </div></div>
     </div>
+    ${stTab === 'vis' ? '' : stagesHtml}
+    ${stTab === 'vis' ? '' : repayHtml}
     ${stTab === 'vis' ? '' : archHtml}
     <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;${stTab === 'vis' ? 'display:none;' : ''}">
       Нажмите на строку — раскроется карточка сотрудника. Цвет % закрытия: зелёный от 35%, жёлтый 15–35%, красный ниже 15%. Доля NPL — клиентов 90+ среди клиентов в работе (зелёный до 10%, красный от 25%).
