@@ -10269,6 +10269,13 @@ function stLoadExcelJS() {
   });
   return stExcelJsPromise;
 }
+function stRuDateAny(v) {
+  v = String(v || '').trim();
+  if (!v) return '';
+  if (/^\d{2}\.\d{2}\.\d{4}/.test(v)) return v.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}/.test(v)) { const d = new Date(v); if (!isNaN(d.getTime())) return d.toLocaleDateString('ru-RU'); }
+  return v;
+}
 function stRegistryRows() {
   const nameOf = stNameOfEmp(stBuildRows(stBuildVisitIndex()));
   const selIds = Object.keys(stSelEmps);
@@ -10302,8 +10309,8 @@ function stRegistryRows() {
       nv: vs.length, lastVisit: last, noVisit: last ? Math.round((today - last) / 86400000) : null,
       leg: f.mib ? 'МИБ' : f.order ? 'Приказ есть' : f.courtAny ? 'Суд идёт' : 'Нет суда',
       court: court.caseStatus || '', order: g.courtOrderNumberJoined || '',
-      mibCase: mib.caseNumber || mib.caseId || g.mibCaseJoined || '', insp: mib.inspectorName || '', mibDate: mib.mibDate || g.mibDateJoined || '',
-      rest: rest, inspPhone: mib.inspectorPhone || '', acts: acts, lastAct: lastAct ? lastAct.s : '', need: need.join(', ')
+      mibCase: String(mib.caseNumber || mib.caseId || g.mibCaseJoined || ''), insp: mib.inspectorName || '', mibDate: stRuDateAny(mib.mibDate || g.mibDateJoined || ''),
+      rest: rest, inspPhone: String(mib.inspectorPhone || ''), acts: acts, lastAct: lastAct ? lastAct.s : '', need: need.join(', ')
     });
   });
   out.sort((a, b) => (b.days - a.days) || (b.pf - a.pf));
@@ -10375,7 +10382,7 @@ async function exportNplRegistryExcel() {
         c.alignment = { vertical: 'middle', horizontal: center[col] ? 'center' : (money[col] ? 'right' : 'left'), indent: (center[col] || money[col]) ? 0 : 1, wrapText: col === 27 };
         if (money[col]) c.numFmt = '#,##0';
         if (col === 15) c.numFmt = 'dd.mm.yyyy';
-        if (col === 3 || col === 4 || col === 5) c.numFmt = '@';
+        if (col === 3 || col === 4 || col === 5 || col === 20 || col === 22 || col === 24) c.numFmt = '@';
       });
       row.getCell(2).font = fnt({ bold: true });
       const sf = stF[r.stage]; const c9 = row.getCell(9); c9.fill = fill(sf[0]); c9.font = fnt({ bold: true, color: { argb: sf[1] } });
@@ -11801,48 +11808,78 @@ function nplLoadPdfJs() {
   });
   return nplPdfJsPromise;
 }
-// Достаёт текст и таблицу действий из PDF с текстовым слоем (без OCR Google).
-async function nplExtractMibPdf(file) {
+// Достаёт текст, поля и таблицу действий из PDF выписки МИБ с текстовым слоем (без OCR Google).
+// Выписка — сетка: подпись сверху, значение под ней в том же столбце. Поэтому поля ищем по геометрии.
+async function nplExtractMibPdfBuf(buf) {
   await nplLoadPdfJs();
-  const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  const lines = [];
+  const rows = [];
   for (let p = 1; p <= Math.min(pdf.numPages, 10); p++) {
     const page = await pdf.getPage(p);
     const tc = await page.getTextContent();
-    const rows = [];
+    const pr = [];
     tc.items.forEach(function(it) {
       const str = String(it.str || '').trim();
       if (!str) return;
       const y = it.transform[5], x = it.transform[4];
-      let r = rows.find(q => Math.abs(q.y - y) < 3);
-      if (!r) { r = { y: y, it: [] }; rows.push(r); }
-      r.it.push({ x: x, w: it.width || 0, s: str });
+      let r = pr.find(q => Math.abs(q.y - y) < 3);
+      if (!r) { r = { y: y, it: [] }; pr.push(r); }
+      r.it.push({ x: x, x2: x + (it.width || 0), s: str });
     });
-    rows.sort((a, b) => b.y - a.y).forEach(function(r) {
+    pr.sort((a, b) => b.y - a.y).forEach(function(r) {
       r.it.sort((a, b) => a.x - b.x);
-      let line = '';
-      r.it.forEach(function(c, i) {
-        if (i) { const prev = r.it[i - 1]; line += (c.x - (prev.x + prev.w) > 25 && !/[:：]\s*$/.test(line)) ? ' : ' : ' '; }
-        line += c.s;
+      const cells = [];
+      r.it.forEach(function(c) {
+        const last = cells[cells.length - 1];
+        if (last && c.x - last.x2 < 14) { last.s += (c.x - last.x2 > 1.5 ? ' ' : '') + c.s; last.x2 = c.x2; }
+        else cells.push({ x: c.x, x2: c.x2, s: c.s });
       });
-      lines.push(line.trim());
+      rows.push({ cells: cells });
     });
   }
-  const text = lines.join('\n');
+  const KW = /КЎРСАТИЛГАН|МАЗМУНИ|САНАСИ|РАҚАМИ|ҚОЛДИҒИ|ИЖРОЧИ|ТЕЛЕФОНИ|ТОМОНДАН|ВАРАҚА|ҚАРЗДОР|УНДИРУВЧИ|БЎЛИМ|ҲОЛАТИ|ИЖРО\s*ID|ДАВЛАТ|ҲАРАКАТ|ХАРАКАТ|КУЧГА/i;
+  const isLabelCell = s => KW.test(s) && !/[a-zа-яё]/.test(s.replace(/[A-Z]{2,}/g, ''));
+  const defs = [['ИЖРО ID', /^ИЖРО\s*ID/i], ['И/Ҳ РАҚАМИ', /^И\/?Ҳ\s*РАҚАМИ/i], ['МИБ ГА КЕЛИБ ТУШГАН САНА', /^МИБ\s*ГА\s*КЕЛИБ/i],
+    ['ҚАРЗДОРЛИК ҚОЛДИҒИ', /^ҚАРЗДОРЛИК\s*ҚОЛДИҒИ/i], ['ДАВЛАТ ИЖРОЧИСИ', /^ДАВЛАТ\s*ИЖРОЧИСИ/i], ['ИЖРОЧИ ТЕЛЕФОНИ', /^ИЖРОЧИ\s*ТЕЛЕФОНИ/i]];
+  const found = [];
+  defs.forEach(function(d) {
+    for (let i = 0; i < rows.length; i++) {
+      const cs = rows[i].cells;
+      for (let j = 0; j < cs.length; j++) {
+        const c = cs[j];
+        if (!d[1].test(c.s)) continue;
+        if (d[0] === 'ИЖРО ID') { const m = c.s.match(/ИЖРО\s*ID\s*:?\s*(\d+)/i); if (m) { found.push(d[0] + ' : ' + m[1]); return; } }
+        const after = c.s.replace(/^[^:]*:/, '').trim();
+        if (c.s.indexOf(':') >= 0 && after) { found.push(d[0] + ' : ' + after); return; }
+        const cx = (c.x + c.x2) / 2;
+        for (let k = i + 1; k < Math.min(rows.length, i + 5); k++) {
+          const cand = rows[k].cells.filter(x => !isLabelCell(x.s));
+          if (!cand.length) continue;
+          cand.sort((a, b) => Math.abs((a.x + a.x2) / 2 - cx) - Math.abs((b.x + b.x2) / 2 - cx));
+          if (Math.abs((cand[0].x + cand[0].x2) / 2 - cx) < 170) found.push(d[0] + ' : ' + cand[0].s);
+          return;
+        }
+        return;
+      }
+    }
+  });
+  const lines = rows.map(r => r.cells.map(c => c.s).join(' : '));
+  const text = found.join('\n') + '\n' + lines.join('\n');
   const actions = [];
   const dateRe = /\b(\d{2}\.\d{2}\.\d{4})\b/;
   let inTable = false;
-  lines.forEach(function(ln) {
-    if (/ижро\s*[ҳх]аракат/i.test(ln)) { inTable = true; return; }
+  rows.forEach(function(r) {
+    const joined = r.cells.map(c => c.s).join(' ');
+    if (/ижро\s*[ҳх]аракат/i.test(joined)) { inTable = true; return; }
     if (!inTable) return;
-    const m = ln.match(dateRe);
-    if (!m) return;
-    let art = ln.replace(dateRe, '').replace(/^\s*[№#]?\s*\d{1,3}[.)]?\s+/, '').replace(/\s*:\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    if (art) actions.push({ article: art, date: m[1] });
+    const dc = r.cells.slice().reverse().find(c => dateRe.test(c.s));
+    if (!dc) return;
+    const art = r.cells.filter(c => c !== dc).map(c => c.s).join(' ').replace(/\s{2,}/g, ' ').trim();
+    if (art && !/^чиқарилган/i.test(art)) actions.push({ article: art, date: dc.s.match(dateRe)[1] });
   });
   return { text: text, actions: actions };
 }
+async function nplExtractMibPdf(file) { return nplExtractMibPdfBuf(await file.arrayBuffer()); }
 
 async function uploadNplMibFile(keyEnc, input) {
   const key = decodeURIComponent(keyEnc);
