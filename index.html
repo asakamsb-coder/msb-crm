@@ -9140,12 +9140,13 @@ function getNplNoLegalGroups(empId) {
 }
 
 // empId === null — по всем взыскателям, иначе по одному (строка ID).
-function computeNplStats(empId) {
+function computeNplStats(empId, range) {
   const today = nplLocalDateStr();
   const month = today.slice(0, 7);
   const match = r => empId === null || r.employeeId === String(empId);
   const allRows = allNplStats.filter(match);
-  const rows = allRows.filter(r => r.date.slice(0, 7) === month)
+  const inR = range ? (r => r.date.slice(0, 10) >= range.from && r.date.slice(0, 10) <= range.to) : (r => r.date.slice(0, 7) === month);
+  const rows = allRows.filter(inR)
     .sort((a, b) => a.date < b.date ? -1 : (a.date > b.date ? 1 : 0));
 
   const byEmp = {};
@@ -9523,13 +9524,58 @@ function stPctCls(p) { return p >= 35 ? 'g' : p >= 15 ? 'y' : 'rd'; }
 function stScoreCol(sc) { return sc >= 70 ? ['#3B6D11', '#27500A'] : sc >= 40 ? ['#BA7517', '#633806'] : ['#A32D2D', '#791F1F']; }
 function stArchDate(a) { const d = String(a.closedAt || '').split('.'); return d.length === 3 ? d[2] + '-' + d[1] + '-' + d[0] : ''; }
 
+// ---- Период и фильтр взыскателей главной таблицы статистики ----
+let stPeriod = 'month', stFrom = '', stTo = '', stSelEmps = {}, stEmpMenuOpen = false;
+const ST_PERIODS = [['month', 'Этот месяц'], ['prev', 'Прошлый месяц'], ['week', '7 дней'], ['today', 'Сегодня'], ['custom', 'По календарю']];
+function stIso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function stIsoParse(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+function stStatRange() {
+  const now = new Date();
+  const sod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const ru = d => String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+  const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  let f, t, label;
+  if (stPeriod === 'custom') { f = stIsoParse(stFrom) || sod; t = stIsoParse(stTo) || f; label = f.getTime() === t.getTime() ? ru(f) : ru(f) + ' — ' + ru(t); }
+  else if (stPeriod === 'today') { f = t = sod; label = 'сегодня'; }
+  else if (stPeriod === 'week') { f = new Date(sod.getTime() - 6 * 86400000); t = sod; label = ru(f) + ' — ' + ru(t); }
+  else if (stPeriod === 'prev') { f = new Date(now.getFullYear(), now.getMonth() - 1, 1); t = new Date(now.getFullYear(), now.getMonth(), 0); label = monthNames[f.getMonth()] + ' ' + f.getFullYear(); }
+  else { f = new Date(now.getFullYear(), now.getMonth(), 1); t = new Date(now.getFullYear(), now.getMonth() + 1, 0); label = monthNames[f.getMonth()] + ' ' + f.getFullYear(); }
+  const end = t.getTime() < sod.getTime() ? t : sod;
+  const days = Math.max(1, Math.round((end.getTime() - f.getTime()) / 86400000) + 1);
+  return { from: stIso(f), to: stIso(t), label: label, days: days };
+}
+function stSetPeriod(v) {
+  if (v === 'custom') { const r = stStatRange(); stFrom = r.from; stTo = r.to; }
+  stPeriod = v; renderNplStatsPanel();
+}
+function stSetDate(which, val) {
+  if (stPeriod !== 'custom') { const r = stStatRange(); stFrom = r.from; stTo = r.to; }
+  stPeriod = 'custom';
+  if (val) {
+    if (which === 'from') { stFrom = val; if (!stTo || stTo < val) stTo = val; }
+    else { stTo = val; if (!stFrom || stFrom > val) stFrom = val; }
+  }
+  renderNplStatsPanel();
+}
+function stToggleEmp(idEnc) { const id = decodeURIComponent(idEnc); if (stSelEmps[id]) delete stSelEmps[id]; else stSelEmps[id] = true; stEmpMenuOpen = true; renderNplStatsPanel(); }
+function stClearEmps() { stSelEmps = {}; renderNplStatsPanel(); }
+function stToggleEmpMenu(ev) { if (ev) ev.stopPropagation(); stEmpMenuOpen = !stEmpMenuOpen; renderNplStatsPanel(); }
+function stFilterEmps(rows) { const ks = Object.keys(stSelEmps); return ks.length ? rows.filter(r => stSelEmps[r.id]) : rows; }
+document.addEventListener('click', function(ev) {
+  if (!stEmpMenuOpen) return;
+  if ((ev.composedPath ? ev.composedPath() : []).some(el => el && el.id === 'stEmpMenuWrap')) return;
+  stEmpMenuOpen = false;
+  try { renderNplStatsPanel(); } catch (e) {}
+});
+
 function stBuildRows(vi) {
   stFileHasIds = (allNplLoans || []).some(l => String(l.employeeId || '').trim());
-  const month = nplLocalDateStr().slice(0, 7);
+  const range = stStatRange();
+  const inRange = d => d >= range.from && d <= range.to;
   const todayKey = stDayKey(new Date());
-  const dayOfMonth = new Date().getDate();
+  const dayOfMonth = range.days;
   const ids = {};
-  allNplStats.filter(r => r.date.slice(0, 7) === month).forEach(r => { ids[r.employeeId] = true; });
+  allNplStats.filter(r => inRange(r.date.slice(0, 10))).forEach(r => { ids[r.employeeId] = true; });
   getNplGroupsCached().forEach(g => { const id = String(allNplAssignments[g.key] || '').trim(); if (id) ids[id] = true; });
   delete ids[''];
   delete ids['9999'];
@@ -9540,7 +9586,7 @@ function stBuildRows(vi) {
     const a = allNplArchive[k];
     if (!a || a.status !== 'closed') return;
     const d = stArchDate(a);
-    if (d.slice(0, 7) !== month) return;
+    if (!inRange(d)) return;
     const e = archBy[a.employeeId] || (archBy[a.employeeId] = { cnt: 0, pf: 0, dayCnt: 0, dayPf: 0 });
     e.cnt++; e.pf += Number(a.lastDebt) || 0;
     if (d === todayKey) { e.dayCnt++; e.dayPf += Number(a.lastDebt) || 0; }
@@ -9549,7 +9595,7 @@ function stBuildRows(vi) {
   const weekAgo = Date.now() - 7 * 86400000;
 
   return Object.keys(ids).map(function(id) {
-    const s = computeNplStats(id);
+    const s = computeNplStats(id, range);
     const user = stEmpUser(id);
     const groups = getNplGroupsCached().filter(g => {
       if (String(allNplAssignments[g.key] || '').trim() !== id) return false;
@@ -9559,7 +9605,7 @@ function stBuildRows(vi) {
     });
     const nameKey = String((user && user.fullName) || '').trim().toLowerCase();
     const vis = (nameKey && vi.byName[nameKey]) || [];
-    const visMonth = vis.filter(d => stDayKey(d).slice(0, 7) === month).length;
+    const visMonth = vis.filter(d => inRange(stDayKey(d))).length;
     const visToday = vis.filter(d => stDayKey(d) === todayKey).length;
     const last = vis.reduce((m, d) => (!m || d > m) ? d : m, null);
 
@@ -10210,7 +10256,7 @@ function setNplStatsTab(t) { stTab = t; renderNplStatsPanel(); }
 function exportNplStatsExcel() {
   if (stTab === 'vis') return exportNplVisitsExcel();
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
-  const rows = stBuildRows(stBuildVisitIndex()).filter(r => r.groups > 0);
+  const rows = stFilterEmps(stBuildRows(stBuildVisitIndex())).filter(r => r.groups > 0);
   const head = ['№', 'Взыскатель', 'ID', 'План, клиентов', 'План, портфель (млн)', 'Возвращено, клиентов', 'Возвращено, портфель (млн)', '% закрытия по клиентам', '% закрытия по портфелю', 'За день, клиентов', 'За день, портфель (млн)', 'Визитов за месяц', 'Визитов сегодня', 'Визитов в день (среднее)', '90+ без МИБ и суда', 'Без контакта 7+ дн.', 'Последняя активность', 'Доля NPL, %', 'Общий балл', 'Ожид. NPL', 'FPD', 'SPD', 'TPD', 'NPL 90+'];
   const mln = v => Math.round((Number(v) || 0) / 1e5) / 10;
   const data = rows.map((r, i) => [i + 1, r.name, r.id, r.planCnt, mln(r.planPf), r.retCnt, mln(r.retPf), Math.round(r.pctCl * 10) / 10, Math.round(r.pctPf * 10) / 10, r.dayCnt, mln(r.dayPf), r.visMonth, r.visToday, Math.round(r.visAvg * 10) / 10, r.g90NoLegal, r.noContact, r.last ? r.last.toLocaleDateString('ru-RU') : '', Math.round(r.nplShare * 10) / 10, r.score, r.expNpl, r.cats.fpd, r.cats.spd, r.cats.tpd, r.cats.npl]);
@@ -10219,6 +10265,26 @@ function exportNplStatsExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Статистика');
   XLSX.writeFile(wb, 'Statistika_vzyskateley_' + nplLocalDateStr() + '.xlsx');
+}
+
+function stToolbarHtml(rowsAll, range) {
+  const list = rowsAll.filter(r => r.groups > 0).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const nSel = Object.keys(stSelEmps).length;
+  const sel = 'padding:7px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:#fff;';
+  const today = stIso(new Date());
+  const menu = stEmpMenuOpen ? `<div style="position:absolute;left:0;top:calc(100% + 4px);z-index:40;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:8px;min-width:260px;max-height:340px;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:4px;font-size:12px;color:var(--muted);">
+        <span>${nSel ? 'Выбрано: ' + nSel : 'Показаны все'}</span>${nSel ? '<a href="javascript:void(0)" onclick="stClearEmps()" style="color:var(--brand);font-weight:700;">Сбросить</a>' : ''}</div>
+      ${list.map(r => `<label style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;cursor:pointer;font-size:13px;"><input type="checkbox" ${stSelEmps[r.id] ? 'checked' : ''} onchange="stToggleEmp('${encodeURIComponent(r.id)}')"> <span style="flex:1;min-width:0;">${safe(r.name)}</span><span style="color:var(--muted);font-size:11px;">${r.groups}</span></label>`).join('') || '<div style="padding:8px;color:var(--muted);font-size:13px;">Нет взыскателей</div>'}
+    </div>` : '';
+  const btnLabel = nSel === 0 ? 'Все взыскатели' : nSel === 1 ? (list.find(r => stSelEmps[r.id]) || { name: '1 выбран' }).name : 'Выбрано: ' + nSel;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+    <div id="stEmpMenuWrap" style="position:relative;">
+      <button type="button" style="${sel}cursor:pointer;font-weight:600;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" onclick="stToggleEmpMenu(event)">👤 ${safe(btnLabel)} ▾</button>${menu}
+    </div>
+    <select style="${sel}" onchange="stSetPeriod(this.value)">${ST_PERIODS.map(p => `<option value="${p[0]}"${p[0] === stPeriod ? ' selected' : ''}>${p[1]}</option>`).join('')}</select>
+    <span style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted);">с <input type="date" style="${sel}" max="${today}" value="${range.from}" onchange="stSetDate('from',this.value)"> по <input type="date" style="${sel}" max="${today}" value="${range.to}" onchange="stSetDate('to',this.value)"></span>
+  </div>`;
 }
 
 function renderNplStatsPanel() {
@@ -10230,7 +10296,9 @@ function renderNplStatsPanel() {
     ensureNplArchive().then(function() { renderNplStatsPanel(); }).catch(function(e) { console.error(e); });
   }
   const vi = stBuildVisitIndex();
-  const rows = stBuildRows(vi);
+  const rowsAll = stBuildRows(vi);
+  const rows = stFilterEmps(rowsAll);
+  const srange = stStatRange();
   const now = new Date();
   const month = nplLocalDateStr().slice(0, 7);
   const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
@@ -10376,16 +10444,17 @@ function renderNplStatsPanel() {
       .st-mini{background:#fff;border-radius:10px;padding:8px 10px;border:1px solid var(--line)}.st-mini b{display:block;font-size:16px}.st-mini span{font-size:11px;color:var(--muted)}
     </style>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <div style="font-size:13px;color:var(--muted);">За ${monthNames[now.getMonth()]} ${now.getFullYear()}. План — назначено клиентов на начало месяца, возвращено — вышли из просрочки.</div>
+      <div style="font-size:13px;color:var(--muted);">За ${srange.label}. План — назначено клиентов на начало периода, возвращено — вышли из просрочки.</div>
       <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button>
     </div>
+    ${stTab === 'vis' ? '' : stToolbarHtml(rowsAll, srange)}
     ${stTab === 'vis' ? '' : kpis}
     ${stTab === 'vis' ? '' : ratingHtml}
     <div class="st-table">
       <div class="st-tabs">${tabsHtml}</div>
       ${stTab === 'vis' ? stVisitsHtml() : ''}
       <div style="overflow-x:auto;${stTab === 'vis' ? 'display:none;' : ''}"><div class="st-in">
-        <div class="st-r st-hd"><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План<span class="s2">клиентов / портфель</span></div><div>Возвращено<span class="s2">клиентов / портфель</span></div><div>% закрытия<span class="s2">клиенты / портфель</span></div><div>За день<span class="s2">клиентов / портфель</span></div><div>Визитов<span class="s2">за месяц / сегодня</span></div><div>90+ без МИБ и суда</div><div>Без контакта 7+</div><div>Последняя активность</div><div>Доля NPL</div></div>
+        <div class="st-r st-hd"><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План<span class="s2">клиентов / портфель</span></div><div>Возвращено<span class="s2">клиентов / портфель</span></div><div>% закрытия<span class="s2">клиенты / портфель</span></div><div>За день<span class="s2">клиентов / портфель</span></div><div>Визитов<span class="s2">за период / сегодня</span></div><div>90+ без МИБ и суда</div><div>Без контакта 7+</div><div>Последняя активность</div><div>Доля NPL</div></div>
         ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">' + (activeRows.length ? 'В этой группе никого нет.' : 'Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.') + '</div>'}
       </div></div>
     </div>
