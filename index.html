@@ -9676,7 +9676,10 @@ function stDetailHtml(r) {
 let stVisMode = 'clients', stVisEmp = '', stVisPeriod = 'month', stVisRes = '', stVisFilter = 'all';
 let stVisLimit = 50, stVisOpenDays = {}, stChkEmp = '', stChkDay = '';
 const ST_VIS_RESULTS = ['Контакт с клиентом', 'Контакт с третьим лицом', 'Нет дома', 'Не проживает/съехал'];
-const ST_VIS_PERIODS = [['month', 'Этот месяц'], ['prev', 'Прошлый месяц'], ['week', '7 дней'], ['today', 'Сегодня']];
+const ST_VIS_PERIODS = [['month', 'Этот месяц'], ['prev', 'Прошлый месяц'], ['week', '7 дней'], ['today', 'Сегодня'], ['custom', 'По календарю']];
+let stVisFrom = '', stVisTo = '';
+function stIsoDay(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function stParseIso(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
 const ST_SPEED_BAD = 60, ST_SPEED_WARN = 30;   // км/ч по городу
 const ST_SAME_GPS_M = 20;                      // две отметки ближе этого — «одна точка»
 const ST_FLAG_W = { dup: 1, impossible: 4, samegps: 4, far: 2, nophoto: 1, nogps: 1, night: 1, fast: 1 };
@@ -9686,7 +9689,18 @@ function stEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').rep
 function stVisSet(name, val) {
   if (name === 'mode') stVisMode = val;
   else if (name === 'emp') { stVisEmp = val; stChkEmp = ''; stChkDay = ''; }
-  else if (name === 'period') { stVisPeriod = val; stChkDay = ''; }
+  else if (name === 'period') {
+    if (val === 'custom') { const r = stVisRange(); stVisFrom = stIsoDay(r.from); stVisTo = stIsoDay(new Date(r.to.getTime() - 43200000)); }
+    stVisPeriod = val; stChkDay = '';
+  }
+  else if (name === 'from' || name === 'to') {
+    if (stVisPeriod !== 'custom') { const r = stVisRange(); stVisFrom = stIsoDay(r.from); stVisTo = stIsoDay(new Date(r.to.getTime() - 43200000)); }
+    stVisPeriod = 'custom'; stChkDay = '';
+    if (val) {
+      if (name === 'from') { stVisFrom = val; if (!stVisTo || stVisTo < val) stVisTo = val; }
+      else { stVisTo = val; if (!stVisFrom || stVisFrom > val) stVisFrom = val; }
+    }
+  }
   else if (name === 'res') stVisRes = val;
   else if (name === 'filter') stVisFilter = val;
   else if (name === 'chkEmp') { stChkEmp = val; stChkDay = ''; }
@@ -9746,6 +9760,11 @@ function stVisOpenRoute(emp, day) { stVisMode = 'check'; stChkEmp = emp; stChkDa
 function stVisRange() {
   const now = new Date();
   const sod = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (stVisPeriod === 'custom') {
+    const f = stParseIso(stVisFrom) || sod(now), t = stParseIso(stVisTo) || f;
+    const lab = d => String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+    return { from: f, to: new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1), label: f.getTime() === t.getTime() ? lab(f) : lab(f) + ' — ' + lab(t) };
+  }
   if (stVisPeriod === 'today') return { from: sod(now), to: new Date(sod(now).getTime() + 86400000), label: 'сегодня' };
   if (stVisPeriod === 'week') return { from: new Date(sod(now).getTime() - 6 * 86400000), to: new Date(sod(now).getTime() + 86400000), label: 'за 7 дней' };
   if (stVisPeriod === 'prev') return { from: new Date(now.getFullYear(), now.getMonth() - 1, 1), to: new Date(now.getFullYear(), now.getMonth(), 1), label: 'за прошлый месяц' };
@@ -10155,7 +10174,8 @@ function stVisitsHtml() {
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
         <div style="display:flex;gap:4px;">${modeBtn('clients', 'Все клиенты')}${modeBtn('days', 'По дням')}${modeBtn('check', 'Проверка')}</div>
         ${sel('e', stVisEmp, [['', 'Все взыскатели']].concat(empOpts.map(k => [k, D.empNames[k]])), "stVisSet('emp',this.value)")}
-        ${sel('p', stVisPeriod, ST_VIS_PERIODS, "stVisSet('period',this.value)")}${resFilter}
+        ${sel('p', stVisPeriod, ST_VIS_PERIODS, "stVisSet('period',this.value)")}
+        <span style="display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted);">с <input type="date" class="input" style="width:auto;padding:6px 8px;" max="${stIsoDay(new Date())}" value="${stIsoDay(D.rng.from)}" onchange="stVisSet('from',this.value)"> по <input type="date" class="input" style="width:auto;padding:6px 8px;" max="${stIsoDay(new Date())}" value="${stIsoDay(new Date(D.rng.to.getTime() - 43200000))}" onchange="stVisSet('to',this.value)"></span>${resFilter}
       </div>
       ${kpis}${body}
     </div>`;
