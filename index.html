@@ -11815,7 +11815,10 @@ async function uploadNplMibFile(keyEnc, input) {
       allNplMib.files[key] = allNplMib.files[key] || [];
       allNplMib.files[key].unshift({ url: result.fileUrl, name: file.name, uploadedAt: new Date().toLocaleString('ru-RU'), uploadedBy: ((currentUser && (currentUser.fullName || currentUser.login)) || ''), recognized: result.recognized, ocrError: result.ocrError || '' });
       if (!result.recognized && result.ocrError) {
-        alert('Автораспознавание не сработало.\n\nПричина: ' + result.ocrError);
+        const lim = /rate limit|quota|too many/i.test(String(result.ocrError));
+        alert(lim
+          ? 'Файл сохранён, но Google временно ограничил автораспознавание — слишком много файлов за короткое время.\n\nПодождите 1–2 минуты и загрузите этот документ ещё раз либо заполните поля МИБ вручную.'
+          : 'Автораспознавание не сработало.\n\nПричина: ' + result.ocrError);
       }
       nplRefreshLegal(group);
     } else {
