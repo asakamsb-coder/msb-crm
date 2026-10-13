@@ -10255,6 +10255,233 @@ function exportNplVisitsExcel() {
 
 function setNplStatsTab(t) { stTab = t; renderNplStatsPanel(); }
 
+// ======================= Реестр клиентов в Excel (с оформлением) =======================
+let stExcelJsPromise = null;
+function stLoadExcelJS() {
+  if (typeof ExcelJS !== 'undefined') return Promise.resolve();
+  if (stExcelJsPromise) return stExcelJsPromise;
+  stExcelJsPromise = new Promise(function(resolve, reject) {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    s.onload = function() { resolve(); };
+    s.onerror = function() { stExcelJsPromise = null; reject(new Error('Не удалось загрузить библиотеку Excel')); };
+    document.head.appendChild(s);
+  });
+  return stExcelJsPromise;
+}
+function stRegistryRows() {
+  const nameOf = stNameOfEmp(stBuildRows(stBuildVisitIndex()));
+  const selIds = Object.keys(stSelEmps);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const out = [];
+  getNplGroupsCached().forEach(function(g) {
+    const id = String(allNplAssignments[g.key] || '').trim();
+    if (selIds.length && !stSelEmps[id]) return;
+    const f = stLegalFlags(g);
+    const d = Number(g.maxDays) || 0;
+    const court = (allNplCourt.data || {})[g.key] || {};
+    const mib = (allNplMib.data || {})[g.key] || {};
+    const vs = (allNplVisits || {})[String(g.key)] || [];
+    let last = null;
+    vs.forEach(v => { const t = stParseDt(v.addedAt); if (t && (!last || t > last)) last = t; });
+    if (last) last = new Date(last.getFullYear(), last.getMonth(), last.getDate());
+    const acts = (mib.actions || []).map(a => ({ article: String(a.article || '').trim(), date: String(a.date || '').trim() })).filter(a => a.article);
+    let lastAct = '';
+    acts.forEach(a => { const t = stParseDt(a.date); if (t && (!lastAct || t > lastAct.t)) lastAct = { t: t, s: a.date }; });
+    const pin = String(g.pin || g.key || '').replace(/\s+/g, '');
+    const rest = mib.debtRemaining === undefined || mib.debtRemaining === '' ? '' : (isFinite(Number(String(mib.debtRemaining).replace(/\s/g, '').replace(',', '.'))) ? Number(String(mib.debtRemaining).replace(/\s/g, '').replace(',', '.')) : String(mib.debtRemaining));
+    const need = [];
+    if (d >= 60 && !f.courtAny) need.push('передать в суд');
+    if (d >= 80 && !f.order && !f.mib) need.push('получить приказ');
+    if (d >= 90 && !f.mib) need.push('передать в МИБ');
+    out.push({
+      key: g.key, client: g.clientName || '', pinfl: pin.length >= 12 ? pin : '', inn: pin.length && pin.length < 12 ? pin : '',
+      phone: g.phoneJoined || '', collector: id ? nameOf(id) : 'Не назначен', loans: g.loans.length, days: d,
+      stage: d >= 90 ? 'Legal 90+' : d >= 60 ? 'Hard 60–89' : 'Soft 1–59',
+      overdue: Number(g.overdueBalanceSum) || 0, overInt: Number(g.overdueInterestSum) || 0, debt: Number(g.totalDebtSum) || 0, pf: stPf(g),
+      nv: vs.length, lastVisit: last, noVisit: last ? Math.round((today - last) / 86400000) : null,
+      leg: f.mib ? 'МИБ' : f.order ? 'Приказ есть' : f.courtAny ? 'Суд идёт' : 'Нет суда',
+      court: court.caseStatus || '', order: g.courtOrderNumberJoined || '',
+      mibCase: mib.caseNumber || mib.caseId || g.mibCaseJoined || '', insp: mib.inspectorName || '', mibDate: mib.mibDate || g.mibDateJoined || '',
+      rest: rest, inspPhone: mib.inspectorPhone || '', acts: acts, lastAct: lastAct ? lastAct.s : '', need: need.join(', ')
+    });
+  });
+  out.sort((a, b) => (b.days - a.days) || (b.pf - a.pf));
+  return out;
+}
+async function exportNplRegistryExcel() {
+  const btn = document.getElementById('stRegBtn');
+  const old = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Готовлю файл…'; }
+  try {
+    await stLoadExcelJS();
+    const data = stRegistryRows();
+    if (!data.length) { alert('Нет клиентов для выгрузки'); return; }
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'MSB CRM'; wb.created = new Date();
+    const NAVY = 'FF1F3A5F', HEAD = 'FF2E5C8A', INK = 'FF1B2430', GR = 'FF6B7280', LINE = 'FFD9DEE5';
+    const fill = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
+    const bd = { top: { style: 'thin', color: { argb: LINE } }, left: { style: 'thin', color: { argb: LINE } }, bottom: { style: 'thin', color: { argb: LINE } }, right: { style: 'thin', color: { argb: LINE } } };
+    const fnt = (o) => Object.assign({ name: 'Calibri', size: 10, color: { argb: INK } }, o || {});
+    const stF = { 'Soft 1–59': ['FFE3F0FB', 'FF0C447C'], 'Hard 60–89': ['FFFCEFD2', 'FF7A4A06'], 'Legal 90+': ['FFF9DCDC', 'FF8E1F1F'] };
+    const lgF = { 'Нет суда': ['FFF9DCDC', 'FF8E1F1F'], 'Суд идёт': ['FFFCEFD2', 'FF7A4A06'], 'Приказ есть': ['FFE3F0FB', 'FF0C447C'], 'МИБ': ['FFDDEFD0', 'FF2F5E10'] };
+    const todayRu = new Date().toLocaleDateString('ru-RU');
+    const banner = (ws, lastCol, title, sub) => {
+      ws.mergeCells(1, 1, 1, lastCol); ws.mergeCells(2, 1, 2, lastCol);
+      const a = ws.getCell(1, 1); a.value = title; a.font = { name: 'Calibri', size: 18, bold: true, color: { argb: 'FFFFFFFF' } }; a.alignment = { vertical: 'middle', indent: 1 };
+      const b = ws.getCell(2, 1); b.value = sub; b.font = { name: 'Calibri', size: 10, color: { argb: 'FFD6E0EE' } }; b.alignment = { vertical: 'middle', indent: 1 };
+      for (let c = 1; c <= lastCol; c++) { ws.getCell(1, c).fill = fill(NAVY); ws.getCell(2, c).fill = fill(NAVY); }
+      ws.getRow(1).height = 34; ws.getRow(2).height = 20;
+    };
+    const headRow = (ws, r, heads, h) => {
+      heads.forEach((x, i) => { const c = ws.getCell(r, i + 1); c.value = x[0]; c.font = fnt({ bold: true, color: { argb: 'FFFFFFFF' } }); c.fill = fill(HEAD); c.border = bd; c.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; ws.getColumn(i + 1).width = x[1]; });
+      ws.getRow(r).height = h || 32;
+    };
+
+    // ---------- Лист «Клиенты» ----------
+    const cols = [['№', 6], ['Клиент', 36], ['ПИНФЛ', 17], ['ИНН', 13], ['Телефон', 15], ['Взыскатель (ФИО)', 21], ['Анкет', 7], ['Дней просрочки', 11], ['Стадия', 13],
+      ['Просроченный долг', 20], ['Проценты просроч.', 19], ['Общий долг', 20], ['Портфель (остаток)', 20], ['Визитов', 9], ['Последний визит', 14], ['Дней без визита', 11],
+      ['Юр. статус', 14], ['Статус суда', 17], ['№ приказа', 14], ['Дело МИБ', 13], ['Инспектор МИБ (ФИО)', 27], ['Передано в МИБ', 13], ['Остаток по делу МИБ', 19], ['Тел. инспектора', 15],
+      ['Действий МИБ', 9], ['Последнее действие', 13], ['Статьи МИБ (действия и даты)', 52], ['Что нужно сделать', 36]];
+    const NC = cols.length, H = 5, a0 = H + 1, z0 = H + data.length;
+    const ws = wb.addWorksheet('Клиенты', { properties: { tabColor: { argb: HEAD } }, views: [{ state: 'frozen', xSplit: 2, ySplit: H, showGridLines: false, zoomScale: 90 }] });
+    banner(ws, NC, 'Портфель взыскания — реестр клиентов', 'Дата выгрузки: ' + todayRu + ' · Просрочка, портфель, визиты и юридический статус по каждому клиенту');
+    const sum = k => data.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+    const kp = [['Клиентов', `SUBTOTAL(103,B${a0}:B${z0})`, data.length, '#,##0', 1, 3], ['Портфель, сум', `SUBTOTAL(109,M${a0}:M${z0})`, sum('pf'), '#,##0', 4, 6],
+      ['Просроч. долг, сум', `SUBTOTAL(109,J${a0}:J${z0})`, sum('overdue'), '#,##0', 7, 9], ['Проценты, сум', `SUBTOTAL(109,K${a0}:K${z0})`, sum('overInt'), '#,##0', 10, 11],
+      ['Макс. дней', `SUBTOTAL(104,H${a0}:H${z0})`, Math.max.apply(null, data.map(r => r.days)), '#,##0', 12, 13]];
+    kp.forEach(function(k) {
+      ws.mergeCells(3, k[4], 3, k[5]); ws.mergeCells(4, k[4], 4, k[5]);
+      const l = ws.getCell(3, k[4]); l.value = k[0]; l.font = fnt({ size: 9, color: { argb: GR } }); l.alignment = { indent: 1, vertical: 'bottom' };
+      const v = ws.getCell(4, k[4]); v.value = { formula: k[1], result: k[2] }; v.numFmt = k[3]; v.font = fnt({ size: 14, bold: true }); v.alignment = { horizontal: 'left', indent: 1, vertical: 'top' };
+      for (let c = k[4]; c <= k[5]; c++) { ws.getCell(3, c).fill = fill('FFF3F6FA'); ws.getCell(4, c).fill = fill('FFF3F6FA'); }
+    });
+    ws.getRow(3).height = 18; ws.getRow(4).height = 26;
+    const note = ws.getCell(3, 14); note.value = 'Итоги пересчитываются по фильтру ↓'; note.font = fnt({ size: 9, italic: true, color: { argb: GR } });
+    headRow(ws, H, cols, 34);
+    const center = { 1: 1, 7: 1, 8: 1, 9: 1, 14: 1, 15: 1, 16: 1, 17: 1, 22: 1, 25: 1, 26: 1, 3: 1, 4: 1 };
+    const money = { 10: 1, 11: 1, 12: 1, 13: 1, 23: 1 };
+    data.forEach(function(r, k) {
+      const row = ws.getRow(a0 + k);
+      const actsTxt = r.acts.map(x => '• ' + x.article + (x.date ? ' — ' + x.date : '')).join('\n');
+      const vals = [k + 1, r.client, r.pinfl, r.inn, r.phone, r.collector, r.loans, r.days, r.stage, r.overdue, r.overInt, r.debt, r.pf, r.nv || 0, r.lastVisit || null, r.noVisit,
+        r.leg, r.court, r.order, r.mibCase, r.insp, r.mibDate, r.rest, r.inspPhone, r.acts.length || '', r.lastAct, actsTxt, r.need];
+      vals.forEach(function(v, i) {
+        const c = row.getCell(i + 1);
+        c.value = (v === '' || v === undefined) ? null : v;
+        c.font = fnt(); c.border = bd;
+        if (k % 2) c.fill = fill('FFFAFBFD');
+        const col = i + 1;
+        c.alignment = { vertical: 'middle', horizontal: center[col] ? 'center' : (money[col] ? 'right' : 'left'), indent: (center[col] || money[col]) ? 0 : 1, wrapText: col === 27 };
+        if (money[col]) c.numFmt = '#,##0';
+        if (col === 15) c.numFmt = 'dd.mm.yyyy';
+        if (col === 3 || col === 4 || col === 5) c.numFmt = '@';
+      });
+      row.getCell(2).font = fnt({ bold: true });
+      const sf = stF[r.stage]; const c9 = row.getCell(9); c9.fill = fill(sf[0]); c9.font = fnt({ bold: true, color: { argb: sf[1] } });
+      const lf = lgF[r.leg]; const c17 = row.getCell(17); c17.fill = fill(lf[0]); c17.font = fnt({ bold: true, color: { argb: lf[1] } });
+      if (r.days >= 365) row.getCell(8).font = fnt({ bold: true, color: { argb: 'FF8E1F1F' } });
+      if (r.noVisit !== null && r.noVisit >= 14) row.getCell(16).font = fnt({ bold: true, color: { argb: 'FF8E1F1F' } });
+      if (r.need) row.getCell(28).font = fnt({ color: { argb: 'FF8E1F1F' } });
+      if (r.acts.length > 1) row.height = Math.max(15, 13.5 * r.acts.length);
+    });
+    ws.autoFilter = { from: { row: H, column: 1 }, to: { row: z0, column: NC } };
+    ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: H + ':' + H };
+
+    // ---------- Лист «Свод по взыскателям» ----------
+    const by = {};
+    data.forEach(function(r) {
+      const e = by[r.collector] || (by[r.collector] = { name: r.collector, n: 0, pf: 0, s: [0, 0, 0], sp: [0, 0, 0], no60: 0, no80: 0, no90: 0, m90: 0 });
+      e.n++; e.pf += r.pf; const si = r.days >= 90 ? 2 : r.days >= 60 ? 1 : 0; e.s[si]++; e.sp[si] += r.pf;
+      if (r.days >= 60 && r.leg === 'Нет суда') e.no60++;
+      if (r.days >= 80 && (r.leg === 'Нет суда' || r.leg === 'Суд идёт')) e.no80++;
+      if (r.days >= 90) { if (r.leg === 'МИБ') e.m90++; else e.no90++; }
+    });
+    const L = Object.keys(by).map(k => by[k]).sort((a, b) => (b.no60 + b.no80 + b.no90) - (a.no60 + a.no80 + a.no90));
+    const sc = [['Взыскатель (ФИО)', 24], ['Клиентов', 10], ['Портфель, млн', 13], ['Soft кл.', 9], ['Soft, млн', 11], ['Hard кл.', 9], ['Hard, млн', 11], ['Legal кл.', 9], ['Legal, млн', 11], ['60+ без суда', 11], ['80+ без приказа', 12], ['90+ без МИБ', 11], ['90+ с МИБ', 10], ['Юр. готовность', 16]];
+    const sv = wb.addWorksheet('Свод по взыскателям', { properties: { tabColor: { argb: NAVY } }, views: [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false, zoomScale: 95 }] });
+    banner(sv, sc.length, 'Свод по взыскателям — просрочка, портфель, юридический статус', 'Дата выгрузки: ' + todayRu + ' · Soft 1–59 · Hard 60–89 · Legal 90+ дней · Юр. готовность = доля клиентов 90+, переданных в МИБ');
+    headRow(sv, 4, sc, 32);
+    const rg = (col) => `Клиенты!$${col}$${a0}:$${col}$${z0}`;
+    const grp = { 4: 'FFE3F0FB', 5: 'FFE3F0FB', 6: 'FFFCEFD2', 7: 'FFFCEFD2', 8: 'FFF9DCDC', 9: 'FFF9DCDC' };
+    const mln = v => Math.round(v / 1e5) / 10;
+    const ready = e => (e.m90 + e.no90) ? e.m90 / (e.m90 + e.no90) : 0;
+    L.forEach(function(e, k) {
+      const r = 5 + k, A = `$A${r}`;
+      const cells = [e.name,
+        { formula: `COUNTIF(${rg('F')},${A})`, result: e.n },
+        { formula: `SUMIF(${rg('F')},${A},${rg('M')})/1000000`, result: e.pf / 1e6 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('I')},"Soft*")`, result: e.s[0] },
+        { formula: `SUMIFS(${rg('M')},${rg('F')},${A},${rg('I')},"Soft*")/1000000`, result: e.sp[0] / 1e6 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('I')},"Hard*")`, result: e.s[1] },
+        { formula: `SUMIFS(${rg('M')},${rg('F')},${A},${rg('I')},"Hard*")/1000000`, result: e.sp[1] / 1e6 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('I')},"Legal*")`, result: e.s[2] },
+        { formula: `SUMIFS(${rg('M')},${rg('F')},${A},${rg('I')},"Legal*")/1000000`, result: e.sp[2] / 1e6 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=60",${rg('Q')},"Нет суда")`, result: e.no60 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=80",${rg('Q')},"Нет суда")+COUNTIFS(${rg('F')},${A},${rg('H')},">=80",${rg('Q')},"Суд идёт")`, result: e.no80 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=90",${rg('Q')},"<>МИБ")`, result: e.no90 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=90",${rg('Q')},"МИБ")`, result: e.m90 },
+        { formula: `IF(L${r}+M${r}=0,0,M${r}/(L${r}+M${r}))`, result: ready(e) }];
+      cells.forEach(function(v, i) {
+        const c = sv.getCell(r, i + 1); c.value = v; c.font = fnt({ bold: i === 0 }); c.border = bd;
+        c.alignment = { horizontal: i === 0 ? 'left' : 'right', indent: i === 0 ? 1 : 0, vertical: 'center' };
+        if (i === 2 || i === 4 || i === 6 || i === 8) c.numFmt = '#,##0.0';
+        if (i === 13) c.numFmt = '0%';
+        if (k % 2) c.fill = fill('FFFAFBFD');
+        if (grp[i + 1]) c.fill = fill(grp[i + 1]);
+        if (i >= 9 && i <= 11) c.font = fnt({ bold: true, color: { argb: 'FF8E1F1F' } });
+      });
+      const rd = ready(e); const c14 = sv.getCell(r, 14);
+      c14.fill = fill(rd >= 0.5 ? 'FFDDEFD0' : rd >= 0.2 ? 'FFFCEFD2' : 'FFF9DCDC');
+    });
+    const tr = 5 + L.length, ez = tr - 1;
+    const T = { n: 0, pf: 0, s: [0, 0, 0], sp: [0, 0, 0], no60: 0, no80: 0, no90: 0, m90: 0 };
+    L.forEach(e => { T.n += e.n; T.pf += e.pf; for (let i = 0; i < 3; i++) { T.s[i] += e.s[i]; T.sp[i] += e.sp[i]; } T.no60 += e.no60; T.no80 += e.no80; T.no90 += e.no90; T.m90 += e.m90; });
+    const tv = [T.n, T.pf / 1e6, T.s[0], T.sp[0] / 1e6, T.s[1], T.sp[1] / 1e6, T.s[2], T.sp[2] / 1e6, T.no60, T.no80, T.no90, T.m90];
+    sv.getCell(tr, 1).value = 'ВСЕГО';
+    tv.forEach((v, i) => { const col = i + 2; const cl = String.fromCharCode(64 + col); sv.getCell(tr, col).value = { formula: `SUM(${cl}5:${cl}${ez})`, result: v }; if ([3, 5, 7, 9].indexOf(col) >= 0) sv.getCell(tr, col).numFmt = '#,##0.0'; });
+    sv.getCell(tr, 14).value = { formula: `IF(L${tr}+M${tr}=0,0,M${tr}/(L${tr}+M${tr}))`, result: (T.m90 + T.no90) ? T.m90 / (T.m90 + T.no90) : 0 }; sv.getCell(tr, 14).numFmt = '0%';
+    for (let c = 1; c <= 14; c++) { const x = sv.getCell(tr, c); x.font = fnt({ bold: true, color: { argb: 'FFFFFFFF' } }); x.fill = fill(NAVY); x.border = bd; x.alignment = { horizontal: c === 1 ? 'left' : 'right', indent: c === 1 ? 1 : 0 }; }
+    sv.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+
+    // ---------- Лист «Статьи МИБ» ----------
+    const tc = [['№', 6], ['Клиент', 36], ['Взыскатель (ФИО)', 21], ['Дело МИБ', 13], ['Инспектор (ФИО)', 27], ['Статья / действие МИБ', 58], ['Дата', 12], ['Портфель (остаток)', 20]];
+    const tw = wb.addWorksheet('Статьи МИБ', { properties: { tabColor: { argb: 'FF3B6D11' } }, views: [{ state: 'frozen', xSplit: 2, ySplit: 4, showGridLines: false }] });
+    banner(tw, tc.length, 'Статьи МИБ — все действия по делам исполнительного производства', 'По одной строке на действие (ижро ҳаракатлари): статья и дата из выписки МИБ');
+    headRow(tw, 4, tc, 28);
+    let rr = 5, n0 = 0;
+    data.forEach(function(r) {
+      r.acts.forEach(function(x) {
+        n0++;
+        [n0, r.client, r.collector, r.mibCase, r.insp, x.article, x.date, r.pf].forEach(function(v, i) {
+          const c = tw.getCell(rr, i + 1); c.value = (v === '' ? null : v); c.font = fnt(); c.border = bd;
+          c.alignment = { vertical: 'middle', horizontal: [1, 4, 7].indexOf(i + 1) >= 0 ? 'center' : (i === 7 ? 'right' : 'left'), indent: ([1, 4, 7, 8].indexOf(i + 1) >= 0) ? 0 : 1 };
+          if (i === 7) c.numFmt = '#,##0';
+          if (rr % 2) c.fill = fill('FFFAFBFD');
+        });
+        rr++;
+      });
+    });
+    if (rr > 5) tw.autoFilter = { from: { row: 4, column: 1 }, to: { row: rr - 1, column: tc.length } };
+    tw.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+
+    wb.calcProperties = { fullCalcOnLoad: true };
+    wb.views = [{ activeTab: 1 }];
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'Reestr_klientov_' + nplLocalDateStr() + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
+  } catch (e) {
+    console.error(e);
+    alert('Не удалось сформировать файл: ' + (e && e.message ? e.message : e));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = old; }
+  }
+}
+// ===================== /Реестр клиентов в Excel =====================
+
 function exportNplStatsExcel() {
   if (stTab === 'vis') return exportNplVisitsExcel();
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё не загрузилась, повторите через несколько секунд'); return; }
@@ -10691,7 +10918,8 @@ function renderNplStatsPanel() {
     </style>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="font-size:13px;color:var(--muted);">За ${srange.label}. План — назначено клиентов на начало периода, возвращено — вышли из просрочки.</div>
-      <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button>
+      <span style="display:inline-flex;gap:8px;flex-wrap:wrap;"><button type="button" id="stRegBtn" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplRegistryExcel()">Реестр клиентов (Excel)</button>
+      <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button></span>
     </div>
     ${stTab === 'vis' ? '' : stToolbarHtml(rowsAll, srange)}
     ${stTab === 'vis' ? '' : kpis}
