@@ -1897,10 +1897,9 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
   <div id="nplDashboard" style="display:none;">
     <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
       <button class="msb-sales-tab active" id="nplPageTabDash" onclick="setNplPageTab('dashboard')">1. Дашборд</button>
-      <button class="msb-sales-tab" id="nplPageTabIndiv" onclick="setNplPageTab('indiv')">2. Физические лица</button>
-      <button class="msb-sales-tab" id="nplPageTabLegal" onclick="setNplPageTab('legal')">3. Юридические лица</button>
-      <button class="msb-sales-tab" id="nplPageTabArchive" onclick="setNplPageTab('archive')">4. Архив</button>
-      <button class="msb-sales-tab" id="nplPageTabStats" style="display:none;" onclick="setNplPageTab('stats')">5. Статистика</button>
+      <button class="msb-sales-tab" id="nplPageTabClients" onclick="setNplPageTab('clients')">2. Клиенты</button>
+      <button class="msb-sales-tab" id="nplPageTabStats" style="display:none;" onclick="setNplPageTab('stats')">3. Статистика</button>
+      <span id="nplPageTabIndiv" style="display:none;"></span><span id="nplPageTabLegal" style="display:none;"></span>
       <div id="nplMyClientsBadge" style="display:none;margin-left:auto;font-weight:700;font-size:14px;color:var(--muted);">
         Мои клиенты: <b id="nplMyClientsCount" style="color:var(--text);">0</b>
       </div>
@@ -1962,9 +1961,14 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
       <div id="nplDashPager" style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px;font-size:13px;color:var(--muted);"></div>
     </div>
 
-    <div id="nplTabPanelLegalAll" style="margin-top:32px;display:none;">
-      <h2 style="font-size:16px;margin:0 0 6px;">2. Юридические лица</h2>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все юр. лица и ИП/ЯТТ с просрочкой от 1 дня — поимённо, все поля из выгрузки (прокрутка вправо).</p>
+    <div id="nplClientsBar" style="display:none;gap:8px;flex-wrap:wrap;margin:0 0 14px;">
+      <button type="button" class="msb-sales-tab" id="nplCliModeIndiv" onclick="setNplClientsMode('indiv')">Физические лица</button>
+      <button type="button" class="msb-sales-tab" id="nplCliModeLegal" onclick="setNplClientsMode('legal')">Юридические лица</button>
+      <button type="button" class="msb-sales-tab" id="nplCliModeArchive" onclick="setNplClientsMode('archive')">Архив</button>
+    </div>
+
+    <div id="nplTabPanelLegalAll" style="margin-top:12px;display:none;">
+      <h2 style="font-size:16px;margin:0 0 6px;">Юридические лица</h2>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input id="nplLegalAllSearchInput" class="input" placeholder="Поиск по названию, ИНН, ID клиента, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('legal')">
       </div>
@@ -2005,9 +2009,8 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
       <div id="nplLegalAllPager" class="npl-pager"></div>
     </div>
 
-    <div id="nplTabPanelIndiv" style="margin-top:32px;display:none;">
-      <h2 style="font-size:16px;margin:0 0 6px;">3. Физические лица</h2>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Все физ. лица с просрочкой от 1 дня — поимённо (сводно).</p>
+    <div id="nplTabPanelIndiv" style="margin-top:12px;display:none;">
+      <h2 style="font-size:16px;margin:0 0 6px;">Физические лица</h2>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input id="nplIndivSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ, ID клиента, № анкеты" style="max-width:320px;flex:1 1 200px;" oninput="onNplListSearchInput('indiv')">
       </div>
@@ -2030,17 +2033,16 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
       <div id="nplIndivPager" class="npl-pager"></div>
     </div>
 
-    <div id="nplTabPanelArchive" style="margin-top:32px;display:none;">
-      <h2 style="font-size:16px;margin:0 0 6px;">4. Архив</h2>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Клиенты, у которых просрочка закрыта. Фото, адреса, телефоны и документы сохранены и вернутся, если просрочка появится снова.</p>
+    <div id="nplTabPanelArchive" style="margin-top:12px;display:none;">
+      <h2 style="font-size:16px;margin:0 0 6px;">Архив</h2>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
         <input id="nplArchiveSearchInput" class="input" placeholder="Поиск по ФИО, ПИНФЛ" style="max-width:320px;flex:1 1 200px;" oninput="nplArchiveSearchDebounced()">
       </div>
       <div id="nplArchiveList"></div>
     </div>
 
-    <div id="nplTabPanelStats" style="margin-top:32px;display:none;">
-      <h2 style="font-size:16px;margin:0 0 6px;">5. Статистика по взыскателям</h2>
+    <div id="nplTabPanelStats" style="margin-top:12px;display:none;">
+      <h2 style="font-size:16px;margin:0 0 6px;">Статистика по взыскателям</h2>
       <div id="nplStatsBody"></div>
     </div>
   </div>
@@ -7778,7 +7780,7 @@ async function loadNplData() {
     document.getElementById('nplDashboard').style.display = 'block';
     renderNplPage();
     nplUpdatePerfNote();
-    if (nplActiveTab === 'archive') renderNplArchivePanel();
+    if (nplTabIs('archive')) renderNplArchivePanel();
     // доп. данные и статистика могли прийти раньше списка — перерисуем один раз
     Promise.all([restP, statsP]).then(nplRenderSoon).catch(function() {});
   } catch (error) {
@@ -7899,7 +7901,11 @@ function nplArchiveCountFromSummary() {
   return Object.keys(by).reduce((t, k) => t + (Number(by[k]) || 0), 0);
 }
 
-function nplTabIs(t) { return nplActiveTab === t; }
+let nplClientsMode = 'indiv';
+function nplTabIs(t) {
+  if (nplActiveTab === 'clients' && (t === 'legal' || t === 'indiv' || t === 'archive')) return nplClientsMode === t;
+  return nplActiveTab === t;
+}
 
 // Список "моих" визитов (всех статусов, по всем клиентам, не только
 // назначенным сейчас — история визита не должна пропадать при
@@ -8779,18 +8785,32 @@ function groupNplByClient(loans) {
 // именным списком NPL юр.лиц внутри), полный список юр.лиц, полный
 // список физ.лиц. Активен всегда только один пункт.
 function setNplPageTab(tab) {
-  const tabs = { dashboard: 'Dash', legal: 'Legal', indiv: 'Indiv', archive: 'Archive', stats: 'Stats' };
-  const panels = { dashboard: 'Dash', legal: 'LegalAll', indiv: 'Indiv', archive: 'Archive', stats: 'Stats' };
+  if (tab === 'legal' || tab === 'indiv' || tab === 'archive') { nplClientsMode = tab; tab = 'clients'; }
   nplActiveTab = tab;
-  Object.keys(tabs).forEach(function(k) {
-    const b = document.getElementById('nplPageTab' + tabs[k]);
-    if (b) b.classList.toggle('active', tab === k);
-    const pn = document.getElementById('nplTabPanel' + panels[k]);
-    if (pn) pn.style.display = tab === k ? 'block' : 'none';
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? 'block' : 'none'; };
+  const act = (id, on) => { const b = document.getElementById(id); if (b) b.classList.toggle('active', !!on); };
+  act('nplPageTabDash', tab === 'dashboard'); act('nplPageTabClients', tab === 'clients'); act('nplPageTabStats', tab === 'stats');
+  show('nplTabPanelDash', tab === 'dashboard');
+  show('nplTabPanelLegalAll', nplTabIs('legal'));
+  show('nplTabPanelIndiv', nplTabIs('indiv'));
+  show('nplTabPanelArchive', nplTabIs('archive'));
+  show('nplTabPanelStats', tab === 'stats');
+  const bar = document.getElementById('nplClientsBar');
+  if (bar) bar.style.display = tab === 'clients' ? 'flex' : 'none';
+  const monM = nplMobileMonitor();
+  [['Indiv', 'indiv'], ['Legal', 'legal'], ['Archive', 'archive']].forEach(function(m) {
+    const b = document.getElementById('nplCliMode' + m[0]);
+    if (!b) return;
+    b.classList.toggle('active', nplClientsMode === m[1]);
+    b.style.display = (monM && m[1] === 'indiv') ? 'none' : '';
   });
-  if (tab === 'archive') renderNplArchivePanel();
+  if (tab === 'clients' && nplClientsMode === 'archive') renderNplArchivePanel();
   else if (tab === 'stats') renderNplStatsPanel();
   else if (nplDataLoaded) renderNplPage();
+}
+function setNplClientsMode(mode) {
+  nplClientsMode = mode;
+  setNplPageTab('clients');
 }
 
 // Пагинация для пунктов 2 и 3 — рендерим в DOM не больше NPL_PAGE_SIZE
@@ -8848,15 +8868,13 @@ function renderNplPage() {
   const myClientsBadge = document.getElementById('nplMyClientsBadge');
   const myClientsCount = document.getElementById('nplMyClientsCount');
   const monMobile = nplMobileMonitor();
-  const indivTabBtn = document.getElementById('nplPageTabIndiv');
   if (dashTabBtn) dashTabBtn.style.display = (isCollector || monMobile) ? 'none' : '';
-  if (indivTabBtn) indivTabBtn.style.display = monMobile ? 'none' : '';
   if (isCollector && nplActiveTab === 'dashboard') {
     setNplPageTab('indiv');
     return;
   }
   // Юр. мониторинг на телефоне работает только с юридическими лицами.
-  if (monMobile && (nplActiveTab === 'dashboard' || nplActiveTab === 'indiv')) {
+  if (monMobile && (nplActiveTab === 'dashboard' || (nplActiveTab === 'clients' && nplClientsMode === 'indiv'))) {
     setNplPageTab('legal');
     return;
   }
@@ -9359,10 +9377,10 @@ function nplArchiveSearchDebounced() { clearTimeout(nplArchiveSearchTimer); nplA
 
 function renderNplArchivePanel() {
   const box = document.getElementById('nplArchiveList');
-  const tabBtn = document.getElementById('nplPageTabArchive');
+  const tabBtn = document.getElementById('nplCliModeArchive');
   if (!box) return;
   if (!nplArchiveLoaded) {
-    if (tabBtn) tabBtn.innerText = '4. Архив (' + nplArchiveCountFromSummary() + ')';
+    if (tabBtn) tabBtn.innerText = 'Архив (' + nplArchiveCountFromSummary() + ')';
     if (!nplTabIs('archive')) return;
     box.innerHTML = '<div style="font-size:13px;color:var(--muted);padding:12px 0;">Загружаю архив…</div>';
     ensureNplArchive().then(renderNplArchivePanel).catch(function(e) {
@@ -9372,7 +9390,7 @@ function renderNplArchivePanel() {
     return;
   }
   const all = getNplArchiveList();
-  if (tabBtn) tabBtn.innerText = '4. Архив (' + all.length + ')';
+  if (tabBtn) tabBtn.innerText = 'Архив (' + all.length + ')';
 
   const query = normalizeText((document.getElementById('nplArchiveSearchInput')?.value || '').trim());
   const list = query ? all.filter(a => normalizeText([a.name, a.key].join(' ')).includes(query)) : all;
@@ -10675,7 +10693,7 @@ function stLegalHtml(activeRows) {
   return `<div class="st-table" style="margin-bottom:14px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
       <b style="font-size:15px;">Юридический путь портфеля</b>
-      <span style="font-size:12px;color:var(--muted);">по данным МИБ и суда, внесённым сотрудниками · нажмите на число или цвет — список клиентов</span>
+      
     </div>
     ${kp}${seg}
     <style>.stl-t{display:grid;grid-template-columns:minmax(150px,2fr) repeat(6,minmax(54px,.7fr)) minmax(110px,1.1fr);gap:6px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:13px;text-align:right}.stl-t.h{font-size:11.5px;color:var(--muted);font-weight:700}</style>
@@ -10685,7 +10703,7 @@ function stLegalHtml(activeRows) {
       ${rowsHtml ? totRow : ''}
     </div></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">
-      <span>Дисциплина = доля этапов, пройденных вовремя: (передано + решения + МИБ) / (50+ + 75+ + 85+). Клиент 85+ входит во все три линии. «Приказ» — внесён номер приказа или статус «Решение вынесено».</span>
+      <span></span>
       ${C.list.length > 6 ? `<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="stLegToggleAll()">${stLegAll ? 'Свернуть' : 'Показать всех (' + C.list.length + ')'}</button>` : ''}
     </div>
   </div>`;
@@ -10725,7 +10743,6 @@ function stStagesHtml(range) {
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
       <b style="font-size:15px;">Просрочка по стадиям</b><span style="font-size:12px;color:var(--muted);">за ${range.label}</span></div>
     <div class="st-kpis" style="padding:0 14px;margin-bottom:8px;">${ST_STAGE_DEF.map(card).join('')}</div>
-    <div style="padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">${note}</div>
   </div>`;
 }
 
@@ -10777,7 +10794,7 @@ function stRepayHtml(range, nameOf) {
     <div class="str-t" style="background:#F5F7FA;font-weight:700;"><div style="text-align:left;">В среднем в день</div><div>${nplFmtPct(R.avgC)}</div><div>${stMoney(R.avgS)}</div><div></div><div></div></div>` : '';
   return `<div class="st-table" style="margin-bottom:14px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
-      <b style="font-size:15px;">Погашение по дням</b><span style="font-size:12px;color:var(--muted);">за ${range.label} · нажмите на день — по взыскателям</span></div>
+      <b style="font-size:15px;">Погашение по дням</b></div>
     ${cards}
     <style>.str-t{display:grid;grid-template-columns:minmax(110px,1.2fr) repeat(4,minmax(80px,1fr));gap:6px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:13px;text-align:right}.str-t.h{font-size:11.5px;color:var(--muted);font-weight:700}</style>
     <div style="overflow-x:auto;"><div style="min-width:560px;">
@@ -10785,7 +10802,6 @@ function stRepayHtml(range, nameOf) {
       ${body || '<div style="padding:12px 14px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);">За выбранный период данных нет.</div>'}
       ${foot}
     </div></div>
-    <div style="padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">Сумма — погашенная просрочка (основной долг + проценты). «Портфель ±» — изменение общего остатка портфеля к предыдущему дню с данными: минус (зелёный) — портфель уменьшился, плюс (красный) — вырос.</div>
   </div>`;
 }
 function stNameOfEmp(rowsAll) {
@@ -10948,7 +10964,7 @@ function renderNplStatsPanel() {
       .st-mini{background:#fff;border-radius:10px;padding:8px 10px;border:1px solid var(--line)}.st-mini b{display:block;font-size:16px}.st-mini span{font-size:11px;color:var(--muted)}
     </style>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-      <div style="font-size:13px;color:var(--muted);">За ${srange.label}. План — назначено клиентов на начало периода, возвращено — вышли из просрочки.</div>
+      <div></div>
       <span style="display:inline-flex;gap:8px;flex-wrap:wrap;"><button type="button" id="stRegBtn" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplRegistryExcel()">Реестр клиентов (Excel)</button>
       <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button></span>
     </div>
@@ -10966,11 +10982,7 @@ function renderNplStatsPanel() {
     ${stTab === 'vis' ? '' : stagesHtml}
     ${stTab === 'vis' ? '' : repayHtml}
     ${stTab === 'vis' ? '' : archHtml}
-    <div style="font-size:12px;color:var(--muted);margin-top:8px;line-height:1.6;${stTab === 'vis' ? 'display:none;' : ''}">
-      Нажмите на строку — раскроется карточка сотрудника. Цвет % закрытия: зелёный от 35%, жёлтый 15–35%, красный ниже 15%. Доля NPL — клиентов 90+ среди клиентов в работе (зелёный до 10%, красный от 25%).
-      Общий балл (0–100): закрытие по портфелю 40% · визиты в день 20% (если в системе есть визиты) · охват контактом за 7 дней 15% · низкая доля NPL 15% · юридическая готовность (90+ с МИБ или судом) 10%.
-      Портфель — текущий остаток клиентов; «возвращено» — по архиву закрытых клиентов (последний долг). Визиты и активность считаются по визитам, подтверждённым в CRM.
-    </div>`;
+    `;
 }
 function archRowsLoaded() { return nplArchiveLoaded; }
 
