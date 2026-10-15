@@ -7987,7 +7987,9 @@ function getNplParserWorker() {
         let nameColIdx = -1, idColIdx = -1, pinColIdx = -1, openDateColIdx = -1, portfolioColIdx = -1;
         const portfolioKeys = {};
         const extraPortfolio = {};
-        const portfolio = { clients: 0, loans: 0, totalDebt: 0, sum: 0, jClients: 0, jSum: 0, pClients: 0, pSum: 0 };
+        const portfolio = { clients: 0, loans: 0, totalDebt: 0, sum: 0, jClients: 0, jSum: 0, pClients: 0, pSum: 0, skipN: 0, skipSum: 0, textN: 0 };
+        // число из ячейки: и 123, и "29 932 000", и "29932000,5"
+        const numV = function(v) { if (typeof v === 'number') return v; const t = String(v == null ? '' : v).replace(/[\\s\\u00a0]/g, '').replace(',', '.'); const n = Number(t); return isFinite(n) ? n : 0; };
         const normOpenDate = function(v) {
           if (v === '' || v == null) return '';
           if (typeof v === 'number') {
@@ -8112,11 +8114,12 @@ function getNplParserWorker() {
         for (let i = headerRowIdx + 1; i < rows.length; i++) {
           const row = rows[i];
           const contractId = row[idColIdx];
-          if (!contractId || isNaN(Number(contractId))) continue;
+          const skipPf = portfolioColIdx !== -1 ? numV(row[portfolioColIdx]) : 0;
+          if (!contractId || isNaN(Number(contractId))) { if (skipPf) { portfolio.skipN++; portfolio.skipSum += skipPf; } continue; }
 
           const clientName = String(row[nameColIdx] || '').trim();
           // служебная строка с кодами колонок (1, 7, 10, 36 ...) — не клиент
-          if (!clientName || !isNaN(Number(clientName))) continue;
+          if (!clientName || !isNaN(Number(clientName))) { if (skipPf) { portfolio.skipN++; portfolio.skipSum += skipPf; } continue; }
           const pin = pinColIdx !== -1 ? String(row[pinColIdx] || '').trim() : '';
 
           // Субъект (физ./юр. лицо): если в файле есть готовая колонка
@@ -8146,8 +8149,9 @@ function getNplParserWorker() {
           const hasOverdue = (Number(row[overdueBalanceColIdx]) || 0) + (Number(row[overdueInterestColIdx]) || 0) > 0
             || cleanDays(row[daysOverdueColIdx]) > 0 || cleanDays(row[daysOverdueInterestColIdx]) > 0;
           portfolio.loans++;
-          portfolio.totalDebt += Number(row[totalDebtColIdx]) || 0;
-          const pfVal = portfolioColIdx !== -1 ? (Number(row[portfolioColIdx]) || 0) : (Number(row[totalDebtColIdx]) || 0);
+          portfolio.totalDebt += numV(row[totalDebtColIdx]);
+          if (portfolioColIdx !== -1 && typeof row[portfolioColIdx] === 'string' && row[portfolioColIdx].trim() && isNaN(Number(row[portfolioColIdx]))) portfolio.textN++;
+          const pfVal = portfolioColIdx !== -1 ? numV(row[portfolioColIdx]) : numV(row[totalDebtColIdx]);
           portfolio.sum += pfVal;
           if (subject === 'J') portfolio.jSum += pfVal; else portfolio.pSum += pfVal;
           if (!portfolioKeys[clientKey]) {
@@ -8898,7 +8902,13 @@ function renderNplPage() {
     const nplAll = sumBy(trueNplGroups, g => g.nplSum);
     const nplJ = sumBy(trueLegalNpl, g => g.nplSum), nplP = sumBy(trueIndivNpl, g => g.nplSum);
     setT('ndPfTotal', pfOk ? fm(pf.sum) : '—');
-    setT('ndPfCount', pfOk ? pf.clients + ' клиентов' : 'нет полного файла портфеля');
+    {
+      let when = '';
+      if (pf && pf.date) { const d = new Date(pf.date); if (!isNaN(d.getTime())) when = ' · файл от ' + d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+      let warn = '';
+      if (pf && (Number(pf.skipN) > 0 || Number(pf.textN) > 0)) warn = ' · ⚠ пропущено строк: ' + (Number(pf.skipN) || 0) + (pf.skipSum ? ' на ' + fm(pf.skipSum) : '') + (pf.textN ? ', текстовых сумм: ' + pf.textN : '');
+      setT('ndPfCount', pfOk ? pf.clients + ' клиентов · ' + (pf.loans || 0) + ' кредитов' + when + warn : 'нет полного файла портфеля');
+    }
     setT('ndPfJ', pfOk ? fm(pf.jSum) : '—'); setT('ndPfJc', pfOk ? pf.jClients + ' клиентов' : '');
     setT('ndPfP', pfOk ? fm(pf.pSum) : '—'); setT('ndPfPc', pfOk ? pf.pClients + ' клиентов' : '');
     setT('ndNplTotal', fm(nplAll));
@@ -9611,10 +9621,11 @@ function stBuildRows(vi) {
     const visToday = vis.filter(d => stDayKey(d) === todayKey).length;
     const last = vis.reduce((m, d) => (!m || d > m) ? d : m, null);
 
-    let openPf = 0, noContact = 0, nplCnt = 0, g90 = 0, g90NoLegal = 0, loansCnt = 0;
+    let openPf = 0, openNpl = 0, noContact = 0, nplCnt = 0, g90 = 0, g90NoLegal = 0, loansCnt = 0;
     const cats = { fpd: 0, spd: 0, tpd: 0, exp: 0, npl: 0 };
     groups.forEach(function(g) {
       openPf += stPf(g);
+      openNpl += Number(g.nplSum) || 0;
       loansCnt += g.loans.length;
       const c = nplRiskCategory(g);
       if (c) cats[c]++;
@@ -9644,7 +9655,7 @@ function stBuildRows(vi) {
 
     return {
       id: id, user: user, name: nplCollectorLabel(id), s: s, planCnt: planCnt, groups: groups.length, loansCnt: loansCnt,
-      openPf: openPf, planPf: planPf, retCnt: s.closed, retPf: ar.pf, dayCnt: s.today.closed, dayPf: ar.dayPf,
+      openPf: openPf, openNpl: openNpl, planPf: planPf, retCnt: s.closed, retPf: ar.pf, dayCnt: s.today.closed, dayPf: ar.dayPf,
       pct: pctCl, pctCl: pctCl, pctPf: pctPf, nplShare: nplShare, nplCnt: nplCnt,
       cats: cats, expNpl: groups.filter(g => g.maxDays >= 60 && g.maxDays < 90).length,
       g90NoLegal: g90NoLegal, noLegal: getNplNoLegalGroups(id).length, noContact: noContact,
@@ -10298,14 +10309,14 @@ function stRegistryRows() {
     const pin = String(g.pin || g.key || '').replace(/\s+/g, '');
     const rest = mib.debtRemaining === undefined || mib.debtRemaining === '' ? '' : (isFinite(Number(String(mib.debtRemaining).replace(/\s/g, '').replace(',', '.'))) ? Number(String(mib.debtRemaining).replace(/\s/g, '').replace(',', '.')) : String(mib.debtRemaining));
     const need = [];
-    if (d >= 60 && !f.courtAny) need.push('передать в суд');
-    if (d >= 80 && !f.order && !f.mib) need.push('получить приказ');
-    if (d >= 90 && !f.mib) need.push('передать в МИБ');
+    if (d >= 50 && !f.courtAny) need.push('передать в суд');
+    if (d >= 75 && !f.order && !f.mib) need.push('получить решение суда');
+    if (d >= 85 && !f.mib) need.push('передать в МИБ');
     out.push({
       key: g.key, client: g.clientName || '', pinfl: pin.length >= 12 ? pin : '', inn: pin.length && pin.length < 12 ? pin : '',
       phone: g.phoneJoined || '', collector: id ? nameOf(id) : 'Не назначен', loans: g.loans.length, days: d,
       stage: d >= 90 ? 'Legal 90+' : d >= 60 ? 'Hard 60–89' : 'Soft 1–59',
-      overdue: Number(g.overdueBalanceSum) || 0, overInt: Number(g.overdueInterestSum) || 0, debt: Number(g.totalDebtSum) || 0, pf: stPf(g),
+      npl: Number(g.nplSum) || 0, overdue: Number(g.overdueBalanceSum) || 0, overInt: Number(g.overdueInterestSum) || 0, debt: Number(g.totalDebtSum) || 0, pf: stPf(g),
       nv: vs.length, lastVisit: last, noVisit: last ? Math.round((today - last) / 86400000) : null,
       leg: f.mib ? 'МИБ' : f.order ? 'Приказ есть' : f.courtAny ? 'Суд идёт' : 'Нет суда',
       court: court.caseStatus || '', order: g.courtOrderNumberJoined || '',
@@ -10400,14 +10411,14 @@ async function exportNplRegistryExcel() {
     data.forEach(function(r) {
       const e = by[r.collector] || (by[r.collector] = { name: r.collector, n: 0, pf: 0, s: [0, 0, 0], sp: [0, 0, 0], no60: 0, no80: 0, no90: 0, m90: 0 });
       e.n++; e.pf += r.pf; const si = r.days >= 90 ? 2 : r.days >= 60 ? 1 : 0; e.s[si]++; e.sp[si] += r.pf;
-      if (r.days >= 60 && r.leg === 'Нет суда') e.no60++;
-      if (r.days >= 80 && (r.leg === 'Нет суда' || r.leg === 'Суд идёт')) e.no80++;
-      if (r.days >= 90) { if (r.leg === 'МИБ') e.m90++; else e.no90++; }
+      if (r.days >= 50 && r.leg === 'Нет суда') e.no60++;
+      if (r.days >= 75 && (r.leg === 'Нет суда' || r.leg === 'Суд идёт')) e.no80++;
+      if (r.days >= 85) { if (r.leg === 'МИБ') e.m90++; else e.no90++; }
     });
     const L = Object.keys(by).map(k => by[k]).sort((a, b) => (b.no60 + b.no80 + b.no90) - (a.no60 + a.no80 + a.no90));
-    const sc = [['Взыскатель (ФИО)', 24], ['Клиентов', 10], ['Портфель, млн', 13], ['Soft кл.', 9], ['Soft, млн', 11], ['Hard кл.', 9], ['Hard, млн', 11], ['Legal кл.', 9], ['Legal, млн', 11], ['60+ без суда', 11], ['80+ без приказа', 12], ['90+ без МИБ', 11], ['90+ с МИБ', 10], ['Юр. готовность', 16]];
+    const sc = [['Взыскатель (ФИО)', 24], ['Клиентов', 10], ['Портфель, млн', 13], ['Soft кл.', 9], ['Soft, млн', 11], ['Hard кл.', 9], ['Hard, млн', 11], ['Legal кл.', 9], ['Legal, млн', 11], ['ИСК 50+ не в суде', 12], ['РЕШЕНИЕ 75+ нет решения', 14], ['МИБ 85+ не в МИБ', 12], ['МИБ 85+ в МИБ', 11], ['Юр. готовность', 16]];
     const sv = wb.addWorksheet('Свод по взыскателям', { properties: { tabColor: { argb: NAVY } }, views: [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false, zoomScale: 95 }] });
-    banner(sv, sc.length, 'Свод по взыскателям — просрочка, портфель, юридический статус', 'Дата выгрузки: ' + todayRu + ' · Soft 1–59 · Hard 60–89 · Legal 90+ дней · Юр. готовность = доля клиентов 90+, переданных в МИБ');
+    banner(sv, sc.length, 'Свод по взыскателям — просрочка, портфель, юридический статус', 'Дата выгрузки: ' + todayRu + ' · Soft 1–59 · Hard 60–89 · Legal 90+ дней · Юр. готовность = доля клиентов 85+, переданных в МИБ · черты: ИСК 50+, РЕШЕНИЕ 75+, МИБ 85+');
     headRow(sv, 4, sc, 32);
     const rg = (col) => `Клиенты!$${col}$${a0}:$${col}$${z0}`;
     const grp = { 4: 'FFE3F0FB', 5: 'FFE3F0FB', 6: 'FFFCEFD2', 7: 'FFFCEFD2', 8: 'FFF9DCDC', 9: 'FFF9DCDC' };
@@ -10424,10 +10435,10 @@ async function exportNplRegistryExcel() {
         { formula: `SUMIFS(${rg('M')},${rg('F')},${A},${rg('I')},"Hard*")/1000000`, result: e.sp[1] / 1e6 },
         { formula: `COUNTIFS(${rg('F')},${A},${rg('I')},"Legal*")`, result: e.s[2] },
         { formula: `SUMIFS(${rg('M')},${rg('F')},${A},${rg('I')},"Legal*")/1000000`, result: e.sp[2] / 1e6 },
-        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=60",${rg('Q')},"Нет суда")`, result: e.no60 },
-        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=80",${rg('Q')},"Нет суда")+COUNTIFS(${rg('F')},${A},${rg('H')},">=80",${rg('Q')},"Суд идёт")`, result: e.no80 },
-        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=90",${rg('Q')},"<>МИБ")`, result: e.no90 },
-        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=90",${rg('Q')},"МИБ")`, result: e.m90 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=50",${rg('Q')},"Нет суда")`, result: e.no60 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=75",${rg('Q')},"Нет суда")+COUNTIFS(${rg('F')},${A},${rg('H')},">=75",${rg('Q')},"Суд идёт")`, result: e.no80 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=85",${rg('Q')},"<>МИБ")`, result: e.no90 },
+        { formula: `COUNTIFS(${rg('F')},${A},${rg('H')},">=85",${rg('Q')},"МИБ")`, result: e.m90 },
         { formula: `IF(L${r}+M${r}=0,0,M${r}/(L${r}+M${r}))`, result: ready(e) }];
       cells.forEach(function(v, i) {
         const c = sv.getCell(r, i + 1); c.value = v; c.font = fnt({ bold: i === 0 }); c.border = bd;
@@ -10551,37 +10562,47 @@ function stLegalFlags(g) {
   const courtAny = !!(g.courtOrderNumberJoined || cs || ((allNplCourt.files || {})[g.key] || []).length);
   return { mib: mib, order: order, courtAny: courtAny || order || mib };
 }
+// Три линии: ИСК (50+), РЕШЕНИЕ СУДА (75+), МИБ (85+)
+const ST_LEG_LINES = [
+  { k: 'isk', title: 'ИСК — подача в суд', days: 50, yes: 'Передано в суд', no: 'Не передано' },
+  { k: 'res', title: 'РЕШЕНИЕ СУДА — приказ', days: 75, yes: 'Приказ получен', no: 'Решения нет' },
+  { k: 'mib', title: 'МИБ — исполнение', days: 85, yes: 'Передано в МИБ', no: 'Не передано в МИБ' }
+];
 function stLegalCalc(activeRows) {
+  const mk = () => ({ iskYes: [], iskNo: [], resYes: [], resNo: [], mibYes: [], mibNo: [] });
   const byId = {};
-  activeRows.forEach(r => { byId[r.id] = { id: r.id, name: r.name, no60: [], no80: [], no90: [], with90: [], seg: { none: [], court: [], order: [], mib: [] }, all90: 0 }; });
-  const tot = { no60: [], no80: [], no90: [], with90: [], seg: { none: [], court: [], order: [], mib: [] } };
+  activeRows.forEach(r => { const o = mk(); o.id = r.id; o.name = r.name; byId[r.id] = o; });
+  const tot = mk();
   getNplGroupsCached().forEach(function(g) {
     const id = String(allNplAssignments[g.key] || '').trim();
     const e = byId[id];
     if (!e || !stGroupBelongs(g, id)) return;
     const d = Number(g.maxDays) || 0;
-    if (d < 60) return;
+    if (d < 50) return;
     const f = stLegalFlags(g);
     const put = (k) => { e[k].push(g); tot[k].push(g); };
-    if (!f.courtAny) put('no60');
-    if (d >= 80 && !f.order && !f.mib) put('no80');
-    if (d >= 90) {
-      e.all90++;
-      if (!f.mib) put('no90'); else put('with90');
-      const s = f.mib ? 'mib' : f.order ? 'order' : f.courtAny ? 'court' : 'none';
-      e.seg[s].push(g); tot.seg[s].push(g);
-    }
+    put(f.courtAny ? 'iskYes' : 'iskNo');
+    if (d >= 75) put(f.order || f.mib ? 'resYes' : 'resNo');
+    if (d >= 85) put(f.mib ? 'mibYes' : 'mibNo');
   });
-  const list = Object.keys(byId).map(k => byId[k]).filter(e => e.no60.length + e.no80.length + e.all90 > 0);
-  list.forEach(e => { e.ready = e.all90 ? e.with90.length / e.all90 * 100 : null; e.bad = e.no60.length + e.no80.length + e.no90.length; });
-  list.sort((a, b) => (b.bad - a.bad) || a.name.localeCompare(b.name));
-  return { list: list, tot: tot };
+  const fin = e => {
+    e.nIsk = e.iskYes.length + e.iskNo.length; e.nRes = e.resYes.length + e.resNo.length; e.nMib = e.mibYes.length + e.mibNo.length;
+    e.total = e.nIsk + e.nRes + e.nMib;
+    e.bad = e.iskNo.length + e.resNo.length + e.mibNo.length;
+    e.disc = e.total ? (e.total - e.bad) / e.total * 100 : null;
+  };
+  const list = Object.keys(byId).map(k => byId[k]);
+  list.forEach(fin); fin(tot);
+  const l2 = list.filter(e => e.total > 0);
+  l2.sort((a, b) => (b.bad - a.bad) || a.name.localeCompare(b.name));
+  return { list: l2, tot: tot };
 }
 function stLegSum(gs) { return gs.reduce((a, g) => a + stPf(g), 0); }
 
 const ST_LEG_TITLES = {
-  no60: '60+ дней — не передано в суд', no80: '80+ дней — нет приказа суда', no90: '90+ дней — нет МИБ', with90: '90+ дней — МИБ есть',
-  'seg:none': '90+: суда нет', 'seg:court': '90+: суд идёт', 'seg:order': '90+: приказ есть', 'seg:mib': '90+: МИБ'
+  iskNo: 'ИСК 50+ — не передано в суд', iskYes: 'ИСК 50+ — передано в суд',
+  resNo: 'РЕШЕНИЕ 75+ — решения суда нет', resYes: 'РЕШЕНИЕ 75+ — приказ получен',
+  mibNo: 'МИБ 85+ — не передано в МИБ', mibYes: 'МИБ 85+ — передано в МИБ'
 };
 function stLegOpen(kind, idEnc) {
   if (!stLegLast) return;
@@ -10631,38 +10652,40 @@ function stLegalHtml(activeRows) {
   const T = C.tot;
   const card = (kind, label, gs, color) => `<div class="st-k" style="cursor:pointer;" onclick="stLegOpen('${kind}','')"><span>${label}</span><b style="color:${color};">${gs.length}</b><span>клиентов · ${stMoney(stLegSum(gs))}</span></div>`;
   const kp = `<div class="st-kpis" style="padding:0 14px;margin-bottom:10px;">
-    ${card('no60', '60+ не передано в суд', T.no60, '#C0392B')}
-    ${card('no80', '80+ нет приказа суда', T.no80, '#BA7517')}
-    ${card('no90', '90+ нет МИБ', T.no90, '#791F1F')}
+    ${card('iskNo', 'ИСК 50+: не в суде', T.iskNo, '#C0392B')}
+    ${card('resNo', 'РЕШЕНИЕ 75+: нет решения', T.resNo, '#BA7517')}
+    ${card('mibNo', 'МИБ 85+: не в МИБ', T.mibNo, '#791F1F')}
   </div>`;
-  const segDef = [['none', 'Нет суда', '#E24B4A'], ['court', 'Суд идёт', '#EF9F27'], ['order', 'Приказ есть', '#378ADD'], ['mib', 'МИБ', '#3B6D11']];
-  const n90 = segDef.reduce((a, s) => a + T.seg[s[0]].length, 0);
-  const seg = n90 ? `<div style="padding:0 14px 12px;">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:5px;">Путь клиентов 90+ (${n90}): суд → приказ → МИБ</div>
-    <div style="display:flex;height:26px;border-radius:8px;overflow:hidden;background:#E4E7EC;">
-      ${segDef.map(s => { const n = T.seg[s[0]].length; return n ? `<div title="${s[1]}: ${n}" onclick="stLegOpen('seg:${s[0]}','')" style="flex:${n};background:${s[2]};color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:26px;">${n}</div>` : ''; }).join('')}
-    </div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:5px;font-size:11.5px;color:var(--muted);">${segDef.map(s => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${s[2]};margin-right:4px;"></i>${s[1]} ${T.seg[s[0]].length}</span>`).join('')}</div>
-  </div>` : '';
+  const lines = ST_LEG_LINES.map(function(ln) {
+    const yes = T[ln.k + 'Yes'], no = T[ln.k + 'No'], n = yes.length + no.length;
+    const seg = (arr, kind, col, lab) => arr.length ? `<div title="${lab}: ${arr.length}" onclick="stLegOpen('${kind}','')" style="flex:${arr.length};background:${col};color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;min-width:30px;white-space:nowrap;padding:0 6px;">${lab} ${arr.length}</div>` : '';
+    return `<div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:13px;margin-bottom:5px;"><b>${ln.title}</b><span style="font-size:11.5px;color:var(--muted);">черта: ${ln.days}+ дней · всего ${n} клиентов</span></div>
+      ${n ? `<div style="display:flex;height:28px;border-radius:8px;overflow:hidden;background:#E4E7EC;">${seg(yes, ln.k + 'Yes', '#3B6D11', ln.yes)}${seg(no, ln.k + 'No', '#E24B4A', ln.no)}</div>` : '<div style="font-size:12px;color:var(--muted);">Клиентов нет.</div>'}
+    </div>`;
+  }).join('');
+  const seg = `<div style="padding:0 14px 4px;">${lines}</div>`;
   const shown = stLegAll ? C.list : C.list.slice(0, 6);
   const num = (kind, e, arr, cls) => arr.length ? `<a href="javascript:void(0)" onclick="stLegOpen('${kind}','${encodeURIComponent(e.id)}')" class="${cls}" style="text-decoration:none;font-weight:800;">${arr.length}</a>` : '<span class="dash">0</span>';
   const rowsHtml = shown.map(function(e) {
-    const rd = e.ready == null ? '<span class="dash">—</span>' : `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;"><div style="width:54px;height:7px;border-radius:4px;background:#E4E7EC;overflow:hidden;"><i style="display:block;height:100%;width:${Math.round(e.ready)}%;background:${e.ready >= 50 ? '#3B6D11' : e.ready >= 20 ? '#BA7517' : '#A32D2D'};"></i></div><b>${Math.round(e.ready)}%</b></div>`;
-    return `<div class="stl-t"><div style="text-align:left;font-weight:700;">${stEsc(e.name)}</div><div>${num('no60', e, e.no60, 'bad')}</div><div>${num('no80', e, e.no80, 'bad')}</div><div>${num('no90', e, e.no90, 'bad')}</div><div>${num('with90', e, e.with90, '')}</div><div>${rd}</div></div>`;
+    const rd = e.disc == null ? '<span class="dash">—</span>' : `<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;"><div style="width:54px;height:7px;border-radius:4px;background:#E4E7EC;overflow:hidden;"><i style="display:block;height:100%;width:${Math.round(e.disc)}%;background:${e.disc >= 50 ? '#3B6D11' : e.disc >= 20 ? '#BA7517' : '#A32D2D'};"></i></div><b>${Math.round(e.disc)}%</b></div>`;
+    return `<div class="stl-t"><div style="text-align:left;font-weight:700;">${stEsc(e.name)}</div><div>${e.nIsk || '<span class="dash">0</span>'}</div><div>${num('iskNo', e, e.iskNo, 'bad')}</div><div>${e.nRes || '<span class="dash">0</span>'}</div><div>${num('resNo', e, e.resNo, 'bad')}</div><div>${e.nMib || '<span class="dash">0</span>'}</div><div>${num('mibNo', e, e.mibNo, 'bad')}</div><div>${rd}</div></div>`;
   }).join('');
+  const totRow = `<div class="stl-t" style="background:#F6F7F9;font-weight:800;"><div style="text-align:left;">Итого</div><div>${T.nIsk}</div><div class="bad">${T.iskNo.length}</div><div>${T.nRes}</div><div class="bad">${T.resNo.length}</div><div>${T.nMib}</div><div class="bad">${T.mibNo.length}</div><div>${T.disc == null ? '—' : Math.round(T.disc) + '%'}</div></div>`;
   return `<div class="st-table" style="margin-bottom:14px;">
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:12px 14px 8px;">
-      <b style="font-size:15px;">Юридический статус портфеля</b>
-      <span style="font-size:12px;color:var(--muted);">по данным МИБ и суда, внесённым сотрудниками · нажмите на число — список клиентов</span>
+      <b style="font-size:15px;">Юридический путь портфеля</b>
+      <span style="font-size:12px;color:var(--muted);">по данным МИБ и суда, внесённым сотрудниками · нажмите на число или цвет — список клиентов</span>
     </div>
     ${kp}${seg}
-    <style>.stl-t{display:grid;grid-template-columns:minmax(150px,2fr) repeat(4,minmax(60px,.8fr)) minmax(110px,1.2fr);gap:6px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:13px;text-align:right}.stl-t.h{font-size:11.5px;color:var(--muted);font-weight:700}</style>
-    <div style="overflow-x:auto;"><div style="min-width:600px;">
-      <div class="stl-t h"><div style="text-align:left;">Взыскатель</div><div>60+ без суда</div><div>80+ без приказа</div><div>90+ без МИБ</div><div>90+ с МИБ</div><div>Юр. готовность</div></div>
-      ${rowsHtml || '<div style="padding:12px 14px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);">Клиентов 60+ нет.</div>'}
+    <style>.stl-t{display:grid;grid-template-columns:minmax(150px,2fr) repeat(6,minmax(54px,.7fr)) minmax(110px,1.1fr);gap:6px;align-items:center;padding:8px 14px;border-top:1px solid var(--line);font-size:13px;text-align:right}.stl-t.h{font-size:11.5px;color:var(--muted);font-weight:700}</style>
+    <div style="overflow-x:auto;"><div style="min-width:720px;">
+      <div class="stl-t h"><div style="text-align:left;">Взыскатель</div><div>50+</div><div>Не в суде</div><div>75+</div><div>Нет решения</div><div>85+</div><div>Не в МИБ</div><div>Дисциплина</div></div>
+      ${rowsHtml || '<div style="padding:12px 14px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);">Клиентов 50+ нет.</div>'}
+      ${rowsHtml ? totRow : ''}
     </div></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);">
-      <span>Юр. готовность = доля клиентов 90+, переданных в МИБ. Таблица отсортирована от худших. «Приказ» — внесён номер приказа или статус «Решение вынесено».</span>
+      <span>Дисциплина = доля этапов, пройденных вовремя: (передано + решения + МИБ) / (50+ + 75+ + 85+). Клиент 85+ входит во все три линии. «Приказ» — внесён номер приказа или статус «Решение вынесено».</span>
       ${C.list.length > 6 ? `<button type="button" class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" onclick="stLegToggleAll()">${stLegAll ? 'Свернуть' : 'Показать всех (' + C.list.length + ')'}</button>` : ''}
     </div>
   </div>`;
@@ -10774,9 +10797,10 @@ function stExportLegalSheets(wb, rowsAll, rows, range) {
   const act = rows.filter(r => r.groups > 0);
   const C = stLegalCalc(act);
   const mln = v => Math.round((Number(v) || 0) / 1e5) / 10;
-  const h1 = ['Взыскатель', '60+ без суда', 'Сумма (млн)', '80+ без приказа', 'Сумма (млн)', '90+ без МИБ', 'Сумма (млн)', '90+ с МИБ', 'Юр. готовность, %'];
-  const d1 = C.list.map(e => [e.name, e.no60.length, mln(stLegSum(e.no60)), e.no80.length, mln(stLegSum(e.no80)), e.no90.length, mln(stLegSum(e.no90)), e.with90.length, e.ready == null ? '' : Math.round(e.ready)]);
-  d1.push(['ВСЕГО', C.tot.no60.length, mln(stLegSum(C.tot.no60)), C.tot.no80.length, mln(stLegSum(C.tot.no80)), C.tot.no90.length, mln(stLegSum(C.tot.no90)), C.tot.with90.length, '']);
+  const h1 = ['Взыскатель', 'ИСК 50+', 'Не в суде', 'Сумма (млн)', 'РЕШЕНИЕ 75+', 'Нет решения', 'Сумма (млн)', 'МИБ 85+', 'Не в МИБ', 'Сумма (млн)', 'Дисциплина, %'];
+  const rw = e => [e.name, e.nIsk, e.iskNo.length, mln(stLegSum(e.iskNo)), e.nRes, e.resNo.length, mln(stLegSum(e.resNo)), e.nMib, e.mibNo.length, mln(stLegSum(e.mibNo)), e.disc == null ? '' : Math.round(e.disc)];
+  const d1 = C.list.map(rw);
+  const tr = rw(C.tot); tr[0] = 'ВСЕГО'; d1.push(tr);
   XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([h1].concat(d1)), 'Юр. статус');
   const S = stStagesCalc(range);
   const h2 = ['Стадия', 'Клиентов', 'Портфель (млн)', 'Вошло', 'Вышло', 'Итого ±'];
@@ -10810,18 +10834,18 @@ function renderNplStatsPanel() {
   const archRows = rows.filter(r => r.groups === 0);
 
   const T = activeRows.reduce((a, r) => {
-    a.assigned += r.planCnt; a.closed += r.retCnt; a.openPf += r.openPf; a.retPf += r.retPf; a.planPf += r.planPf;
+    a.assigned += r.planCnt; a.closed += r.retCnt; a.openPf += r.openPf; a.openNpl += r.openNpl; a.retPf += r.retPf; a.planPf += r.planPf;
     a.clients += r.groups; a.loans += r.loansCnt; a.noContact += r.noContact; a.visToday += r.visToday;
     if (r.last && stDayKey(r.last) === stDayKey(now)) a.activeToday++;
     return a;
-  }, { assigned: 0, closed: 0, openPf: 0, retPf: 0, planPf: 0, clients: 0, loans: 0, noContact: 0, visToday: 0, activeToday: 0 });
+  }, { assigned: 0, closed: 0, openPf: 0, openNpl: 0, retPf: 0, planPf: 0, clients: 0, loans: 0, noContact: 0, visToday: 0, activeToday: 0 });
   const effPct = T.assigned ? T.closed / T.assigned * 100 : 0;
   const retShare = T.planPf ? T.retPf / T.planPf * 100 : 0;
 
   const kpi = (l, v, sub, color) => `<div class="st-k"><span>${l}</span><b${color ? ' style="color:' + color + ';"' : ''}>${v}</b><span>${sub}</span></div>`;
   const kpis = `
     <div class="st-kpis">
-      ${kpi('Общий портфель взыскания', stMoney(T.openPf), T.loans + ' анкет · ' + T.clients + ' клиентов')}
+      ${kpi('NPL в работе (Всего NPL по файлу)', stMoney(T.openNpl), 'остаток кредитов ' + stMoney(T.openPf) + ' · ' + T.loans + ' анкет · ' + T.clients + ' клиентов')}
       ${kpi('Сумма возврата (факт)', stMoney(T.retPf), (archRowsLoaded() ? '▲ ' + nplFmtPct(retShare) + '% от портфеля плана' : 'считаю по архиву…'), '#1E7B34')}
       ${kpi('Эффективность закрытия', nplFmtPct(effPct) + '%', 'закрыто ' + T.closed + ' из ' + T.assigned + ' клиентов')}
       ${kpi('Проблемная зона', T.noContact, 'без контакта 7+ дней — требуют внимания', T.noContact ? '#C0392B' : '')}
