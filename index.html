@@ -16755,6 +16755,7 @@ function mbHomeHtml() {
     <div class="m-card"><div class="m-ring">${mbRing([[done.length, '#C4231A'], [retry.length, '#EF9F27'], [left, '#E4E5EA']], houses || 1)}<div class="m-lg"><div class="m-mu">Домов в махалле: <b style="color:#141414">${mbThousands(houses)}</b></div><div><span><i style="background:#C4231A"></i>Опрошено</span><b>${done.length}</b></div><div><span><i style="background:#EF9F27"></i>Зайти повторно</span><b>${retry.length}</b></div><div><span><i style="background:#E4E5EA"></i>Осталось</span><b>${mbThousands(left)}</b></div></div></div></div>
     <div class="m-two"><div class="m-stat"><div class="m-n">${un}</div><div class="m-mu">безработных 18+</div></div><div class="m-stat"><div class="m-n">${biz}</div><div class="m-mu">интерес к бизнесу</div></div><div class="m-stat"><div class="m-n">${fin}</div><div class="m-mu">интерес к поддержке</div></div><div class="m-stat"><div class="m-n">${done.length}</div><div class="m-mu">всего опрошено</div></div></div>
     <button class="m-big" onclick="mbStartSurvey()">${appIcon('plus', 20)}<span>Новый дом</span></button>
+    <button class="m-big" style="background:#fff;color:#141414;border:1.5px solid #141414" onclick="mbStartProject()">${appIcon('plus', 20)}<span>Новый микропроект</span></button>
     ${retry.length ? `<div class="m-card"><h3>Зайти повторно</h3>${retry.map(v => `<div class="m-vit"><span class="m-sp" style="background:#EF9F27"></span><div style="flex:1;min-width:0"><b>${mbX(v.address)}</b><div class="m-mu">${mbFmtDT(v.finishedAt)}</div></div><button class="m-btn s sm" onclick="mbStartSurvey(false,'${encodeURIComponent(v.addressKey || '')}','${encodeURIComponent(v.address || '')}')">Опросить сейчас</button></div>`).join('')}</div>` : ''}
     ${S.loading && !S.loaded ? '<div class="m-mu" style="text-align:center;padding:20px">Загрузка...</div>' : ''}
   </div>`;
@@ -16906,11 +16907,12 @@ async function mbCloseSurvey(keep) {
   mbQ('mbSurvey').classList.remove('on'); mbQ('mbSurvey').innerHTML = '';
   document.body.classList.remove('mb-surveying');
   mbGpsStop(); mbStopCamera();
+  if (MBM.state.draft && MBM.state.draft.pOnly) { MBM.state.draft = MBM.state.stash || null; MBM.state.stash = null; keep = true; }
   if (!keep) { MBM.state.draft = null; await mbKvDel('draft:' + mbUserKey()); }
   mbRender();
 }
 let mbSaveT = null;
-function mbSave() { clearTimeout(mbSaveT); mbSaveT = setTimeout(() => { if (MBM.state.draft) mbKvSet('draft:' + mbUserKey(), MBM.state.draft); }, 350); }
+function mbSave() { clearTimeout(mbSaveT); mbSaveT = setTimeout(() => { if (MBM.state.draft && !MBM.state.draft.pOnly) mbKvSet('draft:' + mbUserKey(), MBM.state.draft); }, 350); }
 function mbSet(fn) { const d = MBM.state.draft; fn(d); mbSave(); }
 
 // ---------- проверки (зеркало серверных) ----------
@@ -16950,6 +16952,7 @@ function mbCheck(d, i) { // [ok, text]
   return [true, ''];
 }
 function mbVisibleSections(d) {
+  if (d.pOnly) return [0, 10];
   if (d.ownerHere === false) return [0, 1, 2, 9];
   const s = [0, 1, 2, 3, 4, 5, 6]; if (d.unemployedCount > 0) s.push(7); s.push(8, 9); s.push(10); return s;
 }
@@ -16963,10 +16966,10 @@ function mbRenderSurvey(keepScroll) {
   const vis = mbVisibleSections(d); const okCount = vis.filter(i => mbCheck(d, i)[0]).length;
   const prob = mbFirstProblem(d);
   const secs = vis.map((i, n) => `<div class="m-sec ${mbCheck(d, i)[0] ? 'ok' : ''}" id="mbSec${i}"><div class="m-sh"><span class="m-sn">${n + 1}</span><b>${MBM.titles[i]}</b><span class="m-ck">${mbCheck(d, i)[0] ? '✓' : ''}</span></div>${mbSecBody(i, d)}${S.issues && S.issues.sec === i ? `<div class="m-err">${mbX(S.issues.text)}</div>` : ''}</div>`).join('');
-  el.innerHTML = `<div class="m-svtop"><button class="m-x" onclick="mbExit()" aria-label="Закрыть">${appIcon('x', 18)}</button><div style="flex:1;min-width:0"><div class="m-svh">${d.retry ? 'Зайти повторно' : 'Новый дом'}</div><div class="m-svs">${mbX(d.mahalla)} · заполнено ${okCount} из ${vis.length}</div></div></div>
+  el.innerHTML = `<div class="m-svtop"><button class="m-x" onclick="mbExit()" aria-label="Закрыть">${appIcon('x', 18)}</button><div style="flex:1;min-width:0"><div class="m-svh">${d.pOnly ? 'Новый микропроект' : d.retry ? 'Зайти повторно' : 'Новый дом'}</div><div class="m-svs">${mbX(d.mahalla)} · заполнено ${okCount} из ${vis.length}</div></div></div>
   <div class="m-svbar"><i style="width:${Math.round(okCount / vis.length * 100)}%"></i></div>
   <div class="m-svmain" id="mbSvMain">${secs}</div>
-  <div class="m-svfoot">${prob ? `<div class="m-hint">${mbX(prob[1])}</div>` : '<div class="m-hint"></div>'}<button class="m-big blk" ${prob || S.busy ? 'disabled' : ''} onclick="mbSubmit()">${S.busy ? 'Отправка...' : d.retry ? 'Сохранить «зайти повторно»' : 'Завершить визит'}</button></div>`;
+  <div class="m-svfoot">${prob ? `<div class="m-hint">${mbX(prob[1])}</div>` : '<div class="m-hint"></div>'}<button class="m-big blk" ${prob || S.busy ? 'disabled' : ''} onclick="mbSubmit()">${S.busy ? 'Отправка...' : d.pOnly ? 'Сохранить проект' : d.retry ? 'Сохранить «зайти повторно»' : 'Завершить визит'}</button></div>`;
   if (keepScroll && mbQ('mbSvMain')) mbQ('mbSvMain').scrollTop = prevScroll;
 }
 function mbRef() { mbRenderSurvey(true); }
@@ -17096,8 +17099,8 @@ function mbProjBody(d) {
   const chips = (arr, cur, k) => `<div class="m-chips">${arr.map(([a, l]) => `<button class="m-chip${cur === a ? ' on' : ''}" onclick="mbProjPick('${k}','${a}')">${l}</button>`).join('')}</div>`;
   const money = (id, key, val, ph) => inp(id, mbThousands(val), ph, `inputmode="numeric" oninput="var c=this.value.replace(/\\D/g,'');this.value=mbThousands(c);mbProjSet('${key}',c);mbLive()"`);
   if (d.retry) return '';
-  const toggle = `<div class="m-seg"><button class="${p.on ? '' : 'on'}" onclick="mbProjToggle(false)">Нет проекта</button><button class="${p.on ? 'on' : ''}" onclick="mbProjToggle(true)">Добавить проект</button></div>`;
-  if (!p.on) return toggle;
+  const toggle = d.pOnly ? '' : `<div class="m-seg"><button class="${p.on ? '' : 'on'}" onclick="mbProjToggle(false)">Нет проекта</button><button class="${p.on ? 'on' : ''}" onclick="mbProjToggle(true)">Добавить проект</button></div>`;
+  if (!p.on && !d.pOnly) return toggle;
   const yr = new Date().getFullYear();
   return toggle + `
     <label>Название проекта${mbRq}</label>${inp('mbPjName', p.name, 'Например: теплица на 6 соток', `oninput="mbProjSet('name',this.value);mbLive()"`)}
@@ -17122,6 +17125,30 @@ async function mbProjPhoto(e) {
 }
 function mbOpenIndustry() { MBM.state.sheet = 'industry'; mbSheetSv(); }
 function mbOpenMonth() { MBM.state.sheet = 'month'; mbSheetSv(); }
+
+function mbStartProject() {
+  const S = MBM.state;
+  if (!S.mahallas.length) { alert('За вами не закреплена ни одна махалля'); return; }
+  if (S.draft && !S.draft.pOnly) S.stash = S.draft;
+  const p = mbProjNew(); p.on = true;
+  S.draft = { id: 'pr' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), pOnly: true, startedAt: Date.now(), mahalla: S.mah || '', addr: { type: 'house', street: '', house: '', flat: '' }, ownerHere: true, fio: '', pinfl: '', phone: '', people: [], finance: [], photos: [], location: null, retry: false, project: p };
+  S.issues = null; S.gpsErr = '';
+  mbQ('mbSurvey').classList.add('on'); document.body.classList.add('mb-surveying');
+  mbRenderSurvey();
+}
+async function mbSubmitProject() {
+  const S = MBM.state; const d = S.draft; if (S.busy) return;
+  const fix = await mbFinishLocation(); if (!fix) return;
+  d.location = fix; S.busy = true; mbRef();
+  const pr = d.project;
+  const project = { on: true, name: pr.name.trim(), initiator: pr.initiator.trim(), subject: pr.subject === 'МЧЖ' ? 'Юрлицо' : pr.subject, industry: pr.industry, description: pr.description.trim(), cost: Number(pr.cost) || 0, own: Number(pr.own) || 0, support: pr.support, jobs: pr.jobs, month: pr.month, year: pr.year, premises: pr.premises, assess: pr.assess };
+  let r = null;
+  try { r = await postWebAction({ webAction: 'saveMahallaProject', sessionId: localStorage.getItem('msbSessionId'), id: d.id, mahalla: d.mahalla, location: fix, project, projectPhotos: pr.photo ? [pr.photo.split(',')[1]] : [] }, 0); } catch (e) { r = null; }
+  S.busy = false;
+  if (!r) { mbRef(); alert('Нет связи с сервером. Проверьте интернет и нажмите «Сохранить проект» ещё раз.'); return; }
+  if (!r.success) { mbRef(); alert(r.message || 'Не удалось сохранить проект'); return; }
+  await mbCloseSurvey(false); mbGoTo('home'); alert('Микропроект сохранён');
+}
 
 // ---------- GPS ----------
 function mbGpsStart() {
@@ -17189,6 +17216,7 @@ async function mbSend(p) {
 async function mbSubmit() {
   const S = MBM.state; const d = S.draft; if (S.busy) return;
   const prob = mbFirstProblem(d); if (prob) return;
+  if (d.pOnly) return mbSubmitProject();
   const fix = await mbFinishLocation();
   if (!fix) return;
   d.location = fix; mbSave();
