@@ -16630,8 +16630,8 @@ const MBM = {
   wish: [['training','Обучение профессии'],['job','Стабильная работа'],['business','Открыть бизнес'],['abroad','Работа за границей'],['none','Нет желания']],
   fin: [['subsidy','Субсидия'],['loan','Ссуда'],['credit','Кредит'],['none','Не интересно']],
   slots: [['facade','Фасад с номером дома'],['yard','Двор или участок'],['resident','Житель у входа']],
-  titles: ['Махалля','Адрес','Владелец','Состав семьи','Приусадебный участок','Доход и статус дома','Интерес к бизнесу','Желание безработных','Субсидия, ссуда, кредит','Фото и локация'],
-  state: { tab: 'home', mah: '', mahallas: [], visits: [], rating: [], queue: [], draft: null, loaded: false, loading: false, filter: 'all', detail: null, err: '', gps: null, gpsWatch: null, sheet: null, busy: false, issues: null },
+  titles: ['Махалля','Адрес','Владелец','Состав семьи','Приусадебный участок','Доход и статус дома','Интерес к бизнесу','Желание безработных','Субсидия, ссуда, кредит','Фото','Новый микропроект'],
+  state: { phone: '', tg: null, pwd: null, locBusy: null, tab: 'home', mah: '', mahallas: [], visits: [], rating: [], queue: [], draft: null, loaded: false, loading: false, filter: 'all', detail: null, err: '', gps: null, gpsWatch: null, sheet: null, busy: false, issues: null },
 };
 const mbL = (arr, k) => { const r = arr.find(x => x[0] === k); return r ? r[1] : k; };
 const mbQ = id => document.getElementById(id);
@@ -16659,7 +16659,7 @@ function isMbShell() { return !!(currentUser && currentUser.role === 'MAHALLA_BA
 function renderMbNavbar() {
   const bar = mbQ('vzyskatelNavbar'); if (!bar) return;
   const b = (id, icon, label, fn) => `<button type="button" class="vzyskatel-nav-btn" id="mbNav_${id}" onclick="${fn}">${appIcon(icon, 20)}<span>${label}</span></button>`;
-  bar.innerHTML = b('home', 'home', 'Махалля', "mbGoTo('home')") + b('new', 'plus', 'Новый дом', 'mbStartSurvey()') + b('rating', 'star', 'Рейтинг', "mbGoTo('rating')") + b('history', 'clock', 'История', "mbGoTo('history')");
+  bar.innerHTML = b('home', 'home', 'Махалля', "mbGoTo('home')") + b('new', 'plus', 'Новый дом', 'mbStartSurvey()') + b('rating', 'star', 'Рейтинг', "mbGoTo('rating')") + b('history', 'clock', 'История', "mbGoTo('history')") + b('profile', 'user', 'Профиль', "mbGoTo('profile')");
 }
 
 async function mbEnter() {
@@ -16679,7 +16679,7 @@ async function mbLoad() {
   try {
     const r = await postWebAction({ webAction: 'mahallaMyData', sessionId: localStorage.getItem('msbSessionId') });
     if (!r || !r.success) throw new Error((r && r.message) || 'Не удалось загрузить данные');
-    S.mahallas = r.mahallas || []; S.visits = r.visits || []; S.rating = r.rating || []; S.loaded = true;
+    S.mahallas = r.mahallas || []; S.visits = r.visits || []; S.rating = r.rating || []; S.loaded = true; if (r.phone != null) S.phone = r.phone;
     if (!S.mahallas.find(m => m.name === S.mah)) S.mah = (S.mahallas[0] || {}).name || '';
     try { await mbKvSet('cache:' + mbUserKey(), r); } catch (e) {}
   } catch (e) {
@@ -16691,8 +16691,8 @@ async function mbLoad() {
 }
 
 function mbGoTo(tab) {
-  MBM.state.tab = tab;
-  ['home', 'rating', 'history'].forEach(t => { const b = mbQ('mbNav_' + t); if (b) b.classList.toggle('active', t === tab); });
+  MBM.state.tab = tab; if (tab === 'profile') mbTgLoad();
+  ['home', 'rating', 'history', 'profile'].forEach(t => { const b = mbQ('mbNav_' + t); if (b) b.classList.toggle('active', t === tab); });
   showPage('mbPage');
   mbRender();
 }
@@ -16717,13 +16717,14 @@ function mbRender() {
   const S = MBM.state;
   if (S.tab === 'home') root.innerHTML = mbHomeHtml();
   else if (S.tab === 'rating') root.innerHTML = mbRatingHtml();
+  else if (S.tab === 'profile') root.innerHTML = mbProfileHtml();
   else root.innerHTML = mbHistoryHtml();
 }
 
 function mbHeroHtml(title, sub, withSwitch) {
   const S = MBM.state; const name = (currentUser && (currentUser.fullName || currentUser.login)) || '';
   const ini = name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-  return `<div class="m-hero"><div class="m-hv"><div class="m-av">${mbX(ini)}</div><div style="flex:1;min-width:0"><div class="m-hn">${mbX(title)}</div><div class="m-sub">${mbX(sub)}</div></div><button class="m-out" onclick="logout()" aria-label="Выйти">${appIcon('logout', 18)}</button></div>
+  return `<div class="m-hero"><div class="m-hv"><div class="m-av">${currentUser && currentUser.photoUrl ? `<img src="${mbX(currentUser.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : mbX(ini)}</div><div style="flex:1;min-width:0"><div class="m-hn">${mbX(title)}</div><div class="m-sub">${mbX(sub)}</div></div></div>
     ${withSwitch ? `<button class="m-msw" onclick="mbOpenSheet('mah')"><span>${mbX(S.mah || 'Нет махалли')}</span>${appIcon('chevron', 16)}</button>` : ''}</div>`;
 }
 
@@ -16803,8 +16804,85 @@ function mbRenderSheet() {
 }
 function mbPickMah(enc) { MBM.state.mah = decodeURIComponent(enc); localStorage.setItem('mbMah:' + mbUserKey(), MBM.state.mah); mbCloseSheet(); mbRender(); }
 
+// ===================== ПРОФИЛЬ =====================
+function mbProfileHtml() {
+  const S = MBM.state; const u = currentUser || {}; const name = u.fullName || u.login || '';
+  const ini = name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const rec = (typeof getDeviceRecord === 'function') ? getDeviceRecord() : null;
+  const lang = (typeof currentAppLang !== 'undefined' && currentAppLang) || localStorage.getItem('msbAppLang') || 'ru';
+  const row = (ico, title, sub, fn) => `<button class="m-pick" style="min-height:56px;margin-top:8px" onclick="${fn}"><span style="display:flex;align-items:center;gap:10px">${appIcon(ico, 18)}<span><b style="font-weight:600">${title}</b><br><span class="m-mu">${sub}</span></span></span>${appIcon('chevron', 16)}</button>`;
+  const tg = S.tg === null ? 'Проверяем…' : S.tg ? 'Подключён' : 'Не подключён';
+  return `<div class="m-hero" style="text-align:center;padding-bottom:64px"><div class="m-av" style="width:84px;height:84px;font-size:28px;margin:0 auto 10px">${u.photoUrl ? `<img src="${mbX(u.photoUrl)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">` : mbX(ini)}</div><div class="m-hn">${mbX(name)}</div><div class="m-sub">Банкир махалли · ${mbX(u.login || '')}</div>
+    <input type="file" accept="image/*" id="mbProfPhotoIn" style="display:none" onchange="mbProfPhoto(event)"><button class="m-msw" style="width:auto;margin:12px auto 0;display:inline-flex;gap:8px" onclick="mbQ('mbProfPhotoIn').click()">${appIcon('camera', 16)}<span>Изменить фото</span></button><div class="m-sub" id="mbProfPhotoSt" style="margin-top:6px"></div></div>
+  <div class="m-vb">
+    <div class="m-card"><h3>Данные</h3><label class="m-mu">ФИО</label><div style="font-weight:600;margin-bottom:8px">${mbX(name)}</div><label class="m-mu">Логин</label><div style="font-weight:600">${mbX(u.login || '')}</div><div class="m-mu" style="margin-top:8px">ФИО и логин меняет администратор</div></div>
+    <div class="m-card"><h3>Контакты</h3><label class="m-mu">Телефон</label><div class="m-ph"><span>+998</span><input class="m-in" id="mbProfPhone" value="${mbX(S.phone || '')}" inputmode="numeric" maxlength="9" placeholder="90 123 45 67" oninput="this.value=this.value.replace(/\\D/g,'')"></div>
+      <label class="m-mu" style="display:block;margin-top:12px">Язык</label><div class="m-seg"><button class="${lang === 'ru' ? 'on' : ''}" onclick="mbProfLang('ru')">Русский</button><button class="${lang === 'uz' ? 'on' : ''}" onclick="mbProfLang('uz')">O‘zbekcha</button></div>
+      <div class="m-err" id="mbProfErr"></div><button class="m-big blk" style="margin-top:12px" onclick="mbProfSave()">Сохранить</button></div>
+    <div class="m-card"><h3>Безопасность</h3>
+      ${row('check', 'Сменить пароль', 'Минимум 8 символов, буква и цифра', 'mbOpenPwd()')}
+      ${row('fingerprint', 'PIN-код на этом телефоне', rec ? 'Включён' : 'Не настроен', rec ? 'mbPinOff()' : 'mbPinOn()')}
+      ${row('phone', 'Telegram', tg, 'mbTgToggle()')}</div>
+    <div class="m-card"><h3>Мои махалли</h3><div class="m-chips">${S.mahallas.length ? S.mahallas.map(m => `<span class="m-chip">${mbX(m.name)}</span>`).join('') : '<span class="m-mu">Не назначены</span>'}</div></div>
+    <button class="m-btn s" style="color:#B3261E;min-height:52px" onclick="logout()">Выйти из аккаунта</button>
+  </div>`;
+}
+async function mbProfPhoto(e) {
+  const f = e.target.files && e.target.files[0]; if (!f) return; const st = mbQ('mbProfPhotoSt'); if (st) st.textContent = 'Загрузка…';
+  try {
+    const r = await resizeImageFile(f, 480);
+    const res = await postWebAction({ webAction: 'uploadEmployeePhoto', sessionId: localStorage.getItem('msbSessionId'), base64: r.base64, mimeType: r.mimeType });
+    if (!res.success) { if (st) st.textContent = res.message || 'Не удалось сохранить фото'; return; }
+    currentUser.photoUrl = res.photoUrl; localStorage.setItem('msbUser', JSON.stringify(currentUser));
+    const rec = getDeviceRecord(); if (rec) { rec.photoUrl = res.photoUrl; saveDeviceRecord(rec); }
+    mbRender();
+  } catch (err) { if (st) st.textContent = 'Не удалось обработать фото'; }
+}
+function mbProfLang(l) { if (typeof setAppLang === 'function') setAppLang(l); mbRender(); }
+async function mbProfSave() {
+  const v = (mbQ('mbProfPhone').value || '').replace(/\D/g, ''); const er = mbQ('mbProfErr');
+  if (v) { const e = mbPhoneErr(v); if (e) { er.textContent = e; return; } }
+  er.style.color = '#6B7280'; er.textContent = 'Сохранение…';
+  const r = await postWebAction({ webAction: 'updateMyProfile', sessionId: localStorage.getItem('msbSessionId'), phone: v });
+  if (!r || !r.success) { er.style.color = '#B3261E'; er.textContent = (r && r.message) || 'Не удалось сохранить'; return; }
+  MBM.state.phone = v; er.style.color = '#1E9E5A'; er.textContent = 'Сохранено';
+}
+function mbOpenPwd() { MBM.state.pwd = { o: '', n: '', r: '', err: '' }; MBM.state.sheet = 'pwd'; mbSheetSv(); }
+function mbPwdRules(p) { return [[p.n.length >= 8, 'Не меньше 8 символов'], [/[A-Za-zА-Яа-я]/.test(p.n) && /\d/.test(p.n), 'Есть буква и цифра'], [!!p.n && p.n === p.r, 'Пароли совпадают']]; }
+function mbPwdSheet() {
+  const p = MBM.state.pwd; const rules = mbPwdRules(p); const ok = p.o && rules.every(x => x[0]);
+  return `<h3>Смена пароля</h3><label>Текущий пароль</label><input class="m-in" type="password" id="mbPwO" value="${mbX(p.o)}" autocomplete="current-password" oninput="MBM.state.pwd.o=this.value;mbPwdLive()">
+  <label>Новый пароль</label><input class="m-in" type="password" id="mbPwN" value="${mbX(p.n)}" autocomplete="new-password" oninput="MBM.state.pwd.n=this.value;mbPwdLive()">
+  <label>Повторите пароль</label><input class="m-in" type="password" id="mbPwR" value="${mbX(p.r)}" autocomplete="new-password" oninput="MBM.state.pwd.r=this.value;mbPwdLive()">
+  <div id="mbPwRules" style="margin-top:10px">${rules.map(x => `<div style="font-size:13px;color:${x[0] ? '#1E9E5A' : '#6B7280'}">${x[0] ? '✓' : '○'} ${x[1]}</div>`).join('')}</div>
+  <div class="m-err" id="mbPwErr">${mbX(p.err)}</div><button class="m-big blk" id="mbPwBtn" style="margin-top:12px" ${ok ? '' : 'disabled'} onclick="mbPwdSave()">Сменить пароль</button>`;
+}
+function mbPwdLive() { const p = MBM.state.pwd; const rules = mbPwdRules(p); mbQ('mbPwRules').innerHTML = rules.map(x => `<div style="font-size:13px;color:${x[0] ? '#1E9E5A' : '#6B7280'}">${x[0] ? '✓' : '○'} ${x[1]}</div>`).join(''); mbQ('mbPwBtn').disabled = !(p.o && rules.every(x => x[0])); }
+async function mbPwdSave() {
+  const p = MBM.state.pwd; const b = mbQ('mbPwBtn'); b.disabled = true; b.textContent = 'Сохранение…';
+  const r = await postWebAction({ webAction: 'changePassword', sessionId: localStorage.getItem('msbSessionId'), oldPassword: p.o, newPassword: p.n });
+  if (!r || !r.success) { p.err = (r && r.message) || 'Не удалось сменить пароль'; mbSheetSv(); return; }
+  MBM.state.sheet = null; mbRenderSheet(); alert('Пароль изменён');
+}
+async function mbPinOn() { await showQuickLoginOfferScreen(); mbRender(); }
+function mbPinOff() { resetDevicePinFromProfile(); mbRender(); }
+async function mbTgLoad() {
+  try { const r = await postWebAction({ webAction: 'getTelegramLinkStatus', sessionId: localStorage.getItem('msbSessionId') }); MBM.state.tg = !!(r && r.success && r.linked); } catch (e) { MBM.state.tg = false; }
+  if (MBM.state.tab === 'profile') mbRender();
+}
+async function mbTgToggle() {
+  const S = MBM.state;
+  if (S.tg) { if (!confirm('Отключить уведомления в Telegram?')) return; await postWebAction({ webAction: 'unlinkTelegram', sessionId: localStorage.getItem('msbSessionId') }); S.tg = false; mbRender(); return; }
+  const r = await postWebAction({ webAction: 'generateTelegramLinkCode', sessionId: localStorage.getItem('msbSessionId') });
+  if (!r || !r.success) { alert((r && r.message) || 'Не удалось создать ссылку'); return; }
+  window.open(r.deepLink, '_blank');
+  let n = 0; const t = setInterval(async () => { n++; await mbTgLoad(); if (MBM.state.tg || n > 40 || MBM.state.tab !== 'profile') clearInterval(t); }, 4000);
+}
+
 // ===================== АНКЕТА =====================
-const mbFresh = (mah) => ({ id: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), startedAt: Date.now(), mahalla: mah || '', addr: { type: 'house', street: '', house: '', flat: '' }, ownerHere: null, fio: '', pinfl: '', phone: '', membersTotal: 0, unemployedCount: 0, people: [], hasPlot: null, plotSotki: 0, plotTags: [], income: '', houseStatus: '', bizInterest: '', bizSphere: '', bizText: '', wishes: {}, finance: [], photos: [], location: null, retry: false });
+const mbProjNew = () => ({ on: false, name: '', initiator: '', subject: 'Физлицо', industry: '', description: '', cost: '', own: '', support: [], jobs: '', month: '', year: '', premises: '', assess: '', photo: '' });
+const mbProj = d => d.project || (d.project = mbProjNew());
+const mbFresh = (mah) => ({ id: 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), startedAt: Date.now(), mahalla: mah || '', addr: { type: 'house', street: '', house: '', flat: '' }, ownerHere: null, fio: '', pinfl: '', phone: '', membersTotal: 0, unemployedCount: 0, people: [], hasPlot: null, plotSotki: 0, plotTags: [], income: '', houseStatus: '', bizInterest: '', bizSphere: '', bizText: '', wishes: {}, finance: [], photos: [], location: null, retry: false, project: mbProjNew() });
 
 function mbStartSurvey(resume, addrKeyEnc, addrEnc) {
   const S = MBM.state;
@@ -16866,13 +16944,14 @@ function mbCheck(d, i) { // [ok, text]
     case 6: { if (!d.bizInterest) return [false, 'Выберите ответ про бизнес']; if (mbBizActive(d)) { if (!d.bizSphere) return [false, 'Выберите сферу']; const e = mbBizTextErr(d.bizText); if (e) return [false, e]; } return [true, '']; }
     case 7: { const miss = mbUnList(d).filter(p => !d.wishes[p.id]); return [!miss.length, 'Укажите желание: ' + miss.map(p => p.fio.split(' ')[0]).join(', ')]; }
     case 8: { if (!d.finance.length) return [false, 'Выберите вариант поддержки']; if (d.finance.indexOf('none') !== -1 && d.finance.length > 1) return [false, '«Не интересно» нельзя сочетать с другими']; if (d.finance.indexOf('credit') !== -1 && !mbBizActive(d)) return [false, 'Кредит возможен только при интересе к бизнесу']; return [true, '']; }
-    case 9: { const need = d.retry ? 1 : 3; if (!mbGpsGood()) return [false, d.location ? 'Точность GPS ±' + Math.round(d.location.accuracy) + ' м, нужно не хуже 50 м' : 'Ожидание GPS']; if (d.photos.length < need) return [false, 'Нужно ещё фото с камеры: ' + (need - d.photos.length)]; const sl = d.photos.map(p => p.slot); if (!d.retry && MBM.slots.some(s => sl.indexOf(s[0]) === -1)) return [false, 'Нужны фото: фасад, двор, житель']; if (d.retry && sl.indexOf('facade') === -1) return [false, 'Нужно фото фасада']; return [true, '']; }
+    case 9: { const need = d.retry ? 1 : 3; if (!d.location && d.photos.length < need) return [false, 'Ожидание GPS: камера включится после определения местоположения']; if (d.photos.length < need) return [false, 'Нужно ещё фото с камеры: ' + (need - d.photos.length)]; const sl = d.photos.map(p => p.slot); if (!d.retry && MBM.slots.some(s => sl.indexOf(s[0]) === -1)) return [false, 'Нужны фото: фасад, двор, житель']; if (d.retry && sl.indexOf('facade') === -1) return [false, 'Нужно фото фасада']; return [true, '']; }
+    case 10: { const p = mbProj(d); if (!p.on) return [true, '']; if (p.name.trim().length < 3) return [false, 'Микропроект: введите название']; if (!mbNameOk(p.initiator)) return [false, 'Микропроект: укажите ФИО инициатора']; if (!p.industry) return [false, 'Микропроект: выберите отрасль']; const c = Number(p.cost) || 0; if (c < 1000000) return [false, 'Микропроект: укажите стоимость (от 1 000 000 сум)']; if ((Number(p.own) || 0) > c) return [false, 'Свои средства больше стоимости']; return [true, '']; }
   }
   return [true, ''];
 }
 function mbVisibleSections(d) {
   if (d.ownerHere === false) return [0, 1, 2, 9];
-  const s = [0, 1, 2, 3, 4, 5, 6]; if (d.unemployedCount > 0) s.push(7); s.push(8, 9); return s;
+  const s = [0, 1, 2, 3, 4, 5, 6]; if (d.unemployedCount > 0) s.push(7); s.push(8, 9); s.push(10); return s;
 }
 function mbFirstProblem(d) { for (const i of mbVisibleSections(d)) { const c = mbCheck(d, i); if (!c[0]) return [i, c[1]]; } return null; }
 
@@ -16920,6 +16999,7 @@ function mbSecBody(i, d) {
     case 7: return mbUnList(d).map(p => `<div class="m-person"><b>${mbX(p.fio)}</b><div class="m-chips">${MBM.wish.map(([k, l]) => `<button class="m-chip${d.wishes[p.id] === k ? ' on' : ''}" onclick="mbSet(d=>d.wishes['${p.id}']='${k}');mbRef()">${l}</button>`).join('')}</div></div>`).join('');
     case 8: return mbOpts(MBM.fin, d.finance, 'mbFin', true);
     case 9: return mbPhotoBody(d);
+    case 10: return mbProjBody(d);
   }
   return '';
 }
@@ -16945,6 +17025,9 @@ function mbSheetSv() {
   const S = MBM.state; const el = mbQ('mbSheet'); let html = '';
   if (S.sheet === 'svmah') html = `<h3>Махалля</h3>${S.mahallas.map(m => `<button class="m-opt${m.name === S.draft.mahalla ? ' on' : ''}" onclick="mbSet(d=>d.mahalla=decodeURIComponent('${encodeURIComponent(m.name)}'));MBM.state.sheet=null;mbRenderSheet();mbRef()"><i></i><span>${mbX(m.name)}</span></button>`).join('')}`;
   else if (S.sheet === 'sphere') html = `<h3>Сфера</h3>${MBM.sphere.map(([k, l]) => `<button class="m-opt${S.draft.bizSphere === k ? ' on' : ''}" onclick="mbSet(d=>d.bizSphere='${k}');MBM.state.sheet=null;mbRenderSheet();mbRef()"><i></i><span>${l}</span></button>`).join('')}`;
+  else if (S.sheet === 'industry') html = `<h3>Отрасль</h3>${mbIndustries().map(x => `<button class="m-opt${mbProj(S.draft).industry === x ? ' on' : ''}" onclick="mbProjSet('industry',decodeURIComponent('${encodeURIComponent(x)}'));MBM.state.sheet=null;mbRenderSheet();mbRef()"><i></i><span>${mbX(x)}</span></button>`).join('')}`;
+  else if (S.sheet === 'month') html = `<h3>Месяц старта</h3>${MBM_MONTHS.map(x => `<button class="m-opt${mbProj(S.draft).month === x ? ' on' : ''}" onclick="mbProjSet('month','${x}');MBM.state.sheet=null;mbRenderSheet();mbRef()"><i></i><span>${x}</span></button>`).join('')}`;
+  else if (S.sheet === 'pwd') html = mbPwdSheet();
   else if (S.sheet === 'person') html = mbPersonSheet();
   el.className = 'on top'; el.innerHTML = `<div class="m-sbg" onclick="mbCloseSheet()"></div><div class="m-sheet">${html}</div>`;
 }
@@ -16986,6 +17069,59 @@ function mbPersonSave() {
   MBM.state.sheet = null; mbRenderSheet(); mbRef();
 }
 function mbPersonDel(n) { mbSet(d => { const p = d.people.splice(n, 1)[0]; if (p) delete d.wishes[p.id]; }); mbRef(); }
+
+// ---------- новый микропроект ----------
+const MBM_SUBJ = [['Физлицо', 'Физлицо'], ['Самозанятый', 'Самозанятый'], ['ИП', 'ИП'], ['МЧЖ', 'МЧЖ']];
+const MBM_SUP = [['credit', 'Кредит'], ['loan', 'Ссуда'], ['subsidy', 'Субсидия']];
+const MBM_ASSESS = [['weak', 'Слабый'], ['promising', 'Перспективный'], ['strong', 'Очень сильный']];
+const MBM_MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const mbIndustries = () => ((typeof webFormLists !== 'undefined' && webFormLists && webFormLists.industries && webFormLists.industries.length) ? webFormLists.industries : ['Торговля', 'Производство', 'Услуги', 'Сервис', 'Сельское хозяйство', 'Строительство', 'Другое']);
+function mbProjToggle(on) {
+  mbSet(d => {
+    const p = mbProj(d); p.on = on;
+    if (on) {
+      if (!p.initiator) p.initiator = d.fio || '';
+      if (!p.description && d.bizText) p.description = d.bizText;
+      if (!p.support.length) p.support = d.finance.filter(x => ['credit', 'loan', 'subsidy'].indexOf(x) !== -1);
+      if (!p.industry && d.bizSphere) { const l = mbL(MBM.sphere, d.bizSphere); const ind = mbIndustries(); const map = { greenhouse: 'Сельское хозяйство', poultry: 'Сельское хозяйство', livestock: 'Сельское хозяйство', seedlingsGarden: 'Сельское хозяйство', sewing: 'Производство', trade: 'Торговля' }; p.industry = ind.indexOf(map[d.bizSphere]) !== -1 ? map[d.bizSphere] : ''; }
+    }
+  });
+  mbRef();
+}
+function mbProjSet(k, v) { mbSet(d => { mbProj(d)[k] = v; }); }
+function mbProjSup(k) { mbSet(d => { const a = mbProj(d).support; const i = a.indexOf(k); if (i >= 0) a.splice(i, 1); else a.push(k); }); mbRef(); }
+function mbProjPick(k, v) { mbSet(d => { mbProj(d)[k] = mbProj(d)[k] === v ? '' : v; }); mbRef(); }
+function mbProjBody(d) {
+  const p = mbProj(d); const inp = (id, val, ph, extra) => `<input class="m-in" id="${id}" value="${mbX(val)}" placeholder="${ph || ''}" ${extra || ''}>`;
+  const chips = (arr, cur, k) => `<div class="m-chips">${arr.map(([a, l]) => `<button class="m-chip${cur === a ? ' on' : ''}" onclick="mbProjPick('${k}','${a}')">${l}</button>`).join('')}</div>`;
+  const money = (id, key, val, ph) => inp(id, mbThousands(val), ph, `inputmode="numeric" oninput="var c=this.value.replace(/\\D/g,'');this.value=mbThousands(c);mbProjSet('${key}',c);mbLive()"`);
+  if (d.retry) return '';
+  const toggle = `<div class="m-seg"><button class="${p.on ? '' : 'on'}" onclick="mbProjToggle(false)">Нет проекта</button><button class="${p.on ? 'on' : ''}" onclick="mbProjToggle(true)">Добавить проект</button></div>`;
+  if (!p.on) return toggle;
+  const yr = new Date().getFullYear();
+  return toggle + `
+    <label>Название проекта${mbRq}</label>${inp('mbPjName', p.name, 'Например: теплица на 6 соток', `oninput="mbProjSet('name',this.value);mbLive()"`)}
+    <label>Инициатор${mbRq}</label>${inp('mbPjIni', p.initiator, 'Фамилия Имя Отчество', `oninput="mbProjSet('initiator',this.value);mbLive()"`)}
+    <label>Статус субъекта</label>${chips(MBM_SUBJ, p.subject, 'subject')}
+    <label>Отрасль${mbRq}</label><button class="m-pick" onclick="mbOpenIndustry()"><span>${mbX(p.industry || 'Выберите')}</span>${appIcon('chevron', 16)}</button>
+    <label>Описание</label><textarea class="m-in" id="mbPjDesc" style="min-height:76px;padding:12px 14px;resize:vertical" oninput="mbProjSet('description',this.value)">${mbX(p.description)}</textarea>
+    <label>Стоимость проекта, сум${mbRq}</label>${money('mbPjCost', 'cost', p.cost, '30 000 000')}
+    <label>Свои средства, сум</label>${money('mbPjOwn', 'own', p.own, '5 000 000')}
+    <label>Нужна поддержка</label>${mbOpts(MBM_SUP, p.support, 'mbProjSup', true)}
+    <label>Новых рабочих мест</label>${inp('mbPjJobs', p.jobs, '0', `inputmode="numeric" maxlength="3" oninput="this.value=this.value.replace(/\\D/g,'');mbProjSet('jobs',this.value)"`)}
+    <label>Старт</label><div class="m-two2"><button class="m-pick" onclick="mbOpenMonth()"><span>${p.month ? mbX(p.month) : 'Месяц'}</span>${appIcon('chevron', 16)}</button>${inp('mbPjYear', p.year, String(yr), `inputmode="numeric" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,'');mbProjSet('year',this.value)"`)}</div>
+    <label>Помещение или участок есть</label><div class="m-seg"><button class="${p.premises === 'yes' ? 'on' : ''}" onclick="mbProjPick('premises','yes')">Да</button><button class="${p.premises === 'no' ? 'on' : ''}" onclick="mbProjPick('premises','no')">Нет</button></div>
+    <label>Оценка банкира</label>${chips(MBM_ASSESS, p.assess, 'assess')}
+    <label>Фото проекта</label>
+    ${p.photo ? `<div class="m-photos"><div class="m-ph"><img src="${p.photo}"><button class="m-rm" onclick="mbProjSet('photo','');mbRef()">×</button></div></div>` : `<button class="m-btn s" onclick="mbQ('mbPjPhotoIn').click()">${appIcon('camera', 16)} Добавить фото</button>`}
+    <input type="file" accept="image/*" capture="environment" id="mbPjPhotoIn" style="display:none" onchange="mbProjPhoto(event)">`;
+}
+async function mbProjPhoto(e) {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  try { const r = await resizeImageFile(f, 1280); mbProjSet('photo', 'data:image/jpeg;base64,' + r.base64); mbRef(); } catch (err) { alert('Не удалось обработать фото'); }
+}
+function mbOpenIndustry() { MBM.state.sheet = 'industry'; mbSheetSv(); }
+function mbOpenMonth() { MBM.state.sheet = 'month'; mbSheetSv(); }
 
 // ---------- GPS ----------
 function mbGpsStart() {
@@ -17043,15 +17179,19 @@ function mbBuildPayload(d) {
   const photos = d.photos.map(p => ({ slot: p.slot, hash: p.hash, takenAt: p.takenAt, lat: p.lat, lng: p.lng, accuracy: p.accuracy }));
   const draft = JSON.parse(JSON.stringify(d)); delete draft.photos; delete draft.location; delete draft.retry;
   draft.addr.type = d.addr.type === 'flat' ? 'flat' : 'house';
-  return { visit: { id: d.id, status: d.retry ? 'retry' : 'done', draft, photos, location: d.location, startedAt: d.startedAt, finishedAt: Date.now(), deviceTime: Date.now() }, photoFiles: d.photos.map(p => p.dataUrl.split(',')[1]) };
+  const pr = d.retry ? null : mbProj(d); const project = (pr && pr.on) ? { on: true, name: pr.name.trim(), initiator: pr.initiator.trim(), subject: pr.subject === 'МЧЖ' ? 'Юрлицо' : pr.subject, industry: pr.industry, description: pr.description.trim(), cost: Number(pr.cost) || 0, own: Number(pr.own) || 0, support: pr.support, jobs: pr.jobs, month: pr.month, year: pr.year, premises: pr.premises, assess: pr.assess } : null;
+  delete draft.project;
+  return { visit: { id: d.id, status: d.retry ? 'retry' : 'done', draft, photos, location: d.location, project, startedAt: d.startedAt, finishedAt: Date.now(), deviceTime: Date.now() }, photoFiles: d.photos.map(p => p.dataUrl.split(',')[1]), projectPhotos: (project && pr.photo) ? [pr.photo.split(',')[1]] : [] };
 }
 async function mbSend(p) {
-  return postWebAction({ webAction: 'saveMahallaVisit', sessionId: localStorage.getItem('msbSessionId'), visit: p.visit, photoFiles: p.photoFiles }, 0);
+  return postWebAction({ webAction: 'saveMahallaVisit', sessionId: localStorage.getItem('msbSessionId'), visit: p.visit, photoFiles: p.photoFiles, projectPhotos: p.projectPhotos || [] }, 0);
 }
 async function mbSubmit() {
   const S = MBM.state; const d = S.draft; if (S.busy) return;
   const prob = mbFirstProblem(d); if (prob) return;
-  d.location = d.location || null;
+  const fix = await mbFinishLocation();
+  if (!fix) return;
+  d.location = fix; mbSave();
   S.busy = true; mbRef();
   const payload = mbBuildPayload(d);
   let r = null;
@@ -17067,11 +17207,45 @@ async function mbSubmit() {
   await mbCloseSurvey(false);
   await mbLoad();
   mbGoTo('history');
-  if (r.flags && r.flags.length) alert('Визит принят и отправлен на проверку.');
+  if (r.projectWarning) alert('Визит принят, но микропроект не создан: ' + r.projectWarning);
+  else if (r.flags && r.flags.length) alert('Визит принят и отправлен на проверку.');
+}
+function mbFixOnce(ms) {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve({ err: 'Геолокация недоступна' }); return; }
+    let best = null, done = false, id = null;
+    const fin = () => { if (done) return; done = true; if (id != null) navigator.geolocation.clearWatch(id); clearTimeout(tm); resolve(best ? { fix: best } : { err: 'Не удалось определить местоположение' }); };
+    const tm = setTimeout(fin, ms);
+    const onPos = pos => {
+      const c = pos.coords; if (!best || c.accuracy < best.accuracy) best = { lat: c.latitude, lng: c.longitude, accuracy: c.accuracy, at: Date.now() };
+      MBM.state.locAcc = best.accuracy; const lm = mbQ('mbLocMu'); if (lm) lm.textContent = 'Точность ±' + Math.round(best.accuracy) + ' м';
+      if (best.accuracy <= 25) fin();
+    };
+    const onErr = e => { if (e.code === 1) { clearTimeout(tm); done = true; navigator.geolocation.clearWatch(id); resolve({ err: 'Нет доступа к геолокации. Разрешите её в настройках браузера' }); } };
+    const opt = { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 };
+    navigator.geolocation.getCurrentPosition(onPos, onErr, opt);
+    id = navigator.geolocation.watchPosition(onPos, onErr, opt);
+  });
+}
+async function mbFinishLocation() {
+  const S = MBM.state; const el = mbQ('mbSheet');
+  for (;;) {
+    el.className = 'on top'; el.innerHTML = `<div class="m-sbg"></div><div class="m-sheet" style="text-align:center"><h3>Фиксируем местоположение…</h3><div class="m-mu" id="mbLocMu" style="margin-bottom:6px">${S.locAcc ? 'Точность ±' + Math.round(S.locAcc) + ' м' : 'Определяем точность'}</div></div>`;
+    S.locAcc = 0;
+    const r = await mbFixOnce(8000);
+    const ok = r.fix && r.fix.accuracy <= 50;
+    if (ok) { S.sheet = null; mbRenderSheet(); S.locAcc = 0; return r.fix; }
+    const txt = r.fix ? 'Точность ±' + Math.round(r.fix.accuracy) + ' м. Нужно не хуже 50 м. Выйдите на открытое место' : r.err;
+    const again = await new Promise(res => {
+      window.__mbLocRes = res;
+      el.innerHTML = `<div class="m-sbg"></div><div class="m-sheet" style="text-align:center"><h3>Местоположение не зафиксировано</h3><div class="m-err" style="margin-bottom:12px">${mbX(txt)}</div><button class="m-big blk" onclick="__mbLocRes(true)">Повторить</button><button class="m-btn s" style="margin-top:8px;width:100%" onclick="__mbLocRes(false)">Отмена</button></div>`;
+    });
+    if (!again) { S.sheet = null; mbRenderSheet(); return null; }
+  }
 }
 function mbSecOfCode(c) {
   c = String(c || '');
-  if (/^mahalla/.test(c)) return 0; if (/^addr|retry_limit|address_/.test(c)) return 1; if (/^(fio|pinfl|phone|owner)/.test(c)) return 2; if (/^(family|person)/.test(c)) return 3; if (/^plot/.test(c)) return 4; if (/^(income|status)/.test(c)) return 5; if (/^biz|copy/.test(c)) return 6; if (/^wish/.test(c)) return 7; if (/^(finance|credit)/.test(c)) return 8; return 9;
+  if (/^mahalla/.test(c)) return 0; if (/^addr|retry_limit|address_/.test(c)) return 1; if (/^(fio|pinfl|phone|owner)/.test(c)) return 2; if (/^(family|person)/.test(c)) return 3; if (/^plot/.test(c)) return 4; if (/^(income|status)/.test(c)) return 5; if (/^biz|copy/.test(c)) return 6; if (/^wish/.test(c)) return 7; if (/^project/.test(c)) return 10; if (/^(finance|credit)/.test(c)) return 8; return 9;
 }
 let mbFlushing = false;
 async function mbFlushQueue() {
