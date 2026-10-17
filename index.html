@@ -16384,7 +16384,7 @@ function mbRenderDash() {
   const all = (allObhodSurveys || []).filter(s => s.source === 'mobile' || s.visitStatus);
   const ts = s => Number(s.finishedAt) || 0;
   const visToday = all.filter(s => ts(s) >= t0).length;
-  const days = []; for (let i = 6; i >= 0; i--) { const a = t0 - i * 86400000; days.push({ d: new Date(a), n: all.filter(s => ts(s) >= a && ts(s) < a + 86400000).length }); }
+  const days = []; for (let i = 4; i >= 0; i--) { const a = t0 - i * 86400000; days.push({ d: new Date(a), n: all.filter(s => ts(s) >= a && ts(s) < a + 86400000).length }); }
   const retry = all.filter(s => mbIsRetry(s)).length;
   const pending = all.filter(s => s.review === 'pending').length;
   const maxDay = Math.max(1, ...days.map(x => x.n));
@@ -16399,7 +16399,7 @@ function mbRenderDash() {
       <div class="mb-card"><div class="mb-k">Зайти повторно</div><div class="mb-v">${mbFmt(retry)}</div></div>
       <div class="mb-card"><div class="mb-k">На проверке</div><div class="mb-v${pending ? ' mb-warn' : ''}">${mbFmt(pending)}</div></div>
       <div class="mb-card"><div class="mb-k">Визитов сегодня</div><div class="mb-v">${mbFmt(visToday)}</div></div>
-      <div class="mb-card"><div class="mb-k">Визиты за 7 дней</div><div class="mb-v">${mbFmt(days.reduce((a, x) => a + x.n, 0))}</div>
+      <div class="mb-card"><div class="mb-k">Визиты за 5 дней</div><div class="mb-v">${mbFmt(days.reduce((a, x) => a + x.n, 0))}</div>
         <div class="mb-spark">${days.map(x => `<i style="height:${Math.max(4, Math.round(x.n / maxDay * 40))}px" title="${x.d.toLocaleDateString('ru-RU')}: ${x.n}"></i>`).join('')}</div></div>
     </div>
     <div class="panel">
@@ -16459,7 +16459,7 @@ function mbRenderStats() {
   const secsAll = done.map(s => (Number(s.finishedAt) - Number(s.startedAt)) / 1000).filter(x => x > 0 && x < 7200);
   const avgAll = secsAll.length ? secsAll.reduce((a, b) => a + b, 0) / secsAll.length : 0;
   const t0 = new Date(); t0.setHours(0, 0, 0, 0); const d0 = t0.getTime();
-  const days = []; for (let i = 13; i >= 0; i--) { const a = d0 - i * 86400000; days.push({ d: new Date(a), n: done.filter(s => Number(s.finishedAt) >= a && Number(s.finishedAt) < a + 86400000).length }); }
+  const days = []; for (let i = 4; i >= 0; i--) { const a = d0 - i * 86400000; days.push({ d: new Date(a), n: done.filter(s => Number(s.finishedAt) >= a && Number(s.finishedAt) < a + 86400000).length }); }
   const mxd = Math.max(1, ...days.map(x => x.n));
   const top = bm.filter(b => b.houses > 0).slice(0, 10);
   const worst = bm.filter(b => b.houses > 0).slice(-10).reverse();
@@ -16493,7 +16493,7 @@ function mbRenderStats() {
       <div class="mb-card"><div class="mb-k">Визитов с флагом</div><div class="mb-v${flagTotal ? ' mb-warn' : ''}">${done.length ? Math.round(flagTotal / done.length * 100) : 0}%</div></div>
       <div class="mb-card"><div class="mb-k">Среднее время опроса</div><div class="mb-v" style="font-size:22px">${mbDur(avgAll)}</div></div>
     </div>
-    <div class="panel"><h2 style="margin-bottom:6px;">Динамика визитов за 14 дней</h2>
+    <div class="panel"><h2 style="margin-bottom:6px;">Динамика визитов за 5 дней</h2>
       <div class="mb-col">${days.map(x => `<div><i style="height:${Math.max(3, Math.round(x.n / mxd * 110))}px"></i><b>${x.n}</b><span>${x.d.getDate()}.${String(x.d.getMonth() + 1).padStart(2, '0')}</span></div>`).join('')}</div></div>
     <div class="mb-two">${mbRankCard('Топ 10 банкиров', top, false)}${mbRankCard('10 худших банкиров', worst, true)}</div>
     <div class="panel"><h2 style="margin-bottom:14px;">Все банкиры</h2>
@@ -16535,6 +16535,7 @@ function mbRenderObhod() {
   }).join('');
   const box = document.getElementById('obhodListBox');
   box.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="btn btn-secondary" onclick="mbClearOld()">Очистить данные до 17.10.2026</button></div>
     <div class="mb-filters">
       <input class="input" placeholder="Поиск" value="${mbEsc(f.q)}" oninput="mbObhodFilter.q=this.value;mbRenderObhodDebounced()">
       <select class="select" onchange="mbObhodFilter.mahalla=this.value;mbRenderObhod()">${opt(mah, f.mahalla, 'Все махалли')}</select>
@@ -16544,6 +16545,18 @@ function mbRenderObhod() {
     <div class="client-table-wrap"><table class="mb-table"><thead><tr><th>Дата</th><th>Махалля</th><th>Адрес</th><th>Владелец</th><th>Банкир</th><th>Статус</th></tr></thead><tbody>${list || '<tr><td colspan="6" class="loading">Нет визитов</td></tr>'}</tbody></table></div>
     <div class="mb-count">${filtered.length > 300 ? 'Показано 300 из ' + filtered.length : filtered.length + ' шт.'}</div>`;
   const wasFocus = document.activeElement && document.activeElement.tagName === 'INPUT';
+}
+async function mbClearOld() {
+  const sid = localStorage.getItem('msbSessionId');
+  const r = await postWebAction({ webAction: 'clearMahallaDataBefore', sessionId: sid, cutoff: '2026-10-17', dryRun: true });
+  if (!r || !r.success) { alert((r && r.message) || 'Не удалось получить данные'); return; }
+  const c = r.counts || {}; const v = c['Обход махалли'] || 0, m = c['Микропроекты'] || 0;
+  if (!v && !m) { alert('Данных до 17.10.2026 нет'); return; }
+  if (!confirm('Будет удалено: визитов — ' + v + ', микропроектов — ' + m + '.\nКопия сохранится на архивных листах таблицы.\nПродолжить?')) return;
+  const r2 = await postWebAction({ webAction: 'clearMahallaDataBefore', sessionId: sid, cutoff: '2026-10-17' });
+  if (!r2 || !r2.success) { alert((r2 && r2.message) || 'Не удалось очистить'); return; }
+  alert('Очищено');
+  try { await mbAdminLoad(); } catch (e) { location.reload(); }
 }
 let mbObhodT = null;
 function mbRenderObhodDebounced() {
