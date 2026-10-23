@@ -1566,6 +1566,13 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .mb-drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:#fff;z-index:201;transform:translateX(105%);transition:transform .2s;display:flex;flex-direction:column;}.mb-drawer.open{transform:none;}
 .mb-mrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;font-size:13.5px;cursor:pointer;}.mb-mrow.on{border-color:#C4231A;background:#FBE4E1;}.mb-mrow i{width:18px;height:18px;border-radius:5px;border:2px solid #9BA0AB;flex:none;}.mb-mrow.on i{background:#C4231A;border-color:#C4231A;}.mb-mrow span{flex:1;}.mb-mrow small{color:var(--muted);font-size:12px;}.mb-mrow small.w{color:#B76E00;font-weight:600;}
 
+.st-row5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px}.st-row4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.st-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.st-k{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px}.st-k b{display:block;font-size:26px;letter-spacing:-.5px;line-height:1.15}.st-k span{font-size:12.5px;color:var(--muted)}.st-k.r b{color:#B71F17}.st-k em{display:block;font-style:normal;font-size:12px;font-weight:700;margin-top:4px;color:var(--muted)}
+.st-d{display:block;font-style:normal;font-size:12px;font-weight:700;margin-top:4px;color:var(--muted)}.st-d.up{color:#14804A}.st-d.dn{color:#B3261E}.st-bar{height:6px;background:#E4E6EB;border-radius:4px;margin-top:8px;overflow:hidden}.st-bar u{display:block;height:100%;background:#B71F17}
+.st-fn{display:flex;flex-direction:column;gap:6px}.st-fr{display:grid;grid-template-columns:190px 1fr 110px;gap:12px;align-items:center;font-size:13px}.st-fr.click{cursor:pointer}.st-fr.click:hover .tr{outline:2px solid #E7E8EC}.st-fr .tr{background:#F0F1F4;border-radius:8px;height:32px;overflow:hidden}.st-fr .tr u{display:flex;align-items:center;padding-left:10px;height:100%;min-width:34px;color:#fff;font-weight:800;font-size:12.5px;text-decoration:none;border-radius:8px;box-sizing:border-box}.st-fr .v{text-align:right}.st-fr .v b{font-size:15px}.st-fr .v em{display:block;font-style:normal;font-size:11.5px;font-weight:700;color:#B3261E}
+.st-sort{cursor:pointer;user-select:none}.st-late{color:#B3261E}.mb-btn-del{background:#FDECEA !important;color:#B3261E !important;box-shadow:none !important}
+.mb-modalbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center;padding:16px}.mb-modalbg.open{display:flex}.mb-modal{background:#fff;border-radius:18px;padding:20px;width:min(760px,100%);max-height:90vh;overflow:auto}
+@media(max-width:1100px){.st-row5{grid-template-columns:repeat(3,1fr)}.st-row4{grid-template-columns:repeat(2,1fr)}.st-fr{grid-template-columns:120px 1fr 80px}}
 .mb-table{width:100%;border-collapse:collapse;font-size:13.5px;}
 .mb-table th{text-align:left;font-weight:700;color:var(--muted);font-size:12px;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
 .mb-table td{padding:11px 12px;border-bottom:1px solid var(--line);}
@@ -3018,15 +3025,13 @@ body.role-mahalla-banker .footer{display:none;}
   </div>
 
   <div class="msb-sales-tabs">
-    <button class="msb-sales-tab active" data-mahalla-tab="mbDash" onclick="showMahallaTab('mbDash')">Дашборд</button>
-    <button class="msb-sales-tab" data-mahalla-tab="mbStats" onclick="showMahallaTab('mbStats')">Статистика</button>
+    <button class="msb-sales-tab active" data-mahalla-tab="mbStats" onclick="showMahallaTab('mbStats')">Статистика</button>
     <button class="msb-sales-tab" data-mahalla-tab="mbObhod" onclick="showMahallaTab('mbObhod')">Обход</button>
     <button class="msb-sales-tab" data-mahalla-tab="mbBank" onclick="showMahallaTab('mbBank')">Банкиры</button>
   </div>
 
-  <div id="mbDashSection" class="mahalla-tab-section active"><div id="mbDashBody" class="loading">Загрузка...</div></div>
   <div id="mbBankSection" class="mahalla-tab-section"><div id="mbBankBody" class="loading">Загрузка...</div></div>
-  <div id="mbStatsSection" class="mahalla-tab-section"><div id="mbStatsBody" class="loading">Загрузка...</div></div>
+  <div id="mbStatsSection" class="mahalla-tab-section active"><div id="mbStatsBody" class="loading">Загрузка...</div></div>
 
   <div id="mahallaListSection" class="mahalla-tab-section">
     <div class="panel" id="mahallaPassportUploadPanel" style="display:none;">
@@ -5532,7 +5537,7 @@ function showPage(id, el) {
 
   if (id === 'mahallaPage') {
     loadMahallaData();
-    showMahallaTab(mbAdminTab || 'mbDash');
+    showMahallaTab(mbAdminTab || 'mbStats');
   }
 
   if (id === 'statsPage') {
@@ -16191,7 +16196,7 @@ const MB_HS_LABEL = { socialRegistry: 'В социальном реестре', 
 const MB_FLAG_LABEL = { too_fast: 'Слишком быстро', night: 'Нерабочее время', clock_drift: 'Время устройства', future_time: 'Время в будущем', stale: 'Отправлен с опозданием', outside_mahalla: 'Вне махалли', impossible_speed: 'Скорость между визитами', copy_text: 'Копия текста', income_status: 'Доход и статус' };
 const MB_WISH_LABEL = { training: 'Обучение профессии', job: 'Стабильная работа', business: 'Открыть бизнес', abroad: 'Работа за границей', none: 'Нет желания' };
 const MB_FIN_LABEL = { subsidy: 'Субсидия', loan: 'Ссуда', credit: 'Кредит', none: 'Не интересно' };
-let mbAdminTab = 'mbDash';
+let mbAdminTab = 'mbStats';
 let mbObhodFilter = { q: '', mahalla: '', banker: '', status: 'all' };
 let mbObhodRows = [];
 
@@ -16227,7 +16232,7 @@ function showMahallaTab(tab) {
 }
 
 async function mbAdminRender() {
-  const box = document.getElementById(mbAdminTab === 'mbDash' ? 'mbDashBody' : mbAdminTab === 'mbStats' ? 'mbStatsBody' : mbAdminTab === 'mbBank' ? 'mbBankBody' : 'obhodListBox');
+  const box = document.getElementById(mbAdminTab === 'mbStats' ? 'mbStatsBody' : mbAdminTab === 'mbBank' ? 'mbBankBody' : 'obhodListBox');
   try {
     if (mbAdminTab === 'mbBank' || mbAdminTab === 'mbStats') await mbBankLoad(); else { await mbAdminLoad(); if (mbAdminTab === 'mbObhod' || mbAdminTab === 'obhod') await mbEnsureBankUsers(); }
   } catch (e) {
@@ -16235,8 +16240,7 @@ async function mbAdminRender() {
     if (box) box.innerHTML = '<div class="loading">Не удалось загрузить данные. <a onclick="mbAdminRender()" style="color:var(--brand);font-weight:700;cursor:pointer;">Повторить</a></div>';
     return;
   }
-  if (mbAdminTab === 'mbDash') mbRenderDash();
-  else if (mbAdminTab === 'mbStats') { mbRenderBankers(true); mbRenderStats(); }
+  if (mbAdminTab === 'mbStats') { mbRenderBankers(true); mbRenderStats(); }
   else if (mbAdminTab === 'mbBank') mbRenderBankers();
   else { mbRenderObhod(); checkObhodMapAccess(); }
 }
@@ -16252,7 +16256,7 @@ let mbMahQ = '', mbBankQ = '', mbBankF = '', mbBankUsers = [], mbBankEdit = null
 const mbNorm = v => String(v == null ? '' : v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[ıİ]/g, 'i').replace(/[ʼ’'`´]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 function mbBankList() {
   const users = mbBankUsers;
-  const rows = users.map(u => ({ name: u.fullName || u.login, login: u.login, active: u.active, unknown: false, ids: [] }));
+  const rows = users.map(u => ({ id: u.id, name: u.fullName || u.login, login: u.login, active: u.active, unknown: false, ids: [] }));
   const find = n => rows.find(r => mbNorm(r.name) === mbNorm(n) || mbNorm(r.login) === mbNorm(n));
   (allMahallas || []).forEach(m => {
     String(m.bankers || '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean).forEach(n => {
@@ -16267,8 +16271,17 @@ function mbBankList() {
   return rows;
 }
 async function mbBankLoad() {
-  const [users] = await Promise.all([fetchJSON('users'), mbAdminLoad()]);
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const sid = localStorage.getItem('msbSessionId');
+  const [users, micro, arch] = await Promise.all([
+    fetchJSON('users'),
+    fetchJSON('microprojects').catch(() => []),
+    isAdmin ? postWebAction({ webAction: 'listMahallaBankerArchive', sessionId: sid }).catch(() => null) : Promise.resolve(null),
+    mbAdminLoad()
+  ]);
   mbBankUsers = (users || []).filter(u => u.role === 'MAHALLA_BANKER' && u.active !== false);
+  mbMicro = Array.isArray(micro) ? micro : [];
+  mbBankArchive = arch && arch.success ? arch.items : [];
 }
 async function mbImportRoster() {
   if (!confirm('Загрузить ' + MB_ROSTER.length + ' махаллей из плана и назначить банкиров? Недостающие махалли будут созданы, у существующих обновится паспорт, план и банкир.')) return;
@@ -16288,18 +16301,63 @@ function mbRenderBankers(silent) {
   const box = document.getElementById('mbBankBody'); if (!box) return;
   const all = mbBankList();
   window.mbBankAll = all; if (silent) return;
-  const list = all.filter(r => (!mbBankQ || r.name.toLowerCase().includes(mbBankQ.toLowerCase())) && (mbBankF !== 'none' || !r.ids.length));
-  const free = (allMahallas || []).filter(m => !all.some(r => r.ids.indexOf(m.id) !== -1));
   const canEdit = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const free = (allMahallas || []).filter(m => !all.some(r => r.ids.indexOf(m.id) !== -1));
   const idx = r => all.indexOf(r);
-  box.innerHTML = `
-    <div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="mbImportRoster()">Загрузить махалли из плана</button><button class="btn btn-secondary" onclick="mbOpenTransfer()">Переназначить</button></div>' : ''}</div>
-      <div class="mb-filters" style="grid-template-columns:1.4fr 1fr"><input class="input" placeholder="Поиск по ФИО" value="${mbEsc(mbBankQ)}" oninput="mbBankQ=this.value;mbRenderBankersDebounced()"><select class="select" onchange="mbBankF=this.value;mbRenderBankers()"><option value="">Все</option><option value="none"${mbBankF === 'none' ? ' selected' : ''}>Без махаллей</option></select></div>
+  const sub = (k, l, n) => `<span class="${mbBankSub === k ? 'on' : ''}" onclick="mbBankSub='${k}';mbRenderBankers()">${l} (${n})</span>`;
+  let body = '';
+  if (mbBankSub === 'archive') {
+    const dt = ms => ms ? new Date(Number(ms)).toLocaleDateString('ru-RU') : '';
+    body = `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>ФИО</th><th>Логин</th><th>Удалён</th><th>Кем</th><th>Махалли</th><th></th></tr></thead><tbody>
+      ${mbBankArchive.map((a, i) => `<tr><td><b>${mbEsc(a.fullName)}</b></td><td>${mbEsc(a.login)}</td><td>${dt(a.at)}</td><td>${mbEsc(a.by)}</td><td>${(a.mahallas || []).map(m => `<span class="mb-chip">${mbEsc(m.name)}</span>`).join('')}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="mbBankRestore(${i})">Восстановить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="loading">Архив пуст</td></tr>'}
+      </tbody></table></div>`;
+  } else if (mbBankSub === 'free') {
+    const arch = {}; mbBankArchive.forEach(a => (a.mahallas || []).forEach(m => { if (!arch[m.id]) arch[m.id] = a; }));
+    body = `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>Махалля</th><th>Район</th><th class="mb-num">Домов</th><th>Был закреплён</th><th></th></tr></thead><tbody>
+      ${free.map(m => `<tr><td><b>${mbEsc(m.name)}</b></td><td>${mbEsc(m.district || '')}</td><td class="mb-num">${mbFmt(mbNum(m.households))}</td><td>${arch[m.id] ? mbEsc(arch[m.id].fullName) + ' · ' + new Date(arch[m.id].at).toLocaleDateString('ru-RU') : ''}</td><td class="mb-num">${canEdit ? `<button class="btn" onclick="mbAssignFree('${mbEsc(m.id)}')">Назначить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="loading">Все махалли закреплены</td></tr>'}
+      </tbody></table></div>`;
+  } else {
+    const list = all.filter(r => (!mbBankQ || r.name.toLowerCase().includes(mbBankQ.toLowerCase())) && (mbBankF !== 'none' || !r.ids.length));
+    body = `<div class="mb-filters" style="grid-template-columns:1.4fr 1fr"><input class="input" placeholder="Поиск по ФИО" value="${mbEsc(mbBankQ)}" oninput="mbBankQ=this.value;mbRenderBankersDebounced()"><select class="select" onchange="mbBankF=this.value;mbRenderBankers()"><option value="">Все</option><option value="none"${mbBankF === 'none' ? ' selected' : ''}>Без махаллей</option></select></div>
       <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>ФИО</th><th>Логин</th><th>Прикреплённые махалли</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th></th></tr></thead><tbody>
-      ${list.map((r, n) => `<tr class="mb-row" ${canEdit ? `onclick="mbOpenBankEdit(${idx(r)})"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(r.name)}</b></td><td>${r.unknown ? '<span class="mb-bd a">нет в пользователях</span>' : mbEsc(r.login)}</td><td>${r.ids.length ? r.ids.slice(0, 2).map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') + (r.ids.length > 2 ? `<span class="mb-chip more">+${r.ids.length - 2}</span>` : '') : '<b style="color:#B76E00">Не назначены</b>'}</td><td class="mb-num">${mbFmt(r.houses)}</td><td class="mb-num">${r.visits}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="event.stopPropagation();mbOpenBankEdit(${idx(r)})">Изменить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Нет банкиров</td></tr>'}
-      </tbody></table></div></div>
-    <div class="panel"><div class="mb-head"><h2>Махалли без банкира</h2><span class="mb-count">${free.length} шт.</span></div>${free.length ? free.map(m => `<span class="mb-chip">${mbEsc(m.name)}</span>`).join('') : '<div class="mb-count">Все махалли закреплены</div>'}</div>`;
+      ${list.map((r, n) => `<tr class="mb-row" ${canEdit ? `onclick="mbOpenBankEdit(${idx(r)})"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(r.name)}</b></td><td>${r.unknown ? '<span class="mb-bd a">нет в пользователях</span>' : mbEsc(r.login)}</td><td>${r.ids.length ? r.ids.slice(0, 2).map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') + (r.ids.length > 2 ? `<span class="mb-chip more">+${r.ids.length - 2}</span>` : '') : '<b style="color:#B76E00">Не назначены</b>'}</td><td class="mb-num">${mbFmt(r.houses)}</td><td class="mb-num">${r.visits}</td><td class="mb-num" style="white-space:nowrap">${canEdit ? `<button class="btn btn-secondary" onclick="event.stopPropagation();mbOpenBankEdit(${idx(r)})">Изменить</button>${r.unknown ? '' : ` <button class="btn mb-btn-del" onclick="event.stopPropagation();mbBankDelAsk(${idx(r)})">Удалить</button>`}` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Нет банкиров</td></tr>'}
+      </tbody></table></div>`;
+  }
+  box.innerHTML = `<div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="mbImportRoster()">Загрузить махалли из плана</button><button class="btn btn-secondary" onclick="mbOpenTransfer()">Переназначить</button></div>' : ''}</div>
+    <div class="mb-per" style="margin-bottom:14px;width:max-content">${sub('active', 'Активные', all.filter(r => !r.unknown).length)}${sub('archive', 'Архив', mbBankArchive.length)}${sub('free', 'Не назначенные махалли', free.length)}</div>${body}</div>`;
   window.mbBankAll = all;
+}
+function mbBankDelAsk(i) {
+  const r = window.mbBankAll[i]; if (!r) return;
+  mbModal(`<h3 style="margin:0 0 10px">Удалить банкира?</h3><div style="font-size:14px;line-height:1.5;margin-bottom:16px"><b>${mbEsc(r.name)}</b>${r.ids.length ? '<br>' + r.ids.map(id => mbEsc(mbMahName(id))).join(', ') : ''}</div>
+    <div style="display:flex;gap:8px"><button class="btn mb-btn-del" style="flex:1" id="mbDelGo" onclick="mbBankDelGo(${i})">Удалить в архив</button><button class="btn btn-secondary" style="flex:1" onclick="mbModalClose()">Отмена</button></div>`);
+}
+async function mbBankDelGo(i) {
+  const r = window.mbBankAll[i]; if (!r) return;
+  const b = document.getElementById('mbDelGo'); if (b) { b.disabled = true; b.textContent = 'Удаление...'; }
+  const res = await postWebAction({ webAction: 'archiveMahallaBanker', sessionId: localStorage.getItem('msbSessionId'), userId: r.id || '', login: r.login });
+  if (!res || !res.success) { mbModalClose(); alert((res && res.message) || 'Не удалось удалить'); return; }
+  mbModalClose();
+  await mbAdminRender();
+}
+async function mbBankRestore(i) {
+  const a = mbBankArchive[i]; if (!a) return;
+  const res = await postWebAction({ webAction: 'restoreMahallaBanker', sessionId: localStorage.getItem('msbSessionId'), userId: a.userId });
+  if (!res || !res.success) { alert((res && res.message) || 'Не удалось восстановить'); return; }
+  await mbAdminRender();
+}
+function mbAssignFree(id) {
+  const all = (window.mbBankAll || []).filter(r => !r.unknown);
+  const m = (allMahallas || []).find(x => x.id === id); if (!m) return;
+  mbModal(`<h3 style="margin:0 0 10px">${mbEsc(m.name)}</h3><select class="select" id="mbFreeSel" style="width:100%;margin-bottom:16px">${all.map(r => `<option value="${mbEsc(r.name)}">${mbEsc(r.name)}</option>`).join('')}</select>
+    <div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="mbAssignFreeGo('${mbEsc(id)}')">Назначить</button><button class="btn btn-secondary" style="flex:1" onclick="mbModalClose()">Отмена</button></div>`);
+}
+async function mbAssignFreeGo(id) {
+  const name = document.getElementById('mbFreeSel').value; if (!name) return;
+  const res = await postWebAction({ webAction: 'assignMahallaBankersBatch', sessionId: localStorage.getItem('msbSessionId'), changes: [{ mahallaId: id, bankers: name }] });
+  if (!res || !res.success) { alert((res && res.message) || 'Не удалось назначить'); return; }
+  const m = allMahallas.find(x => x.id === id); if (m) m.bankers = name;
+  mbModalClose(); mbRenderBankers();
 }
 let mbBankT = null;
 function mbRenderBankersDebounced() { clearTimeout(mbBankT); mbBankT = setTimeout(() => { mbRenderBankers(); const i = document.querySelector('#mbBankBody .mb-filters input'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); }
@@ -16314,7 +16372,7 @@ function mbRenderBankEdit(keepFocus) {
     <div class="mb-db"><div class="mb-sec">Прикреплённые махалли · выбрано ${mbBankSel.length}</div>
     <input class="input" id="mbMahSearch" placeholder="Поиск махалли" value="${mbEsc(mbMahQ)}" oninput="mbMahQ=this.value;mbRenderBankEdit(true)" style="margin-bottom:10px">
     ${(allMahallas || []).filter(m => !mbMahQ || (String(m.name) + ' ' + (m.district || '')).toLowerCase().includes(mbMahQ.toLowerCase()) || mbBankSel.indexOf(m.id) !== -1).sort((a, b) => (mbBankSel.indexOf(b.id) !== -1) - (mbBankSel.indexOf(a.id) !== -1)).map(m => { const on = mbBankSel.indexOf(m.id) !== -1; const o = mbOwnerOf(m.id, mbBankEdit); return `<div class="mb-mrow${on ? ' on' : ''}" onclick="mbBankTog('${mbEsc(m.id)}')"><i></i><span>${mbEsc(m.name)}<br><small>${mbEsc(m.district || '')}${m.district ? ' · ' : ''}${mbFmt(mbNum(m.households))} домов</small></span>${o ? `<small class="w">сейчас: ${mbEsc(o.split(' ')[0])}</small>` : ''}</div>`; }).join('')}
-    ${steal ? '<div class="mb-flagline">Махалли с пометкой «сейчас» будут сняты с прежних банкиров.</div>' : ''}</div>
+</div>
     <div class="mb-foot"><button class="btn btn-secondary" onclick="mbBankClose()">Отмена</button><button class="btn" id="mbBankSave" onclick="mbBankSave()">Сохранить</button></div>`);
   if (keepFocus === true) { const i = document.getElementById('mbMahSearch'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
 }
@@ -16346,11 +16404,11 @@ function mbRenderTransfer() {
   const all = window.mbBankAll || []; const f = all[mbBankFrom]; if (!f) return;
   const opt = cur => all.map((b, i) => `<option value="${i}"${i === cur ? ' selected' : ''}>${mbEsc(b.name)}</option>`).join('');
   const bad = mbBankFrom === mbBankTo || !f.ids.length;
-  mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">Переназначить махалли</div><div class="mb-ds">Передать все махалли одного банкира другому</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
+  mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">Переназначить махалли</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
     <div class="mb-db"><div class="mb-sec">От кого</div><select class="select" onchange="mbBankFrom=+this.value;mbRenderTransfer()">${opt(mbBankFrom)}</select>
     <div class="mb-sec">Кому</div><select class="select" onchange="mbBankTo=+this.value;mbRenderTransfer()">${opt(mbBankTo)}</select>
     <div class="mb-sec">Будут переданы</div>${f.ids.length ? f.ids.map(id => `<div class="mb-kv"><span>${mbEsc(mbMahName(id))}</span></div>`).join('') : '<div class="mb-count">У выбранного банкира нет махаллей</div>'}
-    ${mbBankFrom === mbBankTo ? '<div class="mb-flagline">Выберите разных банкиров.</div>' : ''}</div>
+</div>
     <div class="mb-foot"><button class="btn btn-secondary" onclick="mbBankClose()">Отмена</button><button class="btn" ${bad ? 'disabled' : ''} onclick="mbDoTransfer()">Передать</button></div>`);
 }
 async function mbDoTransfer() {
@@ -16384,8 +16442,8 @@ function mbPassportTotals() {
   return { mahallas: m.length, houses: sum('households'), pop: sum('population'), streets, fam: sum('families'), soc: sum('lowIncomeFamilies'), migrants: sum('migrants'), dis: sum('disabled'), un: sum('unemployed'), biz: sum('entrepreneursTotal') || sum('activeEntrepreneurs'), plot: sum('householdsWithLand'), sotki: sum('householdLandArea') };
 }
 
-function mbRenderDash() {
-  const box = document.getElementById('mbDashBody');
+function mbDashPanels() {
+  const box = { innerHTML: '' };
   const rows = mbDoneRows();
   const f = mbPassportTotals();
   const o = mbStatsOf(rows);
@@ -16425,13 +16483,6 @@ function mbRenderDash() {
     .sort((a, b) => (b.total ? b.done / b.total : 0) - (a.total ? a.done / a.total : 0));
 
   box.innerHTML = `
-    <div class="mb-cards">
-      <div class="mb-card"><div class="mb-k">Зайти повторно</div><div class="mb-v">${mbFmt(retry)}</div></div>
-      <div class="mb-card"><div class="mb-k">На проверке</div><div class="mb-v${pending ? ' mb-warn' : ''}">${mbFmt(pending)}</div></div>
-      <div class="mb-card"><div class="mb-k">Визитов сегодня</div><div class="mb-v">${mbFmt(visToday)}</div></div>
-      <div class="mb-card"><div class="mb-k">Визиты за 5 дней</div><div class="mb-v">${mbFmt(days.reduce((a, x) => a + x.n, 0))}</div>
-        <div class="mb-spark">${days.map(x => `<i style="height:${Math.max(4, Math.round(x.n / maxDay * 40))}px" title="${x.d.toLocaleDateString('ru-RU')}: ${x.n}"></i>`).join('')}</div></div>
-    </div>
     <div class="panel">
       <div class="mb-head"><h2>Общая статистика</h2>
         <div class="mb-actions"><button class="btn btn-secondary" id="mbUploadBtn" style="display:none" onclick="mbTogglePassport()">Загрузить паспорта</button></div></div>
@@ -16443,8 +16494,7 @@ function mbRenderDash() {
     </div>
     <div class="panel" id="obhodMapPanelDash"><h2 style="margin-bottom:14px;">Карта визитов</h2>
       <div style="display:flex;justify-content:flex-start"><button class="btn btn-secondary" onclick="showMahallaTab('mbObhod');setTimeout(function(){var b=document.getElementById('obhodMapToggleBtn');if(b&&document.getElementById('obhodMapWrap').style.display==='none')b.click();},300)">Открыть карту</button></div></div>`;
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
-  const ub = document.getElementById('mbUploadBtn'); if (ub) ub.style.display = isAdmin ? '' : 'none';
+  return box.innerHTML;
 }
 
 function mbTogglePassport() {
@@ -16515,19 +16565,8 @@ function mbRenderStats() {
   const distRows = Object.keys(dist).map(k => { const r = dist[k]; return `<tr><td>${mbEsc(k)}</td><td class="mb-num">${r.b.size}</td><td class="mb-num">${r.m}</td><td class="mb-num">${mbFmt(r.h)}</td><td class="mb-num">${r.v}</td><td class="mb-num">${r.h ? (r.v / r.h * 100).toFixed(1) : '0.0'}%</td></tr>`; }).join('');
 
   box.innerHTML = `
-    <div class="mb-cards mb-cards6">
-      <div class="mb-card"><div class="mb-k">Банкиров с визитами</div><div class="mb-v">${active.length}<small> / ${bm.length}</small></div></div>
-      <div class="mb-card"><div class="mb-k">Опрошено домов</div><div class="mb-v">${mbFmt(done.length)}</div></div>
-      <div class="mb-card"><div class="mb-k">Охват домов</div><div class="mb-v">${totalHouses ? (done.length / totalHouses * 100).toFixed(1) : '0.0'}%</div></div>
-      <div class="mb-card"><div class="mb-k">В среднем на банкира</div><div class="mb-v">${active.length ? (done.length / active.length).toFixed(1) : '0'}</div></div>
-      <div class="mb-card"><div class="mb-k">Визитов с флагом</div><div class="mb-v${flagTotal ? ' mb-warn' : ''}">${done.length ? Math.round(flagTotal / done.length * 100) : 0}%</div></div>
-      <div class="mb-card"><div class="mb-k">Среднее время опроса</div><div class="mb-v" style="font-size:22px">${mbDur(avgAll)}</div></div>
-    </div>
-    <div class="panel"><h2 style="margin-bottom:6px;">Динамика визитов за 5 дней</h2>
-      <div class="mb-col">${days.map(x => `<div><i style="height:${Math.max(3, Math.round(x.n / mxd * 110))}px"></i><b>${x.n}</b><span>${x.d.getDate()}.${String(x.d.getMonth() + 1).padStart(2, '0')}</span></div>`).join('')}</div></div>
-    <div class="mb-two">${mbRankCard('Топ 10 банкиров', top, false)}${mbRankCard('10 худших банкиров', worst, true)}</div>
-    <div class="panel"><h2 style="margin-bottom:14px;">Все банкиры</h2>
-      <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>Банкир</th><th>Район</th><th class="mb-num">Махаллей</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th class="mb-num">Охват</th><th class="mb-num">Повторно</th><th class="mb-num">Ср. время</th><th class="mb-num">С флагом</th><th class="mb-num">Отклонено</th><th class="mb-num">Безраб.</th><th class="mb-num">Бизнес</th><th class="mb-num">Поддержка</th></tr></thead><tbody>${bankRows || '<tr><td colspan="14" class="loading">Нет данных</td></tr>'}</tbody></table></div></div>
+    ${mbStatTop()}
+    ${mbDashPanels()}
     <div class="panel"><h2 style="margin-bottom:14px;">По районам</h2>
       <div class="client-table-wrap"><table class="mb-table"><thead><tr><th>Район</th><th class="mb-num">Банкиров</th><th class="mb-num">Махаллей</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th class="mb-num">Охват</th></tr></thead><tbody>${distRows || '<tr><td colspan="6" class="loading">Нет данных</td></tr>'}</tbody></table></div></div>
     <div class="mb-two">
@@ -16536,6 +16575,179 @@ function mbRenderStats() {
     </div>
     <div class="panel"><h2 style="margin-bottom:14px;">По махаллям</h2>
       <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>Махалля</th><th>Район</th><th>Банкир</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th class="mb-num">Охват</th><th class="mb-num">Безраб.</th><th class="mb-num">Бизнес</th><th class="mb-num">Поддержка</th></tr></thead><tbody>${mahRows || '<tr><td colspan="10" class="loading">Нет данных</td></tr>'}</tbody></table></div></div>`;
+}
+
+// ---------- Статистика: период, KPI, воронка, банкиры ----------
+let mbStPer = 'month', mbStQ = '', mbStDist = '', mbStSort = { k: 'visits', d: -1 }, mbFnBank = '', mbFnMah = '', mbMicro = [], mbBankArchive = [], mbBankSub = 'active';
+const MB_STPER = [['today', 'Сегодня'], ['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Всё время']];
+const MB_BIZ_YES = ['Интерес', 'Бизнес уже есть'];
+function mbMsOf(v) {
+  const m = String(v || '').match(/(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)).getTime();
+  const t = Date.parse(v); return isFinite(t) ? t : 0;
+}
+function mbStRange(per) {
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0); const d0 = t0.getTime();
+  if (per === 'today') return [d0, Infinity];
+  if (per === 'week') return [d0 - 6 * 86400000, Infinity];
+  if (per === 'month') return [new Date(t0.getFullYear(), t0.getMonth(), 1).getTime(), Infinity];
+  return [0, Infinity];
+}
+function mbMobileRows() { return (allObhodSurveys || []).filter(s => mbIsPhysical(s) && (s.source === 'mobile' || s.visitStatus) && s.review !== 'rejected'); }
+function mbBankKeys(r) { return [mbNorm(r.name), mbNorm(r.login)].filter(Boolean); }
+function mbBankKpis(per) {
+  const [a, b] = mbStRange(per);
+  const list = mbBankList(); const rows = mbMobileRows(); const micro = (mbMicro || []).filter(p => p.banker);
+  const mah = {}; (allMahallas || []).forEach(m => { mah[m.id] = m; });
+  const out = list.map(r => {
+    const keys = mbBankKeys(r);
+    const mine = rows.filter(s => keys.indexOf(mbNorm(s.createdBy)) !== -1);
+    const inP = mine.filter(s => { const t = Number(s.finishedAt) || 0; return t >= a && t < b; });
+    const done = inP.filter(s => !mbIsRetry(s));
+    const pr = micro.filter(p => keys.indexOf(mbNorm(p.banker)) !== -1);
+    const prP = pr.filter(p => { const t = mbMsOf(p.createdAt); return t >= a && t < b; });
+    const last = mine.reduce((m, s) => Math.max(m, Number(s.finishedAt) || 0), 0);
+    const plan = r.ids.reduce((x, id) => x + (mah[id] ? mbNum(mah[id].microprojectsPlan) : 0), 0);
+    const dists = Array.from(new Set(r.ids.map(id => mah[id] && mah[id].district).filter(Boolean)));
+    return { name: r.name, login: r.login, ids: r.ids, houses: r.houses, district: dists.join(', '), visits: inP.length, done: done.length, retry: inP.length - done.length,
+      cover: r.houses ? done.length / r.houses * 100 : 0, interest: done.filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1).length,
+      proj: prP.length, sum: prP.reduce((x, p) => x + mbNum(p.totalCost), 0), projAll: pr.length, plan, last, mine };
+  });
+  const ranked = out.filter(x => x.houses > 0).sort((x, y) => y.visits - x.visits || y.cover - x.cover);
+  const n = ranked.length;
+  ranked.forEach((x, i) => { x.grade = x.visits === 0 ? 'r' : i < Math.ceil(n * 0.25) ? 'g' : i >= Math.floor(n * 0.75) ? 'r' : 'a'; });
+  out.forEach(x => { if (!x.grade) x.grade = 'r'; });
+  return out;
+}
+function mbPeriodHtml(cur, fn) { return `<div class="mb-per">${MB_STPER.map(([k, l]) => `<span class="${cur === k ? 'on' : ''}" onclick="${fn}('${k}')">${l}</span>`).join('')}</div>`; }
+function mbStSetPer(k) { mbStPer = k; mbRenderStats(); }
+function mbDelta(cur, prev) { if (!prev) return cur ? '<i class="st-d up">▲</i>' : ''; const p = Math.round((cur - prev) / prev * 100); return p === 0 ? '<i class="st-d">0%</i>' : `<i class="st-d ${p > 0 ? 'up' : 'dn'}">${p > 0 ? '▲' : '▼'} ${Math.abs(p)}%</i>`; }
+function mbStatTop() {
+  const f = mbPassportTotals();
+  const rows = mbMobileRows().filter(s => !mbIsRetry(s));
+  const ts = s => Number(s.finishedAt) || 0;
+  const now = Date.now(); const [m0] = mbStRange('month'); const [d0] = mbStRange('today');
+  const mdt = new Date(m0); const pm0 = new Date(mdt.getFullYear(), mdt.getMonth() - 1, 1).getTime();
+  const cnt = (a, b) => rows.filter(s => ts(s) >= a && ts(s) < b).length;
+  const cum = rows.length, month = cnt(m0, Infinity), monthPrev = cnt(pm0, pm0 + (now - m0));
+  const today = cnt(d0, Infinity), yest = cnt(d0 - 86400000, d0 - 86400000 + (now - d0));
+  const pend = (allObhodSurveys || []).filter(s => s.review === 'pending').length;
+  const cover = f.houses ? cum / f.houses * 100 : 0;
+  const t0 = d0; const days = []; for (let i = 4; i >= 0; i--) { const a = t0 - i * 86400000; days.push({ d: new Date(a), n: cnt(a, a + 86400000) }); }
+  const mxd = Math.max(1, ...days.map(x => x.n));
+  const card = (v, l, cls) => `<div class="st-k ${cls || ''}"><b>${v}</b><span>${l}</span></div>`;
+  return `
+    <div class="st-row5">${card(mbFmt(f.mahallas), 'Махаллей')}${card(mbFmt(f.pop), 'Население')}${card(mbFmt(f.houses), 'Домов')}${card(mbFmt(f.un), 'Безработных', 'r')}${card(mbFmt(f.soc), 'В реестре')}</div>
+    <div class="st-row4">
+      <div class="st-k"><b>${mbFmt(cum)}</b><span>Нарастающий обход</span><div class="st-bar"><u style="width:${Math.min(100, cover)}%"></u></div><em>${mbFmt1(cover)}%</em></div>
+      <div class="st-k"><b>${mbFmt(month)}</b><span>Ежемесячный обход</span>${mbDelta(month, monthPrev)}</div>
+      <div class="st-k"><b>${mbFmt(today)}</b><span>Ежедневный обход</span>${mbDelta(today, yest)}</div>
+      <div class="st-k${pend ? ' r' : ''}"><b>${mbFmt(pend)}</b><span>На проверке</span></div>
+    </div>
+    <div class="panel"><div class="mb-head"><h2>Динамика визитов</h2></div>
+      <div class="mb-col">${days.map(x => `<div><i style="height:${Math.max(3, Math.round(x.n / mxd * 110))}px"></i><b>${x.n}</b><span>${x.d.getDate()}.${String(x.d.getMonth() + 1).padStart(2, '0')}</span></div>`).join('')}</div></div>
+    ${mbFunnelHtml()}${mbBankKpiHtml()}`;
+}
+function mbFunnelData() {
+  const [a, b] = mbStRange(mbStPer);
+  const keysOf = n => { const r = mbBankList().find(x => x.name === n); return r ? mbBankKeys(r) : [mbNorm(n)]; };
+  const bk = mbFnBank ? keysOf(mbFnBank) : null;
+  const okRow = s => (!mbFnMah || String(s.mahalla).trim() === mbFnMah) && (!bk || bk.indexOf(mbNorm(s.createdBy)) !== -1);
+  const inP = mbMobileRows().filter(s => { const t = Number(s.finishedAt) || 0; return t >= a && t < b && okRow(s); });
+  const done = inP.filter(s => !mbIsRetry(s));
+  const interest = done.filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1);
+  const support = interest.filter(s => (s.finance || []).some(x => x !== 'none'));
+  const projects = (mbMicro || []).filter(p => { if (!p.banker) return false; const t = mbMsOf(p.createdAt); return t >= a && t < b && (!mbFnMah || String(p.mahalla).trim() === mbFnMah) && (!bk || bk.indexOf(mbNorm(p.banker)) !== -1); });
+  let houses = 0;
+  if (bk) { const r = mbBankList().find(x => x.name === mbFnBank); houses = r ? r.houses : 0; if (mbFnMah) { const m = (allMahallas || []).find(x => String(x.name).trim() === mbFnMah); houses = m ? mbNum(m.households) : 0; } }
+  else if (mbFnMah) { const m = (allMahallas || []).find(x => String(x.name).trim() === mbFnMah); houses = m ? mbNum(m.households) : 0; }
+  else houses = (allMahallas || []).reduce((x, m) => x + mbNum(m.households), 0);
+  return { houses, inP, done, interest, support, projects, retry: inP.length - done.length };
+}
+function mbFunnelHtml() {
+  const d = mbFunnelData();
+  const steps = [['Домов в махаллях', d.houses, null], ['Посещено', d.inP.length, d.houses], ['Опрошено', d.done.length, d.inP.length], ['Интерес к бизнесу', d.interest.length, d.done.length], ['Нужна поддержка', d.support.length, d.interest.length], ['Микропроект создан', d.projects.length, d.support.length]];
+  const base = Math.max(1, d.houses);
+  const colors = ['#9BA0AB', '#6B7280', '#4B5563', '#B71F17', '#B71F17', '#14804A'];
+  const mahs = (allMahallas || []).map(m => String(m.name).trim()).sort();
+  const banks = mbBankList().map(r => r.name).sort();
+  const sum = d.projects.reduce((x, p) => x + mbNum(p.totalCost), 0);
+  const pc = (x, y) => y ? Math.round(x / y * 100) + '%' : '—';
+  const card = (v, l) => `<div class="st-k"><b>${v}</b><span>${l}</span></div>`;
+  return `<div class="panel"><div class="mb-head"><h2>Качественная воронка результатов</h2></div>
+    <div class="mb-filters2">${mbPeriodHtml(mbStPer, 'mbStSetPer')}
+      <select class="select" style="max-width:240px" onchange="mbFnMah=this.value;mbRenderStats()"><option value="">Все махалли</option>${mahs.map(n => `<option${n === mbFnMah ? ' selected' : ''}>${mbEsc(n)}</option>`).join('')}</select>
+      <select class="select" style="max-width:240px" onchange="mbFnBank=this.value;mbRenderStats()"><option value="">Все банкиры</option>${banks.map(n => `<option${n === mbFnBank ? ' selected' : ''}>${mbEsc(n)}</option>`).join('')}</select></div>
+    <div class="st-fn">${steps.map((st, i) => { const w = Math.max(i === 0 ? 100 : 6, Math.round(Math.sqrt(st[1] / base) * 100)); return `<div class="st-fr${i ? ' click' : ''}" ${i ? `onclick="mbFunnelOpen(${i})"` : ''}><div class="t"><b>${st[0]}</b></div><div class="tr"><u style="width:${i === 0 ? 100 : w}%;background:${colors[i]}">${mbFmt(st[1])}</u></div><div class="v"><b>${st[2] === null ? '100%' : pc(st[1], st[2])}</b>${i === 2 && d.retry ? `<em>${mbFmt(d.retry)}</em>` : ''}</div></div>`; }).join('')}</div>
+    <div class="st-row4" style="margin-top:14px">${card(pc(d.done.length, d.inP.length), 'Опрошено от посещённых')}${card(d.done.length ? mbFmt1(d.projects.length / d.done.length * 100) : '—', 'Проектов на 100 домов')}${card(pc(d.projects.length, d.interest.length), 'Интерес → проект')}${card(mbFmt1(sum / 1e6), 'Сумма проектов, млн')}</div></div>`;
+}
+function mbModal(html) {
+  let m = document.getElementById('mbModalBg');
+  if (!m) { m = document.createElement('div'); m.id = 'mbModalBg'; m.className = 'mb-modalbg'; m.onclick = e => { if (e.target === m) mbModalClose(); }; document.body.appendChild(m); }
+  m.innerHTML = `<div class="mb-modal">${html}</div>`; m.classList.add('open');
+}
+function mbModalClose() { const m = document.getElementById('mbModalBg'); if (m) m.classList.remove('open'); }
+function mbFunnelOpen(i) {
+  const d = mbFunnelData();
+  const dt = ms => ms ? new Date(Number(ms)).toLocaleString('ru-RU') : '';
+  const names = ['', 'Посещено', 'Опрошено', 'Интерес к бизнесу', 'Нужна поддержка', 'Микропроект создан'];
+  let head, body;
+  if (i === 5) {
+    head = '<th>Дата</th><th>Махалля</th><th>Проект</th><th>Инициатор</th><th>Банкир</th><th class="mb-num">Стоимость</th>';
+    body = d.projects.slice(0, 300).map(p => `<tr><td>${mbEsc(p.createdAt)}</td><td>${mbEsc(p.mahalla)}</td><td>${mbEsc(p.projectName)}</td><td>${mbEsc(p.applicantName)}</td><td>${mbEsc(p.banker)}</td><td class="mb-num">${mbFmt(mbNum(p.totalCost))}</td></tr>`).join('');
+  } else {
+    const list = [d.houses, d.inP, d.done, d.interest, d.support][i];
+    head = '<th>Дата</th><th>Махалля</th><th>Адрес</th><th>Владелец</th><th>Банкир</th>';
+    body = list.slice().sort((x, y) => (Number(y.finishedAt) || 0) - (Number(x.finishedAt) || 0)).slice(0, 300).map(s => `<tr><td>${dt(s.finishedAt)}</td><td>${mbEsc(s.mahalla)}</td><td>${mbEsc(s.address)}</td><td>${mbEsc(s.headName)}</td><td>${mbEsc(s.createdBy)}</td></tr>`).join('');
+  }
+  mbModal(`<div class="mb-head"><h2>${names[i]}</h2><button class="close-btn" onclick="mbModalClose()">×</button></div><div class="client-table-wrap" style="max-height:60vh;overflow:auto"><table class="mb-table"><thead><tr>${head}</tr></thead><tbody>${body || '<tr><td colspan="6">Нет данных</td></tr>'}</tbody></table></div>`);
+}
+function mbBankKpiHtml() {
+  const all = mbBankKpis(mbStPer);
+  const withH = all.filter(x => x.houses > 0).sort((x, y) => y.visits - x.visits || y.cover - x.cover);
+  const top = withH.slice(0, 10), worst = withH.slice(-10).reverse();
+  const rk = (list, bad) => `<div class="panel"><h2 style="margin-bottom:10px;color:${bad ? '#B3261E' : '#14804A'}">${bad ? 'Топ 10 худших' : 'Топ 10 лучших'}</h2><div class="client-table-wrap"><table class="mb-table"><thead><tr><th></th><th>Банкир</th><th>Махалля</th><th class="mb-num">Визитов</th><th class="mb-num">Охват</th></tr></thead><tbody>${list.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td><span class="mb-pos${bad ? ' w' : ''}" style="${bad ? 'background:#FBE6E3;color:#B3261E' : ''}">${bad ? withH.length - i : i + 1}</span></td><td><b>${mbEsc(x.name)}</b></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', '))}</td><td class="mb-num"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td></tr>`).join('') || '<tr><td colspan="5">Нет данных</td></tr>'}</tbody></table></div></div>`;
+  const dists = Array.from(new Set(all.flatMap(x => x.district.split(', ')).filter(Boolean))).sort();
+  let rows = all.filter(x => (!mbStQ || x.name.toLowerCase().includes(mbStQ.toLowerCase())) && (!mbStDist || x.district.split(', ').indexOf(mbStDist) !== -1));
+  const k = mbStSort.k, dir = mbStSort.d;
+  rows.sort((x, y) => { const a = x[k], b = y[k]; return (typeof a === 'string' ? a.localeCompare(b) : (a - b)) * dir; });
+  const th = (key, label, num) => `<th class="${num ? 'mb-num ' : ''}st-sort" onclick="mbStSortBy('${key}')">${label}${k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  const gl = { g: 'Отлично', a: 'Средне', r: 'Слабо' };
+  const lastTxt = ms => { if (!ms) return '—'; const days = Math.floor((Date.now() - ms) / 86400000); return days >= 3 ? `<b class="st-late">${days} дн. назад</b>` : new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+  return `<div class="mb-two">${rk(top, false)}${rk(worst, true)}</div>
+    <div class="panel"><div class="mb-head"><h2>KPI банкиров</h2><button class="btn btn-secondary" onclick="mbStExport()">Скачать в Excel</button></div>
+      <div class="mb-filters2">${mbPeriodHtml(mbStPer, 'mbStSetPer')}<input class="input" style="max-width:240px" placeholder="Поиск по ФИО" value="${mbEsc(mbStQ)}" oninput="mbStQ=this.value;mbStSearchDeb()"><select class="select" style="max-width:200px" onchange="mbStDist=this.value;mbRenderStats()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbStDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select></div>
+      <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th>${th('name', 'Банкир')}<th>Махалля</th>${th('houses', 'Домов', 1)}${th('visits', 'Визитов', 1)}${th('cover', 'Охват', 1)}${th('done', 'Опрошено', 1)}${th('interest', 'Интерес', 1)}${th('proj', 'Проектов', 1)}${th('sum', 'Сумма, млн', 1)}${th('retry', 'Повторно', 1)}${th('projAll', 'План проектов', 1)}${th('last', 'Последний визит')}<th>Оценка</th></tr></thead><tbody>
+      ${rows.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td class="mb-num">${i + 1}</td><td><b>${mbEsc(x.name)}</b></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', ') || '—')}</td><td class="mb-num">${mbFmt(x.houses)}</td><td class="mb-num${x.visits === 0 ? ' mb-red' : ''}"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td><td class="mb-num">${x.done}</td><td class="mb-num">${x.interest}</td><td class="mb-num">${x.proj}</td><td class="mb-num">${mbFmt1(x.sum / 1e6)}</td><td class="mb-num">${x.retry}</td><td class="mb-num">${x.plan ? x.projAll + ' / ' + mbFmt(x.plan) + ' · ' + Math.round(x.projAll / x.plan * 100) + '%' : x.projAll}</td><td>${lastTxt(x.last)}</td><td><span class="mb-bd ${x.grade}">${gl[x.grade]}</span></td></tr>`).join('') || '<tr><td colspan="14">Нет данных</td></tr>'}
+      </tbody></table></div></div>`;
+}
+let mbStT = null;
+function mbStSearchDeb() { clearTimeout(mbStT); mbStT = setTimeout(() => { mbRenderStats(); const i = document.querySelector('#mbStatsBody input[placeholder="Поиск по ФИО"]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); }
+function mbStSortBy(k) { mbStSort = { k, d: mbStSort.k === k ? -mbStSort.d : (k === 'name' ? 1 : -1) }; mbRenderStats(); }
+function mbStExport() {
+  if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё загружается. Повторите через несколько секунд.'); return; }
+  const per = (MB_STPER.find(x => x[0] === mbStPer) || [])[1] || '';
+  const hdr = ['№', 'Банкир', 'Логин', 'Район', 'Махалли', 'Домов', 'Визитов', 'Охват, %', 'Опрошено', 'Интерес к бизнесу', 'Проектов', 'Сумма проектов, сум', 'Зайти повторно', 'Проектов всего', 'План проектов', 'Последний визит', 'Оценка'];
+  const gl = { g: 'Отлично', a: 'Средне', r: 'Слабо' };
+  const data = [hdr].concat(mbBankKpis(mbStPer).sort((x, y) => y.visits - x.visits).map((x, i) => [i + 1, x.name, x.login, x.district, x.ids.map(mbMahName).join(', '), x.houses, x.visits, Math.round(x.cover * 10) / 10, x.done, x.interest, x.proj, x.sum, x.retry, x.projAll, x.plan, x.last ? new Date(x.last).toLocaleString('ru-RU') : '', gl[x.grade]]));
+  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols'] = [5, 30, 18, 14, 40, 9, 9, 9, 10, 12, 10, 18, 11, 12, 12, 18, 10].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'KPI банкиров'); XLSX.writeFile(wb, 'KPI_bankirov_' + per + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+}
+function mbBankCard(key) {
+  const r = mbBankKpis(mbStPer).find(x => (x.login || x.name) === key); if (!r) return;
+  const rows = r.mine.slice().sort((x, y) => (Number(y.finishedAt) || 0) - (Number(x.finishedAt) || 0));
+  const d0 = mbStRange('today')[0]; const days = [];
+  for (let i = 13; i >= 0; i--) { const a = d0 - i * 86400000; days.push({ d: new Date(a), n: rows.filter(s => !mbIsRetry(s) && (Number(s.finishedAt) || 0) >= a && (Number(s.finishedAt) || 0) < a + 86400000).length }); }
+  const mx = Math.max(1, ...days.map(x => x.n));
+  const flags = rows.filter(s => mbFlags(s).length).length;
+  const k = (v, l) => `<div class="st-k"><b>${v}</b><span>${l}</span></div>`;
+  const kp = mbBankKpis(mbStPer).filter(x => x.houses > 0).sort((x, y) => y.visits - x.visits || y.cover - x.cover); const place = kp.findIndex(x => x.name === r.name) + 1;
+  const dt = ms => ms ? new Date(Number(ms)).toLocaleString('ru-RU') : '';
+  mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">${mbEsc(r.name)}</div><div class="mb-ds">${mbEsc(r.ids.map(mbMahName).join(', '))}</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
+    <div class="mb-db"><div class="st-row3" style="margin-top:14px">${k(r.visits, 'Визитов')}${k(mbFmt1(r.cover) + '%', 'Охват')}${k(r.done, 'Опрошено')}${k(r.interest, 'Интерес')}${k(r.proj, 'Проектов')}${k(place ? place + ' из ' + kp.length : '—', 'Место')}</div>
+      <div class="mb-sec">Визиты за 14 дней</div><div class="mb-col" style="height:110px">${days.map(x => `<div><i style="height:${Math.max(3, Math.round(x.n / mx * 70))}px"></i><b>${x.n}</b><span>${x.d.getDate()}</span></div>`).join('')}</div>
+      <div class="mb-sec">Флагов проверки: ${flags}</div>
+      <div class="mb-sec">Последние визиты</div>${rows.slice(0, 10).map(s => `<div class="mb-kv"><span>${dt(s.finishedAt)} · ${mbEsc(s.address || '')}</span><b>${mbIsRetry(s) ? 'Повторно' : 'Опрошен'}</b></div>`).join('') || '<div class="mb-count">Нет визитов</div>'}</div>`);
 }
 
 // ---------- Обход ----------
@@ -16975,7 +17187,7 @@ async function mbInfoSave(kind) {
 }
 
 // ===================== ПЕРЕВОД МОБИЛЬНОЙ ВЕРСИИ (RU ⇄ UZ) =====================
-const MB_UZ = {"Нет связи с сервером. Проверьте интернет и нажмите «Сохранить проект» ещё раз.": "Serverga ulanib bo‘lmadi. Internetni tekshiring va «Loyihani saqlash» tugmasini yana bosing.", "Нет связи. Визит сохранён на телефоне и будет отправлен автоматически.": "Aloqa yo‘q. Tashrif telefonda saqlandi va avtomatik yuboriladi.", "Есть незавершённый визит. Начать новый? Черновик будет удалён.": "Tugallanmagan tashrif bor. Yangisini boshlaysizmi? Qoralama o‘chiriladi.", "Нет доступа к геолокации. Разрешите её в настройках браузера": "Geolokatsiyaga ruxsat yo‘q. Brauzer sozlamalarida ruxsat bering", "Нет доступа к камере. Разрешите её в настройках браузера.": "Kameraga ruxsat yo‘q. Brauzer sozlamalarida ruxsat bering.", "Закрыть анкету? Черновик сохранён, его можно продолжить.": "So‘rovnomani yopasizmi? Qoralama saqlandi, uni davom ettirish mumkin.", "Камера недоступна в этом браузере. Откройте CRM в Chrome или Safari по защищённому адресу.": "Bu brauzerda kamera mavjud emas. CRM’ni Chrome yoki Safari’da xavfsiz manzil orqali oching.", "камера включится после определения местоположения": "kamera joylashuv aniqlangach yoqiladi", "Ожидание GPS:": "GPS kutilmoqda:", "Микропроект: укажите стоимость (от 1 000 000 сум)": "Mikroloyiha: qiymatini kiriting (1 000 000 so‘mdan)", "Нужно не хуже 50 м. Выйдите на открытое место": "50 m dan yomon bo‘lmasligi kerak. Ochiq joyga chiqing", "Кредит возможен только при интересе к бизнесу": "Kredit faqat biznesga qiziqish bo‘lsa mumkin", "Подождите, пока определится местоположение": "Joylashuv aniqlanguncha kuting", "Для «зайти повторно» нужны фото фасада и GPS в разделе «Фото».": "«Qayta kirish» uchun «Rasm» bo‘limida fasad surati va GPS kerak.", "Для «зайти повторно» нужны фото фасада и GPS в разделе «Фото и локация».": "«Qayta kirish» uchun «Rasm» bo‘limida fasad surati va GPS kerak.", "Школьник такого возраста — проверьте год": "Bunday yoshdagi maktab o‘quvchisi — yilni tekshiring", "Визит принят, но микропроект не создан:": "Tashrif qabul qilindi, lekin mikroloyiha yaratilmadi:", "Визит принят и отправлен на проверку.": "Tashrif qabul qilindi va tekshiruvga yuborildi.", "«Не интересно» нельзя сочетать с другими вариантами": "«Qiziq emas» ni boshqa variantlar bilan birga tanlab bo‘lmaydi", "«Не интересно» нельзя сочетать с другими": "«Qiziq emas» ni boshqalar bilan birga tanlab bo‘lmaydi", "Нельзя сочетать «Невозможно посеять» с другими вариантами": "«Ekib bo‘lmaydi» ni boshqa variantlar bilan birga tanlab bo‘lmaydi", "Опишите пожелание минимум тремя словами": "Istakni kamida uch so‘z bilan yozing", "Текст похож на случайный набор символов": "Matn tasodifiy belgilar to‘plamiga o‘xshaydi", "За вами не закреплена ни одна махалля": "Sizga birorta mahalla biriktirilmagan", "Не закреплена ни одна махалля": "Birorta mahalla biriktirilmagan", "Укажите, есть ли приусадебный участок": "Tomorqa bor-yo‘qligini ko‘rsating", "Безработных больше, чем членов семьи": "Ishsizlar oila a’zolaridan ko‘p", "Не удалось определить местоположение": "Joylashuvni aniqlab bo‘lmadi", "ФИО: минимум фамилия и имя, без цифр": "F.I.Sh.: kamida familiya va ism, raqamsiz", "Безработный не может быть младше 18": "Ishsiz 18 yoshdan kichik bo‘lishi mumkin emas", "Микропроект: укажите ФИО инициатора": "Mikroloyiha: tashabbuskor F.I.Sh. ni kiriting", "Пенсионер младше 50 — проверьте год": "Pensioner 50 dan kichik — yilni tekshiring", "Занятость не подходит по возрасту": "Bandlik yoshga mos kelmaydi", "Минимум 8 символов, буква и цифра": "Kamida 8 belgi, harf va raqam", "Средний месячный доход семьи, сум": "Oilaning o‘rtacha oylik daromadi, so‘m", "ФИО и логин меняет администратор": "F.I.Sh. va loginni administrator o‘zgartiradi", "Доход вне допустимого диапазона": "Daromad ruxsat etilgan oraliqdan tashqarida", "Местоположение не зафиксировано": "Joylashuv qayd etilmadi", "Нужны фото: фасад, двор, житель": "Rasmlar kerak: fasad, hovli, aholi", "Укажите, владелец рядом или нет": "Egasi yaqinda yoki yo‘qligini ko‘rsating", "Свои средства больше стоимости": "O‘z mablag‘i qiymatdan ko‘p", "Микропроект: введите название": "Mikroloyiha: nomini kiriting", "Микропроект: выберите отрасль": "Mikroloyiha: sohani tanlang", "Микропроект: свои средства больше стоимости": "Mikroloyiha: o‘z mablag‘i qiymatdan ko‘p", "Микропроект: стоимость вне допустимого диапазона": "Mikroloyiha: qiymati ruxsat etilgan oraliqdan tashqarida", "Определение местоположения...": "Joylashuv aniqlanmoqda...", "ПИНФЛ: неверная дата рождения": "JSHSHIR: tug‘ilgan sana noto‘g‘ri", "ПИНФЛ: неверная первая цифра": "JSHSHIR: birinchi raqam noto‘g‘ri", "ПИНФЛ: ровно 14 цифр": "JSHSHIR: roppa-rosa 14 ta raqam", "ПИНФЛ: только цифры": "JSHSHIR: faqat raqamlar", "ПИНФЛ: ещё": "JSHSHIR: yana", "Выберите возможности участка": "Uchastka imkoniyatlarini tanlang", "Есть возможность для бизнеса": "Biznes uchun imkoniyat bor", "Например: теплица на 6 соток": "Masalan: 6 sotixda issiqxona", "Нужен ровно один глава семьи": "Roppa-rosa bitta oila boshlig‘i kerak", "Добавьте всех членов семьи:": "Barcha oila a’zolarini qo‘shing:", "Не удалось загрузить данные": "Ma’lumotlarni yuklab bo‘lmadi", "Не удалось сохранить проект": "Loyihani saqlab bo‘lmadi", "Опишите пожелание подробнее": "Istakni batafsilroq yozing", "показаны сохранённые данные": "saqlangan ma’lumotlar ko‘rsatilmoqda", "Выберите вариант поддержки": "Qo‘llab-quvvatlash variantini tanlang", "Не удалось обработать фото": "Rasmni qayta ishlab bo‘lmadi", "Пока нет зачтённых визитов": "Hisoblangan tashriflar hali yo‘q", "Помещение или участок есть": "Xona yoki yer uchastkasi bor", "Похоже на выдуманный номер": "O‘ylab topilgan raqamga o‘xshaydi", "Сохранить «зайти повторно»": "«Qayta kirish» ni saqlash", "Укажите число членов семьи": "Oila a’zolari sonini kiriting", "Введите телефон полностью": "Telefonni to‘liq kiriting", "введите телефон полностью": "telefonni to‘liq kiriting", "Выберите ответ про бизнес": "Biznes haqida javobni tanlang", "Данные ещё не обновлялись": "Ma’lumotlar hali yangilanmagan", "Не удалось сменить пароль": "Parolni o‘zgartirib bo‘lmadi", "Не удалось создать ссылку": "Havola yaratib bo‘lmadi", "Не удалось сохранить фото": "Rasmni saqlab bo‘lmadi", "Фиксируем местоположение…": "Joylashuv qayd etilmoqda…", "Глава семьи уже добавлен": "Oila boshlig‘i allaqachon qo‘shilgan", "Нужно ещё фото с камеры:": "Kameradan yana rasm kerak:", "Семья со средним доходом": "O‘rtacha daromadli oila", "Можно поставить теплицу": "Issiqxona qurish mumkin", "Отключить уведомления в Telegram?": "Telegram’dagi bildirishnomalarni o‘chirasizmi?", "Субсидия, ссуда, кредит": "Subsidiya, ssuda, kredit", "PIN-код на этом телефоне": "Shu telefondagi PIN-kod", "Безработный младше 18:": "18 yoshdan kichik ishsiz:", "Владелец моложе 18 лет": "Egasi 18 yoshdan kichik", "Инспектор профилактики": "Profilaktika inspektori", "Неверный код оператора": "Operator kodi noto‘g‘ri", "Стоимость проекта, сум": "Loyiha qiymati, so‘m", "Строительство и ремонт": "Qurilish va ta’mirlash", "Укажите размер участка": "Uchastka maydonini kiriting", "Безработных в списке:": "Ro‘yxatdagi ishsizlar:", "Введите средний доход": "O‘rtacha daromadni kiriting", "Геолокация недоступна": "Geolokatsiya mavjud emas", "укажите фамилию и имя": "familiya va ismni kiriting", "В социальном реестре": "Ijtimoiy reyestrda", "Выберите статус дома": "Uy maqomini tanlang", "Добавить члена семьи": "Oila a’zosini qo‘shish", "Заполните улицу, дом": "Ko‘cha, uyni to‘ldiring", "и квартиру": "va xonadonni", "Инвалид с профессией": "Kasbli nogiron", "Инвалид без работы": "Ishsiz nogiron", "Микропроект сохранён": "Mikroloyiha saqlandi", "Не меньше 8 символов": "Kamida 8 belgi", "Не удалось сохранить": "Saqlab bo‘lmadi", "Неофициальная работа": "Norasmiy ish", "Нет связи с сервером": "Serverga ulanish yo‘q", "Председатель махалли": "Mahalla raisi", "Приусадебный участок": "Tomorqa", "Фамилия Имя Отчество": "Familiya Ism Sharif", "Фасад с номером дома": "Uy raqamli fasad", "Доход и статус дома": "Daromad va uy maqomi", "Желание безработных": "Ishsizlarning istagi", "Имеет хороший доход": "Daromadi yaxshi", "Налоговый инспектор": "Soliq inspektori", "Незавершённый визит": "Tugallanmagan tashrif", "Определяем точность": "Aniqlik aniqlanmoqda", "интерес к поддержке": "qo‘llab-quvvatlashga qiziqish", "продолжаем черновик": "qoralama davom ettirilmoqda", "Активист (женщины)": "Faol (ayollar)", "Есть буква и цифра": "Harf va raqam bor", "Невозможно посеять": "Ekib bo‘lmaydi", "Новых рабочих мест": "Yangi ish o‘rinlari", "Обучение профессии": "Kasb o‘rgatish", "Работа за границей": "Chet elda ish", "Свои средства, сум": "O‘z mablag‘i, so‘m", "Сельское хозяйство": "Qishloq xo‘jaligi", "Выйти из аккаунта": "Hisobdan chiqish", "Выпечка и общепит": "Pishiriq va ommaviy ovqatlanish", "Интерес к бизнесу": "Biznesga qiziqish", "интерес к бизнесу": "biznesga qiziqish", "Новый микропроект": "Yangi mikroloyiha", "Нужно фото фасада": "Fasad surati kerak", "Ожидают отправки:": "Yuborilishi kutilmoqda:", "Отклонён сервером": "Server rad etdi", "Стабильная работа": "Doimiy ish", "Что хочет открыть": "Nimani ochmoqchi", "Выберите махаллю": "Mahallani tanlang", "Двор или участок": "Hovli yoki uchastka", "Домов в махалле:": "Mahalladagi uylar:", "Зачтённые визиты": "Hisoblangan tashriflar", "Название проекта": "Loyiha nomi", "Ожидает отправки": "Yuborilishi kutilmoqda", "Отправить сейчас": "Hozir yuborish", "Пароли совпадают": "Parollar mos", "Повторите пароль": "Parolni takrorlang", "Сохранить проект": "Loyihani saqlash", "Укажите желание:": "Istakni ko‘rsating:", "никого нет дома)": "uyda hech kim yo‘q)", "сегодня опрошено": "bugun so‘rovdan o‘tgan", "Безработных 18+": "Ishsizlar 18+", "Бизнес уже есть": "Biznes allaqachon bor", "Добавить проект": "Loyiha qo‘shish", "Завершить визит": "Tashrifni yakunlash", "Никого нет дома": "Uyda hech kim yo‘q", "Нужна поддержка": "Qo‘llab-quvvatlash kerak", "Опросить сейчас": "Hozir so‘rash", "Помощник хокима": "Hokim yordamchisi", "Статус субъекта": "Subyekt maqomi", "безработных 18+": "ishsizlar 18+", "Банкир махалли": "Mahalla bankiri", "Владелец рядом": "Egasi yaqinda", "Выберите сферу": "Sohani tanlang", "Данные махалли": "Mahalla ma’lumotlari", "Животноводство": "Chorvachilik", "Житель у входа": "Kirish joyidagi aholi", "Зайти повторно": "Qayta kirish", "Лидер молодёжи": "Yoshlar yetakchisi", "Открыть бизнес": "Biznes ochish", "Оценка банкира": "Bankir bahosi", "Очень сильный": "Juda kuchli", "Пароль изменён": "Parol o‘zgartirildi", "Сессия истекла": "Seans tugadi", "Сменить пароль": "Parolni o‘zgartirish", "Текущий пароль": "Joriy parol", "всего опрошено": "jami so‘rovdan o‘tgan", "Введите ПИНФЛ": "JSHSHIR kiriting", "Добавить фото": "Rasm qo‘shish", "Изменить фото": "Rasmni o‘zgartirish", "Перспективный": "Istiqbolli", "Размер, соток": "Maydon, sotix", "Саженцы и сад": "Ko‘chat va bog‘", "Слабый сигнал": "Signal zaif", "ФИО владельца": "Egasining F.I.Sh.", "Безопасность": "Xavfsizlik", "Год рождения": "Tug‘ilgan yili", "Имеет бизнес": "Biznesi bor", "Месяц старта": "Boshlanish oyi", "Не интересен": "Qiziq emas", "Не интересно": "Qiziq emas", "Не назначены": "Tayinlanmagan", "Не подключён": "Ulanmagan", "Новый пароль": "Yangi parol", "Производство": "Ishlab chiqarish", "Птицеводство": "Parrandachilik", "Смена пароля": "Parolni o‘zgartirish", "Состав семьи": "Oila tarkibi", "Фото проекта": "Loyiha surati", "Членов семьи": "Oila a’zolari", "Что возможно": "Nima mumkin", "Швейное дело": "Tikuvchilik", "Безработные": "Ishsizlar", "Безработный": "Ishsiz", "Безработных": "Ishsizlar", "Ваше место:": "Sizning o‘rningiz:", "Глава семьи": "Oila boshlig‘i", "Домохозяйка": "Uy bekasi", "Загрузка...": "Yuklanmoqda...", "Загрузка…": "Yuklanmoqda…", "Мои махалли": "Mening mahallalarim", "На проверке": "Tekshiruvda", "Не настроен": "Sozlanmagan", "Нет визитов": "Tashriflar yo‘q", "Нет желания": "Istak yo‘q", "Нет махалли": "Mahalla yo‘q", "Нет проекта": "Loyiha yo‘q", "Образование": "Ta’lim", "Отправка...": "Yuborilmoqda...", "Самозанятый": "O‘zini o‘zi band qilgan", "Сохранение…": "Saqlanmoqda…", "Соцработник": "Ijtimoiy xodim", "Статус дома": "Uy maqomi", "Фамилия Имя": "Familiya Ism", "Частный дом": "Xususiy uy", "в счётчике:": "hisoblagichda:", "Дошкольное": "Maktabgacha", "Нет данных": "Ma’lumot yo‘q", "Проверяем…": "Tekshirilmoqda…", "Продолжить": "Davom etish", "Точность ±": "Aniqlik ±", "Член семьи": "Oila a’zosi", "В очереди": "Navbatda", "Занятость": "Bandlik", "Инвалидов": "Nogironlar", "Инициатор": "Tashabbuskor", "Интересен": "Qiziq", "Мигрантов": "Migrantlar", "Население": "Aholi", "Не указан": "Ko‘rsatilmagan", "Новый дом": "Yangi uy", "Обновлено": "Yangilangan", "Отправить": "Yuborish", "Пенсионер": "Pensioner", "Повторить": "Qayta urinish", "Поддержка": "Qo‘llab-quvvatlash", "Подключён": "Ulangan", "Пожелание": "Istak", "Сохранено": "Saqlandi", "Сохранить": "Saqlash", "Транспорт": "Transport", "заполнено": "to‘ldirildi", "Владелец": "Egasi", "Выберите": "Tanlang", "Добавить": "Qo‘shish", "Изменить": "O‘zgartirish", "Квартира": "Xonadon", "Контакты": "Kontaktlar", "Невестка": "Kelin", "Ожидание": "Kutilmoqda", "Описание": "Tavsif", "Опрошено": "So‘ralgan", "Осталось": "Qoldi", "Отклонён": "Rad etildi", "Повторно": "Qayta", "Подумает": "O‘ylab ko‘radi", "Работает": "Ishlaydi", "Сентябрь": "Sentabr", "Субсидия": "Subsidiya", "Техникум": "Texnikum", "Торговля": "Savdo", "Школьник": "Maktab o‘quvchisi", "Включён": "Yoqilgan", "Главная": "Asosiy", "Декабрь": "Dekabr", "Закрыть": "Yopish", "Интерес": "Qiziqish", "История": "Tarix", "Махалля": "Mahalla", "Октябрь": "Oktabr", "Отрасль": "Soha", "Профиль": "Profil", "Рейтинг": "Reyting", "Ремесло": "Hunarmandchilik", "Русский": "Русский", "Саженцы": "Ko‘chatlar", "Сегодня": "Bugun", "Семёрка": "Yettilik", "Среднее": "O‘rta", "Студент": "Talaba", "Телефон": "Telefon", "Теплица": "Issiqxona", "Удалить": "O‘chirish", "Февраль": "Fevral", "Физлицо": "Jismoniy shaxs", "безраб.": "ishsiz", "визитов": "tashrif", "Август": "Avgust", "Апрель": "Aprel", "Бизнес": "Biznes", "Внучка": "Nevara", "Высшее": "Oliy", "Данные": "Ma’lumotlar", "Другое": "Boshqa", "Кредит": "Kredit", "Ноябрь": "Noyabr", "Отмена": "Bekor qilish", "Принят": "Qabul qilindi", "Сервис": "Servis", "Сестра": "Opa-singil", "Слабый": "Zaif", "Статус": "Maqom", "Услуги": "Xizmatlar", "Юрлицо": "Yuridik shaxs", "Январь": "Yanvar", "Адрес": "Manzil", "Визит": "Tashrif", "Время": "Vaqt", "Вчера": "Kecha", "Домов": "Uylar", "Доход": "Daromad", "Логин": "Login", "Месяц": "Oy", "Назад": "Orqaga", "ПИНФЛ": "JSHSHIR", "Семей": "Oilalar", "Снять": "Suratga olish", "Ссуда": "Ssuda", "Старт": "Boshlanishi", "Сфера": "Soha", "Улица": "Ko‘cha", "сотка": "sotix", "сотки": "sotix", "соток": "sotix", "Брат": "Aka-uka", "Внук": "Nevara", "Дочь": "Qiz", "Есть": "Bor", "Жена": "Xotin", "Зять": "Kuyov", "Июль": "Iyul", "Июнь": "Iyun", "Март": "Mart", "Мать": "Ona", "Отец": "Ota", "Роль": "Rol", "Фото": "Rasm", "Язык": "Til", "цифр": "raqam", "Все": "Hammasi", "Дом": "Uy", "МЧЖ": "MChJ", "Май": "May", "Муж": "Er", "Нет": "Yo‘q", "Сын": "O‘g‘il", "ФИО": "F.I.Sh.", "кв.": "xon.", "сум": "so‘m", "Да": "Ha", "ИП": "YaTT", "из": "/", "Нет GPS-координат": "GPS koordinatalari yo‘q", "Точность GPS ±": "GPS aniqligi ±", "Визит в нерабочее время": "Ish vaqtidan tashqari tashrif", "Визит далеко от остальных визитов махалли": "Tashrif mahalladagi boshqa tashriflardan uzoq", "Визит отправлен спустя больше 14 дней": "Tashrif 14 kundan ko‘proq vaqt o‘tib yuborildi", "Время визита в будущем": "Tashrif vaqti kelajakda", "Время устройства расходится со временем GPS": "Qurilma vaqti GPS vaqtidan farq qiladi", "Высокий доход при статусе «В социальном реестре»": "«Ijtimoiy reyestrda» maqomida daromad yuqori", "Низкий доход при статусе «Имеет хороший доход»": "«Daromadi yaxshi» maqomida daromad past", "Год рождения указан неверно:": "Tug‘ilgan yil noto‘g‘ri ko‘rsatilgan:", "Данные визита повреждены": "Tashrif ma’lumotlari buzilgan", "Данные проекта повреждены": "Loyiha ma’lumotlari buzilgan", "Для «повторно» нужно фото фасада": "«Qayta» uchun fasad surati kerak", "Занятость не подходит по возрасту:": "Bandlik yoshga mos kelmaydi:", "Заполните роль, занятость и образование:": "Rol, bandlik va ta’limni to‘ldiring:", "Найдены одинаковые фото": "Bir xil rasmlar topildi", "Невозможная скорость между визитами": "Tashriflar orasida imkonsiz tezlik", "Неизвестная махалля:": "Noma’lum mahalla:", "Недостаточно прав.": "Huquq yetarli emas.", "Опрос заполнен слишком быстро": "So‘rovnoma juda tez to‘ldirilgan", "По этому адресу уже": "Bu manzil bo‘yicha allaqachon", "Пожелание дословно повторяет другой визит": "Istak boshqa tashrifni so‘zma-so‘z takrorlaydi", "Сессия истекла. Войдите заново.": "Seans tugadi. Qaytadan kiring.", "Телефон: 9 цифр после +998": "Telefon: +998 dan keyin 9 ta raqam", "У члена семьи нужны фамилия и имя": "Oila a’zosi uchun familiya va ism kerak", "Укажите махаллю": "Mahallani ko‘rsating", "Укажите номер дома": "Uy raqamini kiriting", "Укажите номер квартиры": "Xonadon raqamini kiriting", "Укажите улицу": "Ko‘chani kiriting", "Фото не дошли до сервера, повторите отправку": "Rasmlar serverga yetib bormadi, qayta yuboring", "Фото сделано далеко от точки визита": "Rasm tashrif nuqtasidan uzoqda olingan", "Фото сделаны слишком быстро одно за другим": "Rasmlar ketma-ket juda tez olingan", "Эта махалля вам не назначена": "Bu mahalla sizga tayinlanmagan", "Это фото уже использовано в другом визите": "Bu rasm boshqa tashrifda allaqachon ishlatilgan", "Этот ПИНФЛ уже опрошен": "Bu JSHSHIR allaqachon so‘ralgan", "Этот адрес уже опрошен": "Bu manzil allaqachon so‘ralgan", "Этот телефон уже указан в другом визите": "Bu telefon boshqa tashrifda allaqachon ko‘rsatilgan", "Введите ФИО инициатора": "Tashabbuskor F.I.Sh. ni kiriting", "Введите название проекта": "Loyiha nomini kiriting", "Не удалось сохранить фото:": "Rasmni saqlab bo‘lmadi:", "Пользователь не найден": "Foydalanuvchi topilmadi", "Неверное значение:": "Noto‘g‘ri qiymat:", "Неверный телефон:": "Noto‘g‘ri telefon:", "Неверное ФИО:": "Noto‘g‘ri F.I.Sh.:", "Махалля не найдена": "Mahalla topilmadi", "Неверная дата": "Noto‘g‘ri sana", "Старый пароль неверный": "Eski parol noto‘g‘ri", "Новый пароль минимум 6 символов": "Yangi parol kamida 6 belgidan iborat bo‘lsin", "Добавлен отдельно": "Alohida qo‘shilgan", "Дата": "Sana", "Банкир": "Bankir", "GPS готов": "GPS tayyor", "(вы)": "(siz)", "ул.": "ko‘ch.", "Строительство": "Qurilish", "Слабый сигнал GPS": "GPS signali zaif", "Исправьте, чтобы сохранить": "Saqlash uchun tuzating", "Не сохранено. Ошибок:": "Saqlanmadi. Xatolar soni:", "Нажмите на пункт, чтобы перейти к полю.": "Maydonga o‘tish uchun bandni bosing.", "Исправить": "Tuzatish", "Сервер не принял визит. Проверьте данные и повторите.": "Server tashrifni qabul qilmadi. Ma’lumotlarni tekshirib, qayta urining.", "Ошибка данных": "Ma’lumot xatosi", "На заработках за рубежом": "Chet elda ishlaydi", "На заработках в другом регионе": "Boshqa hududda ishlaydi", "В декрете": "Dekret ta’tilida", "Служит в армии": "Armiyada xizmat qilmoqda", "Учится за границей": "Chet elda o‘qiydi", "Длительно болеет": "Uzoq muddat kasal", "Неделя": "Hafta", "Всё время": "Butun davr", "Ваше место": "Sizning o‘rningiz", "Вы лидируете": "Siz yetakchisiz", "Лидеры": "Yetakchilar", "Все банкиры": "Barcha bankirlar", "К моему месту": "O‘z o‘rnimga", "% от лидера": "% yetakchidan", "охват домов": "uylar qamrovi", "микропроектов": "mikroloyiha", "Охват": "Qamrov", "Проекты": "Loyihalar", "Визиты": "Tashriflar", "визит(ов)": "tashrif", "проект(ов)": "loyiha", "За этот период визитов ещё нет": "Bu davrda tashriflar hali yo‘q", "Вас нет в рейтинге: махалли не закреплены": "Siz reytingda yo‘qsiz: mahallalar biriktirilmagan", "Зачтённые визиты ·": "Hisoblangan tashriflar ·", "1 место": "1-o‘rin", "2 место": "2-o‘rin", "3 место": "3-o‘rin"};
+const MB_UZ = {"Нет сигнала GPS. Выйдите на открытое место": "GPS signali yo‘q. Ochiq joyga chiqing", "Нет связи с сервером. Проверьте интернет и нажмите «Сохранить проект» ещё раз.": "Serverga ulanib bo‘lmadi. Internetni tekshiring va «Loyihani saqlash» tugmasini yana bosing.", "Нет связи. Визит сохранён на телефоне и будет отправлен автоматически.": "Aloqa yo‘q. Tashrif telefonda saqlandi va avtomatik yuboriladi.", "Есть незавершённый визит. Начать новый? Черновик будет удалён.": "Tugallanmagan tashrif bor. Yangisini boshlaysizmi? Qoralama o‘chiriladi.", "Нет доступа к геолокации. Разрешите её в настройках браузера": "Geolokatsiyaga ruxsat yo‘q. Brauzer sozlamalarida ruxsat bering", "Нет доступа к камере. Разрешите её в настройках браузера.": "Kameraga ruxsat yo‘q. Brauzer sozlamalarida ruxsat bering.", "Закрыть анкету? Черновик сохранён, его можно продолжить.": "So‘rovnomani yopasizmi? Qoralama saqlandi, uni davom ettirish mumkin.", "Камера недоступна в этом браузере. Откройте CRM в Chrome или Safari по защищённому адресу.": "Bu brauzerda kamera mavjud emas. CRM’ni Chrome yoki Safari’da xavfsiz manzil orqali oching.", "камера включится после определения местоположения": "kamera joylashuv aniqlangach yoqiladi", "Ожидание GPS:": "GPS kutilmoqda:", "Микропроект: укажите стоимость (от 1 000 000 сум)": "Mikroloyiha: qiymatini kiriting (1 000 000 so‘mdan)", "Нужно не хуже 150 м. Выйдите на открытое место": "150 m dan yomon bo‘lmasligi kerak. Ochiq joyga chiqing", "Слабый GPS ±": "GPS zaif ±", "Кредит возможен только при интересе к бизнесу": "Kredit faqat biznesga qiziqish bo‘lsa mumkin", "Подождите, пока определится местоположение": "Joylashuv aniqlanguncha kuting", "Для «зайти повторно» нужны фото фасада и GPS в разделе «Фото».": "«Qayta kirish» uchun «Rasm» bo‘limida fasad surati va GPS kerak.", "Для «зайти повторно» нужны фото фасада и GPS в разделе «Фото и локация».": "«Qayta kirish» uchun «Rasm» bo‘limida fasad surati va GPS kerak.", "Школьник такого возраста — проверьте год": "Bunday yoshdagi maktab o‘quvchisi — yilni tekshiring", "Визит принят, но микропроект не создан:": "Tashrif qabul qilindi, lekin mikroloyiha yaratilmadi:", "Визит принят и отправлен на проверку.": "Tashrif qabul qilindi va tekshiruvga yuborildi.", "«Не интересно» нельзя сочетать с другими вариантами": "«Qiziq emas» ni boshqa variantlar bilan birga tanlab bo‘lmaydi", "«Не интересно» нельзя сочетать с другими": "«Qiziq emas» ni boshqalar bilan birga tanlab bo‘lmaydi", "Нельзя сочетать «Невозможно посеять» с другими вариантами": "«Ekib bo‘lmaydi» ni boshqa variantlar bilan birga tanlab bo‘lmaydi", "Опишите пожелание минимум тремя словами": "Istakni kamida uch so‘z bilan yozing", "Текст похож на случайный набор символов": "Matn tasodifiy belgilar to‘plamiga o‘xshaydi", "За вами не закреплена ни одна махалля": "Sizga birorta mahalla biriktirilmagan", "Не закреплена ни одна махалля": "Birorta mahalla biriktirilmagan", "Укажите, есть ли приусадебный участок": "Tomorqa bor-yo‘qligini ko‘rsating", "Безработных больше, чем членов семьи": "Ishsizlar oila a’zolaridan ko‘p", "Не удалось определить местоположение": "Joylashuvni aniqlab bo‘lmadi", "ФИО: минимум фамилия и имя, без цифр": "F.I.Sh.: kamida familiya va ism, raqamsiz", "Безработный не может быть младше 18": "Ishsiz 18 yoshdan kichik bo‘lishi mumkin emas", "Микропроект: укажите ФИО инициатора": "Mikroloyiha: tashabbuskor F.I.Sh. ni kiriting", "Пенсионер младше 50 — проверьте год": "Pensioner 50 dan kichik — yilni tekshiring", "Занятость не подходит по возрасту": "Bandlik yoshga mos kelmaydi", "Минимум 8 символов, буква и цифра": "Kamida 8 belgi, harf va raqam", "Средний месячный доход семьи, сум": "Oilaning o‘rtacha oylik daromadi, so‘m", "ФИО и логин меняет администратор": "F.I.Sh. va loginni administrator o‘zgartiradi", "Доход вне допустимого диапазона": "Daromad ruxsat etilgan oraliqdan tashqarida", "Местоположение не зафиксировано": "Joylashuv qayd etilmadi", "Нужны фото: фасад, двор, житель": "Rasmlar kerak: fasad, hovli, aholi", "Укажите, владелец рядом или нет": "Egasi yaqinda yoki yo‘qligini ko‘rsating", "Свои средства больше стоимости": "O‘z mablag‘i qiymatdan ko‘p", "Микропроект: введите название": "Mikroloyiha: nomini kiriting", "Микропроект: выберите отрасль": "Mikroloyiha: sohani tanlang", "Микропроект: свои средства больше стоимости": "Mikroloyiha: o‘z mablag‘i qiymatdan ko‘p", "Микропроект: стоимость вне допустимого диапазона": "Mikroloyiha: qiymati ruxsat etilgan oraliqdan tashqarida", "Определение местоположения...": "Joylashuv aniqlanmoqda...", "ПИНФЛ: неверная дата рождения": "JSHSHIR: tug‘ilgan sana noto‘g‘ri", "ПИНФЛ: неверная первая цифра": "JSHSHIR: birinchi raqam noto‘g‘ri", "ПИНФЛ: ровно 14 цифр": "JSHSHIR: roppa-rosa 14 ta raqam", "ПИНФЛ: только цифры": "JSHSHIR: faqat raqamlar", "ПИНФЛ: ещё": "JSHSHIR: yana", "Выберите возможности участка": "Uchastka imkoniyatlarini tanlang", "Есть возможность для бизнеса": "Biznes uchun imkoniyat bor", "Например: теплица на 6 соток": "Masalan: 6 sotixda issiqxona", "Нужен ровно один глава семьи": "Roppa-rosa bitta oila boshlig‘i kerak", "Добавьте всех членов семьи:": "Barcha oila a’zolarini qo‘shing:", "Не удалось загрузить данные": "Ma’lumotlarni yuklab bo‘lmadi", "Не удалось сохранить проект": "Loyihani saqlab bo‘lmadi", "Опишите пожелание подробнее": "Istakni batafsilroq yozing", "показаны сохранённые данные": "saqlangan ma’lumotlar ko‘rsatilmoqda", "Выберите вариант поддержки": "Qo‘llab-quvvatlash variantini tanlang", "Не удалось обработать фото": "Rasmni qayta ishlab bo‘lmadi", "Пока нет зачтённых визитов": "Hisoblangan tashriflar hali yo‘q", "Помещение или участок есть": "Xona yoki yer uchastkasi bor", "Похоже на выдуманный номер": "O‘ylab topilgan raqamga o‘xshaydi", "Сохранить «зайти повторно»": "«Qayta kirish» ni saqlash", "Укажите число членов семьи": "Oila a’zolari sonini kiriting", "Введите телефон полностью": "Telefonni to‘liq kiriting", "введите телефон полностью": "telefonni to‘liq kiriting", "Выберите ответ про бизнес": "Biznes haqida javobni tanlang", "Данные ещё не обновлялись": "Ma’lumotlar hali yangilanmagan", "Не удалось сменить пароль": "Parolni o‘zgartirib bo‘lmadi", "Не удалось создать ссылку": "Havola yaratib bo‘lmadi", "Не удалось сохранить фото": "Rasmni saqlab bo‘lmadi", "Фиксируем местоположение…": "Joylashuv qayd etilmoqda…", "Глава семьи уже добавлен": "Oila boshlig‘i allaqachon qo‘shilgan", "Нужно ещё фото с камеры:": "Kameradan yana rasm kerak:", "Семья со средним доходом": "O‘rtacha daromadli oila", "Можно поставить теплицу": "Issiqxona qurish mumkin", "Отключить уведомления в Telegram?": "Telegram’dagi bildirishnomalarni o‘chirasizmi?", "Субсидия, ссуда, кредит": "Subsidiya, ssuda, kredit", "PIN-код на этом телефоне": "Shu telefondagi PIN-kod", "Безработный младше 18:": "18 yoshdan kichik ishsiz:", "Владелец моложе 18 лет": "Egasi 18 yoshdan kichik", "Инспектор профилактики": "Profilaktika inspektori", "Неверный код оператора": "Operator kodi noto‘g‘ri", "Стоимость проекта, сум": "Loyiha qiymati, so‘m", "Строительство и ремонт": "Qurilish va ta’mirlash", "Укажите размер участка": "Uchastka maydonini kiriting", "Безработных в списке:": "Ro‘yxatdagi ishsizlar:", "Введите средний доход": "O‘rtacha daromadni kiriting", "Геолокация недоступна": "Geolokatsiya mavjud emas", "укажите фамилию и имя": "familiya va ismni kiriting", "В социальном реестре": "Ijtimoiy reyestrda", "Выберите статус дома": "Uy maqomini tanlang", "Добавить члена семьи": "Oila a’zosini qo‘shish", "Заполните улицу, дом": "Ko‘cha, uyni to‘ldiring", "и квартиру": "va xonadonni", "Инвалид с профессией": "Kasbli nogiron", "Инвалид без работы": "Ishsiz nogiron", "Микропроект сохранён": "Mikroloyiha saqlandi", "Не меньше 8 символов": "Kamida 8 belgi", "Не удалось сохранить": "Saqlab bo‘lmadi", "Неофициальная работа": "Norasmiy ish", "Нет связи с сервером": "Serverga ulanish yo‘q", "Председатель махалли": "Mahalla raisi", "Приусадебный участок": "Tomorqa", "Фамилия Имя Отчество": "Familiya Ism Sharif", "Фасад с номером дома": "Uy raqamli fasad", "Доход и статус дома": "Daromad va uy maqomi", "Желание безработных": "Ishsizlarning istagi", "Имеет хороший доход": "Daromadi yaxshi", "Налоговый инспектор": "Soliq inspektori", "Незавершённый визит": "Tugallanmagan tashrif", "Определяем точность": "Aniqlik aniqlanmoqda", "интерес к поддержке": "qo‘llab-quvvatlashga qiziqish", "продолжаем черновик": "qoralama davom ettirilmoqda", "Активист (женщины)": "Faol (ayollar)", "Есть буква и цифра": "Harf va raqam bor", "Невозможно посеять": "Ekib bo‘lmaydi", "Новых рабочих мест": "Yangi ish o‘rinlari", "Обучение профессии": "Kasb o‘rgatish", "Работа за границей": "Chet elda ish", "Свои средства, сум": "O‘z mablag‘i, so‘m", "Сельское хозяйство": "Qishloq xo‘jaligi", "Выйти из аккаунта": "Hisobdan chiqish", "Выпечка и общепит": "Pishiriq va ommaviy ovqatlanish", "Интерес к бизнесу": "Biznesga qiziqish", "интерес к бизнесу": "biznesga qiziqish", "Новый микропроект": "Yangi mikroloyiha", "Нужно фото фасада": "Fasad surati kerak", "Ожидают отправки:": "Yuborilishi kutilmoqda:", "Отклонён сервером": "Server rad etdi", "Стабильная работа": "Doimiy ish", "Что хочет открыть": "Nimani ochmoqchi", "Выберите махаллю": "Mahallani tanlang", "Двор или участок": "Hovli yoki uchastka", "Домов в махалле:": "Mahalladagi uylar:", "Зачтённые визиты": "Hisoblangan tashriflar", "Название проекта": "Loyiha nomi", "Ожидает отправки": "Yuborilishi kutilmoqda", "Отправить сейчас": "Hozir yuborish", "Пароли совпадают": "Parollar mos", "Повторите пароль": "Parolni takrorlang", "Сохранить проект": "Loyihani saqlash", "Укажите желание:": "Istakni ko‘rsating:", "никого нет дома)": "uyda hech kim yo‘q)", "сегодня опрошено": "bugun so‘rovdan o‘tgan", "Безработных 18+": "Ishsizlar 18+", "Бизнес уже есть": "Biznes allaqachon bor", "Добавить проект": "Loyiha qo‘shish", "Завершить визит": "Tashrifni yakunlash", "Никого нет дома": "Uyda hech kim yo‘q", "Нужна поддержка": "Qo‘llab-quvvatlash kerak", "Опросить сейчас": "Hozir so‘rash", "Помощник хокима": "Hokim yordamchisi", "Статус субъекта": "Subyekt maqomi", "безработных 18+": "ishsizlar 18+", "Банкир махалли": "Mahalla bankiri", "Владелец рядом": "Egasi yaqinda", "Выберите сферу": "Sohani tanlang", "Данные махалли": "Mahalla ma’lumotlari", "Животноводство": "Chorvachilik", "Житель у входа": "Kirish joyidagi aholi", "Зайти повторно": "Qayta kirish", "Лидер молодёжи": "Yoshlar yetakchisi", "Открыть бизнес": "Biznes ochish", "Оценка банкира": "Bankir bahosi", "Очень сильный": "Juda kuchli", "Пароль изменён": "Parol o‘zgartirildi", "Сессия истекла": "Seans tugadi", "Сменить пароль": "Parolni o‘zgartirish", "Текущий пароль": "Joriy parol", "всего опрошено": "jami so‘rovdan o‘tgan", "Введите ПИНФЛ": "JSHSHIR kiriting", "Добавить фото": "Rasm qo‘shish", "Изменить фото": "Rasmni o‘zgartirish", "Перспективный": "Istiqbolli", "Размер, соток": "Maydon, sotix", "Саженцы и сад": "Ko‘chat va bog‘", "Слабый сигнал": "Signal zaif", "ФИО владельца": "Egasining F.I.Sh.", "Безопасность": "Xavfsizlik", "Год рождения": "Tug‘ilgan yili", "Имеет бизнес": "Biznesi bor", "Месяц старта": "Boshlanish oyi", "Не интересен": "Qiziq emas", "Не интересно": "Qiziq emas", "Не назначены": "Tayinlanmagan", "Не подключён": "Ulanmagan", "Новый пароль": "Yangi parol", "Производство": "Ishlab chiqarish", "Птицеводство": "Parrandachilik", "Смена пароля": "Parolni o‘zgartirish", "Состав семьи": "Oila tarkibi", "Фото проекта": "Loyiha surati", "Членов семьи": "Oila a’zolari", "Что возможно": "Nima mumkin", "Швейное дело": "Tikuvchilik", "Безработные": "Ishsizlar", "Безработный": "Ishsiz", "Безработных": "Ishsizlar", "Ваше место:": "Sizning o‘rningiz:", "Глава семьи": "Oila boshlig‘i", "Домохозяйка": "Uy bekasi", "Загрузка...": "Yuklanmoqda...", "Загрузка…": "Yuklanmoqda…", "Мои махалли": "Mening mahallalarim", "На проверке": "Tekshiruvda", "Не настроен": "Sozlanmagan", "Нет визитов": "Tashriflar yo‘q", "Нет желания": "Istak yo‘q", "Нет махалли": "Mahalla yo‘q", "Нет проекта": "Loyiha yo‘q", "Образование": "Ta’lim", "Отправка...": "Yuborilmoqda...", "Самозанятый": "O‘zini o‘zi band qilgan", "Сохранение…": "Saqlanmoqda…", "Соцработник": "Ijtimoiy xodim", "Статус дома": "Uy maqomi", "Фамилия Имя": "Familiya Ism", "Частный дом": "Xususiy uy", "в счётчике:": "hisoblagichda:", "Дошкольное": "Maktabgacha", "Нет данных": "Ma’lumot yo‘q", "Проверяем…": "Tekshirilmoqda…", "Продолжить": "Davom etish", "Точность ±": "Aniqlik ±", "Член семьи": "Oila a’zosi", "В очереди": "Navbatda", "Занятость": "Bandlik", "Инвалидов": "Nogironlar", "Инициатор": "Tashabbuskor", "Интересен": "Qiziq", "Мигрантов": "Migrantlar", "Население": "Aholi", "Не указан": "Ko‘rsatilmagan", "Новый дом": "Yangi uy", "Обновлено": "Yangilangan", "Отправить": "Yuborish", "Пенсионер": "Pensioner", "Повторить": "Qayta urinish", "Поддержка": "Qo‘llab-quvvatlash", "Подключён": "Ulangan", "Пожелание": "Istak", "Сохранено": "Saqlandi", "Сохранить": "Saqlash", "Транспорт": "Transport", "заполнено": "to‘ldirildi", "Владелец": "Egasi", "Выберите": "Tanlang", "Добавить": "Qo‘shish", "Изменить": "O‘zgartirish", "Квартира": "Xonadon", "Контакты": "Kontaktlar", "Невестка": "Kelin", "Ожидание": "Kutilmoqda", "Описание": "Tavsif", "Опрошено": "So‘ralgan", "Осталось": "Qoldi", "Отклонён": "Rad etildi", "Повторно": "Qayta", "Подумает": "O‘ylab ko‘radi", "Работает": "Ishlaydi", "Сентябрь": "Sentabr", "Субсидия": "Subsidiya", "Техникум": "Texnikum", "Торговля": "Savdo", "Школьник": "Maktab o‘quvchisi", "Включён": "Yoqilgan", "Главная": "Asosiy", "Декабрь": "Dekabr", "Закрыть": "Yopish", "Интерес": "Qiziqish", "История": "Tarix", "Махалля": "Mahalla", "Октябрь": "Oktabr", "Отрасль": "Soha", "Профиль": "Profil", "Рейтинг": "Reyting", "Ремесло": "Hunarmandchilik", "Русский": "Русский", "Саженцы": "Ko‘chatlar", "Сегодня": "Bugun", "Семёрка": "Yettilik", "Среднее": "O‘rta", "Студент": "Talaba", "Телефон": "Telefon", "Теплица": "Issiqxona", "Удалить": "O‘chirish", "Февраль": "Fevral", "Физлицо": "Jismoniy shaxs", "безраб.": "ishsiz", "визитов": "tashrif", "Август": "Avgust", "Апрель": "Aprel", "Бизнес": "Biznes", "Внучка": "Nevara", "Высшее": "Oliy", "Данные": "Ma’lumotlar", "Другое": "Boshqa", "Кредит": "Kredit", "Ноябрь": "Noyabr", "Отмена": "Bekor qilish", "Принят": "Qabul qilindi", "Сервис": "Servis", "Сестра": "Opa-singil", "Слабый": "Zaif", "Статус": "Maqom", "Услуги": "Xizmatlar", "Юрлицо": "Yuridik shaxs", "Январь": "Yanvar", "Адрес": "Manzil", "Визит": "Tashrif", "Время": "Vaqt", "Вчера": "Kecha", "Домов": "Uylar", "Доход": "Daromad", "Логин": "Login", "Месяц": "Oy", "Назад": "Orqaga", "ПИНФЛ": "JSHSHIR", "Семей": "Oilalar", "Снять": "Suratga olish", "Ссуда": "Ssuda", "Старт": "Boshlanishi", "Сфера": "Soha", "Улица": "Ko‘cha", "сотка": "sotix", "сотки": "sotix", "соток": "sotix", "Брат": "Aka-uka", "Внук": "Nevara", "Дочь": "Qiz", "Есть": "Bor", "Жена": "Xotin", "Зять": "Kuyov", "Июль": "Iyul", "Июнь": "Iyun", "Март": "Mart", "Мать": "Ona", "Отец": "Ota", "Роль": "Rol", "Фото": "Rasm", "Язык": "Til", "цифр": "raqam", "Все": "Hammasi", "Дом": "Uy", "МЧЖ": "MChJ", "Май": "May", "Муж": "Er", "Нет": "Yo‘q", "Сын": "O‘g‘il", "ФИО": "F.I.Sh.", "кв.": "xon.", "сум": "so‘m", "Да": "Ha", "ИП": "YaTT", "из": "/", "Нет GPS-координат": "GPS koordinatalari yo‘q", "Точность GPS ±": "GPS aniqligi ±", "Визит в нерабочее время": "Ish vaqtidan tashqari tashrif", "Визит далеко от остальных визитов махалли": "Tashrif mahalladagi boshqa tashriflardan uzoq", "Визит отправлен спустя больше 14 дней": "Tashrif 14 kundan ko‘proq vaqt o‘tib yuborildi", "Время визита в будущем": "Tashrif vaqti kelajakda", "Время устройства расходится со временем GPS": "Qurilma vaqti GPS vaqtidan farq qiladi", "Высокий доход при статусе «В социальном реестре»": "«Ijtimoiy reyestrda» maqomida daromad yuqori", "Низкий доход при статусе «Имеет хороший доход»": "«Daromadi yaxshi» maqomida daromad past", "Год рождения указан неверно:": "Tug‘ilgan yil noto‘g‘ri ko‘rsatilgan:", "Данные визита повреждены": "Tashrif ma’lumotlari buzilgan", "Данные проекта повреждены": "Loyiha ma’lumotlari buzilgan", "Для «повторно» нужно фото фасада": "«Qayta» uchun fasad surati kerak", "Занятость не подходит по возрасту:": "Bandlik yoshga mos kelmaydi:", "Заполните роль, занятость и образование:": "Rol, bandlik va ta’limni to‘ldiring:", "Найдены одинаковые фото": "Bir xil rasmlar topildi", "Невозможная скорость между визитами": "Tashriflar orasida imkonsiz tezlik", "Неизвестная махалля:": "Noma’lum mahalla:", "Недостаточно прав.": "Huquq yetarli emas.", "Опрос заполнен слишком быстро": "So‘rovnoma juda tez to‘ldirilgan", "По этому адресу уже": "Bu manzil bo‘yicha allaqachon", "Пожелание дословно повторяет другой визит": "Istak boshqa tashrifni so‘zma-so‘z takrorlaydi", "Сессия истекла. Войдите заново.": "Seans tugadi. Qaytadan kiring.", "Телефон: 9 цифр после +998": "Telefon: +998 dan keyin 9 ta raqam", "У члена семьи нужны фамилия и имя": "Oila a’zosi uchun familiya va ism kerak", "Укажите махаллю": "Mahallani ko‘rsating", "Укажите номер дома": "Uy raqamini kiriting", "Укажите номер квартиры": "Xonadon raqamini kiriting", "Укажите улицу": "Ko‘chani kiriting", "Фото не дошли до сервера, повторите отправку": "Rasmlar serverga yetib bormadi, qayta yuboring", "Фото сделано далеко от точки визита": "Rasm tashrif nuqtasidan uzoqda olingan", "Фото сделаны слишком быстро одно за другим": "Rasmlar ketma-ket juda tez olingan", "Эта махалля вам не назначена": "Bu mahalla sizga tayinlanmagan", "Это фото уже использовано в другом визите": "Bu rasm boshqa tashrifda allaqachon ishlatilgan", "Этот ПИНФЛ уже опрошен": "Bu JSHSHIR allaqachon so‘ralgan", "Этот адрес уже опрошен": "Bu manzil allaqachon so‘ralgan", "Этот телефон уже указан в другом визите": "Bu telefon boshqa tashrifda allaqachon ko‘rsatilgan", "Введите ФИО инициатора": "Tashabbuskor F.I.Sh. ni kiriting", "Введите название проекта": "Loyiha nomini kiriting", "Не удалось сохранить фото:": "Rasmni saqlab bo‘lmadi:", "Пользователь не найден": "Foydalanuvchi topilmadi", "Неверное значение:": "Noto‘g‘ri qiymat:", "Неверный телефон:": "Noto‘g‘ri telefon:", "Неверное ФИО:": "Noto‘g‘ri F.I.Sh.:", "Махалля не найдена": "Mahalla topilmadi", "Неверная дата": "Noto‘g‘ri sana", "Старый пароль неверный": "Eski parol noto‘g‘ri", "Новый пароль минимум 6 символов": "Yangi parol kamida 6 belgidan iborat bo‘lsin", "Добавлен отдельно": "Alohida qo‘shilgan", "Дата": "Sana", "Банкир": "Bankir", "GPS готов": "GPS tayyor", "(вы)": "(siz)", "ул.": "ko‘ch.", "Строительство": "Qurilish", "Слабый сигнал GPS": "GPS signali zaif", "Исправьте, чтобы сохранить": "Saqlash uchun tuzating", "Не сохранено. Ошибок:": "Saqlanmadi. Xatolar soni:", "Нажмите на пункт, чтобы перейти к полю.": "Maydonga o‘tish uchun bandni bosing.", "Исправить": "Tuzatish", "Сервер не принял визит. Проверьте данные и повторите.": "Server tashrifni qabul qilmadi. Ma’lumotlarni tekshirib, qayta urining.", "Ошибка данных": "Ma’lumot xatosi", "На заработках за рубежом": "Chet elda ishlaydi", "На заработках в другом регионе": "Boshqa hududda ishlaydi", "В декрете": "Dekret ta’tilida", "Служит в армии": "Armiyada xizmat qilmoqda", "Учится за границей": "Chet elda o‘qiydi", "Длительно болеет": "Uzoq muddat kasal", "Неделя": "Hafta", "Всё время": "Butun davr", "Ваше место": "Sizning o‘rningiz", "Вы лидируете": "Siz yetakchisiz", "Лидеры": "Yetakchilar", "Все банкиры": "Barcha bankirlar", "К моему месту": "O‘z o‘rnimga", "% от лидера": "% yetakchidan", "охват домов": "uylar qamrovi", "микропроектов": "mikroloyiha", "Охват": "Qamrov", "Проекты": "Loyihalar", "Визиты": "Tashriflar", "визит(ов)": "tashrif", "проект(ов)": "loyiha", "За этот период визитов ещё нет": "Bu davrda tashriflar hali yo‘q", "Вас нет в рейтинге: махалли не закреплены": "Siz reytingda yo‘qsiz: mahallalar biriktirilmagan", "Зачтённые визиты ·": "Hisoblangan tashriflar ·", "1 место": "1-o‘rin", "2 место": "2-o‘rin", "3 место": "3-o‘rin"};
 let MB_UZ_RE = null;
 const mbIsUz = () => (localStorage.getItem('msbAppLang') || 'ru') === 'uz' && document.body.classList.contains('role-mahalla-banker');
 function mbTrStr(s) {
@@ -17454,15 +17666,15 @@ async function mbSubmit() {
 function mbFixOnce(ms) {
   return new Promise(resolve => {
     if (!navigator.geolocation) { resolve({ err: 'Геолокация недоступна' }); return; }
-    let best = null, done = false, id = null;
-    const fin = () => { if (done) return; done = true; if (id != null) navigator.geolocation.clearWatch(id); clearTimeout(tm); resolve(best ? { fix: best } : { err: 'Не удалось определить местоположение' }); };
+    let best = null, done = false, id = null, lastErr = '';
+    const fin = () => { if (done) return; done = true; if (id != null) navigator.geolocation.clearWatch(id); clearTimeout(tm); resolve(best ? { fix: best } : { err: lastErr || 'Не удалось определить местоположение' }); };
     const tm = setTimeout(fin, ms);
     const onPos = pos => {
       const c = pos.coords; if (!best || c.accuracy < best.accuracy) best = { lat: c.latitude, lng: c.longitude, accuracy: c.accuracy, at: Date.now() };
       MBM.state.locAcc = best.accuracy; const lm = mbQ('mbLocMu'); if (lm) lm.textContent = 'Точность ±' + Math.round(best.accuracy) + ' м';
-      if (best.accuracy <= 25) fin();
+      if (best.accuracy <= 30) fin();
     };
-    const onErr = e => { if (e.code === 1) { clearTimeout(tm); done = true; navigator.geolocation.clearWatch(id); resolve({ err: 'Нет доступа к геолокации. Разрешите её в настройках браузера' }); } };
+    const onErr = e => { if (e.code === 2) lastErr = 'Нет сигнала GPS. Выйдите на открытое место'; if (e.code === 1) { clearTimeout(tm); done = true; navigator.geolocation.clearWatch(id); resolve({ err: 'Нет доступа к геолокации. Разрешите её в настройках браузера' }); } };
     const opt = { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 };
     navigator.geolocation.getCurrentPosition(onPos, onErr, opt);
     id = navigator.geolocation.watchPosition(onPos, onErr, opt);
@@ -17473,10 +17685,10 @@ async function mbFinishLocation() {
   for (;;) {
     el.className = 'on top'; el.innerHTML = `<div class="m-sbg"></div><div class="m-sheet" style="text-align:center"><h3>Фиксируем местоположение…</h3><div class="m-mu" id="mbLocMu" style="margin-bottom:6px">${S.locAcc ? 'Точность ±' + Math.round(S.locAcc) + ' м' : 'Определяем точность'}</div></div>`;
     S.locAcc = 0;
-    const r = await mbFixOnce(8000);
-    const ok = r.fix && r.fix.accuracy <= 50;
+    const r = await mbFixOnce(25000);
+    const ok = r.fix && r.fix.accuracy <= 150;
     if (ok) { S.sheet = null; mbRenderSheet(); S.locAcc = 0; return r.fix; }
-    const txt = r.fix ? 'Точность ±' + Math.round(r.fix.accuracy) + ' м. Нужно не хуже 50 м. Выйдите на открытое место' : r.err;
+    const txt = r.fix ? 'Точность ±' + Math.round(r.fix.accuracy) + ' м. Нужно не хуже 150 м. Выйдите на открытое место' : r.err;
     const again = await new Promise(res => {
       window.__mbLocRes = res;
       el.innerHTML = `<div class="m-sbg"></div><div class="m-sheet" style="text-align:center"><h3>Местоположение не зафиксировано</h3><div class="m-err" style="margin-bottom:12px">${mbX(txt)}</div><button class="m-big blk" onclick="__mbLocRes(true)">Повторить</button><button class="m-btn s" style="margin-top:8px;width:100%" onclick="__mbLocRes(false)">Отмена</button></div>`;
