@@ -1573,7 +1573,7 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .st-sort{cursor:pointer;user-select:none}.st-late{color:#B3261E}.mb-btn-del{background:#FDECEA !important;color:#B3261E !important;box-shadow:none !important}
 .mb-modalbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center;padding:16px}.mb-modalbg.open{display:flex}.mb-modal{background:#fff;border-radius:18px;padding:20px;width:min(760px,100%);max-height:90vh;overflow:auto}
 @media(max-width:1100px){.st-row5{grid-template-columns:repeat(3,1fr)}.st-row4{grid-template-columns:repeat(2,1fr)}.st-fr{grid-template-columns:120px 1fr 80px}}
-.st-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:14px}.st-row3 .st-card,.st-two .st-card,.st-stack .st-card{margin:0}
+.st-topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}.st-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:14px}.st-row3 .st-card,.st-two .st-card,.st-stack .st-card{margin:0}
 .st-kp{display:grid;grid-template-columns:5fr 4fr}.st-grp{padding:0 22px}.st-grp:first-child{padding-left:0;border-right:1px solid #EEF0F3}.st-grp:last-child{padding-right:0}
 .st-gt{font-size:11.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}.st-m{display:grid;gap:8px}.st-m5{grid-template-columns:repeat(5,1fr)}.st-m4{grid-template-columns:repeat(4,1fr)}
 .st-m b{display:block;font-size:24px;letter-spacing:-.5px;line-height:1.1}.st-m span{display:block;font-size:12px;color:var(--muted);margin-top:3px}.st-m .r b{color:#B71F17}
@@ -16559,7 +16559,7 @@ function mbRankCard(title, list, worst) {
 }
 function mbRenderStats() {
   const box = document.getElementById('mbStatsBody'); if (!box) return;
-  box.innerHTML = mbStatTop();
+  box.innerHTML = `<div class="st-topbar">${mbPeriodHtml(mbStPer, 'mbStSetPer')}<button class="btn" id="mbXlBtn" onclick="mbStatXlsx()">Скачать в Excel</button></div>` + mbStatTop();
   const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
   const ub = document.getElementById('mbUploadBtn'); if (ub) ub.style.display = isAdmin ? '' : 'none';
 }
@@ -16708,7 +16708,7 @@ function mbBankKpiHtml() {
   const th = (key, label, num) => `<th class="${num ? 'mb-num ' : ''}st-sort" onclick="mbStSortBy('${key}')">${label}${k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
   const gl = { g: 'Отлично', a: 'Средне', r: 'Слабо' };
   const lastTxt = ms => { if (!ms) return '—'; const days = Math.floor((Date.now() - ms) / 86400000); return days >= 3 ? `<b class="st-late">${days} дн. назад</b>` : new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
-  return `<div class="panel"><div class="mb-head"><h2>KPI банкиров</h2><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="mbUploadBtn" style="display:none" onclick="mbTogglePassport()">Загрузить паспорта</button><button class="btn btn-secondary" onclick="mbStExport()">Скачать в Excel</button></div></div><div id="mbPassportSlot"></div>
+  return `<div class="panel"><div class="mb-head"><h2>KPI банкиров</h2><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="mbUploadBtn" style="display:none" onclick="mbTogglePassport()">Загрузить паспорта</button></div></div><div id="mbPassportSlot"></div>
       <div class="mb-filters2">${mbPeriodHtml(mbStPer, 'mbStSetPer')}<input class="input" style="max-width:240px" placeholder="Поиск по ФИО" value="${mbEsc(mbStQ)}" oninput="mbStQ=this.value;mbStSearchDeb()"><select class="select" style="max-width:200px" onchange="mbStDist=this.value;mbRenderStats()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbStDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select></div>
       <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th>${th('name', 'Банкир')}<th>Махалля</th>${th('houses', 'Домов', 1)}${th('visits', 'Визитов', 1)}${th('cover', 'Охват', 1)}${th('done', 'Опрошено', 1)}${th('interest', 'Интерес', 1)}${th('proj', 'Проектов', 1)}${th('sum', 'Сумма, млн', 1)}${th('retry', 'Повторно', 1)}${th('projAll', 'План проектов', 1)}${th('last', 'Последний визит')}<th>Оценка</th></tr></thead><tbody>
       ${rows.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td class="mb-num">${i + 1}</td><td><b>${mbEsc(mbShortName(x.name))}</b></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', ') || '—')}</td><td class="mb-num">${mbFmt(x.houses)}</td><td class="mb-num${x.visits === 0 ? ' mb-red' : ''}"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td><td class="mb-num">${x.done}</td><td class="mb-num">${x.interest}</td><td class="mb-num">${x.proj}</td><td class="mb-num">${mbFmt1(x.sum / 1e6)}</td><td class="mb-num">${x.retry}</td><td class="mb-num">${x.plan ? x.projAll + ' / ' + mbFmt(x.plan) + ' · ' + Math.round(x.projAll / x.plan * 100) + '%' : x.projAll}</td><td>${lastTxt(x.last)}</td><td><span class="mb-bd ${x.grade}">${gl[x.grade]}</span></td></tr>`).join('') || '<tr><td colspan="14">Нет данных</td></tr>'}
@@ -16721,7 +16721,7 @@ const MB_OD_ITEMS = [
   ['maternity', 'В декрете', 'mem'], ['army', 'Служит в армии', 'mem'], ['studyAbroad', 'Учится за границей', 'mem'], ['longIllness', 'Длительно болеет', 'mem'],
   ['dis', 'Инвалидов', 'mem'], ['biz', 'Самозанятых и с бизнесом', 'mem'], ['plot', 'Домов с участком', 'fam']
 ];
-function mbOdRows() { const [a, b] = mbStRange(mbOdPer); return mbMobileRows().filter(s => !mbIsRetry(s) && (Number(s.finishedAt) || 0) >= a && (Number(s.finishedAt) || 0) < b); }
+function mbOdRows(per) { const [a, b] = mbStRange(per || mbOdPer); return mbMobileRows().filter(s => !mbIsRetry(s) && (Number(s.finishedAt) || 0) >= a && (Number(s.finishedAt) || 0) < b); }
 function mbOdMatch(key, p) {
   if (key === 'dis') return MB_EMP_DIS.indexOf(p.employment) !== -1;
   if (key === 'biz') return MB_EMP_BIZ.indexOf(p.employment) !== -1;
@@ -16796,6 +16796,267 @@ function mbBankCard(key) {
       <div class="mb-sec">Визиты за 14 дней</div><div class="mb-col" style="height:110px">${days.map(x => `<div><i style="height:${Math.max(3, Math.round(x.n / mx * 70))}px"></i><b>${x.n}</b><span>${x.d.getDate()}</span></div>`).join('')}</div>
       <div class="mb-sec">Флагов проверки: ${flags}</div>
       <div class="mb-sec">Последние визиты</div>${rows.slice(0, 10).map(s => `<div class="mb-kv"><span>${dt(s.finishedAt)} · ${mbEsc(s.address || '')}</span><b>${mbIsRetry(s) ? 'Повторно' : 'Опрошен'}</b></div>`).join('') || '<div class="mb-count">Нет визитов</div>'}</div>`);
+}
+
+// ---------- Excel-выгрузка «Статистика» (ExcelJS) ----------
+const XL = { red: 'FFB71F17', dark: 'FF1F2937', pink: 'FFF3E1DF', zebra: 'FFF6F7F9', line: 'FFE1E4E9', gF: 'FFD8F0E1', gT: 'FF14693A', aF: 'FFFFF0CC', aT: 'FF8A5A00', rF: 'FFFAD9D5', rT: 'FFA01E15', grey: 'FF6B7280' };
+function xlBorder() { const b = { style: 'thin', color: { argb: XL.line } }; return { top: b, left: b, bottom: b, right: b }; }
+function xlSheet(wb, name, title, sub, ncols, tab) {
+  const ws = wb.addWorksheet(name, { properties: { tabColor: { argb: tab || XL.red } }, pageSetup: { orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: .4, right: .4, top: .5, bottom: .5, header: .3, footer: .3 } }, views: [{ showGridLines: false }] });
+  ws.mergeCells(1, 1, 1, ncols); ws.mergeCells(2, 1, 2, ncols);
+  const c1 = ws.getCell(1, 1); c1.value = title; c1.font = { name: 'Calibri', size: 16, bold: true, color: { argb: 'FFFFFFFF' } }; c1.alignment = { vertical: 'middle', indent: 1 };
+  const c2 = ws.getCell(2, 1); c2.value = sub; c2.font = { name: 'Calibri', size: 10, color: { argb: 'FFFAD4D0' } }; c2.alignment = { vertical: 'middle', indent: 1 };
+  ws.getRow(1).height = 30; ws.getRow(2).height = 18;
+  for (let c = 1; c <= ncols; c++) { ws.getCell(1, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL.red } }; ws.getCell(2, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL.red } }; }
+  return ws;
+}
+// cols: [{h, w, fmt, al}] ; rows: массивы значений либо {v, f(fill), t(font color), b(bold), fmt}
+function xlTable(ws, r0, cols, rows, o) {
+  o = o || {};
+  const hr = ws.getRow(r0); hr.height = 24;
+  cols.forEach((c, i) => {
+    const cell = hr.getCell(i + 1); cell.value = c.h; cell.font = { name: 'Calibri', size: 10.5, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL.dark } }; cell.border = xlBorder();
+    cell.alignment = { vertical: 'middle', horizontal: c.al || (c.fmt ? 'right' : 'left'), wrapText: true };
+    if (c.w && !o.keepWidth) ws.getColumn(i + 1).width = c.w;
+  });
+  rows.forEach((rw, ri) => {
+    const row = ws.getRow(r0 + 1 + ri);
+    cols.forEach((c, i) => {
+      let it = rw[i]; let st = {};
+      if (it !== null && typeof it === 'object' && !(it instanceof Date) && 'v' in it) { st = it; it = it.v; }
+      const cell = row.getCell(i + 1); cell.value = it === undefined ? null : it;
+      const fmt = st.fmt || c.fmt; if (fmt) cell.numFmt = fmt;
+      cell.font = { name: 'Calibri', size: 10.5, bold: !!st.b || !!o.boldTotal && ri === rows.length - 1 && o.total, color: { argb: st.t || 'FF1F2937' } };
+      const fill = st.f || (o.total && ri === rows.length - 1 ? XL.pink : (ri % 2 ? XL.zebra : null));
+      if (fill) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fill } };
+      cell.border = xlBorder();
+      cell.alignment = { vertical: 'middle', horizontal: st.al || c.al || (typeof it === 'number' || it instanceof Date ? (c.al || 'right') : 'left'), wrapText: !!c.wrap };
+    });
+  });
+  if (o.filter && rows.length) ws.autoFilter = { from: { row: r0, column: 1 }, to: { row: r0 + rows.length, column: cols.length } };
+  return r0 + rows.length;
+}
+function xlSection(ws, r, text, ncols) {
+  ws.mergeCells(r, 1, r, ncols); const c = ws.getCell(r, 1); c.value = text; c.font = { name: 'Calibri', size: 11.5, bold: true, color: { argb: 'FF8F1812' } };
+  c.alignment = { vertical: 'middle', indent: 1 }; ws.getRow(r).height = 22;
+  for (let i = 1; i <= ncols; i++) ws.getCell(r, i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL.pink } };
+}
+function xlBars(ws, ref, color) {
+  ws.addConditionalFormatting({ ref, rules: [{ type: 'dataBar', priority: 1, gradient: false, minLength: 0, maxLength: 100, cfvo: [{ type: 'num', value: 0 }, { type: 'max' }], color: { argb: color || 'FFE8341F' } }] });
+}
+const xlRedCell = v => ({ v, f: XL.rF, t: XL.rT, b: true });
+const xlGradeCell = g => g === 'g' ? { v: 'Отлично', f: XL.gF, t: XL.gT, b: true, al: 'center' } : g === 'a' ? { v: 'Средне', f: XL.aF, t: XL.aT, b: true, al: 'center' } : { v: 'Слабо', f: XL.rF, t: XL.rT, b: true, al: 'center' };
+function xlPhone(p) { const d = String(p || '').replace(/\D/g, ''); return d.length >= 9 ? '+998 ' + d.slice(-9, -7) + ' ' + d.slice(-7, -4) + ' ' + d.slice(-4, -2) + ' ' + d.slice(-2) : String(p || ''); }
+function xlDt(ms) { return ms ? new Date(Number(ms)).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''; }
+function xlMin(s) { const m = (Number(s.finishedAt) - Number(s.startedAt)) / 60000; return m > 0 && m < 120 ? Math.round(m * 10) / 10 : null; }
+const xlFinTxt = s => (s.finance || []).filter(x => x !== 'none').map(x => MB_FIN_LABEL[x] || x).join(', ');
+const xlWd = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+
+function xlCollect() {
+  const per = mbStPer; const [a, b] = mbStRange(per);
+  const perLabel = (MB_STPER.find(x => x[0] === per) || [])[1] || '';
+  const inR = s => { const t = Number(s.finishedAt) || 0; return t >= a && t < b; };
+  const all = mbMobileRows();
+  const visits = all.filter(inR).sort((x, y) => (Number(y.finishedAt) || 0) - (Number(x.finishedAt) || 0));
+  const done = visits.filter(s => !mbIsRetry(s));
+  const kp = mbBankKpis(per);
+  const micro = (mbMicro || []).filter(p => p.banker);
+  const microP = micro.filter(p => { const t = mbMsOf(p.createdAt); return t >= a && t < b; });
+  const mahs = mbMahs();
+  return { per, perLabel, a, b, all, visits, done, kp, micro, microP, mahs };
+}
+function xlBankerStats(d) {
+  const sts = d.kp.map(k => {
+    const inP = k.mine.filter(s => { const t = Number(s.finishedAt) || 0; return t >= d.a && t < d.b; });
+    const done = inP.filter(s => !mbIsRetry(s));
+    const interest = done.filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1);
+    const support = interest.filter(s => (s.finance || []).some(x => x !== 'none'));
+    const times = done.map(xlMin).filter(x => x !== null);
+    const avg = times.length ? times.reduce((x, y) => x + y, 0) / times.length : null;
+    const flagN = done.filter(s => mbFlags(s).length).length;
+    return { k, visits: inP.length, done: done.length, interest: interest.length, support: support.length, proj: k.proj, avg, flagN, pct: done.length ? interest.length / done.length : null };
+  });
+  const withD = sts.filter(x => x.done >= 5);
+  const avgPct = withD.length ? withD.reduce((x, y) => x + y.pct, 0) / withD.length : 0;
+  const tAll = withD.filter(x => x.avg !== null);
+  const avgTime = tAll.length ? tAll.reduce((x, y) => x + y.avg, 0) / tAll.length : 0;
+  sts.forEach(x => {
+    x.why = [];
+    if (x.done >= 10 && x.pct !== null && x.pct >= avgPct + 0.2 && x.pct >= avgPct * 1.5) { x.bizBad = true; x.why.push('Интерес ' + Math.round(x.pct * 100) + '% при среднем ' + Math.round(avgPct * 100) + '%'); }
+    if (x.done >= 5 && x.avg !== null && x.avg < 3) { x.timeBad = true; x.why.push('опрос ' + mbFmt1(x.avg) + ' мин'); }
+    if (x.done >= 5 && x.flagN / x.done > 0.2) { x.flagBad = true; x.why.push('флагов ' + Math.round(x.flagN / x.done * 100) + '%'); }
+  });
+  return { sts, avgPct, avgTime };
+}
+function xlBuild(EJ) {
+  const d = xlCollect(); const wb = new EJ.Workbook();
+  wb.creator = 'MSB CRM'; wb.created = new Date();
+  const who = (currentUser && (currentUser.fullName || currentUser.login)) || '';
+  const sub = 'Период: ' + d.perLabel + ' · выгружено ' + xlDt(Date.now()) + (who ? ' · ' + who : '');
+  const f = mbPassportTotals();
+  const bs = xlBankerStats(d);
+  const wd = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+  // --- общие числа обхода
+  const rowsAll = d.all.filter(s => !mbIsRetry(s)); const ts = s => Number(s.finishedAt) || 0;
+  const now = Date.now(); const m0 = mbStRange('month')[0]; const d0 = mbStRange('today')[0];
+  const cnt = (x, y) => rowsAll.filter(s => ts(s) >= x && ts(s) < y).length;
+  const pend = (allObhodSurveys || []).filter(s => s.review === 'pending' && !mbIsArchived(s.createdBy)).length;
+
+  // ===== 1. Сводка =====
+  let ws = xlSheet(wb, 'Сводка', 'Статистика махалли · Asakabank, Нукус', sub, 8);
+  [24, 18, 18, 18, 18, 18, 18, 18].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  const kpi = (r, items) => {
+    items.forEach((it, i) => {
+      const c1 = ws.getCell(r, i * 2 + 1), c2 = ws.getCell(r + 1, i * 2 + 1);
+      ws.mergeCells(r, i * 2 + 1, r, i * 2 + 2); ws.mergeCells(r + 1, i * 2 + 1, r + 1, i * 2 + 2);
+      c1.value = it[1]; c1.numFmt = it[3] || '#,##0'; c1.font = { name: 'Calibri', size: 20, bold: true, color: { argb: it[2] ? XL.red : 'FF1F2937' } }; c1.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+      c2.value = it[0]; c2.font = { name: 'Calibri', size: 10, color: { argb: XL.grey } }; c2.alignment = { vertical: 'top', horizontal: 'left', indent: 1 };
+      for (let cc = i * 2 + 1; cc <= i * 2 + 2; cc++) { ws.getCell(r, cc).border = { top: { style: 'thin', color: { argb: XL.line } }, left: cc === i * 2 + 1 ? { style: 'thin', color: { argb: XL.line } } : undefined }; ws.getCell(r + 1, cc).border = { bottom: { style: 'thin', color: { argb: XL.line } }, right: cc === i * 2 + 2 ? { style: 'thin', color: { argb: XL.line } } : undefined }; }
+    });
+    ws.getRow(r).height = 30; ws.getRow(r + 1).height = 18;
+  };
+  xlSection(ws, 4, 'Махалли', 8);
+  kpi(5, [['Махаллей', f.mahallas], ['Население', f.pop], ['Домов', f.houses], ['Безработных', f.un, 1]]);
+  xlSection(ws, 8, 'Обход', 8);
+  kpi(9, [['Нарастающий обход', rowsAll.length], ['За месяц', cnt(m0, Infinity)], ['Сегодня', cnt(d0, Infinity)], ['На проверке', pend, 1]]);
+  xlSection(ws, 12, 'Динамика обхода · 5 дней', 8);
+  const dyn = []; for (let i = 4; i >= 0; i--) { const x = d0 - i * 86400000; const dd = new Date(x); dyn.push([dd, wd[dd.getDay()], cnt(x, x + 86400000)]); }
+  const e1 = xlTable(ws, 13, [{ h: 'Дата', fmt: 'dd.mm.yyyy', al: 'left' }, { h: 'День', al: 'left' }, { h: 'Принято визитов', fmt: '#,##0' }], dyn, { keepWidth: true });
+  xlBars(ws, 'C14:C' + e1, 'FFF3B3AD');
+  xlSection(ws, e1 + 2, 'Воронка результатов · ' + d.perLabel, 8);
+  const fd = mbFunnelData0(d);
+  const steps = [['Домов в махаллях', fd.houses, null], ['Посещено', fd.inP, fd.houses], ['Опрошено', fd.done, fd.inP], ['Интерес к бизнесу', fd.interest, fd.done], ['Нужна поддержка', fd.support, fd.interest], ['Микропроект создан', fd.projects, fd.support]];
+  const frows = steps.map(s => [s[0], s[1], s[2] === null ? 1 : (s[2] ? s[1] / s[2] : null)]);
+  const fr0 = e1 + 3;
+  const e2 = xlTable(ws, fr0, [{ h: 'Шаг', al: 'left' }, { h: 'Количество', fmt: '#,##0' }, { h: '% от предыдущего', fmt: '0.0%' }], frows, { keepWidth: true });
+  xlBars(ws, 'B' + (fr0 + 2) + ':B' + e2, 'FFF3B3AD');
+  ws.views = [{ showGridLines: false }];
+
+  // ===== 2. Воронка по банкирам =====
+  const sorted = bs.sts.filter(x => x.visits > 0 || x.k.houses > 0).sort((x, y) => (y.why.length - x.why.length) || (y.visits - x.visits));
+  ws = xlSheet(wb, 'Воронка', 'Воронка по банкирам', sub, 11);
+  const avgRow = (fn) => { const l = bs.sts.filter(x => x.k.houses > 0); return l.length ? l.reduce((s, x) => s + fn(x), 0) / l.length : 0; };
+  const r2 = sorted.map(x => [mbShortName(x.k.name), x.k.ids.map(mbMahName).join(', '), x.visits, x.done, x.interest, x.pct === null ? null : (x.bizBad ? { v: x.pct, fmt: '0%', f: XL.rF, t: XL.rT, b: true } : { v: x.pct, fmt: '0%' }), x.support, x.proj, x.avg === null ? null : (x.timeBad ? { v: Math.round(x.avg * 10) / 10, fmt: '0.0', f: XL.rF, t: XL.rT, b: true } : { v: Math.round(x.avg * 10) / 10, fmt: '0.0' }), x.flagBad ? { v: x.flagN, f: XL.rF, t: XL.rT, b: true, fmt: '#,##0' } : x.flagN, x.why.length ? { v: x.why.join(' · '), t: XL.rT, b: true } : '']);
+  r2.push([{ v: 'Среднее', b: true }, '', Math.round(avgRow(x => x.visits)), Math.round(avgRow(x => x.done)), Math.round(avgRow(x => x.interest)), bs.avgPct, Math.round(avgRow(x => x.support)), Math.round(avgRow(x => x.proj)), Math.round(bs.avgTime * 10) / 10, Math.round(avgRow(x => x.flagN)), '']);
+  const cols2 = [{ h: 'Банкир', w: 22, al: 'left' }, { h: 'Махалля', w: 28, al: 'left' }, { h: 'Посещено', w: 11, fmt: '#,##0' }, { h: 'Опрошено', w: 11, fmt: '#,##0' }, { h: 'Интерес', w: 10, fmt: '#,##0' }, { h: 'Интерес, % от опрошенных', w: 16, fmt: '0%' }, { h: 'Поддержка', w: 11, fmt: '#,##0' }, { h: 'Проекты', w: 10, fmt: '#,##0' }, { h: 'Ср. время опроса, мин', w: 13, fmt: '0.0' }, { h: 'Флагов проверки', w: 11, fmt: '#,##0' }, { h: 'Проверить', w: 46, al: 'left' }];
+  xlTable(ws, 4, cols2, r2, { total: true, boldTotal: true });
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false }];
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + sorted.length, column: 11 } };
+
+  // ===== 3. Воронка · список (именной) =====
+  ws = xlSheet(wb, 'Воронка · список', 'Воронка по семьям · именной список', sub, 15);
+  const doneAll = d.done;
+  const cntBy = (fn) => { const m = {}; doneAll.forEach(s => { const k = fn(s); if (k) m[k] = (m[k] || 0) + 1; }); return m; };
+  const textCnt = cntBy(s => normalizeTextXl(s.businessIdea)); const phoneCnt = cntBy(s => String(s.phone || '').replace(/\D/g, '').slice(-9)); const addrCnt = cntBy(s => normalizeTextXl(s.mahalla) + '|' + normalizeTextXl(s.address));
+  const bankBad = {}; bs.sts.forEach(x => { if (x.bizBad) bankBad[mbNorm(x.k.name)] = x; });
+  const projPhones = new Set(d.microP.map(p => String(p.applicantContact || '').replace(/\D/g, '').slice(-9)).filter(Boolean));
+  const list = d.visits.map(s => {
+    const retry = mbIsRetry(s); const interest = !retry && MB_BIZ_YES.indexOf(s.businessInterest) !== -1; const fin = xlFinTxt(s);
+    const mins = xlMin(s); const gps = Number(s.gpsAccuracy) || null; const why = [];
+    const idea = String(s.businessIdea || '').trim();
+    if (!retry && mins !== null && mins < 3) why.push('Опрос ' + mbFmt1(mins) + ' мин');
+    if (interest && idea.length < 10) why.push('Интерес без описания');
+    const tk = normalizeTextXl(idea); if (!retry && tk && textCnt[tk] >= 3) why.push('Текст повторяется в ' + textCnt[tk] + ' анкетах');
+    if (gps && gps > 50) why.push('Слабый GPS ±' + Math.round(gps) + ' м');
+    const pk = String(s.phone || '').replace(/\D/g, '').slice(-9); if (!retry && pk && phoneCnt[pk] >= 2) why.push('Телефон повторяется');
+    const ak = normalizeTextXl(s.mahalla) + '|' + normalizeTextXl(s.address); if (!retry && s.address && addrCnt[ak] >= 2) why.push('Адрес повторяется');
+    mbFlags(s).forEach(fl => { if (fl.code === 'too_fast') return; const lb = MB_FLAG_LABEL[fl.code] || fl.message; if (lb && why.indexOf(lb) === -1) why.push(lb); });
+    const bb = bankBad[mbNorm(s.createdBy)]; if (bb && interest) why.push('Банкир: интерес ' + Math.round(bb.pct * 100) + '% при среднем ' + Math.round(bs.avgPct * 100) + '%');
+    return { s, retry, interest, fin, mins, gps, why, proj: pk && projPhones.has(pk), idea };
+  }).sort((x, y) => (y.why.length - x.why.length) || ((Number(y.s.finishedAt) || 0) - (Number(x.s.finishedAt) || 0)));
+  const yes = { v: 'Да', t: XL.gT, b: true, al: 'center' }, no = { v: 'Нет', t: 'FF9CA3AF', al: 'center' }, dash = { v: '—', t: 'FF9CA3AF', al: 'center' };
+  const r3 = list.map(x => [xlDt(x.s.finishedAt), mbShortName(x.s.createdBy), x.s.mahalla, x.s.address || '', x.s.headName || '', xlPhone(x.s.phone), x.retry ? no : yes, x.retry ? dash : (x.interest ? yes : no), x.interest ? (x.s.sector || x.s.sectorOther || '') : '', x.interest ? x.idea : '', x.fin ? { v: x.fin, t: XL.gT, b: true, al: 'center' } : dash, x.proj ? yes : dash, x.mins === null ? null : (x.mins < 3 ? { v: x.mins, fmt: '0.0', f: XL.rF, t: XL.rT, b: true } : { v: x.mins, fmt: '0.0' }), x.gps === null ? null : (x.gps > 50 ? { v: Math.round(x.gps), fmt: '0', f: XL.rF, t: XL.rT, b: true } : { v: Math.round(x.gps), fmt: '0' }), x.why.length ? { v: x.why.join(' · '), t: XL.rT, b: true } : '']);
+  const cols3 = [{ h: 'Дата', w: 17, al: 'left' }, { h: 'Банкир', w: 18, al: 'left' }, { h: 'Махалля', w: 24, al: 'left' }, { h: 'Адрес', w: 24, al: 'left' }, { h: 'ФИО владельца', w: 28, al: 'left' }, { h: 'Телефон', w: 17, al: 'left' }, { h: 'Опрошен', w: 10, al: 'center' }, { h: 'Интерес', w: 10, al: 'center' }, { h: 'Сфера', w: 16, al: 'left' }, { h: 'Что хочет открыть', w: 34, al: 'left' }, { h: 'Поддержка', w: 15, al: 'center' }, { h: 'Проект', w: 10, al: 'center' }, { h: 'Время, мин', w: 10, fmt: '0.0' }, { h: 'GPS, м', w: 9, fmt: '0' }, { h: 'Проверить', w: 52, al: 'left' }];
+  xlTable(ws, 4, cols3, r3, { filter: true });
+  ws.views = [{ state: 'frozen', xSplit: 5, ySplit: 4, showGridLines: false }];
+
+  // ===== 4. Динамика (30 дней) =====
+  ws = xlSheet(wb, 'Динамика', 'Динамика обхода · 30 дней', sub, 5);
+  const dy = []; for (let i = 29; i >= 0; i--) { const x = d0 - i * 86400000; const dd = new Date(x); const ok = d.all.filter(s => !mbIsRetry(s) && ts(s) >= x && ts(s) < x + 86400000).length; const rt = d.all.filter(s => mbIsRetry(s) && ts(s) >= x && ts(s) < x + 86400000).length; dy.push([dd, xlWd[dd.getDay()], ok, rt, ok + rt]); }
+  dy.push([{ v: 'Итого', b: true }, '', dy.reduce((s, r) => s + r[2], 0), dy.reduce((s, r) => s + r[3], 0), dy.reduce((s, r) => s + r[4], 0)]);
+  const e4 = xlTable(ws, 4, [{ h: 'Дата', w: 14, fmt: 'dd.mm.yyyy', al: 'left' }, { h: 'День недели', w: 16, al: 'left' }, { h: 'Принято', w: 22, fmt: '#,##0' }, { h: 'Зайти повторно', w: 16, fmt: '#,##0' }, { h: 'Всего визитов', w: 16, fmt: '#,##0' }], dy, { total: true, boldTotal: true });
+  xlBars(ws, 'C5:C' + (e4 - 1), 'FFF3B3AD');
+  ws.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }];
+
+  // ===== 5. Топ банкиров =====
+  ws = xlSheet(wb, 'Топ банкиров', 'Лучшие и худшие · ' + d.perLabel, sub, 6);
+  const withH = d.kp.filter(x => x.houses > 0).sort((x, y) => y.visits - x.visits || y.cover - x.cover);
+  const mkTop = (list, bad) => list.map((x, i) => [{ v: bad ? withH.length - i : i + 1, al: 'center' }, mbShortName(x.name), x.ids.map(mbMahName).join(', '), x.visits, { v: x.cover / 100, fmt: '0.0%' }]);
+  const topCols = [{ h: '№', al: 'center' }, { h: 'Банкир', al: 'left' }, { h: 'Махалля', al: 'left' }, { h: 'Визитов', fmt: '#,##0' }, { h: 'Охват', fmt: '0.0%' }];
+  [6, 26, 40, 12, 12, 4].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+  xlSection(ws, 4, 'Топ 5 лучших банкиров', 5); let e5 = xlTable(ws, 5, topCols, mkTop(withH.slice(0, 5), false), { keepWidth: true });
+  xlSection(ws, e5 + 2, 'Топ 5 худших банкиров', 5); e5 = xlTable(ws, e5 + 3, topCols, mkTop(withH.slice(-5).reverse(), true), { keepWidth: true });
+  const mahStat = xlMahStats(d);
+  const worstM = mahStat.slice().sort((x, y) => x.cover - y.cover || y.houses - x.houses).slice(0, 5);
+  xlSection(ws, e5 + 2, 'Топ 5 худших махаллей', 5);
+  xlTable(ws, e5 + 3, [{ h: '№', al: 'center' }, { h: 'Махалля', al: 'left' }, { h: 'Банкир', al: 'left' }, { h: 'Опрошено', fmt: '#,##0' }, { h: 'Охват', fmt: '0.0%' }], worstM.map((m, i) => [{ v: mahStat.length - i, al: 'center' }, m.name, m.banker || { v: 'не назначен', t: XL.aT, b: true }, m.done, { v: m.cover, fmt: '0.0%' }]), { keepWidth: true });
+
+  // ===== 6. KPI банкиров =====
+  ws = xlSheet(wb, 'KPI банкиров', 'KPI банкиров · ' + d.perLabel, sub, 14);
+  const kr = d.kp.slice().sort((x, y) => y.visits - x.visits || y.cover - x.cover);
+  const k6 = kr.map((k, i) => [i + 1, mbShortName(k.name), k.district, k.ids.map(mbMahName).join(', '), k.houses, k.visits, { v: k.cover / 100, fmt: '0.0%' }, k.done, k.interest, k.proj, { v: k.sum / 1e6, fmt: '#,##0.0' }, k.retry, k.last ? xlDt(k.last) : '—', xlGradeCell(k.grade)]);
+  const sum = f2 => kr.reduce((s, k) => s + f2(k), 0); const tH = sum(k => k.houses);
+  k6.push([{ v: 'Итого', b: true }, '', '', '', tH, sum(k => k.visits), { v: tH ? sum(k => k.done) / tH : 0, fmt: '0.0%' }, sum(k => k.done), sum(k => k.interest), sum(k => k.proj), { v: sum(k => k.sum) / 1e6, fmt: '#,##0.0' }, sum(k => k.retry), '', '']);
+  const e6 = xlTable(ws, 4, [{ h: '№', w: 5, al: 'center' }, { h: 'Банкир', w: 22, al: 'left' }, { h: 'Район', w: 13, al: 'left' }, { h: 'Махалли', w: 30, al: 'left' }, { h: 'Домов', w: 10, fmt: '#,##0' }, { h: 'Визитов', w: 18, fmt: '#,##0' }, { h: 'Охват', w: 9, fmt: '0.0%' }, { h: 'Опрошено', w: 11, fmt: '#,##0' }, { h: 'Интерес', w: 10, fmt: '#,##0' }, { h: 'Проектов', w: 10, fmt: '#,##0' }, { h: 'Сумма, млн', w: 12, fmt: '#,##0.0' }, { h: 'Повторно', w: 10, fmt: '#,##0' }, { h: 'Последний визит', w: 18, al: 'left' }, { h: 'Оценка', w: 11, al: 'center' }], k6, { total: true, boldTotal: true });
+  xlBars(ws, 'F5:F' + (e6 - 1), 'FFF3B3AD');
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: e6 - 1, column: 14 } };
+  ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 4, showGridLines: false }];
+
+  // ===== 7. Данные обхода =====
+  ws = xlSheet(wb, 'Данные обхода', 'Данные обхода · ' + d.perLabel, sub, 4);
+  const cnts = mbOdCount(d.done);
+  const r7 = MB_OD_ITEMS.map(it => { const k = it[0]; const v = cnts[k] || 0; const den = it[2] === 'fam' ? cnts.fam : cnts.mem; return [it[1] + (k === 'plot' && cnts.sotki ? ' (' + mbFmt(cnts.sotki) + ' соток)' : ''), it[3] ? { v, t: XL.rT, b: true, fmt: '#,##0' } : v, k === 'fam' || k === 'mem' ? null : { v: den ? v / den : 0, fmt: '0.0%' }, it[2] === 'fam' ? 'от опрошенных семей' : 'от членов семьи']; });
+  const e7 = xlTable(ws, 4, [{ h: 'Показатель', w: 42, al: 'left' }, { h: 'Количество', w: 22, fmt: '#,##0' }, { h: 'Доля', w: 12, fmt: '0.0%' }, { h: 'База', w: 24, al: 'left' }], r7);
+  xlBars(ws, 'B7:B' + e7, 'FFF3B3AD');
+  ws.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }];
+
+  // ===== 8. Махалли =====
+  ws = xlSheet(wb, 'Махалли', 'Махалли · охват обходом · ' + d.perLabel, sub, 12);
+  const avgCover = mahStat.length ? mahStat.reduce((s, m) => s + m.cover, 0) / mahStat.length : 0;
+  const ms = mahStat.slice().sort((x, y) => x.cover - y.cover || y.houses - x.houses);
+  const r8 = ms.map((m, i) => { let st, sf;
+    if (!m.banker) { st = 'Не назначен банкир'; sf = [XL.aF, XL.aT]; } else if (m.done === 0) { st = 'Не охвачена'; sf = [XL.rF, XL.rT]; } else if (m.cover < avgCover / 2) { st = 'Низкий охват'; sf = [XL.aF, XL.aT]; } else { st = 'В норме'; sf = [XL.gF, XL.gT]; }
+    return [i + 1, m.name, m.district, m.banker || { v: 'не назначен', t: XL.aT, b: true }, m.pop, m.houses, m.done, m.done === 0 ? { v: 0, fmt: '0.0%', f: XL.rF, t: XL.rT, b: true } : { v: m.cover, fmt: '0.0%' }, m.un, m.abroad, m.proj, { v: st, f: sf[0], t: sf[1], b: true, al: 'center' }]; });
+  xlTable(ws, 4, [{ h: '№', w: 5, al: 'center' }, { h: 'Махалля', w: 28, al: 'left' }, { h: 'Район', w: 13, al: 'left' }, { h: 'Банкир', w: 22, al: 'left' }, { h: 'Население', w: 11, fmt: '#,##0' }, { h: 'Домов', w: 10, fmt: '#,##0' }, { h: 'Опрошено', w: 11, fmt: '#,##0' }, { h: 'Охват', w: 9, fmt: '0.0%' }, { h: 'Безработных', w: 12, fmt: '#,##0' }, { h: 'За рубежом', w: 11, fmt: '#,##0' }, { h: 'Проектов', w: 10, fmt: '#,##0' }, { h: 'Статус', w: 20, al: 'center' }], r8, { filter: true });
+  ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 4, showGridLines: false }];
+
+  // ===== 9. Визиты =====
+  ws = xlSheet(wb, 'Визиты', 'Все визиты · ' + d.perLabel, sub, 17);
+  const r9 = d.visits.map(s => { const retry = mbIsRetry(s); return [xlDt(s.finishedAt), s.mahalla, s.address || '', s.headName || '', retry ? '' : xlPhone(s.phone), mbShortName(s.createdBy), retry ? { v: 'Зайти повторно', t: XL.aT, b: true } : 'Опрошен', s.review === 'pending' ? { v: 'На проверке', f: XL.aF, t: XL.aT, b: true } : 'Принят', retry ? null : mbNum(s.familySize), retry ? null : mbNum(s.unemployed18plus), retry ? '' : (s.businessInterest || ''), retry ? '' : (s.sector || s.sectorOther || ''), retry ? '' : xlFinTxt(s), retry ? null : (mbNum(s.income) || null), retry ? '' : (MB_HS_LABEL[s.houseStatus] || s.houseStatus || ''), Number(s.gpsAccuracy) ? Math.round(Number(s.gpsAccuracy)) : null, xlMin(s)]; });
+  xlTable(ws, 4, [{ h: 'Дата', w: 17, al: 'left' }, { h: 'Махалля', w: 24, al: 'left' }, { h: 'Адрес', w: 24, al: 'left' }, { h: 'ФИО владельца', w: 28, al: 'left' }, { h: 'Телефон', w: 17, al: 'left' }, { h: 'Банкир', w: 18, al: 'left' }, { h: 'Статус визита', w: 15, al: 'left' }, { h: 'Проверка', w: 13, al: 'left' }, { h: 'Членов семьи', w: 10, fmt: '#,##0' }, { h: 'Безработных', w: 11, fmt: '#,##0' }, { h: 'Интерес к бизнесу', w: 17, al: 'left' }, { h: 'Сфера', w: 16, al: 'left' }, { h: 'Поддержка', w: 15, al: 'left' }, { h: 'Доход, сум', w: 13, fmt: '#,##0' }, { h: 'Статус дома', w: 20, al: 'left' }, { h: 'GPS, м', w: 8, fmt: '0' }, { h: 'Время, мин', w: 10, fmt: '0.0' }], r9, { filter: true });
+  ws.views = [{ state: 'frozen', xSplit: 4, ySplit: 4, showGridLines: false }];
+  return wb;
+}
+function normalizeTextXl(v) { return String(v == null ? '' : v).toLowerCase().replace(/\s+/g, ' ').trim(); }
+function mbFunnelData0(d) {
+  const inP = d.visits; const done = d.done;
+  const interest = done.filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1);
+  const support = interest.filter(s => (s.finance || []).some(x => x !== 'none'));
+  const houses = d.mahs.reduce((x, m) => x + mbNum(m.households), 0);
+  return { houses, inP: inP.length, done: done.length, interest: interest.length, support: support.length, projects: d.microP.length };
+}
+function xlMahStats(d) {
+  const byM = {}; d.done.forEach(s => { const k = String(s.mahalla).trim(); const e = byM[k] || (byM[k] = { done: 0, un: 0, abroad: 0 }); e.done++; e.un += mbNum(s.unemployed18plus); (s.members || []).forEach(p => { if (p.employment === 'abroad') e.abroad++; }); });
+  const pr = {}; d.microP.forEach(p => { const k = String(p.mahalla).trim(); pr[k] = (pr[k] || 0) + 1; });
+  return d.mahs.map(m => { const k = String(m.name).trim(); const e = byM[k] || { done: 0, un: 0, abroad: 0 }; const houses = mbNum(m.households);
+    const bn = String(m.bankers || '').split(/[,;\n]/).map(x => x.trim()).filter(x => x && !mbIsArchived(x)).map(mbShortName).join(', ');
+    return { name: m.name, district: m.district || '', banker: bn, pop: mbNum(m.population), houses, done: e.done, cover: houses ? e.done / houses : 0, un: e.un, abroad: e.abroad, proj: pr[k] || 0 }; });
+}
+async function mbStatXlsx() {
+  const btn = document.getElementById('mbXlBtn'); const old = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Формируется…'; }
+  try {
+    const EJ = await nplLoadExcelJs();
+    const wb = xlBuild(EJ);
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = 'Statistika_' + mbStPer + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) { console.error(e); alert('Не удалось сформировать файл: ' + (e && e.message || e)); }
+  if (btn) { btn.disabled = false; btn.textContent = old; }
 }
 
 // ---------- Обход ----------
