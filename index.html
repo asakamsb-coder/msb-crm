@@ -16552,7 +16552,7 @@ function mbMahTabHtml(all, canEdit) {
   const dists = [...new Set((allMahallas || []).map(m => String(m.district || '').trim()).filter(Boolean))].sort();
   const bankNames = [...new Set((allMahallas || []).flatMap(m => mbBankNames(m)))].sort();
   const q = mbMahQ2.toLowerCase();
-  const list = (allMahallas || []).filter(m => (!q || String(m.name).toLowerCase().includes(q)) && (!mbMahDist || String(m.district || '').trim() === mbMahDist) && (!mbMahBankF || (mbMahBankF === '-' ? !mbBankNames(m).length : mbBankNames(m).some(n => mbNorm(n) === mbNorm(mbMahBankF)))));
+  const list = (allMahallas || []).filter(m => (!q || String(m.name).toLowerCase().includes(q) || String(m.code || '').includes(q)) && (!mbMahDist || String(m.district || '').trim() === mbMahDist) && (!mbMahBankF || (mbMahBankF === '-' ? !mbBankNames(m).length : mbBankNames(m).some(n => mbNorm(n) === mbNorm(mbMahBankF)))));
   const sv = n => `<span class="mb-bd ${n >= 7 ? 'g' : n >= 1 ? 'a' : 'r'}">${n} из 7</span>`;
   const chg = (allMahallas || []).filter(mbMahChanged);
   const mv = chg.filter(m => mbMahMoveMap[m.id] && mbMahCur(m));
@@ -16562,8 +16562,8 @@ function mbMahTabHtml(all, canEdit) {
     <select class="select" onchange="mbMahDist=this.value;mbRenderBankers()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbMahDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select>
     <select class="select" onchange="mbMahBankF=this.value;mbRenderBankers()"><option value="">Все банкиры</option><option value="-"${mbMahBankF === '-' ? ' selected' : ''}>Не назначен</option>${bankNames.map(d => `<option${d === mbMahBankF ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select>
     ${canEdit ? '<button class="btn" style="margin-left:auto" onclick="mbMahForm(null)">Добавить махаллю</button>' : ''}</div>
-    <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>Махалля</th><th>Район</th><th>Банкир</th><th>Переход данных</th><th class="mb-num">Население</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th>Семёрка</th><th class="mb-num">Действия</th></tr></thead><tbody>
-    ${list.map((m, n) => { const eff = mbMahEff(m); const ch = mbMahChanged(m); const btn = canEdit ? `<span class="mb-bkb${eff ? '' : ' e'}${ch ? ' ch' : ''}" onclick="mbMahPick('${mbEsc(m.id)}')">${eff ? mbEsc(eff) : 'Назначить'}<i>${eff ? '✎' : '＋'}</i></span>` : (eff ? mbEsc(eff) : '<span style="color:#B76E00;font-weight:700">не назначен</span>'); return `<tr class="${ch ? 'mb-chg' : ''}"><td class="mb-num">${n + 1}</td><td><b>${mbEsc(m.name)}</b>${inPlan.has(m.id) ? '' : ' <span class="mb-bd a">вне плана</span>'}</td><td>${mbEsc(m.district || '')}</td><td>${btn}</td><td>${canEdit ? seg(m) : ''}</td><td class="mb-num">${mbFmt(mbNum(m.population))}</td><td class="mb-num">${mbFmt(mbNum(m.households))}</td><td class="mb-num">${mbMahVisitsAll(m)}</td><td>${sv(mbSevenCount(m))}</td><td class="mb-num" style="white-space:nowrap">${ch ? '<span class="mb-bd a">изменено</span> ' : ''}${canEdit ? `<button class="mb-ic" title="Изменить" onclick="mbMahForm('${mbEsc(m.id)}')">✎</button><button class="mb-ic d" title="Удалить" onclick="mbMahDelAsk('${mbEsc(m.id)}')">🗑</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="10" class="loading">Нет махаллей</td></tr>'}
+    <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>Код</th><th>Махалля</th><th>Район</th><th>Банкир</th><th>Переход данных</th><th class="mb-num">Население</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th>Семёрка</th><th class="mb-num">Действия</th></tr></thead><tbody>
+    ${list.map((m, n) => { const eff = mbMahEff(m); const ch = mbMahChanged(m); const btn = canEdit ? `<span class="mb-bkb${eff ? '' : ' e'}${ch ? ' ch' : ''}" onclick="mbMahPick('${mbEsc(m.id)}')">${eff ? mbEsc(eff) : 'Назначить'}<i>${eff ? '✎' : '＋'}</i></span>` : (eff ? mbEsc(eff) : '<span style="color:#B76E00;font-weight:700">не назначен</span>'); return `<tr class="${ch ? 'mb-chg' : ''}"><td class="mb-num">${n + 1}</td><td><b>${mbEsc(m.code || '')}</b></td><td><b>${mbEsc(m.name)}</b>${inPlan.has(m.id) ? '' : ' <span class="mb-bd a">вне плана</span>'}</td><td>${mbEsc(m.district || '')}</td><td>${btn}</td><td>${canEdit ? seg(m) : ''}</td><td class="mb-num">${mbFmt(mbNum(m.population))}</td><td class="mb-num">${mbFmt(mbNum(m.households))}</td><td class="mb-num">${mbMahVisitsAll(m)}</td><td>${sv(mbSevenCount(m))}</td><td class="mb-num" style="white-space:nowrap">${ch ? '<span class="mb-bd a">изменено</span> ' : ''}${canEdit ? `<button class="mb-ic" title="Изменить" onclick="mbMahForm('${mbEsc(m.id)}')">✎</button><button class="mb-ic d" title="Удалить" onclick="mbMahDelAsk('${mbEsc(m.id)}')">🗑</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="11" class="loading">Нет махаллей</td></tr>'}
     </tbody></table></div>${bar}`;
 }
 let mbMahDraft = {}, mbMahMoveMap = {}, mbPickId = null, mbPickQ = '';
@@ -16611,7 +16611,7 @@ function mbMahForm(id, draft, warn) {
   const m = id ? (allMahallas || []).find(x => x.id === id) : null;
   if (id && !m) return;
   mbMahEditId = id;
-  const d = draft || (m ? { name: m.name, district: m.district || '', bankers: m.bankers || '', streets: m.streets || '', population: m.population, households: m.households, families: m.families, unemployed: m.unemployed, migrants: m.migrants, disabled: m.disabled, lowIncome: m.lowIncomeFamilies, microprojectsPlan: m.microprojectsPlan, seven: m.seven || {} } : { name: '', district: '', bankers: '', streets: '', seven: {} });
+  const d = draft || (m ? { code: m.code || '', name: m.name, district: m.district || '', bankers: m.bankers || '', streets: m.streets || '', population: m.population, households: m.households, families: m.families, unemployed: m.unemployed, migrants: m.migrants, disabled: m.disabled, lowIncome: m.lowIncomeFamilies, microprojectsPlan: m.microprojectsPlan, seven: m.seven || {} } : { code: '', name: '', district: '', bankers: '', streets: '', seven: {} });
   const v = x => mbEsc(x == null ? '' : x);
   const names = (mbBankUsers || []).map(u => u.fullName || u.login);
   const cur = String(d.bankers || '').trim();
@@ -16625,7 +16625,7 @@ function mbMahForm(id, draft, warn) {
   const dtf = ms => ms ? new Date(Number(ms)).toLocaleDateString('ru-RU') : '';
   mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">${m ? mbEsc(m.name) : 'Новая махалля'}</div><div class="mb-ds">${m && m.infoUpdatedAt ? 'обновлено ' + dtf(m.infoUpdatedAt) + (m.infoUpdatedBy ? ', ' + mbEsc(m.infoUpdatedBy) : '') : ''}</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
     <div class="mb-db">${warn ? `<div class="mb-warn">${mbEsc(warn.message)}${warn.existingId ? ` <a href="#" onclick="mbMahForm('${mbEsc(warn.existingId)}');return false">Открыть существующую</a>` : ''}</div>` : ''}
-    <div class="mb-sec">Основное</div><div class="mb-g2"><div class="mb-f"><label>Название</label><input class="input" id="mbMf_name" value="${v(d.name)}"></div><div class="mb-f"><label>Район</label><input class="input" id="mbMf_district" value="${v(d.district)}"></div></div>
+    <div class="mb-sec">Основное</div><div class="mb-f"><label>Код махалли *</label><input class="input" id="mbMf_code" inputmode="numeric" maxlength="7" placeholder="3501002" value="${v(d.code)}" oninput="this.value=this.value.replace(/[^0-9]/g,'');mbMahCodeCheck()"><div id="mbMfCodeWarn"></div></div><div class="mb-g2" style="margin-top:8px"><div class="mb-f"><label>Название *</label><input class="input" id="mbMf_name" value="${v(d.name)}"></div><div class="mb-f"><label>Район</label><input class="input" id="mbMf_district" value="${v(d.district)}"></div></div>
     <div class="mb-f" style="margin-top:8px"><label>Банкир</label><select class="select" id="mbMf_bankers">${opts.join('')}</select></div>
     <div class="mb-f" style="margin-top:8px"><label>Улицы</label><input class="input" id="mbMf_streets" value="${v(d.streets)}"></div>
     <div class="mb-sec">Данные махалли</div><div class="mb-g2">${fld('population', 'Население')}${fld('households', 'Домов')}${fld('families', 'Семей')}${fld('unemployed', 'Безработных')}${fld('migrants', 'Мигрантов')}${fld('disabled', 'Инвалидов')}${fld('lowIncome', 'В соцреестре')}${fld('microprojectsPlan', 'План микропроектов')}</div>
@@ -16633,18 +16633,27 @@ function mbMahForm(id, draft, warn) {
     ${id ? `<div class="mb-sec">Визиты по банкирам</div>${visRows.length ? visRows.map(k => `<div class="mb-kv"><span>${mbEsc(k)}</span><b>${vis[k]}</b></div>`).join('') : '<div class="mb-count">Визитов нет</div>'}
     <div class="mb-sec">История закреплений</div>${hist.length ? `<div class="mb-hist">${hist.map(x => `<div><b>${dtf(x.at)}</b> · ${mbEsc(x.from || 'не назначен')} → <b>${mbEsc(x.to || 'не назначен')}</b><br><span style="color:var(--muted);font-size:11.5px">${mbEsc(x.note)}${x.by ? ' · ' + mbEsc(x.by) : ''}</span></div>`).join('')}</div>` : '<div class="mb-count">Записей нет</div>'}` : ''}
     </div>
-    <div class="mb-foot"><button class="btn" id="mbMahSave" onclick="mbMahSave()">Сохранить</button>${id ? '<button class="btn mb-btn-del" onclick="mbMahDelAsk()">Удалить</button>' : ''}</div>`);
+    <div class="mb-foot"><button class="btn" id="mbMahSave" onclick="mbMahSave()"${/^\d{7}$/.test(String(d.code || '')) ? '' : ' disabled'}>Сохранить</button>${id ? '<button class="btn mb-btn-del" onclick="mbMahDelAsk()">Удалить</button>' : ''}</div>`);
 }
 function mbMahCollect() {
   const g = k => document.getElementById('mbMf_' + k).value.trim();
-  const fields = { name: g('name'), district: g('district'), streets: g('streets'), bankers: document.getElementById('mbMf_bankers').value.trim() };
+  const fields = { code: g('code'), name: g('name'), district: g('district'), streets: g('streets'), bankers: document.getElementById('mbMf_bankers').value.trim() };
   ['population', 'households', 'families', 'unemployed', 'migrants', 'disabled', 'lowIncome', 'microprojectsPlan'].forEach(k => { fields[k] = g(k).replace(/\s/g, ''); });
   const seven = {};
   MB_SEVEN_KEYS.forEach(r => { seven[r.k] = { name: document.getElementById('mbMs_' + r.k + '_n').value.trim(), phone: document.getElementById('mbMs_' + r.k + '_p').value.trim() }; });
   return { fields, seven };
 }
+function mbMahCodeCheck() {
+  const el = document.getElementById('mbMf_code'); if (!el) return;
+  const ok = /^\d{7}$/.test(el.value);
+  const w = document.getElementById('mbMfCodeWarn');
+  el.style.borderColor = el.value && !ok ? '#B3261E' : '';
+  if (w) w.innerHTML = el.value && !ok ? '<div class="mb-warn">Код: ровно 7 цифр, например 3501002</div>' : '';
+  const b = document.getElementById('mbMahSave'); if (b) b.disabled = !ok;
+}
 async function mbMahSave() {
   const { fields, seven } = mbMahCollect();
+  if (!/^\d{7}$/.test(fields.code)) { mbMahCodeCheck(); return; }
   if (!fields.name) { alert('Укажите название махалли'); return; }
   const b = document.getElementById('mbMahSave'); if (b) { b.disabled = true; b.textContent = 'Сохранение...'; }
   const r = await postWebAction({ webAction: 'mbAdminMahallaSave', sessionId: localStorage.getItem('msbSessionId'), mahallaId: mbMahEditId || '', fields, seven });
@@ -17837,7 +17846,7 @@ var MB_ADM_UZ = {
 "Удалён":"O‘chirilgan","Удалена":"O‘chirilgan","Кем":"Kim tomonidan","Махалли при удалении":"O‘chirilgandagi mahallalar","Банкир при удалении":"O‘chirilgandagi bankir","Окончательное удаление":"Yakuniy o‘chirish","Восстановить":"Tiklash","Архив пуст":"Arxiv bo‘sh","завтра":"ertaga","сегодня":"bugun","виз.":"tashrif",
 "Был закреплён":"Avval biriktirilgan","Назначить":"Tayinlash","Все махалли закреплены":"Barcha mahallalar biriktirilgan","Нет махаллей":"Mahallalar yo‘q",
 "Поиск по названию":"Nomi bo‘yicha qidirish","Все районы":"Barcha tumanlar","Все банкиры":"Barcha bankirlar","Все махалли":"Barcha mahallalar","Все статусы":"Barcha maqomlar","Переход данных":"Ma‘lumotlar o‘tishi","В махалле":"Mahallada","Новому":"Yangisiga","Население":"Aholi","Семёрка":"Yettilik","Действия":"Amallar","вне плана":"reja tashqarisida","изменено":"o‘zgargan","Отменить":"Bekor qilish","Отмена":"Bekor qilish","Сохранить":"Saqlash","данные перейдут новому банкиру:":"ma‘lumotlar yangi bankirga o‘tadi:","Снять банкира":"Bankirni olib tashlash","Поиск банкира":"Bankirni qidirish","Сейчас:":"Hozir:","Банкир не назначен":"Bankir biriktirilmagan","Не найдено":"Topilmadi",
-"Новая махалля":"Yangi mahalla","обновлено":"yangilangan","Основное":"Asosiy","Название в таблице":"Jadvaldagi nomi","Название":"Nomi","Район":"Tuman","Банкир:":"Bankir:","Банкир":"Bankir","Улицы":"Ko‘chalar","Данные махалли":"Mahalla ma‘lumotlari","Данные обхода":"Aylanish ma‘lumotlari","Данные":"Ma‘lumotlar","Семей":"Oilalar","Безработных 18+":"Ishsizlar 18+","Безработных":"Ishsizlar","безработных":"ishsizlar","Мигрантов":"Migrantlar","Инвалидов":"Nogironlar","В соцреестре":"Ijtimoiy reyestrda","В реестре":"Reyestrda","План микропроектов":"Mikroloyihalar rejasi",
+"Новая махалля":"Yangi mahalla","обновлено":"yangilangan","Основное":"Asosiy","Код махалли *":"Mahalla kodi *","Код махалли":"Mahalla kodi","Код":"Kod","Код: ровно 7 цифр, например 3501002":"Kod: roppa-rosa 7 ta raqam, masalan 3501002","Махалля с таким кодом уже есть:":"Bunday kodli mahalla allaqachon mavjud:","Название в таблице":"Jadvaldagi nomi","Название *":"Nomi *","Название":"Nomi","Район":"Tuman","Банкир:":"Bankir:","Банкир":"Bankir","Улицы":"Ko‘chalar","Данные махалли":"Mahalla ma‘lumotlari","Данные обхода":"Aylanish ma‘lumotlari","Данные":"Ma‘lumotlar","Семей":"Oilalar","Безработных 18+":"Ishsizlar 18+","Безработных":"Ishsizlar","безработных":"ishsizlar","Мигрантов":"Migrantlar","Инвалидов":"Nogironlar","В соцреестре":"Ijtimoiy reyestrda","В реестре":"Reyestrda","План микропроектов":"Mikroloyihalar rejasi",
 "Председатель махалли":"Mahalla raisi","Помощник хокима":"Hokim yordamchisi","Соцработник":"Ijtimoiy xodim","Лидер молодёжи":"Yoshlar yetakchisi","Активист (женщины)":"Faol (ayollar)","Налоговый инспектор":"Soliq inspektori","Инспектор профилактики":"Profilaktika inspektori","Фамилия Имя":"Familiya Ism","Телефон":"Telefon",
 "Визиты по банкирам":"Bankirlar bo‘yicha tashriflar","Визитов нет":"Tashriflar yo‘q","История закреплений":"Biriktirishlar tarixi","Записей нет":"Yozuvlar yo‘q","Такая махалля уже есть":"Bunday mahalla allaqachon mavjud","Открыть существующую":"Mavjudini ochish",
 "Махалля уйдёт в архив. Визиты и данные сохраняются, банкир открепляется. Из архива махаллю можно восстановить.":"Mahalla arxivga o‘tadi. Tashriflar va ma‘lumotlar saqlanadi, bankir biriktirilmaydi. Mahallani arxivdan tiklash mumkin.",
