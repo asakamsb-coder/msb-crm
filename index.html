@@ -2290,6 +2290,7 @@ body.role-mahalla-banker .footer{display:none;}
       <option value="LAWYER">Юрист</option>
       <option value="MIB_OFFICER">Сотрудник МИБ</option>
       <option value="DEPUTY">Заместитель (только просмотр)</option>
+      <option value="DEPUTY_MAHALLA">Заместитель (Махалля)</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
 
@@ -2700,6 +2701,7 @@ body.role-mahalla-banker .footer{display:none;}
       <option value="LAWYER">Юрист</option>
       <option value="MIB_OFFICER">Сотрудник МИБ</option>
       <option value="DEPUTY">Заместитель (только просмотр)</option>
+      <option value="DEPUTY_MAHALLA">Заместитель (Махалля)</option>
       <option value="DIRECTOR">Управляющий</option>
     </select>
 
@@ -4844,6 +4846,8 @@ function applyRoleView() {
   document.getElementById('myCabinetRole').innerText =
     currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR'
       ? 'Управляющий'
+      : currentUser.role === 'DEPUTY_MAHALLA'
+      ? 'Заместитель (Махалля)'
       : currentUser.role === 'MAHALLA_BANKER'
       ? 'Банкир Махалли'
       : currentUser.role === 'CREDIT_MONITOR'
@@ -4873,7 +4877,7 @@ function applyRoleView() {
   // Махалля — отдельный блок/отдел. Банкир Махалли не должен видеть и даже
   // грузить разделы МСБ (Dashboard, Клиенты, Портфель, SLA, Статистика,
   // Районы, Менеджеры, AI Центр) — только "Махалля" и "Мой кабинет".
-  const isMahallaOnly = currentUser.role === 'MAHALLA_BANKER';
+  const isMahallaOnly = currentUser.role === 'MAHALLA_BANKER' || currentUser.role === 'DEPUTY_MAHALLA';
   document.querySelectorAll('[data-msb-only="true"]').forEach(el => {
     el.classList.toggle('hidden-by-role', isMahallaOnly);
   });
@@ -4895,6 +4899,15 @@ function applyRoleView() {
 
   const myCabinetMsbBlock = document.getElementById('myCabinetMsbBlock');
   if (myCabinetMsbBlock) myCabinetMsbBlock.classList.toggle('hidden-by-role', isMahallaOnly);
+
+  // Заместитель по Махалле: в меню остаются только «Махалля» и «Мой кабинет».
+  if (currentUser.role === 'DEPUTY_MAHALLA') {
+    document.querySelectorAll('.nav a').forEach(a => {
+      const oc = a.getAttribute('onclick') || '';
+      if (a.id === 'mahallaNavLink' || oc.indexOf('myCabinetPage') !== -1) return;
+      a.classList.add('hidden-by-role');
+    });
+  }
 
   // Взыскатель — отдельная мобильная оболочка (Главная/Клиенты/Профиль
   // внизу экрана вместо большого сайдбара CRM), см. .role-vzyskatel в CSS
@@ -4970,6 +4983,11 @@ async function loadCRM() {
     // только список для форм и сам раздел "Махалля".
     if (currentUser && currentUser.role === 'MAHALLA_BANKER') {
       await mbEnter();
+      return;
+    }
+    // Заместитель по Махалле: только блок «Махалля» (десктоп), без данных МСБ.
+    if (currentUser && currentUser.role === 'DEPUTY_MAHALLA') {
+      showPage('mahallaPage', document.getElementById('mahallaNavLink'));
       return;
     }
 
@@ -15651,7 +15669,7 @@ async function loadMahallaData() {
     allMicroprojects = microprojects || [];
     mahallaDataLoaded = true;
 
-    const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    const isAdmin = currentUser && mbIsAdm();
     const addBtn = document.getElementById('addMahallaBtn');
     if (addBtn) addBtn.style.display = isAdmin ? 'inline-block' : 'none';
     const uploadPanel = document.getElementById('mahallaPassportUploadPanel');
@@ -16245,13 +16263,13 @@ async function mbAdminLoad() {
   allObhodSurveys = surveys || [];
   allMahallas = mahallas || [];
   try {
-    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR')) {
+    if (currentUser && mbIsAdm()) {
       const ar = await postWebAction({ webAction: 'listMahallaBankerArchive', sessionId: localStorage.getItem('msbSessionId') });
       if (ar && ar.success) mbBankArchive = ar.items;
     }
   } catch (e) {}
   const up = document.getElementById('mahallaPassportUploadPanel');
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const isAdmin = currentUser && mbIsAdm();
   const upBtn = document.getElementById('mbUploadBtn');
   if (upBtn) upBtn.style.display = isAdmin ? '' : 'none';
   if (up && !isAdmin) up.style.display = 'none';
@@ -16314,7 +16332,7 @@ function mbBankList() {
   return rows;
 }
 async function mbBankLoad() {
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const isAdmin = currentUser && mbIsAdm();
   const sid = localStorage.getItem('msbSessionId');
   const [users, micro, arch] = await Promise.all([
     fetchJSON('users'),
@@ -16346,7 +16364,7 @@ function mbRenderBankers(silent) {
   const box = document.getElementById('mbBankBody'); if (!box) return;
   const all = mbBankList();
   window.mbBankAll = all; if (silent) return;
-  const canEdit = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const canEdit = currentUser && mbIsAdm();
   const free = mbMahs().filter(m => !all.some(r => r.ids.indexOf(m.id) !== -1));
   const idx = r => all.indexOf(r);
   const sub = (k, l, n) => `<span class="${mbBankSub === k ? 'on' : ''}" onclick="mbBankSub='${k}';mbRenderBankers()">${l} (${n})</span>`;
@@ -16864,7 +16882,7 @@ function mbRankCard(title, list, worst) {
 function mbRenderStats() {
   const box = document.getElementById('mbStatsBody'); if (!box) return;
   box.innerHTML = `<div class="st-topbar">${mbPeriodHtml(mbStPer, 'mbStSetPer')}<button class="btn" id="mbXlBtn" onclick="mbStatXlsx()">Скачать в Excel</button></div>` + mbStatTop();
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const isAdmin = currentUser && mbIsAdm();
   const ub = document.getElementById('mbUploadBtn'); if (ub) ub.style.display = isAdmin ? '' : 'none';
 }
 
@@ -17486,7 +17504,7 @@ function mbOpenVisit(enc) {
   const photos = mbPhotoList(s);
   const fl = mbFlags(s);
   const members = s.members || [];
-  const canReview = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const canReview = currentUser && mbIsAdm();
   const kv = (k, v) => `<div class="mb-kv"><span>${k}</span><b>${v === '' || v == null ? '—' : v}</b></div>`;
   const wishText = Object.keys(s.wishes || {}).map(k => { const m = members.find(p => p.id === k); const v = s.wishes[k]; return mbEsc((m ? String(m.fio).split(' ')[0] : '') + ': ' + (MB_WISH_LABEL[v] || v)); }).join('<br>');
   const dur = (Number(s.finishedAt) - Number(s.startedAt)) / 1000;
@@ -17577,6 +17595,7 @@ async function mbKvDel(k) { try { const db = await mbDb(); await new Promise(res
 const mbUserKey = () => (currentUser && (currentUser.login || currentUser.fullName)) || 'u';
 
 // ---------- вход в оболочку ----------
+function mbIsAdm() { return !!currentUser && ['ADMIN', 'DIRECTOR', 'DEPUTY_MAHALLA'].indexOf(currentUser.role) !== -1; }
 function isMbShell() { return !!(currentUser && currentUser.role === 'MAHALLA_BANKER'); }
 
 function renderMbNavbar() {
@@ -18510,7 +18529,7 @@ const MAHALLA_PORTAL_BASE64 = "PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9InV6Ij4KPGhlY
 // Менеджер видит только свои махалли (где его имя есть в поле "Банкиры"),
 // управляющий видит все.
 function getVisibleMahallas() {
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const isAdmin = currentUser && mbIsAdm();
   if (isAdmin) return allMahallas;
 
   const myName = normalizeText(currentUser.fullName || currentUser.login);
@@ -18531,7 +18550,7 @@ function renderMahallasList() {
   if (!box) return;
 
   const visible = getVisibleMahallas();
-  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const isAdmin = currentUser && mbIsAdm();
 
   if (!visible.length) {
     box.innerHTML = '<div class="loading">' + (isAdmin ? tr('mahallaEmptyAdmin') : tr('mahallaEmptyUser')) + '</div>';
@@ -19084,7 +19103,7 @@ async function openObhodForm(idEncoded) {
       // списке (ADMIN/DIRECTOR/DEPUTY). Флаги берём из кэша последнего
       // расчёта списка; если форму открыли напрямую (без захода в
       // список), считаем на месте.
-      const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+      const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY' || currentUser.role === 'DEPUTY_MAHALLA');
       const banner = document.getElementById('obhodSuspiciousBanner');
       if (banner) {
         if (canSeeLocation) {
@@ -19494,7 +19513,7 @@ async function loadObhodList() {
     // что и общая карта визитов: это инструмент проверки банкира, а не
     // рабочий для рядового опроса.
     let obhodSuspiciousFlagsCache = new Map();
-    const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+    const canSeeLocation = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY' || currentUser.role === 'DEPUTY_MAHALLA');
     const suspiciousFlags = canSeeLocation ? findObhodSuspiciousPairs(allObhodSurveys) : new Map();
     obhodSuspiciousFlagsCache = suspiciousFlags;
 
@@ -19627,7 +19646,7 @@ async function loadObhodDashboard() {
     const daysElapsed = Math.max(1, Math.round((now - campaignStart) / (24 * 60 * 60 * 1000)));
 
     const managerNames = Object.keys(doneByManager);
-    const canSeeSuspicious = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+    const canSeeSuspicious = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY' || currentUser.role === 'DEPUTY_MAHALLA');
     const suspiciousByManager = {};
     if (canSeeSuspicious) {
       const flagsMap = findObhodSuspiciousPairs(allObhodSurveys);
@@ -19964,7 +19983,7 @@ let obhodMapAlreadyLoaded = false;
 function checkObhodMapAccess() {
   const panel = document.getElementById('obhodMapPanel');
   if (!panel) return;
-  const allowed = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY');
+  const allowed = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'DEPUTY' || currentUser.role === 'DEPUTY_MAHALLA');
   panel.style.display = allowed ? 'block' : 'none';
 }
 
@@ -20503,7 +20522,7 @@ function openMicroprojectDetail(id) {
     photosBox.innerHTML = '<div style="color:var(--muted);font-size:13px;">Фото не загружены</div>';
   }
 
-  const isAdminUser = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const isAdminUser = currentUser && mbIsAdm();
   const isOwner = currentUser && normalizeText(p.banker) === normalizeText(currentUser.fullName || currentUser.login);
   document.getElementById('mdEditBtn').style.display = (isAdminUser || isOwner) ? 'block' : 'none';
   document.getElementById('mdDeleteBtn').style.display = isAdminUser ? 'block' : 'none';
@@ -20621,7 +20640,7 @@ function openMicroprojectForm(mode, id) {
     document.getElementById('mpStatus').value = p.status || 'Выявлен';
     toggleSubjectStatusFields();
 
-    const isAdminUser = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+    const isAdminUser = currentUser && mbIsAdm();
     // Геолокация и фото — доказательство реального посещения объекта,
     // зафиксированное при создании. Банкир не может их поменять задним
     // числом, только управляющий (см. пояснение в Apps Script).
@@ -21657,7 +21676,8 @@ const USER_ROLE_LABELS = {
   VZYSKATEL: 'Взыскатель',
   LAWYER: 'Юрист',
   MIB_OFFICER: 'Сотрудник МИБ',
-  DEPUTY: 'Заместитель (только просмотр)'
+  DEPUTY: 'Заместитель (только просмотр)',
+  DEPUTY_MAHALLA: 'Заместитель (Махалля)'
 };
 
 let allWebUsers = [];
