@@ -1618,7 +1618,13 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .mb-db{flex:1;overflow-y:auto;padding:6px 20px 20px;}.mb-foot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--line);}.mb-foot .btn{flex:1;}
 .mb-cd{display:inline-block;border-radius:8px;padding:3px 9px;font-size:11.5px;font-weight:800}.mb-cd.a{background:#FFF1D6;color:#8A5A00}.mb-cd.r{background:#FDECEA;color:#B3261E}.mb-cd.g{background:#EEF0F3;color:#4B5563}
 .mb-pb{height:5px;background:#E9EBEF;border-radius:3px;overflow:hidden;margin-top:5px;width:110px}.mb-pb u{display:block;height:100%;background:#B71F17}
-.mb-filters2 .input,.mb-filters2 .select{width:auto;max-width:220px}.mb-s7 .input{min-width:0;padding:8px 10px}.mb-g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mb-f label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}.mb-f .input,.mb-f .select{width:100%}
+.mb-filters2 .input,.mb-filters2 .select{width:auto;max-width:220px}.mb-s7 .input{min-width:0;padding:8px 10px}.mb-bkb{display:inline-flex;align-items:center;gap:8px;justify-content:space-between;border:1.5px solid #D5D8DE;border-radius:10px;padding:7px 11px;font-size:13px;font-weight:600;background:#fff;min-width:200px;cursor:pointer}.mb-bkb i{font-style:normal;color:#6B7280;font-size:12px}.mb-bkb.e{border:1.5px dashed #E0A400;background:#FFF8E6;color:#8A5A00}.mb-bkb.ch{border:1.5px solid #B71F17;background:#FFF5F4}
+.mb-mv{display:inline-flex;background:#EEF0F3;border-radius:9px;padding:2px;font-size:12px;font-weight:700}.mb-mv span{white-space:nowrap;padding:5px 9px;border-radius:7px;color:#6B7280;cursor:pointer}.mb-mv span.on{background:#141414;color:#fff}
+tr.mb-chg td{background:#FFF5F4}.mb-savebar{position:sticky;bottom:12px;margin-top:14px;background:#141414;color:#fff;border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px}.mb-savebar .btn-secondary{background:transparent;color:#fff;border:1.5px solid #6B7280}
+.mb-ic{width:34px;height:34px;border-radius:9px;border:1.5px solid #D5D8DE;background:#fff;cursor:pointer;margin-left:4px;font-size:15px}.mb-ic.d{border-color:#F3C5C0;background:#FDECEA}
+.mb-pk{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:9px;font-size:13.5px;cursor:pointer}.mb-pk:hover{background:#F5F6F8}.mb-pk.on{background:#FBE4E1;font-weight:800}.mb-pk small{color:var(--muted)}
+.mb-per-s span{padding:6px 12px;font-size:12.5px}.mb-per-s span.on{background:#141414}
+.mb-g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mb-f label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}.mb-f .input,.mb-f .select{width:100%}
 .mb-s7{display:grid;grid-template-columns:105px 1fr 125px;line-height:1.2;gap:6px;align-items:center;margin-bottom:6px;font-size:12px}
 .mb-hist{border-left:2px solid #E7E8EC;margin:8px 0 0 6px;padding-left:12px}.mb-hist div{font-size:12.5px;margin-bottom:8px;position:relative}.mb-hist div:before{content:"";position:absolute;left:-18px;top:5px;width:8px;height:8px;border-radius:50%;background:#B71F17}
 .mb-dg{background:#F5F6F8;border-radius:12px;padding:10px 12px;margin-bottom:10px}.mb-dg .t{font-weight:800;font-size:13px;margin-bottom:6px}.mb-dg tr.bad{background:#FDECEA}
@@ -16317,7 +16323,7 @@ async function mbBankLoad() {
   ]);
   mbBankUsers = (users || []).filter(u => u.role === 'MAHALLA_BANKER' && u.active !== false);
   mbBankArchive = arch && arch.success ? arch.items : [];
-  if (isAdmin) { try { const hr = await postWebAction({ webAction: 'mbMahallaHistory', sessionId: sid }); mbHist = hr && hr.success ? hr.items : []; } catch (e) { mbHist = []; } }
+  if (isAdmin) { try { const hr = await postWebAction({ webAction: 'mbMahallaHistory', sessionId: sid }); mbHist = hr && hr.success ? hr.items : []; } catch (e) { mbHist = []; } try { const ar = await postWebAction({ webAction: 'mbMahallaArchiveList', sessionId: sid }); mbMahArch = ar && ar.success ? ar.items : []; } catch (e) { mbMahArch = []; } }
   mbMicro = (Array.isArray(micro) ? micro : []).filter(p => !mbIsArchived(p.banker));
 }
 async function mbImportRoster() {
@@ -16349,7 +16355,14 @@ function mbRenderBankers(silent) {
     const D = 86400000, LIM = 15;
     const left = a => { const d = LIM - Math.floor((Date.now() - Number(a.at)) / D); return Math.max(0, d); };
     const cd = a => { const d = left(a); const cls = d <= 3 ? 'r' : d <= 7 ? 'a' : 'g'; const t = d <= 0 ? 'сегодня' : d === 1 ? 'завтра' : 'через ' + d + ' дн.'; return `<span class="mb-cd ${cls}">${t}</span><div class="mb-pb"><u style="width:${Math.min(100, Math.round((LIM - d) / LIM * 100))}%"></u></div>`; };
-    body = `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>ФИО</th><th>Логин</th><th>Удалён</th><th>Кем</th><th>Махалли при удалении</th><th>Окончательное удаление</th><th></th></tr></thead><tbody>
+    const asub = (k, l, n) => `<span class="${mbArchSub === k ? 'on' : ''}" onclick="mbArchSub='${k}';mbRenderBankers()">${l} (${n})</span>`;
+    const splitBar = `<div class="mb-per mb-per-s" style="margin-bottom:12px;width:max-content">${asub('bank', 'Банкиры', mbArchVisible().length)}${asub('mah', 'Махалли', mbMahArch.length)}</div>`;
+    if (mbArchSub === 'mah') {
+      body = splitBar + `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>Махалля</th><th>Район</th><th>Банкир при удалении</th><th class="mb-num">Домов</th><th class="mb-num">Визитов</th><th>Удалена</th><th>Кем</th><th>Окончательное удаление</th><th></th></tr></thead><tbody>
+      ${mbMahArch.map((a, i) => `<tr><td><b>${mbEsc(a.name)}</b></td><td>${mbEsc(a.district || '—')}</td><td>${a.banker ? mbEsc(a.banker) : '<span style="color:var(--muted)">не назначен</span>'}</td><td class="mb-num">${mbFmt(a.households)}</td><td class="mb-num">${a.visits}</td><td>${dt(a.at)}</td><td>${mbEsc(a.by)}</td><td>${cd(a)}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="mbMahRestore(${i})">Восстановить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="9" class="loading">Архив пуст</td></tr>'}
+      </tbody></table></div>`;
+    } else
+    body = splitBar + `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>ФИО</th><th>Логин</th><th>Удалён</th><th>Кем</th><th>Махалли при удалении</th><th>Окончательное удаление</th><th></th></tr></thead><tbody>
       ${mbArchVisible().map((a, i) => `<tr><td><b>${mbEsc(a.fullName)}</b></td><td>${mbEsc(a.login)}</td><td>${dt(a.at)}</td><td>${mbEsc(a.by)}</td><td>${(a.mahallas || []).map(m => `<span class="mb-chip">${mbEsc(m.name)}</span>`).join('')}</td><td>${cd(a)}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="mbBankRestore(${i})">Восстановить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Архив пуст</td></tr>'}
       </tbody></table></div>`;
   } else if (mbBankSub === 'free') {
@@ -16367,7 +16380,7 @@ function mbRenderBankers(silent) {
       </tbody></table></div>`;
   }
   box.innerHTML = `<div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="mbImportRoster()">Загрузить махалли из плана</button><button class="btn btn-secondary" onclick="mbDupOpen()">Дубликаты</button><button class="btn btn-secondary" onclick="mbOpenTransfer()">Переназначить</button></div>' : ''}</div>
-    <div class="mb-per" style="margin-bottom:14px;width:max-content">${sub('active', 'Активные', all.filter(r => !r.unknown).length)}${sub('archive', 'Архив', mbArchVisible().length)}${sub('free', 'Не назначенные махалли', free.length)}${sub('mah', 'Махалли', (allMahallas || []).length)}</div>${body}</div>`;
+    <div class="mb-per" style="margin-bottom:14px;width:max-content">${sub('active', 'Активные', all.filter(r => !r.unknown).length)}${sub('archive', 'Архив', mbArchVisible().length + mbMahArch.length)}${sub('free', 'Не назначенные махалли', free.length)}${sub('mah', 'Махалли', (allMahallas || []).length)}</div>${body}</div>`;
   window.mbBankAll = all;
 }
 function mbBankDelAsk(i) {
@@ -16470,6 +16483,9 @@ function mbMahVisitsBy(id, b) {
 function mbMahVisitsAll(m) { const mk = mbNorm(m.name); return mbDoneRows(true).filter(s => mbNorm(s.mahalla) === mk).length; }
 function mbSevenCount(m) { const s = m.seven || {}; return MB_SEVEN_KEYS.filter(k => s[k.k] && String(s[k.k].name || '').trim()).length; }
 const MB_SEVEN_KEYS = [{ k: 'chair', l: 'Председатель махалли' }, { k: 'hokimHelper', l: 'Помощник хокима' }, { k: 'social', l: 'Соцработник' }, { k: 'youth', l: 'Лидер молодёжи' }, { k: 'women', l: 'Активист (женщины)' }, { k: 'tax', l: 'Налоговый инспектор' }, { k: 'prevent', l: 'Инспектор профилактики' }];
+function mbMahCur(m) { return String(m.bankers || '').trim(); }
+function mbMahEff(m) { const d = mbMahDraft[m.id]; return d !== undefined ? d : mbMahCur(m); }
+function mbMahChanged(m) { return mbMahDraft[m.id] !== undefined && mbNorm(mbMahDraft[m.id]) !== mbNorm(mbMahCur(m)); }
 function mbMahTabHtml(all, canEdit) {
   const inPlan = new Set(mbMahs().map(m => m.id));
   const dists = [...new Set((allMahallas || []).map(m => String(m.district || '').trim()).filter(Boolean))].sort();
@@ -16477,13 +16493,56 @@ function mbMahTabHtml(all, canEdit) {
   const q = mbMahQ2.toLowerCase();
   const list = (allMahallas || []).filter(m => (!q || String(m.name).toLowerCase().includes(q)) && (!mbMahDist || String(m.district || '').trim() === mbMahDist) && (!mbMahBankF || (mbMahBankF === '-' ? !mbBankNames(m).length : mbBankNames(m).some(n => mbNorm(n) === mbNorm(mbMahBankF)))));
   const sv = n => `<span class="mb-bd ${n >= 7 ? 'g' : n >= 1 ? 'a' : 'r'}">${n} из 7</span>`;
+  const chg = (allMahallas || []).filter(mbMahChanged);
+  const mv = chg.filter(m => mbMahMoveMap[m.id] && mbMahCur(m));
+  const bar = chg.length ? `<div class="mb-savebar"><span><b>Изменено махаллей: ${chg.length}</b>${mv.length ? ` <span style="font-weight:400;opacity:.75">· данные перейдут новому банкиру: ${mv.length}</span>` : ''}</span><span style="display:flex;gap:8px"><button class="btn btn-secondary" onclick="mbMahDraft={};mbMahMoveMap={};mbRenderBankers()">Отменить</button><button class="btn" id="mbMahDraftBtn" onclick="mbMahDraftSave()">Сохранить</button></span></div>` : '';
+  const seg = (m) => { const mvv = !!mbMahMoveMap[m.id]; return `<span class="mb-mv"><span class="${mvv ? '' : 'on'}" onclick="mbMahMoveSet('${mbEsc(m.id)}',false)">В махалле</span><span class="${mvv ? 'on' : ''}" onclick="mbMahMoveSet('${mbEsc(m.id)}',true)">Новому</span></span>`; };
   return `<div class="mb-filters2"><input class="input" style="min-width:240px;max-width:300px" placeholder="Поиск по названию" value="${mbEsc(mbMahQ2)}" oninput="mbMahQ2=this.value;mbMahTabDebounced()">
     <select class="select" onchange="mbMahDist=this.value;mbRenderBankers()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbMahDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select>
     <select class="select" onchange="mbMahBankF=this.value;mbRenderBankers()"><option value="">Все банкиры</option><option value="-"${mbMahBankF === '-' ? ' selected' : ''}>Не назначен</option>${bankNames.map(d => `<option${d === mbMahBankF ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select>
     ${canEdit ? '<button class="btn" style="margin-left:auto" onclick="mbMahForm(null)">Добавить махаллю</button>' : ''}</div>
-    <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>Махалля</th><th>Район</th><th>Банкир</th><th class="mb-num">Население</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th>Семёрка</th><th></th></tr></thead><tbody>
-    ${list.map((m, n) => `<tr class="mb-row" ${canEdit ? `onclick="mbMahForm('${mbEsc(m.id)}')"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(m.name)}</b>${inPlan.has(m.id) ? '' : ' <span class="mb-bd a">вне плана</span>'}</td><td>${mbEsc(m.district || '')}</td><td>${mbBankNames(m).length ? mbEsc(mbBankNames(m).join(', ')) : '<span style="color:#B76E00;font-weight:700">не назначен</span>'}</td><td class="mb-num">${mbFmt(mbNum(m.population))}</td><td class="mb-num">${mbFmt(mbNum(m.households))}</td><td class="mb-num">${mbMahVisitsAll(m)}</td><td>${sv(mbSevenCount(m))}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="event.stopPropagation();mbMahForm('${mbEsc(m.id)}')">Открыть</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="9" class="loading">Нет махаллей</td></tr>'}
-    </tbody></table></div>`;
+    <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>Махалля</th><th>Район</th><th>Банкир</th><th>Переход данных</th><th class="mb-num">Население</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th>Семёрка</th><th class="mb-num">Действия</th></tr></thead><tbody>
+    ${list.map((m, n) => { const eff = mbMahEff(m); const ch = mbMahChanged(m); const btn = canEdit ? `<span class="mb-bkb${eff ? '' : ' e'}${ch ? ' ch' : ''}" onclick="mbMahPick('${mbEsc(m.id)}')">${eff ? mbEsc(eff) : 'Назначить'}<i>${eff ? '✎' : '＋'}</i></span>` : (eff ? mbEsc(eff) : '<span style="color:#B76E00;font-weight:700">не назначен</span>'); return `<tr class="${ch ? 'mb-chg' : ''}"><td class="mb-num">${n + 1}</td><td><b>${mbEsc(m.name)}</b>${inPlan.has(m.id) ? '' : ' <span class="mb-bd a">вне плана</span>'}</td><td>${mbEsc(m.district || '')}</td><td>${btn}</td><td>${canEdit ? seg(m) : ''}</td><td class="mb-num">${mbFmt(mbNum(m.population))}</td><td class="mb-num">${mbFmt(mbNum(m.households))}</td><td class="mb-num">${mbMahVisitsAll(m)}</td><td>${sv(mbSevenCount(m))}</td><td class="mb-num" style="white-space:nowrap">${ch ? '<span class="mb-bd a">изменено</span> ' : ''}${canEdit ? `<button class="mb-ic" title="Изменить" onclick="mbMahForm('${mbEsc(m.id)}')">✎</button><button class="mb-ic d" title="Удалить" onclick="mbMahDelAsk('${mbEsc(m.id)}')">🗑</button>` : ''}</td></tr>`; }).join('') || '<tr><td colspan="10" class="loading">Нет махаллей</td></tr>'}
+    </tbody></table></div>${bar}`;
+}
+let mbMahDraft = {}, mbMahMoveMap = {}, mbPickId = null, mbPickQ = '';
+function mbMahMoveSet(id, v) { mbMahMoveMap[id] = v; mbRenderBankers(); }
+function mbMahPick(id) { mbPickId = id; mbPickQ = ''; mbPickRender(); }
+function mbPickList() {
+  const m = (allMahallas || []).find(x => x.id === mbPickId); if (!m) return '';
+  const eff = mbMahEff(m); const q = mbPickQ.toLowerCase();
+  const rows = (window.mbBankAll || []).filter(r => !r.unknown && (!q || r.name.toLowerCase().includes(q)));
+  const un = eff ? `<div class="mb-pk" onclick="mbMahPickSet('')"><span style="color:#B3261E">Снять банкира</span></div>` : '';
+  return un + rows.map(r => `<div class="mb-pk${mbNorm(r.name) === mbNorm(eff) ? ' on' : ''}" onclick="mbMahPickSet(${mbBankAllIdx(r)})"><span>${mbEsc(r.name)}</span><small>${r.ids.length ? r.ids.length + ' махалл' + (r.ids.length === 1 ? 'я' : r.ids.length < 5 ? 'и' : 'ей') : 'без махаллей'} · ${r.visits} виз.</small></div>`).join('') || '<div class="mb-count">Не найдено</div>';
+}
+function mbBankAllIdx(r) { return (window.mbBankAll || []).indexOf(r); }
+function mbPickRender() {
+  const m = (allMahallas || []).find(x => x.id === mbPickId); if (!m) return;
+  mbModal(`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">${mbEsc(m.name)}</h3><button class="close-btn" onclick="mbModalClose()">×</button></div><div class="mb-ds" style="margin-bottom:10px">${mbMahCur(m) ? 'Сейчас: ' + mbEsc(mbMahCur(m)) : 'Банкир не назначен'}</div>
+    <input class="input" id="mbPickQ" placeholder="Поиск банкира" value="${mbEsc(mbPickQ)}" oninput="mbPickQ=this.value;document.getElementById('mbPickBox').innerHTML=mbPickList()" style="width:100%;margin-bottom:8px"><div id="mbPickBox" style="max-height:50vh;overflow:auto">${mbPickList()}</div>`);
+  const i = document.getElementById('mbPickQ'); if (i) i.focus();
+}
+function mbMahPickSet(v) {
+  const m = (allMahallas || []).find(x => x.id === mbPickId); if (!m) return;
+  const name = v === '' ? '' : (window.mbBankAll[v] || {}).name || '';
+  if (mbNorm(name) === mbNorm(mbMahCur(m))) delete mbMahDraft[m.id]; else mbMahDraft[m.id] = name;
+  mbModalClose(); mbRenderBankers();
+}
+async function mbMahDraftSave() {
+  const chg = (allMahallas || []).filter(mbMahChanged);
+  if (!chg.length) return;
+  const mv = chg.filter(m => mbMahMoveMap[m.id] && mbMahCur(m) && mbMahDraft[m.id]);
+  if (mv.length) {
+    const lines = mv.map(m => `${m.name}: ${mbMahVisitsAll(m)} виз. → ${mbMahDraft[m.id]}`).join('\n');
+    if (!confirm('Данные перейдут новому банкиру и пропадут у прежнего:\n\n' + lines + '\n\nПродолжить?')) return;
+  }
+  const b = document.getElementById('mbMahDraftBtn'); if (b) { b.disabled = true; b.textContent = 'Сохранение...'; }
+  const changes = chg.map(m => ({ mahallaId: m.id, bankers: mbMahDraft[m.id], moveData: !!(mbMahMoveMap[m.id] && mbMahCur(m) && mbMahDraft[m.id]) }));
+  const r = await postWebAction({ webAction: 'mbMahallaReassign', sessionId: localStorage.getItem('msbSessionId'), changes });
+  if (!r || !r.success) { if (b) { b.disabled = false; b.textContent = 'Сохранить'; } alert((r && r.message) || 'Не удалось сохранить'); return; }
+  mbMahDraft = {}; mbMahMoveMap = {};
+  try { const [m2, s2] = await Promise.all([fetchJSON('mahallas'), fetchJSON('obhodList')]); allMahallas = m2 || allMahallas; allObhodSurveys = s2 || allObhodSurveys; } catch (e) {}
+  await mbMahReload();
 }
 let mbMahTabT = null;
 function mbMahTabDebounced() { clearTimeout(mbMahTabT); mbMahTabT = setTimeout(() => { mbRenderBankers(); const i = document.querySelector('#mbBankBody .mb-filters2 input'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); }
@@ -16540,12 +16599,16 @@ async function mbMahReload() {
   const sid = localStorage.getItem('msbSessionId');
   try { allMahallas = await fetchJSON('mahallas') || []; } catch (e) {}
   try { const hr = await postWebAction({ webAction: 'mbMahallaHistory', sessionId: sid }); mbHist = hr && hr.success ? hr.items : []; } catch (e) {}
+  try { const ar = await postWebAction({ webAction: 'mbMahallaArchiveList', sessionId: sid }); mbMahArch = ar && ar.success ? ar.items : []; } catch (e) {}
   mbRenderBankers();
 }
-function mbMahDelAsk() {
-  const m = (allMahallas || []).find(x => x.id === mbMahEditId); if (!m) return;
-  mbModal(`<h3 style="margin:0 0 10px">Удалить махаллю?</h3><div style="font-size:14px;line-height:1.5;margin-bottom:16px"><b>${mbEsc(m.name)}</b><br>Удаление возможно только если по махалле нет визитов.</div>
-    <div style="display:flex;gap:8px"><button class="btn mb-btn-del" style="flex:1" id="mbMahDelGo" onclick="mbMahDelGo()">Удалить</button><button class="btn btn-secondary" style="flex:1" onclick="mbModalClose()">Отмена</button></div>`);
+function mbMahDelAsk(id) {
+  const mid = id || mbMahEditId;
+  const m = (allMahallas || []).find(x => x.id === mid); if (!m) return;
+  mbMahEditId = mid;
+  mbModal(`<h3 style="margin:0 0 10px">Удалить махаллю?</h3><div class="mb-bx" style="background:#F5F6F8;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.5;margin-bottom:10px"><b>${mbEsc(m.name)}</b>${m.district ? ' · ' + mbEsc(m.district) : ''}<br>Банкир: ${mbMahCur(m) ? mbEsc(mbMahCur(m)) : 'не назначен'} · визитов: ${mbMahVisitsAll(m)} · домов: ${mbFmt(mbNum(m.households))}</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.5">Махалля уйдёт в архив. Визиты и данные сохраняются, банкир открепляется. Из архива махаллю можно восстановить.</div>
+    <div style="display:flex;gap:8px"><button class="btn mb-btn-del" style="flex:1" id="mbMahDelGo" onclick="mbMahDelGo()">Удалить в архив</button><button class="btn btn-secondary" style="flex:1" onclick="mbModalClose()">Отмена</button></div>`);
 }
 async function mbMahDelGo() {
   const b = document.getElementById('mbMahDelGo'); if (b) { b.disabled = true; b.textContent = 'Удаление...'; }
@@ -16553,6 +16616,12 @@ async function mbMahDelGo() {
   mbModalClose();
   if (!r || !r.success) { alert((r && r.message) || 'Не удалось удалить'); return; }
   mbBankClose(); await mbMahReload();
+}
+async function mbMahRestore(i) {
+  const a = mbMahArch[i]; if (!a) return;
+  const r = await postWebAction({ webAction: 'mbMahallaRestore', sessionId: localStorage.getItem('msbSessionId'), mahallaId: a.id });
+  if (!r || !r.success) { alert((r && r.message) || 'Не удалось восстановить'); return; }
+  await mbMahReload();
 }
 
 // ---------- Дубликаты ----------
@@ -16727,7 +16796,7 @@ function mbRenderStats() {
 }
 
 // ---------- Статистика: период, KPI, воронка, банкиры ----------
-let mbHist = [], mbMahQ2 = '', mbMahDist = '', mbMahBankF = '', mbMahEditId = null;
+let mbMahArch = [], mbArchSub = 'bank', mbHist = [], mbMahQ2 = '', mbMahDist = '', mbMahBankF = '', mbMahEditId = null;
 let mbStPer = 'month', mbStQ = '', mbStDist = '', mbStSort = { k: 'visits', d: -1 }, mbFnBank = '', mbFnMah = '', mbMicro = [], mbBankArchive = [], mbBankSub = 'active';
 const MB_STPER = [['today', 'Сегодня'], ['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Всё время']];
 const MB_BIZ_YES = ['Интерес', 'Бизнес уже есть'];
