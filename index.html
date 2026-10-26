@@ -1685,7 +1685,7 @@ body.role-mahalla-banker .footer{display:none;}
 .m-svfoot{flex:none;background:#fff;padding:10px 14px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px rgba(0,0,0,.06);}
 .m-svfoot .m-big{max-width:560px;margin:0 auto;}
 .m-hint{font-size:12.5px;color:#B76E00;min-height:16px;margin-bottom:8px;text-align:center;}
-.mb-kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:10px 0 12px}.mb-kpi{border-radius:14px;padding:11px 12px;border-left:5px solid #9BA0AB;background:#F5F6F8}.mb-kpi b{display:block;font-size:22px;line-height:1.1}.mb-kpi span{font-size:11.5px;color:#4B5563}
+.mb-kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:10px 0 12px}.mb-kpi{border-radius:14px;padding:11px 12px;border-left:5px solid #9BA0AB;background:#F5F6F8}.mb-kpi b{display:block;font-size:22px;line-height:1.1}.mb-kpi span{font-size:11.5px;color:#4B5563}
 .mb-kpi.k1{background:#EEF2FF;border-color:#4F6AF5}.mb-kpi.k2{background:#E3F5EA;border-color:#1E9E5A}.mb-kpi.k3{background:#FFF1D6;border-color:#E39A00}.mb-kpi.k4{background:#FFEBDD;border-color:#E8700B}.mb-kpi.k5{background:#F1EAFB;border-color:#7A4FD0}.mb-kpi.k6{background:#FDECEA;border-color:#C4231A}.mb-kpi.k7{background:#E2F4F7;border-color:#0F8FA6}
 .mb-filters2{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.mb-per{display:flex;gap:4px;background:#EEF0F3;padding:3px;border-radius:12px;flex-wrap:wrap}.mb-per span{padding:8px 13px;border-radius:9px;font-size:13px;font-weight:600;color:#6B7280;cursor:pointer}.mb-per span.on{background:#B71F17;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2)}.mb-dates{display:flex;gap:6px;align-items:center}.mb-dates .input{width:160px}
 .mb-wide{min-width:1500px}.mb-wide th{white-space:nowrap;background:#F0F2F6;position:sticky;top:0}.mb-wide td{white-space:nowrap}.mb-un{color:#B3261E;font-weight:800;background:#FDECEA;border-radius:8px;padding:2px 8px}.mb-bd.b{background:#E2F4F7;color:#0F6E80}
@@ -16964,12 +16964,14 @@ function mbFunnelData() {
   if (bk) { const r = mbBankList().find(x => x.name === mbFnBank); houses = r ? r.houses : 0; if (mbFnMah) { const m = mbMahs().find(x => String(x.name).trim() === mbFnMah); houses = m ? mbNum(m.households) : 0; } }
   else if (mbFnMah) { const m = mbMahs().find(x => String(x.name).trim() === mbFnMah); houses = m ? mbNum(m.households) : 0; }
   else houses = mbMahs().reduce((x, m) => x + mbNum(m.households), 0);
-  return { houses, inP, done, interest, support, projects, retry: inP.length - done.length };
+  const hk = new Set(inP.map(mbHouseKey)), dk = new Set(done.map(mbHouseKey));
+  let noDone = 0; hk.forEach(k => { if (!dk.has(k)) noDone++; });
+  return { houses, inP, done, interest, support, projects, vN: hk.size, dN: dk.size, retry: noDone };
 }
 function mbFunnelHtml() {
   const d = mbFunnelData();
-  const steps = [['Домов в махаллях', d.houses, null], ['Посещено', d.inP.length, d.houses], ['Опрошено', d.done.length, d.inP.length], ['Интерес к бизнесу', d.interest.length, d.done.length], ['Нужна поддержка', d.support.length, d.interest.length], ['Микропроект создан', d.projects.length, d.support.length]];
-  const base = Math.max(1, d.inP.length);
+  const steps = [['Домов в махаллях', d.houses, null], ['Посещено', d.vN, d.houses], ['Опрошено', d.dN, d.vN], ['Интерес к бизнесу', d.interest.length, d.done.length], ['Нужна поддержка', d.support.length, d.interest.length], ['Микропроект создан', d.projects.length, d.support.length]];
+  const base = Math.max(1, d.vN);
   const colors = ['#9BA0AB', '#6B7280', '#4B5563', '#B71F17', '#B71F17', '#14804A'];
   const mahs = mbMahs().map(m => String(m.name).trim()).sort();
   const banks = mbBankList().map(r => r.name).sort();
@@ -16982,7 +16984,7 @@ function mbFunnelHtml() {
       <select class="select" onchange="mbFnMah=this.value;mbRenderStats()"><option value="">Все махалли</option>${mahs.map(n => `<option${n === mbFnMah ? ' selected' : ''}>${mbEsc(n)}</option>`).join('')}</select>
       <select class="select" onchange="mbFnBank=this.value;mbRenderStats()"><option value="">Все банкиры</option>${banks.map(n => `<option value="${mbEsc(n)}"${n === mbFnBank ? ' selected' : ''}>${mbEsc(mbShortName(n))}</option>`).join('')}</select></div>
     ${steps.map((st, i) => { const w = i === 0 ? 100 : Math.max(5, Math.min(100, Math.round(st[1] / base * 100))); return `<div class="st-fr${i ? ' click' : ''}" ${i ? `onclick="mbFunnelOpen(${i})"` : ''}><b>${st[0]}</b><div class="tr"><u style="width:${w}%;background:${colors[i]}">${mbFmt(st[1])}</u></div><div class="v"><b>${st[2] === null ? '100%' : (i === 1 ? pc1(st[1], st[2]) : pc(st[1], st[2]))}</b>${i === 2 && d.retry ? `<em>${mbFmt(d.retry)}</em>` : ''}</div></div>`; }).join('')}
-    <div class="st-fs">${card(pc(d.done.length, d.inP.length), 'Опрошено от посещённых')}${card(d.done.length ? mbFmt1(d.projects.length / d.done.length * 100) : '—', 'Проектов на 100 домов')}${card(pc(d.projects.length, d.interest.length), 'Интерес → проект')}${card(mbFmt1(sum / 1e6), 'Сумма проектов, млн')}</div></div>`;
+    <div class="st-fs">${card(pc(d.dN, d.vN), 'Опрошено от посещённых')}${card(d.done.length ? mbFmt1(d.projects.length / d.done.length * 100) : '—', 'Проектов на 100 домов')}${card(pc(d.projects.length, d.interest.length), 'Интерес → проект')}${card(mbFmt1(sum / 1e6), 'Сумма проектов, млн')}</div></div>`;
 }
 function mbModal(html) {
   let m = document.getElementById('mbModalBg');
@@ -16999,7 +17001,8 @@ function mbFunnelOpen(i) {
     head = '<th>Дата</th><th>Махалля</th><th>Проект</th><th>Инициатор</th><th>Банкир</th><th class="mb-num">Стоимость</th>';
     body = d.projects.slice(0, 300).map(p => `<tr><td>${mbEsc(p.createdAt)}</td><td>${mbEsc(p.mahalla)}</td><td>${mbEsc(p.projectName)}</td><td>${mbEsc(p.applicantName)}</td><td>${mbEsc(p.banker)}</td><td class="mb-num">${mbFmt(mbNum(p.totalCost))}</td></tr>`).join('');
   } else {
-    const list = [d.houses, d.inP, d.done, d.interest, d.support][i];
+    const uniq = arr => { const m = new Map(); arr.slice().sort((x, y) => (Number(x.finishedAt) || 0) - (Number(y.finishedAt) || 0)).forEach(s => m.set(mbHouseKey(s), s)); return Array.from(m.values()); };
+    const list = [d.houses, uniq(d.inP), uniq(d.done), d.interest, d.support][i];
     head = '<th>Дата</th><th>Махалля</th><th>Адрес</th><th>Владелец</th><th>Банкир</th>';
     body = list.slice().sort((x, y) => (Number(y.finishedAt) || 0) - (Number(x.finishedAt) || 0)).slice(0, 300).map(s => `<tr><td>${dt(s.finishedAt)}</td><td>${mbEsc(s.mahalla)}</td><td>${mbEsc(s.address)}</td><td>${mbEsc(s.headName)}</td><td>${mbEsc(s.createdBy)}</td></tr>`).join('');
   }
@@ -17418,7 +17421,7 @@ function mbRenderObhod() {
   const bizOpt = ['', 'Интерес', 'Подумает', 'Не интересен', 'Бизнес уже есть'].map(x => `<option value="${x}"${f.biz === x ? ' selected' : ''}>${x || 'Интерес к бизнесу: все'}</option>`).join('');
   const dt = ms => { if (!ms) return ''; const d = new Date(Number(ms)); return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); };
   const real = filtered.filter(s => !mbIsRetry(s));
-  const k = { all: filtered.length, ok: filtered.filter(s => !mbIsRetry(s) && s.review !== 'rejected' && s.review !== 'pending').length, pend: filtered.filter(s => s.review === 'pending').length, retry: filtered.filter(s => mbIsRetry(s)).length, fam: real.reduce((a, s) => a + mbNum(s.familySize), 0), un: real.reduce((a, s) => a + mbNum(s.unemployed18plus), 0), biz: real.filter(s => s.businessInterest === 'Интерес').length };
+  const k = { all: filtered.length, ok: filtered.filter(s => !mbIsRetry(s) && s.review !== 'rejected' && s.review !== 'pending').length, pend: filtered.filter(s => s.review === 'pending').length, retry: filtered.filter(s => mbIsRetry(s)).length, fam: (() => { const m = new Map(); real.slice().sort((x, y) => (Number(x.finishedAt) || 0) - (Number(y.finishedAt) || 0)).forEach(s => m.set(mbHouseKey(s), s)); let t = 0; m.forEach(s => { t += mbNum(s.familySize); }); return t; })(), hs: new Set(real.map(mbHouseKey)).size, un: real.reduce((a, s) => a + mbNum(s.unemployed18plus), 0), biz: real.filter(s => s.businessInterest === 'Интерес').length };
   const kpi = (v, l, c) => `<div class="mb-kpi ${c}"><b>${mbFmt(v)}</b><span>${l}</span></div>`;
   const PS = 50; const pages = Math.max(1, Math.ceil(filtered.length / PS)); if (mbObhodPage >= pages) mbObhodPage = pages - 1;
   const slice = filtered.slice(mbObhodPage * PS, mbObhodPage * PS + PS);
@@ -17434,7 +17437,7 @@ function mbRenderObhod() {
   const box = document.getElementById('obhodListBox');
   box.innerHTML = `
     <div class="mb-head" style="justify-content:flex-end"><button class="btn btn-secondary" onclick="mbObhodExport()">Скачать в Excel</button></div>
-    <div class="mb-kpis">${kpi(k.all, 'визитов за период', 'k1')}${kpi(k.ok, 'принято', 'k2')}${kpi(k.pend, 'на проверке', 'k3')}${kpi(k.retry, 'зайти повторно', 'k4')}${kpi(k.fam, 'членов семьи', 'k5')}${kpi(k.un, 'безработных', 'k6')}${kpi(k.biz, 'интерес к бизнесу', 'k7')}</div>
+    <div class="mb-kpis">${kpi(k.all, 'визитов за период', 'k1')}${kpi(k.ok, 'принято', 'k2')}${kpi(k.pend, 'на проверке', 'k3')}${kpi(k.retry, 'зайти повторно', 'k4')}${kpi(k.hs, 'домов', 'k5')}${kpi(k.fam, 'жителей', 'k5')}${kpi(k.un, 'безработных', 'k6')}${kpi(k.biz, 'интерес к бизнесу', 'k7')}</div>
     <div class="mb-filters2"><div class="mb-per">${per}</div>${f.period === 'custom' ? `<span class="mb-dates"><input type="date" class="input" value="${mbEsc(f.from)}" onchange="mbObhodFilter.from=this.value;mbObhodPage=0;mbRenderObhod()"><b>—</b><input type="date" class="input" value="${mbEsc(f.to)}" onchange="mbObhodFilter.to=this.value;mbObhodPage=0;mbRenderObhod()"></span>` : ''}</div>
     <div class="mb-filters" style="grid-template-columns:1.6fr 1.2fr 1.2fr 1fr 1fr">
       <input class="input" placeholder="Поиск: ФИО, адрес, телефон" value="${mbEsc(f.q)}" oninput="mbObhodFilter.q=this.value;mbObhodPage=0;mbRenderObhodDebounced()">
@@ -17875,7 +17878,7 @@ var MB_ADM_UZ = {
 "Загрузите официальный Excel-файл (население, дворы, безработные, малообеспеченные семьи, план/факт по микропроектам, рабочим местам и кредитам). Махалли из файла, которых ещё нет в списке, будут созданы автоматически; существующие — обновлены по названию.":"Rasmiy Excel faylni yuklang (aholi, hovlilar, ishsizlar, kam ta‘minlangan oilalar, mikroloyihalar, ish o‘rinlari va kreditlar bo‘yicha reja/fakt). Ro‘yxatda yo‘q mahallalar avtomatik yaratiladi; mavjudlari nomi bo‘yicha yangilanadi.",
 "Показатели заполняются импортом файла-паспорта — пока могут быть пустыми, если файл ещё не загружен.":"Ko‘rsatkichlar pasport faylini import qilish orqali to‘ldiriladi — fayl yuklanmagan bo‘lsa, hozircha bo‘sh bo‘lishi mumkin.",
 "Импорт паспорта махаллей":"Mahalla pasportlarini import qilish","Загрузить паспорта":"Pasportlarni yuklash","Загрузить паспорт":"Pasportni yuklash","Загрузить махалли из плана":"Mahallalarni rejadan yuklash","Переназначить":"Qayta tayinlash",
-"в день":"kuniga","максимум":"maksimum","всего":"jami","визитов за период":"davr uchun tashriflar","членов семьи":"oila a‘zolari","Членов семьи":"Oila a‘zolari","Показано":"Ko‘rsatilgan","Список махаллей":"Mahallalar ro‘yxati",
+"в день":"kuniga","максимум":"maksimum","всего":"jami","визитов за период":"davr uchun tashriflar","членов семьи":"oila a‘zolari","домов":"uylar","жителей":"aholi","Членов семьи":"Oila a‘zolari","Показано":"Ko‘rsatilgan","Список махаллей":"Mahallalar ro‘yxati",
 "передача, данные остаются в махалле":"o‘tkazish, ma‘lumotlar mahallada qoladi","передача, данные перешли новому банкиру":"o‘tkazish, ma‘lumotlar yangi bankirga o‘tdi","передача":"o‘tkazish","банкир в архиве":"bankir arxivda","загрузка из плана":"rejadan yuklash","создана":"yaratilgan","изменено в карточке":"kartochkada o‘zgartirilgan","махалля в архиве":"mahalla arxivda","махалля восстановлена из архива":"mahalla arxivdan tiklangan","объединено с дубликатом":"dublikat bilan birlashtirilgan","удалён дубль банкира":"bankir dublikati o‘chirilgan","Вс":"Yak","Пн":"Dush","Вт":"Sesh","Ср":"Chor","Чт":"Pay","Пт":"Jum","Сб":"Shan","Да":"Ha","Все":"Hammasi","из":"/"
 };
 var MB_ADM_RE = [
