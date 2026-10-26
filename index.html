@@ -17598,6 +17598,7 @@ async function mbLoad() {
   const S = MBM.state; S.loading = true; S.err = ''; mbRender();
   try {
     const r = await postWebAction({ webAction: 'mahallaMyData', sessionId: localStorage.getItem('msbSessionId') });
+    if (r && r.success === false && r.result === 'auth' || (r && /Сессия истекла/.test(r.message || ''))) { S.loading = false; alert('Сессия истекла. Войдите заново. Ваши визиты на телефоне сохранены.'); logoutDueToInactivity(); return; }
     if (!r || !r.success) throw new Error((r && r.message) || 'Не удалось загрузить данные');
     S.mahallas = r.mahallas || []; S.visits = r.visits || []; S.rating = r.rating || []; S.rating2 = r.ratingV2 || null; S.loaded = true; if (r.phone != null) S.phone = r.phone;
     if (!S.mahallas.find(m => m.name === S.mah)) S.mah = (S.mahallas[0] || {}).name || '';
@@ -18045,7 +18046,7 @@ function mbStartSurvey(resume, addrKeyEnc, addrEnc) {
       if (addrEnc) { const parts = decodeURIComponent(addrEnc).split(',').map(x => x.trim()); S.draft.addr.street = parts[0] || ''; S.draft.addr.house = parts[1] || ''; const fl = (parts[2] || '').replace(/^кв\.\s*/, ''); if (fl) { S.draft.addr.type = 'flat'; S.draft.addr.flat = fl; } }
     }
   }
-  S.issues = null; S.errs = []; S.gpsErr = '';
+  S.issues = null; S.errs = []; S.gpsErr = ''; mbAddrSt = null; mbAddrAck = '';
   mbSave();
   mbQ('mbSurvey').classList.add('on');
   document.body.classList.add('mb-surveying');
@@ -18087,7 +18088,7 @@ function mbGpsGood() { const l = MBM.state.draft && MBM.state.draft.location; re
 function mbCheck(d, i) { // [ok, text]
   switch (i) {
     case 0: return [!!d.mahalla, 'Выберите махаллю'];
-    case 1: { const a = d.addr; return [!!(a.street.trim() && a.house.trim() && (a.type === 'house' || a.flat.trim())), 'Заполните улицу, дом' + (a.type === 'flat' ? ' и квартиру' : '')]; }
+    case 1: { const a = d.addr; if (!d.retry && mbAddrSt && mbAddrSt.status === 'blocked') return [false, 'Этот адрес уже опрошен. Повторный опрос с ' + mbAddrSt.availDate]; return [!!(a.street.trim() && a.house.trim() && (a.type === 'house' || a.flat.trim())), 'Заполните улицу, дом' + (a.type === 'flat' ? ' и квартиру' : '')]; }
     case 2: { if (d.ownerHere === null) return [false, 'Укажите, владелец рядом или нет']; if (d.ownerHere === false) return [true, '']; if (!mbNameOk(d.fio)) return [false, 'ФИО: минимум фамилия и имя, без цифр']; let e = mbPinflErr(d.pinfl); if (e) return [false, e]; e = mbPhoneErr(d.phone); if (e) return [false, e]; return [true, '']; }
     case 3: { if (!d.membersTotal) return [false, 'Укажите число членов семьи']; if (d.unemployedCount > d.membersTotal) return [false, 'Безработных больше, чем членов семьи']; if (d.people.length !== d.membersTotal) return [false, 'Добавьте всех членов семьи: ' + d.people.length + ' из ' + d.membersTotal]; if (d.people.filter(p => p.role === 'head').length !== 1) return [false, 'Нужен ровно один глава семьи']; const ul = mbUnList(d); if (ul.length !== d.unemployedCount) return [false, 'Безработных в списке: ' + ul.length + ', в счётчике: ' + d.unemployedCount]; const kid = ul.find(x => mbNow() - (+x.birthYear) < 18); if (kid) return [false, 'Безработный младше 18: ' + kid.fio]; return [true, '']; }
     case 4: { if (d.hasPlot === null) return [false, 'Укажите, есть ли приусадебный участок']; if (d.hasPlot === false) return [true, '']; if (!d.plotSotki) return [false, 'Укажите размер участка']; if (!d.plotTags.length) return [false, 'Выберите возможности участка']; return [true, '']; }
@@ -18138,7 +18139,7 @@ function mbAddrHtml() {
 }
 function mbAddrShow() { const el = document.getElementById('mbAddrInfo'); if (el) { el.innerHTML = mbAddrHtml(); if (typeof mbTrApply === 'function') try { mbTrApply(el); } catch (e) {} } }
 function mbAddrCheck() {
-  clearTimeout(mbAddrTimer);
+  clearTimeout(mbAddrTimer); mbAddrSt = null;
   mbAddrTimer = setTimeout(async () => {
     const d = MBM.state.draft; const a = d.addr || {};
     if (!d.mahalla || !String(a.street || '').trim() || !String(a.house || '').trim() || (a.type === 'flat' && !String(a.flat || '').trim())) { mbAddrSt = null; mbAddrShow(); return; }
@@ -18321,7 +18322,7 @@ async function mbSubmitProject() {
   const pr = d.project;
   const project = { on: true, name: pr.name.trim(), initiator: pr.initiator.trim(), subject: pr.subject === 'МЧЖ' ? 'Юрлицо' : pr.subject, industry: pr.industry, description: pr.description.trim(), cost: Number(pr.cost) || 0, own: Number(pr.own) || 0, support: pr.support, jobs: pr.jobs, month: pr.month, year: pr.year, premises: pr.premises, assess: pr.assess };
   let r = null;
-  try { r = await postWebAction({ webAction: 'saveMahallaProject', sessionId: localStorage.getItem('msbSessionId'), id: d.id, mahalla: d.mahalla, location: fix, project, projectPhotos: pr.photo ? [pr.photo.split(',')[1]] : [] }, 0); } catch (e) { r = null; }
+  try { r = await Promise.race([postWebAction({ webAction: 'saveMahallaProject', sessionId: localStorage.getItem('msbSessionId'), id: d.id, mahalla: d.mahalla, location: fix, project, projectPhotos: pr.photo ? [pr.photo.split(',')[1]] : [] }, 0), new Promise(res => setTimeout(() => res(null), 120000))]); } catch (e) { r = null; }
   S.busy = false;
   if (!r) { mbRef(); alert('Нет связи с сервером. Проверьте интернет и нажмите «Сохранить проект» ещё раз.'); return; }
   if (!r.success) { S.errs = [{ sec: 10, text: r.message || 'Не удалось сохранить проект', client: false }]; mbShowErrs(); return; }
@@ -18389,7 +18390,10 @@ function mbBuildPayload(d) {
   return { visit: { id: d.id, status: d.retry ? 'retry' : 'done', draft, photos, location: d.location, project, startedAt: d.startedAt, finishedAt: Date.now(), deviceTime: Date.now() }, photoFiles: d.photos.map(p => p.dataUrl.split(',')[1]), projectPhotos: (project && pr.photo) ? [pr.photo.split(',')[1]] : [] };
 }
 async function mbSend(p) {
-  return postWebAction({ webAction: 'saveMahallaVisit', sessionId: localStorage.getItem('msbSessionId'), visit: p.visit, photoFiles: p.photoFiles, projectPhotos: p.projectPhotos || [] }, 0);
+  // без таймаута плохой LTE оставлял кнопку на «Отправка...» навсегда; сервер принимает визит идемпотентно (по id)
+  const req = postWebAction({ webAction: 'saveMahallaVisit', sessionId: localStorage.getItem('msbSessionId'), visit: p.visit, photoFiles: p.photoFiles, projectPhotos: p.projectPhotos || [] }, 0);
+  const to = new Promise(res => setTimeout(() => res(null), 120000));
+  return Promise.race([req, to]);
 }
 async function mbSubmit() {
   const S = MBM.state; const d = S.draft; if (S.busy) return;
@@ -18410,7 +18414,7 @@ async function mbSubmit() {
     S.queue.push(payload); await mbKvSet('queue:' + mbUserKey(), S.queue);
     await mbCloseSurvey(false); alert('Нет связи. Визит сохранён на телефоне и будет отправлен автоматически.'); return;
   }
-  if (r.result === 'auth') { alert(r.message || 'Сессия истекла'); S.queue.push(payload); await mbKvSet('queue:' + mbUserKey(), S.queue); return; }
+  if (r.result === 'auth') { S.queue.push(payload); await mbKvSet('queue:' + mbUserKey(), S.queue); await mbCloseSurvey(false); alert('Сессия истекла. Визит сохранён на телефоне и будет отправлен автоматически после входа.'); logoutDueToInactivity(); return; }
   if (r.result === 'rejected') { mbServerErrs(r.hard || []); return; }
   await mbCloseSurvey(false);
   await mbLoad();
@@ -18486,6 +18490,7 @@ async function mbFlushQueue() {
     for (const p of S.queue.slice()) {
       if (p.error) continue;
       let r = null; try { r = await mbSend(p); } catch (e) { r = null; }
+      if (r && r.result === 'auth') { mbFlushing = false; alert('Сессия истекла. Войдите заново: визиты на телефоне сохранены и отправятся после входа.'); logoutDueToInactivity(); return; }
       if (!r || (r.success === false && r.result !== 'rejected')) break;
       if (r.result === 'rejected') { p.error = (r.hard || []).map(h => h.message).join('. '); }
       else S.queue = S.queue.filter(x => x !== p);
