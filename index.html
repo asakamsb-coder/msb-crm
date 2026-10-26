@@ -16231,7 +16231,7 @@ function mbPhotoList(s) { return String((s && s.photos) || '').split(/[\s,;|]+/)
 function mbFlags(s) { return Array.isArray(s.flags) ? s.flags : []; }
 function mbIsRetry(s) { return s.visitStatus === 'retry'; }
 function mbIsPhysical(s) { return (s.surveyType || 'Физический') !== 'Юридический'; }
-function mbDoneRows() { return (allObhodSurveys || []).filter(s => !mbIsArchived(s.createdBy) && mbIsPhysical(s) && !mbIsRetry(s) && s.review !== 'rejected'); }
+function mbDoneRows(withArch) { return (allObhodSurveys || []).filter(s => (withArch || !mbIsArchived(s.createdBy)) && mbIsPhysical(s) && !mbIsRetry(s) && s.review !== 'rejected'); }
 
 async function mbAdminLoad() {
   const [surveys, mahallas] = await Promise.all([fetchJSON('obhodList'), fetchJSON('mahallas')]);
@@ -16465,9 +16465,9 @@ function mbMahVisitsBy(id, b) {
   const m = (allMahallas || []).find(x => x.id === id); if (!m) return 0;
   const mk = mbNorm(m.name);
   const keys = [mbNorm(b.name), mbNorm(b.login)].filter(Boolean);
-  return mbDoneRows().filter(s => mbNorm(s.mahalla) === mk && keys.indexOf(mbNorm(s.createdBy)) !== -1).length;
+  return mbDoneRows(true).filter(s => mbNorm(s.mahalla) === mk && keys.indexOf(mbNorm(s.createdBy)) !== -1).length;
 }
-function mbMahVisitsAll(m) { const mk = mbNorm(m.name); return mbDoneRows().filter(s => mbNorm(s.mahalla) === mk).length; }
+function mbMahVisitsAll(m) { const mk = mbNorm(m.name); return mbDoneRows(true).filter(s => mbNorm(s.mahalla) === mk).length; }
 function mbSevenCount(m) { const s = m.seven || {}; return MB_SEVEN_KEYS.filter(k => s[k.k] && String(s[k.k].name || '').trim()).length; }
 const MB_SEVEN_KEYS = [{ k: 'chair', l: 'Председатель махалли' }, { k: 'hokimHelper', l: 'Помощник хокима' }, { k: 'social', l: 'Соцработник' }, { k: 'youth', l: 'Лидер молодёжи' }, { k: 'women', l: 'Активист (женщины)' }, { k: 'tax', l: 'Налоговый инспектор' }, { k: 'prevent', l: 'Инспектор профилактики' }];
 function mbMahTabHtml(all, canEdit) {
@@ -16500,7 +16500,7 @@ function mbMahForm(id, draft, warn) {
   const fld = (k, l) => `<div class="mb-f"><label>${l}</label><input class="input" id="mbMf_${k}" inputmode="numeric" value="${v(d[k])}"></div>`;
   const hist = id ? (mbHist || []).filter(x => x.id === id).sort((a, b) => b.at - a.at) : [];
   const vis = {};
-  if (m) { const mk = mbNorm(m.name); mbDoneRows().filter(s => mbNorm(s.mahalla) === mk).forEach(s => { const k = String(s.createdBy || '—'); vis[k] = (vis[k] || 0) + 1; }); }
+  if (m) { const mk = mbNorm(m.name); mbDoneRows(true).filter(s => mbNorm(s.mahalla) === mk).forEach(s => { const k = String(s.createdBy || '—'); vis[k] = (vis[k] || 0) + 1; }); }
   const visRows = Object.keys(vis).sort((a, b) => vis[b] - vis[a]);
   const dtf = ms => ms ? new Date(Number(ms)).toLocaleDateString('ru-RU') : '';
   mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">${m ? mbEsc(m.name) : 'Новая махалля'}</div><div class="mb-ds">${m && m.infoUpdatedAt ? 'обновлено ' + dtf(m.infoUpdatedAt) + (m.infoUpdatedBy ? ', ' + mbEsc(m.infoUpdatedBy) : '') : ''}</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
@@ -16635,7 +16635,7 @@ function mbPassportTotals() {
 
 function mbDashPanels() {
   const box = { innerHTML: '' };
-  const rows = mbDoneRows();
+  const rows = mbDoneRows(true);
   const f = mbPassportTotals();
   const o = mbStatsOf(rows);
   const mahDone = new Set(rows.map(s => String(s.mahalla).trim())).size;
@@ -16743,7 +16743,8 @@ function mbStRange(per) {
   if (per === 'month') return [new Date(t0.getFullYear(), t0.getMonth(), 1).getTime(), Infinity];
   return [0, Infinity];
 }
-function mbMobileRows() { return (allObhodSurveys || []).filter(s => !mbIsArchived(s.createdBy) && mbIsPhysical(s) && (s.source === 'mobile' || s.visitStatus) && s.review !== 'rejected'); }
+// withArch=true: показатели махалли (визиты уволенных банкиров остаются); без флага: данные по банкирам
+function mbMobileRows(withArch) { return (allObhodSurveys || []).filter(s => (withArch || !mbIsArchived(s.createdBy)) && mbIsPhysical(s) && (s.source === 'mobile' || s.visitStatus) && s.review !== 'rejected'); }
 function mbBankKeys(r) { return [mbNorm(r.name), mbNorm(r.login)].filter(Boolean); }
 function mbBankKpis(per) {
   const [a, b] = mbStRange(per);
@@ -16781,7 +16782,7 @@ function mbShortName(full) {
 function mbDelta(cur, prev) { if (prev < 5) return '<i class="st-d mu">—</i>'; const p = Math.round((cur - prev) / prev * 100); return p === 0 ? '<i class="st-d mu">0%</i>' : `<i class="st-d ${p > 0 ? 'up' : 'dn'}">${p > 0 ? '▲' : '▼'} ${Math.abs(p)}%</i>`; }
 function mbStatTop() {
   const f = mbPassportTotals();
-  const rows = mbMobileRows().filter(s => !mbIsRetry(s));
+  const rows = mbMobileRows(true).filter(s => !mbIsRetry(s));
   const ts = s => Number(s.finishedAt) || 0;
   const now = Date.now(); const [m0] = mbStRange('month'); const [d0] = mbStRange('today');
   const mdt = new Date(m0); const pm0 = new Date(mdt.getFullYear(), mdt.getMonth() - 1, 1).getTime();
@@ -16812,7 +16813,7 @@ function mbFunnelData() {
   const keysOf = n => { const r = mbBankList().find(x => x.name === n); return r ? mbBankKeys(r) : [mbNorm(n)]; };
   const bk = mbFnBank ? keysOf(mbFnBank) : null;
   const okRow = s => (!mbFnMah || String(s.mahalla).trim() === mbFnMah) && (!bk || bk.indexOf(mbNorm(s.createdBy)) !== -1);
-  const inP = mbMobileRows().filter(s => { const t = Number(s.finishedAt) || 0; return t >= a && t < b && okRow(s); });
+  const inP = mbMobileRows(true).filter(s => { const t = Number(s.finishedAt) || 0; return t >= a && t < b && okRow(s); });
   const done = inP.filter(s => !mbIsRetry(s));
   const interest = done.filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1);
   const support = interest.filter(s => (s.finance || []).some(x => x !== 'none'));
@@ -16884,7 +16885,7 @@ const MB_OD_ITEMS = [
   ['maternity', 'В декрете', 'mem'], ['army', 'Служит в армии', 'mem'], ['studyAbroad', 'Учится за границей', 'mem'], ['longIllness', 'Длительно болеет', 'mem'],
   ['dis', 'Инвалидов', 'mem'], ['biz', 'Самозанятых и с бизнесом', 'mem'], ['plot', 'Домов с участком', 'fam']
 ];
-function mbOdRows(per) { const [a, b] = mbStRange(per || mbOdPer); return mbMobileRows().filter(s => !mbIsRetry(s) && (Number(s.finishedAt) || 0) >= a && (Number(s.finishedAt) || 0) < b); }
+function mbOdRows(per) { const [a, b] = mbStRange(per || mbOdPer); return mbMobileRows(true).filter(s => !mbIsRetry(s) && (Number(s.finishedAt) || 0) >= a && (Number(s.finishedAt) || 0) < b); }
 function mbOdMatch(key, p) {
   if (key === 'dis') return MB_EMP_DIS.indexOf(p.employment) !== -1;
   if (key === 'biz') return MB_EMP_BIZ.indexOf(p.employment) !== -1;
@@ -17020,7 +17021,7 @@ function xlCollect() {
   const per = mbStPer; const [a, b] = mbStRange(per);
   const perLabel = (MB_STPER.find(x => x[0] === per) || [])[1] || '';
   const inR = s => { const t = Number(s.finishedAt) || 0; return t >= a && t < b; };
-  const all = mbMobileRows();
+  const all = mbMobileRows(true);
   const visits = all.filter(inR).sort((x, y) => (Number(y.finishedAt) || 0) - (Number(x.finishedAt) || 0));
   const done = visits.filter(s => !mbIsRetry(s));
   const kp = mbBankKpis(per);
