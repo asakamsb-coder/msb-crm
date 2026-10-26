@@ -5487,6 +5487,7 @@ function setAppLang(lang) {
     btnUz.style.color = lang === 'uz' ? '#fff' : 'var(--text)';
   }
   applyAppTranslations();
+  if (typeof mbAdmRelang === 'function') { try { mbAdmRelang(); } catch (e) {} }
 
   // Статичная разметка (data-i18n) переводится сама через
   // applyAppTranslations() выше. Но списки/дашборды, которые строит сам
@@ -16376,11 +16377,11 @@ function mbRenderBankers(silent) {
     const list = all.filter(r => (!mbBankQ || r.name.toLowerCase().includes(mbBankQ.toLowerCase())) && (mbBankF !== 'none' || !r.ids.length));
     body = `<div class="mb-filters" style="grid-template-columns:1.4fr 1fr"><input class="input" placeholder="Поиск по ФИО" value="${mbEsc(mbBankQ)}" oninput="mbBankQ=this.value;mbRenderBankersDebounced()"><select class="select" onchange="mbBankF=this.value;mbRenderBankers()"><option value="">Все</option><option value="none"${mbBankF === 'none' ? ' selected' : ''}>Без махаллей</option></select></div>
       <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>ФИО</th><th>Логин</th><th>Прикреплённые махалли</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th></th></tr></thead><tbody>
-      ${list.map((r, n) => `<tr class="mb-row" ${canEdit ? `onclick="mbOpenBankEdit(${idx(r)})"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(r.name)}</b></td><td>${r.unknown ? '<span class="mb-bd a">нет в пользователях</span>' : mbEsc(r.login)}</td><td>${r.ids.length ? r.ids.slice(0, 2).map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') + (r.ids.length > 2 ? `<span class="mb-chip more">+${r.ids.length - 2}</span>` : '') : '<b style="color:#B76E00">Не назначены</b>'}</td><td class="mb-num">${mbFmt(r.houses)}</td><td class="mb-num">${r.visits}</td><td class="mb-num" style="white-space:nowrap">${canEdit ? `<button class="btn btn-secondary" onclick="event.stopPropagation();mbOpenBankEdit(${idx(r)})">Изменить</button>${r.unknown ? '' : ` <button class="btn mb-btn-del" onclick="event.stopPropagation();mbBankDelAsk(${idx(r)})">Удалить</button>`}` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Нет банкиров</td></tr>'}
+      ${list.map((r, n) => `<tr class="mb-row" ${canEdit && !r.unknown ? `onclick="mbOpenBankEdit(${idx(r)})"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(r.name)}</b></td><td>${r.unknown ? '<span class="mb-bd a">нет в пользователях</span>' : mbEsc(r.login)}</td><td>${r.ids.length ? r.ids.slice(0, 2).map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') + (r.ids.length > 2 ? `<span class="mb-chip more">+${r.ids.length - 2}</span>` : '') : '<b style="color:#B76E00">Не назначены</b>'}</td><td class="mb-num">${mbFmt(r.houses)}</td><td class="mb-num">${r.visits}</td><td class="mb-num" style="white-space:nowrap">${canEdit && !r.unknown ? `<button class="btn mb-btn-del" onclick="event.stopPropagation();mbBankDelAsk(${idx(r)})">Удалить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Нет банкиров</td></tr>'}
       </tbody></table></div>`;
   }
-  box.innerHTML = `<div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="mbImportRoster()">Загрузить махалли из плана</button><button class="btn btn-secondary" onclick="mbDupOpen()">Дубликаты</button><button class="btn btn-secondary" onclick="mbOpenTransfer()">Переназначить</button></div>' : ''}</div>
-    <div class="mb-per" style="margin-bottom:14px;width:max-content">${sub('active', 'Активные', all.filter(r => !r.unknown).length)}${sub('archive', 'Архив', mbArchVisible().length + mbMahArch.length)}${sub('free', 'Не назначенные махалли', free.length)}${sub('mah', 'Махалли', (allMahallas || []).length)}</div>${body}</div>`;
+  box.innerHTML = `<div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<button class="btn" style="background:#F0412C" onclick="mbBankAdd()">Добавить банкира</button>' : ''}</div>
+    <div class="mb-per" style="margin-bottom:14px;width:max-content">${sub('active', 'Активные банкиры', all.filter(r => !r.unknown).length)}${sub('archive', 'Архив', mbArchVisible().length + mbMahArch.length)}${sub('free', 'Не назначенные махалли', free.length)}${sub('mah', 'Махалли', (allMahallas || []).length)}</div>${body}</div>`;
   window.mbBankAll = all;
 }
 function mbBankDelAsk(i) {
@@ -16420,19 +16421,93 @@ function mbRenderBankersDebounced() { clearTimeout(mbBankT); mbBankT = setTimeou
 function mbBankDrawer(html) { document.getElementById('mbBankDrawer').innerHTML = html; document.getElementById('mbBankDrawer').classList.add('open'); document.getElementById('mbBankOv').classList.add('open'); }
 function mbBankClose() { document.getElementById('mbBankDrawer').classList.remove('open'); document.getElementById('mbBankOv').classList.remove('open'); }
 function mbOwnerOf(id, exceptIdx) { const all = window.mbBankAll || []; const r = all.find((x, i) => i !== exceptIdx && x.ids.indexOf(id) !== -1); return r ? r.name : ''; }
-function mbOpenBankEdit(i) { const r = window.mbBankAll[i]; mbMahQ = ''; mbBankEdit = i; mbBankSel = r.ids.slice(); mbRenderBankEdit(); }
-function mbRenderBankEdit(keepFocus) {
-  const r = window.mbBankAll[mbBankEdit];
-  const steal = mbBankSel.some(id => mbOwnerOf(id, mbBankEdit));
+function mbOpenBankEdit(i) { const r = window.mbBankAll[i]; if (!r || !r.id) return; mbBankEdit = i; mbRenderBankEdit(); }
+function mbRenderBankEdit(err) {
+  const r = window.mbBankAll[mbBankEdit]; if (!r) return;
   mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">${mbEsc(r.name)}</div><div class="mb-ds">${r.login ? 'Логин: ' + mbEsc(r.login) : ''}</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
-    <div class="mb-db"><div class="mb-sec">Прикреплённые махалли · выбрано ${mbBankSel.length}</div>
-    <input class="input" id="mbMahSearch" placeholder="Поиск махалли" value="${mbEsc(mbMahQ)}" oninput="mbMahQ=this.value;mbRenderBankEdit(true)" style="margin-bottom:10px">
-    ${mbMahs().filter(m => !mbMahQ || (String(m.name) + ' ' + (m.district || '')).toLowerCase().includes(mbMahQ.toLowerCase()) || mbBankSel.indexOf(m.id) !== -1).sort((a, b) => (mbBankSel.indexOf(b.id) !== -1) - (mbBankSel.indexOf(a.id) !== -1)).map(m => { const on = mbBankSel.indexOf(m.id) !== -1; const o = mbOwnerOf(m.id, mbBankEdit); return `<div class="mb-mrow${on ? ' on' : ''}" onclick="mbBankTog('${mbEsc(m.id)}')"><i></i><span>${mbEsc(m.name)}<br><small>${mbEsc(m.district || '')}${m.district ? ' · ' : ''}${mbFmt(mbNum(m.households))} домов</small></span>${o ? `<small class="w">сейчас: ${mbEsc(o.split(' ')[0])}</small>` : ''}</div>`; }).join('')}
-</div>
-    <div class="mb-foot"><button class="btn btn-secondary" onclick="mbBankClose()">Отмена</button><button class="btn" id="mbBankSave" onclick="mbBankSave()">Сохранить</button></div>`);
-  if (keepFocus === true) { const i = document.getElementById('mbMahSearch'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+    <div class="mb-db"><div class="mb-sec">Данные</div>
+    <div class="mb-f"><label>ФИО</label><input class="input" id="mbBcName" value="${mbEsc(r.name)}"></div>
+    <div class="mb-f" style="margin-top:8px"><label>Логин</label><input class="input" id="mbBcLogin" value="${mbEsc(r.login)}"></div>
+    <div class="mb-f" style="margin-top:8px"><label>Новый пароль</label><input class="input" id="mbBcPass" type="text" placeholder="Оставьте пустым, чтобы не менять"></div>
+    ${err ? `<div class="mb-warn">${mbEsc(err)}</div>` : ''}
+    <div class="mb-sec">Махалли банкира</div>${r.ids.length ? r.ids.map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') : '<div class="mb-count">Не назначены</div>'}
+    <div class="mb-sec">Показатели</div><div class="mb-kv"><span>Домов</span><b>${mbFmt(r.houses)}</b></div><div class="mb-kv"><span>Опрошено</span><b>${r.visits}</b></div></div>
+    <div class="mb-foot"><button class="btn" id="mbBcSave" onclick="mbBankCardSave()">Сохранить</button><button class="btn btn-secondary" onclick="mbBankClose()">Отмена</button></div>`);
 }
-function mbBankTog(id) { const k = mbBankSel.indexOf(id); if (k >= 0) mbBankSel.splice(k, 1); else mbBankSel.push(id); mbRenderBankEdit(); }
+const MB_LATIN_RE = /^[A-Za-z][A-Za-z'ʻʼ‘’`\- ]*$/;
+async function mbBankCardSave() {
+  const r = window.mbBankAll[mbBankEdit]; if (!r) return;
+  const name = document.getElementById('mbBcName').value.trim().replace(/\s+/g, ' ');
+  const login = document.getElementById('mbBcLogin').value.trim().toLowerCase();
+  const pass = document.getElementById('mbBcPass').value.trim();
+  if (!MB_LATIN_RE.test(name) || name.split(' ').length < 2) { mbRenderBankEditKeep('ФИО: только латиница, фамилия и имя', name, login, pass); return; }
+  if (!/^[a-z0-9._-]{3,40}$/.test(login)) { mbRenderBankEditKeep('Логин: латиница, цифры, точка (от 3 символов)', name, login, pass); return; }
+  const b = document.getElementById('mbBcSave'); if (b) { b.disabled = true; b.textContent = 'Сохранение...'; }
+  const res = await postWebAction({ webAction: 'mbBankerUpdate', sessionId: localStorage.getItem('msbSessionId'), userId: r.id, fullName: name, login, password: pass });
+  if (!res || !res.success) { mbRenderBankEditKeep((res && res.message) || 'Не удалось сохранить', name, login, pass); return; }
+  mbBankClose(); await mbAdminRender();
+}
+function mbRenderBankEditKeep(err, name, login, pass) {
+  mbRenderBankEdit(err);
+  document.getElementById('mbBcName').value = name; document.getElementById('mbBcLogin').value = login; document.getElementById('mbBcPass').value = pass;
+}
+
+// ---------- Добавить банкира ----------
+function mbBankKey2(n) { return mbNorm(n).split(' ').filter(Boolean).slice(0, 2).join(' '); }
+function mbMakeLogin(fio) {
+  const w = String(fio || '').trim().split(/\s+/).filter(Boolean);
+  if (w.length < 2) return '';
+  const clean = x => String(x).toLowerCase().replace(/[^a-z]/g, '');
+  const sur = clean(w[0]), first = clean(w[1]);
+  if (!sur || !first) return '';
+  const base = first[0] + '.' + sur;
+  const used = new Set([...(mbBankUsers || []).map(u => String(u.login).toLowerCase()), ...(mbBankArchive || []).map(a => String(a.login).toLowerCase())]);
+  let l = base, k = 2; while (used.has(l)) l = base + (k++);
+  return l;
+}
+let mbAddLoginTouched = false;
+function mbBankAdd() {
+  mbAddLoginTouched = false;
+  mbModal(`<div style="max-width:480px"><h3 style="margin:0 0 6px">Добавить банкира</h3>
+    <div class="mb-f" style="margin-top:12px"><label>ФИО (латиницей) *</label><input class="input" id="mbAddName" placeholder="Yusupov Mahmud Muratovich" oninput="mbAddCheck()"></div>
+    <div id="mbAddWarn"></div>
+    <div class="mb-f" style="margin-top:10px"><label>Логин</label><input class="input" id="mbAddLogin" placeholder="m.yusupov" oninput="mbAddLoginTouched=true;mbAddCheck()"></div>
+    <div class="mb-f" style="margin-top:10px"><label>Пароль</label><input class="input" id="mbAddPass" value="Aa123123"></div>
+    <div class="mb-f" style="margin-top:10px"><label>Роль</label><input class="input" value="MAHALLA_BANKER" readonly style="background:#F5F6F8"></div>
+    <div style="display:flex;gap:8px;margin-top:18px"><button class="btn" id="mbAddSave" style="flex:1;background:#F0412C" onclick="mbAddSave()" disabled>Сохранить</button><button class="btn btn-secondary" style="flex:1" onclick="mbModalClose()">Отмена</button></div></div>`);
+  setTimeout(() => { const i = document.getElementById('mbAddName'); if (i) i.focus(); }, 50);
+}
+function mbAddState() {
+  const name = document.getElementById('mbAddName').value.trim().replace(/\s+/g, ' ');
+  const login = document.getElementById('mbAddLogin').value.trim().toLowerCase();
+  let warn = '';
+  if (!name) warn = '';
+  else if (!MB_LATIN_RE.test(name)) warn = 'Только латиница: Фамилия Имя Отчество';
+  else if (name.split(' ').length < 2) warn = 'Укажите фамилию и имя';
+  else {
+    const key = mbBankKey2(name);
+    const dup = (mbBankUsers || []).find(u => mbBankKey2(u.fullName) === key) || (mbBankArchive || []).find(a => mbBankKey2(a.fullName) === key);
+    if (dup) warn = 'Банкир с таким ФИО уже есть: ' + (dup.fullName) + ' (' + dup.login + ')';
+  }
+  const loginBad = login && !/^[a-z0-9._-]{3,40}$/.test(login);
+  return { name, login, warn, loginBad };
+}
+function mbAddCheck() {
+  const nameEl = document.getElementById('mbAddName'), loginEl = document.getElementById('mbAddLogin');
+  if (!mbAddLoginTouched) loginEl.value = mbMakeLogin(nameEl.value);
+  const st = mbAddState();
+  nameEl.style.borderColor = st.warn ? '#B3261E' : '';
+  document.getElementById('mbAddWarn').innerHTML = st.warn ? `<div class="mb-warn">${mbEsc(st.warn)}</div>` : '';
+  document.getElementById('mbAddSave').disabled = !!(!st.name || st.warn || !st.login || st.loginBad || document.getElementById('mbAddPass').value.trim().length < 4);
+}
+async function mbAddSave() {
+  const st = mbAddState(); if (st.warn || !st.name || !st.login) return;
+  const pass = document.getElementById('mbAddPass').value.trim();
+  const b = document.getElementById('mbAddSave'); b.disabled = true; b.textContent = 'Сохранение...';
+  const r = await postWebAction({ webAction: 'createUser', sessionId: localStorage.getItem('msbSessionId'), fullName: st.name, login: st.login, password: pass, role: 'MAHALLA_BANKER', employeeId: '' });
+  if (!r || !r.success) { b.disabled = false; b.textContent = 'Сохранить'; document.getElementById('mbAddWarn').innerHTML = `<div class="mb-warn">${mbEsc((r && r.message) || 'Не удалось создать')}</div>`; return; }
+  mbModalClose(); await mbAdminRender();
+}
 function mbBankNames(m) { return String(m.bankers || '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean); }
 async function mbBankApply(changes) {
   if (!changes.length) { mbBankClose(); return; }
@@ -16440,20 +16515,6 @@ async function mbBankApply(changes) {
   if (!r || !r.success) { alert((r && r.message) || 'Не удалось сохранить'); return false; }
   changes.forEach(c => { const m = allMahallas.find(x => x.id === c.mahallaId); if (m) m.bankers = c.bankers; });
   mbBankClose(); mbRenderBankers(); return true;
-}
-async function mbBankSave() {
-  const b = document.getElementById('mbBankSave'); if (b) { b.disabled = true; b.textContent = 'Сохранение...'; }
-  const r = window.mbBankAll[mbBankEdit];
-  const me = n => mbNorm(n) === mbNorm(r.name) || (r.login && mbNorm(n) === mbNorm(r.login));
-  const changes = [];
-  mbMahs().forEach(m => {
-    const cur = mbBankNames(m); const want = mbBankSel.indexOf(m.id) !== -1;
-    let next;
-    if (want) next = [r.name]; else next = cur.filter(n => !me(n));
-    if (want && cur.some(n => !me(n))) next = [r.name];
-    if (next.join(', ') !== cur.join(', ')) changes.push({ mahallaId: m.id, bankers: next.join(', ') });
-  });
-  if (await mbBankApply(changes) === false && b) { b.disabled = false; b.textContent = 'Сохранить'; }
 }
 function mbOpenTransfer() { mbBankFrom = 0; mbBankTo = Math.min(1, (window.mbBankAll || []).length - 1); mbRenderTransfer(); }
 function mbRenderTransfer() {
@@ -17764,6 +17825,114 @@ function mbRelang() {
   mbUzApplyAll();
 }
 function mbUzApplyAll() { ['mbPageBody', 'mbSurvey', 'mbSheet', 'mbCam', 'vzyskatelNavbar'].forEach(id => mbUzNode(document.getElementById(id))); }
+
+// ===================== Перевод блока «Махалля» (админ) RU → UZ =====================
+var MB_ADM_UZ = {
+"Банкиры махалли":"Mahalla bankirlari","Активные банкиры":"Faol bankirlar","Активные":"Faol","Архив":"Arxiv","Не назначенные махалли":"Biriktirilmagan mahallalar","Добавить банкира":"Bankir qo‘shish","Добавить махаллю":"Mahalla qo‘shish","Добавить микропроект":"Mikroloyiha qo‘shish",
+"Статистика":"Statistika","Обход":"Aylanib chiqish","Банкиры":"Bankirlar","Махалли":"Mahallalar","Махаллей":"Mahallalar","махаллей":"mahalla","махалли":"mahalla","махалля":"mahalla","Махалля":"Mahalla","МАХАЛЛЯ":"MAHALLA",
+"ФИО (латиницей) *":"F.I.Sh. (lotin harflarida) *","ФИО владельца":"Egasining F.I.Sh.","ФИО":"F.I.Sh.","Логин:":"Login:","Логин":"Login","Пароль":"Parol","Роль":"Rol","Новый пароль":"Yangi parol","Оставьте пустым, чтобы не менять":"O‘zgartirmaslik uchun bo‘sh qoldiring",
+"Прикреплённые махалли":"Biriktirilgan mahallalar","Домов в махаллях":"Mahallalardagi uylar","Домов с участком":"Tomorqali uylar","Домов":"Uylar","Опрошено семей":"So‘ralgan oilalar","Опрошено от посещённых":"Tashrif qilinganlardan so‘ralgan","Опрошено":"So‘ralgan","Опрошен":"So‘ralgan",
+"Не назначенные":"Biriktirilmagan","Не назначены":"Biriktirilmagan","Не назначен":"Biriktirilmagan","не назначен":"biriktirilmagan","Нет банкиров":"Bankirlar yo‘q","нет в пользователях":"foydalanuvchilarda yo‘q","Без махаллей":"Mahallasiz","без махаллей":"mahallasiz",
+"Удалить в архив":"Arxivga o‘chirish","Удалить банкира?":"Bankirni o‘chirasizmi?","Удалить махаллю?":"Mahallani o‘chirasizmi?","Удалить":"O‘chirish","Изменить":"Tahrirlash","Поиск по ФИО":"F.I.Sh. bo‘yicha qidirish","Загрузка...":"Yuklanmoqda...","Сохранение...":"Saqlanmoqda...","Удаление...":"O‘chirilmoqda...","Выполняется...":"Bajarilmoqda...",
+"Удалён":"O‘chirilgan","Удалена":"O‘chirilgan","Кем":"Kim tomonidan","Махалли при удалении":"O‘chirilgandagi mahallalar","Банкир при удалении":"O‘chirilgandagi bankir","Окончательное удаление":"Yakuniy o‘chirish","Восстановить":"Tiklash","Архив пуст":"Arxiv bo‘sh","завтра":"ertaga","сегодня":"bugun","виз.":"tashrif",
+"Был закреплён":"Avval biriktirilgan","Назначить":"Tayinlash","Все махалли закреплены":"Barcha mahallalar biriktirilgan","Нет махаллей":"Mahallalar yo‘q",
+"Поиск по названию":"Nomi bo‘yicha qidirish","Все районы":"Barcha tumanlar","Все банкиры":"Barcha bankirlar","Все махалли":"Barcha mahallalar","Все статусы":"Barcha maqomlar","Переход данных":"Ma‘lumotlar o‘tishi","В махалле":"Mahallada","Новому":"Yangisiga","Население":"Aholi","Семёрка":"Yettilik","Действия":"Amallar","вне плана":"reja tashqarisida","изменено":"o‘zgargan","Отменить":"Bekor qilish","Отмена":"Bekor qilish","Сохранить":"Saqlash","данные перейдут новому банкиру:":"ma‘lumotlar yangi bankirga o‘tadi:","Снять банкира":"Bankirni olib tashlash","Поиск банкира":"Bankirni qidirish","Сейчас:":"Hozir:","Банкир не назначен":"Bankir biriktirilmagan","Не найдено":"Topilmadi",
+"Новая махалля":"Yangi mahalla","обновлено":"yangilangan","Основное":"Asosiy","Название в таблице":"Jadvaldagi nomi","Название":"Nomi","Район":"Tuman","Банкир:":"Bankir:","Банкир":"Bankir","Улицы":"Ko‘chalar","Данные махалли":"Mahalla ma‘lumotlari","Данные обхода":"Aylanish ma‘lumotlari","Данные":"Ma‘lumotlar","Семей":"Oilalar","Безработных 18+":"Ishsizlar 18+","Безработных":"Ishsizlar","безработных":"ishsizlar","Мигрантов":"Migrantlar","Инвалидов":"Nogironlar","В соцреестре":"Ijtimoiy reyestrda","В реестре":"Reyestrda","План микропроектов":"Mikroloyihalar rejasi",
+"Председатель махалли":"Mahalla raisi","Помощник хокима":"Hokim yordamchisi","Соцработник":"Ijtimoiy xodim","Лидер молодёжи":"Yoshlar yetakchisi","Активист (женщины)":"Faol (ayollar)","Налоговый инспектор":"Soliq inspektori","Инспектор профилактики":"Profilaktika inspektori","Фамилия Имя":"Familiya Ism","Телефон":"Telefon",
+"Визиты по банкирам":"Bankirlar bo‘yicha tashriflar","Визитов нет":"Tashriflar yo‘q","История закреплений":"Biriktirishlar tarixi","Записей нет":"Yozuvlar yo‘q","Такая махалля уже есть":"Bunday mahalla allaqachon mavjud","Открыть существующую":"Mavjudini ochish",
+"Махалля уйдёт в архив. Визиты и данные сохраняются, банкир открепляется. Из архива махаллю можно восстановить.":"Mahalla arxivga o‘tadi. Tashriflar va ma‘lumotlar saqlanadi, bankir biriktirilmaydi. Mahallani arxivdan tiklash mumkin.",
+"визитов:":"tashriflar:","домов:":"uylar:","Найденные дубликаты":"Topilgan dublikatlar","Дубликатов нет":"Dublikatlar yo‘q","Оставить одного":"Bittasini qoldirish","Оставить":"Qoldirish","Объединить, лишнее удалить":"Birlashtirish, ortiqchasini o‘chirish","Объединить, лишнего удалить":"Birlashtirish, ortiqchasini o‘chirish","Дубликаты":"Dublikatlar",
+"Только латиница: Фамилия Имя Отчество":"Faqat lotin harflari: Familiya Ism Sharif","Укажите фамилию и имя":"Familiya va ismni kiriting","Банкир с таким ФИО уже есть:":"Bunday F.I.Sh. li bankir allaqachon mavjud:","Махалли банкира":"Bankir mahallalari","Показатели":"Ko‘rsatkichlar",
+"Визиты за 14 дней":"14 kunlik tashriflar","Последние визиты":"Oxirgi tashriflar","Последний визит":"Oxirgi tashrif","Показать карту":"Xaritani ko‘rsatish","Карта визитов":"Tashriflar xaritasi","Визитов":"Tashriflar","Визиты":"Tashriflar","Проекты предпринимателей из махаллей, которые ведёт закреплённый банкир.":"Biriktirilgan bankir olib boradigan mahallalardagi tadbirkorlar loyihalari.",
+"KPI банкиров":"Bankirlar KPI","Общая картина по всем махаллям":"Barcha mahallalar bo‘yicha umumiy ko‘rinish","Нарастающий":"O‘sib boruvchi","Динамика обхода · 5 дней":"Aylanish dinamikasi · 5 kun","Качественная воронка результатов":"Natijalarning sifat voronkasi","Топ 5 лучших":"Eng yaxshi 5 ta","Топ 5 худших":"Eng yomon 5 ta","Посещено":"Tashrif qilingan","Интерес → проект":"Qiziqish → loyiha","Интерес к бизнесу: все":"Biznesga qiziqish: hammasi","Интерес к бизнесу":"Biznesga qiziqish","интерес к бизнесу":"biznesga qiziqish","Интерес":"Qiziqish",
+"Скачать в Excel":"Excel’ga yuklab olish","Скачать как изображение":"Rasm sifatida yuklab olish","Сегодня":"Bugun","Неделя":"Hafta","Месяц":"Oy","Всё время":"Butun davr","За месяц":"Oy uchun","Прошлый месяц":"O‘tgan oy","Вчера":"Kecha","Период…":"Davr…",
+"Проектов на 100 домов":"100 uyga loyihalar","Проектов":"Loyihalar","Проекты":"Loyihalar","Микропроект создан":"Mikroloyiha yaratildi","Микропроекты":"Mikroloyihalar","Охват":"Qamrov","Оценка":"Baho","Самозанятых и с бизнесом":"O‘zini o‘zi band qilgan va biznesli","Сумма проектов, млн":"Loyihalar summasi, mln","Сумма, млн":"Summa, mln","План проектов":"Loyihalar rejasi","Финансирование":"Moliyalashtirish","Флагов проверки:":"Tekshiruv belgilari:","Бизнес уже есть":"Biznes allaqachon bor","Нужна поддержка":"Qo‘llab-quvvatlash kerak","Бизнес-план":"Biznes-reja","Место":"O‘rin",
+"Поиск: ФИО, адрес, телефон":"Qidiruv: F.I.Sh., manzil, telefon","Поиск по проекту, инициатору, ПИНФЛ/ИНН":"Loyiha, tashabbuskor, JSHSHIR/STIR bo‘yicha qidirish","Адрес":"Manzil","Владелец":"Egasi","Доход, сум":"Daromad, so‘m","Дата":"Sana","Сфера":"Soha","Отрасль":"Soha","Субсидия":"Subsidiya","Состав семьи":"Oila tarkibi","Статус дома":"Uy maqomi","Статус":"Maqom","Инициатор":"Tashabbuskor","Стоимость":"Qiymati","Проект":"Loyiha","Нет":"Yo‘q",
+"Принят":"Qabul qilindi","Приняты":"Qabul qilingan","принято":"qabul qilingan","Отклонены":"Rad etilgan","На проверке":"Tekshiruvda","на проверке":"tekshiruvda","Повторно":"Qayta","зайти повторно":"qayta kirish","Подумает":"O‘ylab ko‘radi","Поддержка":"Qo‘llab-quvvatlash","Не интересен":"Qiziq emas","Не интересно":"Qiziq emas",
+"Выявлен":"Aniqlangan","Изучается":"O‘rganilmoqda","Запущен":"Ishga tushirilgan","Профинансирован":"Moliyalashtirilgan","Одобрено":"Ma‘qullangan","Неперспективные":"Istiqbolsiz","Проблемный/закрыт":"Muammoli/yopilgan","Слабо":"Zaif","Средне":"O‘rtacha","Отлично":"A‘lo","Работает":"Ishlaydi",
+"На заработках в другом регионе":"Boshqa hududda ishlaydi","На заработках за рубежом":"Chet elda ishlaydi","В декрете":"Dekret ta‘tilida","Служит в армии":"Armiyada xizmat qilmoqda","Длительно болеет":"Uzoq muddat kasal","Учится за границей":"Chet elda o‘qiydi",
+"Загрузите официальный Excel-файл (население, дворы, безработные, малообеспеченные семьи, план/факт по микропроектам, рабочим местам и кредитам). Махалли из файла, которых ещё нет в списке, будут созданы автоматически; существующие — обновлены по названию.":"Rasmiy Excel faylni yuklang (aholi, hovlilar, ishsizlar, kam ta‘minlangan oilalar, mikroloyihalar, ish o‘rinlari va kreditlar bo‘yicha reja/fakt). Ro‘yxatda yo‘q mahallalar avtomatik yaratiladi; mavjudlari nomi bo‘yicha yangilanadi.",
+"Показатели заполняются импортом файла-паспорта — пока могут быть пустыми, если файл ещё не загружен.":"Ko‘rsatkichlar pasport faylini import qilish orqali to‘ldiriladi — fayl yuklanmagan bo‘lsa, hozircha bo‘sh bo‘lishi mumkin.",
+"Импорт паспорта махаллей":"Mahalla pasportlarini import qilish","Загрузить паспорта":"Pasportlarni yuklash","Загрузить паспорт":"Pasportni yuklash","Загрузить махалли из плана":"Mahallalarni rejadan yuklash","Переназначить":"Qayta tayinlash",
+"в день":"kuniga","максимум":"maksimum","всего":"jami","визитов за период":"davr uchun tashriflar","членов семьи":"oila a‘zolari","Членов семьи":"Oila a‘zolari","Показано":"Ko‘rsatilgan","Список махаллей":"Mahallalar ro‘yxati",
+"передача, данные остаются в махалле":"o‘tkazish, ma‘lumotlar mahallada qoladi","передача, данные перешли новому банкиру":"o‘tkazish, ma‘lumotlar yangi bankirga o‘tdi","передача":"o‘tkazish","банкир в архиве":"bankir arxivda","загрузка из плана":"rejadan yuklash","создана":"yaratilgan","изменено в карточке":"kartochkada o‘zgartirilgan","махалля в архиве":"mahalla arxivda","махалля восстановлена из архива":"mahalla arxivdan tiklangan","объединено с дубликатом":"dublikat bilan birlashtirilgan","удалён дубль банкира":"bankir dublikati o‘chirilgan","Вс":"Yak","Пн":"Dush","Вт":"Sesh","Ср":"Chor","Чт":"Pay","Пт":"Jum","Сб":"Shan","Да":"Ha","Все":"Hammasi","из":"/"
+};
+var MB_ADM_RE = [
+ [/через (\d+) дн\./g, '$1 kundan keyin'],
+ [/В махалле «([^»]*)» банкир указан дважды/g, '«$1» mahallasida bankir ikki marta ko‘rsatilgan'],
+ [/Изменено махаллей: (\d+)/g, 'O‘zgargan mahallalar: $1'],
+ [/Махалли · «/g, 'Mahallalar · «'], [/Банкиры · «/g, 'Bankirlar · «'],
+ [/Данные перейдут новому банкиру и пропадут у прежнего:/g, 'Ma‘lumotlar yangi bankirga o‘tadi va avvalgisida yo‘qoladi:'], [/Продолжить\?/g, 'Davom etasizmi?'],
+ [/Объединить дубликаты\? Лишняя запись будет удалена, визиты сохранятся\./g, 'Dublikatlarni birlashtirasizmi? Ortiqcha yozuv o‘chiriladi, tashriflar saqlanadi.'],
+ [/Объединить банкиров\? Лишняя учётная запись будет удалена, визиты и махалли перейдут на оставшуюся\./g, 'Bankirlarni birlashtirasizmi? Ortiqcha hisob o‘chiriladi, tashriflar va mahallalar qolganiga o‘tadi.'],
+ [/Не удалось ([а-яё ]+)/g, 'Bajarib bo‘lmadi']
+];
+var MB_ADM_CACHE = null;
+function mbAdmTrStr(s) {
+  if (!s || !/[А-Яа-яЁё]/.test(s)) return s;
+  if (!MB_ADM_CACHE) MB_ADM_CACHE = new RegExp('(?<![А-Яа-яЁёA-Za-z0-9])(?:' + Object.keys(MB_ADM_UZ).sort((a, b) => b.length - a.length).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![А-Яа-яЁё])', 'g');
+  let r = s;
+  MB_ADM_RE.forEach(p => { r = r.replace(p[0], p[1]); });
+  return r.replace(MB_ADM_CACHE, m => MB_ADM_UZ[m]);
+}
+var mbAdmOrig = new WeakMap(), mbAdmDone = new WeakMap(), mbAdmAttrOrig = new WeakMap();
+var MB_ADM_ROOTS = '#mahallaPage,#mbBankDrawer,#mbModalBg,#mbVisitDrawer';
+function mbAdmActive() { return (localStorage.getItem('msbAppLang') || 'ru') === 'uz' && !document.body.classList.contains('role-mahalla-banker'); }
+function mbAdmSkip(n) { const t = n.parentNode && n.parentNode.nodeName; return t === 'TEXTAREA' || t === 'SCRIPT' || t === 'STYLE'; }
+function mbAdmText(n) {
+  if (mbAdmSkip(n)) return;
+  const cur = n.nodeValue;
+  if (mbAdmDone.get(n) === cur) return;
+  mbAdmOrig.set(n, cur);
+  const v = mbAdmTrStr(cur);
+  if (v !== cur) { mbAdmDone.set(n, v); n.nodeValue = v; }
+}
+function mbAdmAttrs(el) {
+  ['placeholder', 'title', 'aria-label'].forEach(a => {
+    const x = el.getAttribute && el.getAttribute(a); if (!x) return;
+    let o = mbAdmAttrOrig.get(el); if (!o) { o = {}; mbAdmAttrOrig.set(el, o); }
+    if (o[a] && o[a].done === x) return;
+    const v = mbAdmTrStr(x); o[a] = { orig: x, done: v };
+    if (v !== x) el.setAttribute(a, v);
+  });
+}
+function mbAdmApply(root) {
+  if (!root) return;
+  if (root.nodeType === 3) { mbAdmText(root); return; }
+  if (root.nodeType !== 1) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const list = []; let n; while ((n = w.nextNode())) list.push(n);
+  list.forEach(mbAdmText);
+  mbAdmAttrs(root); root.querySelectorAll && root.querySelectorAll('[placeholder],[title],[aria-label]').forEach(mbAdmAttrs);
+}
+function mbAdmRestore() {
+  document.querySelectorAll(MB_ADM_ROOTS).forEach(r => {
+    const w = document.createTreeWalker(r, NodeFilter.SHOW_TEXT); let n;
+    while ((n = w.nextNode())) { const d = mbAdmDone.get(n); if (d !== undefined && d === n.nodeValue && mbAdmOrig.has(n)) { n.nodeValue = mbAdmOrig.get(n); mbAdmDone.delete(n); } }
+    r.querySelectorAll('[placeholder],[title],[aria-label]').forEach(el => { const o = mbAdmAttrOrig.get(el); if (!o) return; Object.keys(o).forEach(a => { if (el.getAttribute(a) === o[a].done) el.setAttribute(a, o[a].orig); }); mbAdmAttrOrig.delete(el); });
+  });
+}
+function mbAdmRelang() {
+  if (mbAdmActive()) document.querySelectorAll(MB_ADM_ROOTS).forEach(mbAdmApply); else mbAdmRestore();
+}
+var mbAdmObs = null;
+function mbAdmInstall() {
+  if (mbAdmObs) return;
+  mbAdmObs = new MutationObserver(muts => {
+    if (!mbAdmActive()) return;
+    muts.forEach(m => {
+      const host = m.target.nodeType === 1 ? m.target : m.target.parentElement;
+      if (!host || !host.closest || !host.closest(MB_ADM_ROOTS)) return;
+      if (m.type === 'characterData') mbAdmText(m.target); else m.addedNodes.forEach(mbAdmApply);
+      if (m.type === 'attributes') mbAdmAttrs(m.target);
+    });
+  });
+  mbAdmObs.observe(document.body, { childList: true, subtree: true, characterData: true });
+  const _al = window.alert, _cf = window.confirm;
+  window.alert = m => _al.call(window, mbAdmActive() ? mbAdmTrStr(String(m)) : m);
+  window.confirm = m => _cf.call(window, mbAdmActive() ? mbAdmTrStr(String(m)) : m);
+}
+mbAdmInstall(); mbAdmRelang();
 
 // ===================== ПРОФИЛЬ =====================
 function mbProfileHtml() {
