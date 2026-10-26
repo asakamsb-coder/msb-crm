@@ -1616,6 +1616,13 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .mb-dh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:18px 20px;border-bottom:1px solid var(--line);}
 .mb-dt{font-size:18px;font-weight:800;}.mb-ds{font-size:12.5px;color:var(--muted);margin-top:2px;}
 .mb-db{flex:1;overflow-y:auto;padding:6px 20px 20px;}.mb-foot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--line);}.mb-foot .btn{flex:1;}
+.mb-cd{display:inline-block;border-radius:8px;padding:3px 9px;font-size:11.5px;font-weight:800}.mb-cd.a{background:#FFF1D6;color:#8A5A00}.mb-cd.r{background:#FDECEA;color:#B3261E}.mb-cd.g{background:#EEF0F3;color:#4B5563}
+.mb-pb{height:5px;background:#E9EBEF;border-radius:3px;overflow:hidden;margin-top:5px;width:110px}.mb-pb u{display:block;height:100%;background:#B71F17}
+.mb-filters2 .input,.mb-filters2 .select{width:auto;max-width:220px}.mb-s7 .input{min-width:0;padding:8px 10px}.mb-g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mb-f label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:3px}.mb-f .input,.mb-f .select{width:100%}
+.mb-s7{display:grid;grid-template-columns:105px 1fr 125px;line-height:1.2;gap:6px;align-items:center;margin-bottom:6px;font-size:12px}
+.mb-hist{border-left:2px solid #E7E8EC;margin:8px 0 0 6px;padding-left:12px}.mb-hist div{font-size:12.5px;margin-bottom:8px;position:relative}.mb-hist div:before{content:"";position:absolute;left:-18px;top:5px;width:8px;height:8px;border-radius:50%;background:#B71F17}
+.mb-dg{background:#F5F6F8;border-radius:12px;padding:10px 12px;margin-bottom:10px}.mb-dg .t{font-weight:800;font-size:13px;margin-bottom:6px}.mb-dg tr.bad{background:#FDECEA}
+.mb-warn{background:#FFF1D6;color:#8A5A00;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:8px 0}
 .mb-sec{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:18px 0 8px;}
 .mb-kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px;}.mb-kv b{text-align:right;font-weight:600;}
 .mb-chk{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;margin-bottom:6px;font-size:13.5px;}.mb-chk i{width:10px;height:10px;border-radius:50%;flex:none;}.mb-chk b{margin-left:auto;font-weight:600;}
@@ -16278,7 +16285,7 @@ const mbNorm = v => String(v == null ? '' : v).normalize('NFD').replace(/[\u0300
 let mbRosterSet = null;
 function mbMahs() {
   if (!mbRosterSet) mbRosterSet = new Set(MB_ROSTER.map(x => mbNorm(x.name)));
-  const l = (allMahallas || []).filter(m => mbRosterSet.has(mbNorm(m.name)));
+  const l = (allMahallas || []).filter(m => mbRosterSet.has(mbNorm(m.name)) || String(m.comment || '').indexOf('Добавлена вручную') !== -1);
   return l.length ? l : (allMahallas || []);
 }
 function mbArchKeys() { const k = new Set(); (mbBankArchive || []).forEach(a => { k.add(mbNorm(a.fullName)); k.add(mbNorm(a.login)); }); k.delete(''); return k; }
@@ -16310,6 +16317,7 @@ async function mbBankLoad() {
   ]);
   mbBankUsers = (users || []).filter(u => u.role === 'MAHALLA_BANKER' && u.active !== false);
   mbBankArchive = arch && arch.success ? arch.items : [];
+  if (isAdmin) { try { const hr = await postWebAction({ webAction: 'mbMahallaHistory', sessionId: sid }); mbHist = hr && hr.success ? hr.items : []; } catch (e) { mbHist = []; } }
   mbMicro = (Array.isArray(micro) ? micro : []).filter(p => !mbIsArchived(p.banker));
 }
 async function mbImportRoster() {
@@ -16325,6 +16333,7 @@ async function mbImportRoster() {
   alert('Готово. Создано махаллей: ' + r.created + ', обновлено: ' + r.updated);
   mbAdminRender();
 }
+function mbArchVisible() { return (mbBankArchive || []).filter(a => !a.purged); }
 function mbMahName(id) { const m = (allMahallas || []).find(x => x.id === id); return m ? m.name : id; }
 function mbRenderBankers(silent) {
   const box = document.getElementById('mbBankBody'); if (!box) return;
@@ -16337,14 +16346,19 @@ function mbRenderBankers(silent) {
   let body = '';
   if (mbBankSub === 'archive') {
     const dt = ms => ms ? new Date(Number(ms)).toLocaleDateString('ru-RU') : '';
-    body = `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>ФИО</th><th>Логин</th><th>Удалён</th><th>Кем</th><th>Махалли</th><th></th></tr></thead><tbody>
-      ${mbBankArchive.map((a, i) => `<tr><td><b>${mbEsc(a.fullName)}</b></td><td>${mbEsc(a.login)}</td><td>${dt(a.at)}</td><td>${mbEsc(a.by)}</td><td>${(a.mahallas || []).map(m => `<span class="mb-chip">${mbEsc(m.name)}</span>`).join('')}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="mbBankRestore(${i})">Восстановить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="loading">Архив пуст</td></tr>'}
+    const D = 86400000, LIM = 15;
+    const left = a => { const d = LIM - Math.floor((Date.now() - Number(a.at)) / D); return Math.max(0, d); };
+    const cd = a => { const d = left(a); const cls = d <= 3 ? 'r' : d <= 7 ? 'a' : 'g'; const t = d <= 0 ? 'сегодня' : d === 1 ? 'завтра' : 'через ' + d + ' дн.'; return `<span class="mb-cd ${cls}">${t}</span><div class="mb-pb"><u style="width:${Math.min(100, Math.round((LIM - d) / LIM * 100))}%"></u></div>`; };
+    body = `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>ФИО</th><th>Логин</th><th>Удалён</th><th>Кем</th><th>Махалли при удалении</th><th>Окончательное удаление</th><th></th></tr></thead><tbody>
+      ${mbArchVisible().map((a, i) => `<tr><td><b>${mbEsc(a.fullName)}</b></td><td>${mbEsc(a.login)}</td><td>${dt(a.at)}</td><td>${mbEsc(a.by)}</td><td>${(a.mahallas || []).map(m => `<span class="mb-chip">${mbEsc(m.name)}</span>`).join('')}</td><td>${cd(a)}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="mbBankRestore(${i})">Восстановить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Архив пуст</td></tr>'}
       </tbody></table></div>`;
   } else if (mbBankSub === 'free') {
-    const arch = {}; mbBankArchive.forEach(a => (a.mahallas || []).forEach(m => { if (!arch[m.id]) arch[m.id] = a; }));
+    const arch = {}; mbArchVisible().forEach(a => (a.mahallas || []).forEach(m => { if (!arch[m.id]) arch[m.id] = a; }));
     body = `<div class="client-table-wrap"><table class="mb-table"><thead><tr><th>Махалля</th><th>Район</th><th class="mb-num">Домов</th><th>Был закреплён</th><th></th></tr></thead><tbody>
       ${free.map(m => `<tr><td><b>${mbEsc(m.name)}</b></td><td>${mbEsc(m.district || '')}</td><td class="mb-num">${mbFmt(mbNum(m.households))}</td><td>${arch[m.id] ? mbEsc(arch[m.id].fullName) + ' · ' + new Date(arch[m.id].at).toLocaleDateString('ru-RU') : ''}</td><td class="mb-num">${canEdit ? `<button class="btn" onclick="mbAssignFree('${mbEsc(m.id)}')">Назначить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="loading">Все махалли закреплены</td></tr>'}
       </tbody></table></div>`;
+  } else if (mbBankSub === 'mah') {
+    body = mbMahTabHtml(all, canEdit);
   } else {
     const list = all.filter(r => (!mbBankQ || r.name.toLowerCase().includes(mbBankQ.toLowerCase())) && (mbBankF !== 'none' || !r.ids.length));
     body = `<div class="mb-filters" style="grid-template-columns:1.4fr 1fr"><input class="input" placeholder="Поиск по ФИО" value="${mbEsc(mbBankQ)}" oninput="mbBankQ=this.value;mbRenderBankersDebounced()"><select class="select" onchange="mbBankF=this.value;mbRenderBankers()"><option value="">Все</option><option value="none"${mbBankF === 'none' ? ' selected' : ''}>Без махаллей</option></select></div>
@@ -16352,8 +16366,8 @@ function mbRenderBankers(silent) {
       ${list.map((r, n) => `<tr class="mb-row" ${canEdit ? `onclick="mbOpenBankEdit(${idx(r)})"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(r.name)}</b></td><td>${r.unknown ? '<span class="mb-bd a">нет в пользователях</span>' : mbEsc(r.login)}</td><td>${r.ids.length ? r.ids.slice(0, 2).map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') + (r.ids.length > 2 ? `<span class="mb-chip more">+${r.ids.length - 2}</span>` : '') : '<b style="color:#B76E00">Не назначены</b>'}</td><td class="mb-num">${mbFmt(r.houses)}</td><td class="mb-num">${r.visits}</td><td class="mb-num" style="white-space:nowrap">${canEdit ? `<button class="btn btn-secondary" onclick="event.stopPropagation();mbOpenBankEdit(${idx(r)})">Изменить</button>${r.unknown ? '' : ` <button class="btn mb-btn-del" onclick="event.stopPropagation();mbBankDelAsk(${idx(r)})">Удалить</button>`}` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Нет банкиров</td></tr>'}
       </tbody></table></div>`;
   }
-  box.innerHTML = `<div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="mbImportRoster()">Загрузить махалли из плана</button><button class="btn btn-secondary" onclick="mbOpenTransfer()">Переназначить</button></div>' : ''}</div>
-    <div class="mb-per" style="margin-bottom:14px;width:max-content">${sub('active', 'Активные', all.filter(r => !r.unknown).length)}${sub('archive', 'Архив', mbBankArchive.length)}${sub('free', 'Не назначенные махалли', free.length)}</div>${body}</div>`;
+  box.innerHTML = `<div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="mbImportRoster()">Загрузить махалли из плана</button><button class="btn btn-secondary" onclick="mbDupOpen()">Дубликаты</button><button class="btn btn-secondary" onclick="mbOpenTransfer()">Переназначить</button></div>' : ''}</div>
+    <div class="mb-per" style="margin-bottom:14px;width:max-content">${sub('active', 'Активные', all.filter(r => !r.unknown).length)}${sub('archive', 'Архив', mbArchVisible().length)}${sub('free', 'Не назначенные махалли', free.length)}${sub('mah', 'Махалли', (allMahallas || []).length)}</div>${body}</div>`;
   window.mbBankAll = all;
 }
 function mbBankDelAsk(i) {
@@ -16370,7 +16384,7 @@ async function mbBankDelGo(i) {
   await mbAdminRender();
 }
 async function mbBankRestore(i) {
-  const a = mbBankArchive[i]; if (!a) return;
+  const a = mbArchVisible()[i]; if (!a) return;
   const res = await postWebAction({ webAction: 'restoreMahallaBanker', sessionId: localStorage.getItem('msbSessionId'), userId: a.userId });
   if (!res || !res.success) { alert((res && res.message) || 'Не удалось восстановить'); return; }
   await mbAdminRender();
@@ -16436,7 +16450,7 @@ function mbRenderTransfer() {
   mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">Переназначить махалли</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
     <div class="mb-db"><div class="mb-sec">От кого</div><select class="select" onchange="mbBankFrom=+this.value;mbRenderTransfer()">${opt(mbBankFrom)}</select>
     <div class="mb-sec">Кому</div><select class="select" onchange="mbBankTo=+this.value;mbRenderTransfer()">${opt(mbBankTo)}</select>
-    <div class="mb-sec">Будут переданы</div>${f.ids.length ? f.ids.map(id => `<div class="mb-kv"><span>${mbEsc(mbMahName(id))}</span></div>`).join('') : '<div class="mb-count">У выбранного банкира нет махаллей</div>'}
+    <div class="mb-sec">Будут переданы</div>${f.ids.length ? f.ids.map(id => { const vc = mbMahVisitsBy(id, f); const m = allMahallas.find(x => x.id === id); return `<div class="mb-kv"><span>${mbEsc(mbMahName(id))}<br><small style="color:var(--muted)">опрошено ${vc} из ${mbFmt(mbNum(m && m.households))} домов · визиты остаются у ${mbEsc(f.name)}</small></span></div>`; }).join('') : '<div class="mb-count">У выбранного банкира нет махаллей</div>'}
 </div>
     <div class="mb-foot"><button class="btn btn-secondary" onclick="mbBankClose()">Отмена</button><button class="btn" ${bad ? 'disabled' : ''} onclick="mbDoTransfer()">Передать</button></div>`);
 }
@@ -16445,6 +16459,154 @@ async function mbDoTransfer() {
   const changes = f.ids.map(id => ({ mahallaId: id, bankers: t.name }));
   await mbBankApply(changes);
 }
+
+// ---------- Подвкладка «Махалли» ----------
+function mbMahVisitsBy(id, b) {
+  const m = (allMahallas || []).find(x => x.id === id); if (!m) return 0;
+  const mk = mbNorm(m.name);
+  const keys = [mbNorm(b.name), mbNorm(b.login)].filter(Boolean);
+  return mbDoneRows().filter(s => mbNorm(s.mahalla) === mk && keys.indexOf(mbNorm(s.createdBy)) !== -1).length;
+}
+function mbMahVisitsAll(m) { const mk = mbNorm(m.name); return mbDoneRows().filter(s => mbNorm(s.mahalla) === mk).length; }
+function mbSevenCount(m) { const s = m.seven || {}; return MB_SEVEN_KEYS.filter(k => s[k.k] && String(s[k.k].name || '').trim()).length; }
+const MB_SEVEN_KEYS = [{ k: 'chair', l: 'Председатель махалли' }, { k: 'hokimHelper', l: 'Помощник хокима' }, { k: 'social', l: 'Соцработник' }, { k: 'youth', l: 'Лидер молодёжи' }, { k: 'women', l: 'Активист (женщины)' }, { k: 'tax', l: 'Налоговый инспектор' }, { k: 'prevent', l: 'Инспектор профилактики' }];
+function mbMahTabHtml(all, canEdit) {
+  const inPlan = new Set(mbMahs().map(m => m.id));
+  const dists = [...new Set((allMahallas || []).map(m => String(m.district || '').trim()).filter(Boolean))].sort();
+  const bankNames = [...new Set((allMahallas || []).flatMap(m => mbBankNames(m)))].sort();
+  const q = mbMahQ2.toLowerCase();
+  const list = (allMahallas || []).filter(m => (!q || String(m.name).toLowerCase().includes(q)) && (!mbMahDist || String(m.district || '').trim() === mbMahDist) && (!mbMahBankF || (mbMahBankF === '-' ? !mbBankNames(m).length : mbBankNames(m).some(n => mbNorm(n) === mbNorm(mbMahBankF)))));
+  const sv = n => `<span class="mb-bd ${n >= 7 ? 'g' : n >= 1 ? 'a' : 'r'}">${n} из 7</span>`;
+  return `<div class="mb-filters2"><input class="input" style="min-width:240px;max-width:300px" placeholder="Поиск по названию" value="${mbEsc(mbMahQ2)}" oninput="mbMahQ2=this.value;mbMahTabDebounced()">
+    <select class="select" onchange="mbMahDist=this.value;mbRenderBankers()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbMahDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select>
+    <select class="select" onchange="mbMahBankF=this.value;mbRenderBankers()"><option value="">Все банкиры</option><option value="-"${mbMahBankF === '-' ? ' selected' : ''}>Не назначен</option>${bankNames.map(d => `<option${d === mbMahBankF ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select>
+    ${canEdit ? '<button class="btn" style="margin-left:auto" onclick="mbMahForm(null)">Добавить махаллю</button>' : ''}</div>
+    <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>Махалля</th><th>Район</th><th>Банкир</th><th class="mb-num">Население</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th>Семёрка</th><th></th></tr></thead><tbody>
+    ${list.map((m, n) => `<tr class="mb-row" ${canEdit ? `onclick="mbMahForm('${mbEsc(m.id)}')"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(m.name)}</b>${inPlan.has(m.id) ? '' : ' <span class="mb-bd a">вне плана</span>'}</td><td>${mbEsc(m.district || '')}</td><td>${mbBankNames(m).length ? mbEsc(mbBankNames(m).join(', ')) : '<span style="color:#B76E00;font-weight:700">не назначен</span>'}</td><td class="mb-num">${mbFmt(mbNum(m.population))}</td><td class="mb-num">${mbFmt(mbNum(m.households))}</td><td class="mb-num">${mbMahVisitsAll(m)}</td><td>${sv(mbSevenCount(m))}</td><td class="mb-num">${canEdit ? `<button class="btn btn-secondary" onclick="event.stopPropagation();mbMahForm('${mbEsc(m.id)}')">Открыть</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="9" class="loading">Нет махаллей</td></tr>'}
+    </tbody></table></div>`;
+}
+let mbMahTabT = null;
+function mbMahTabDebounced() { clearTimeout(mbMahTabT); mbMahTabT = setTimeout(() => { mbRenderBankers(); const i = document.querySelector('#mbBankBody .mb-filters2 input'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); }
+function mbMahForm(id, draft, warn) {
+  const m = id ? (allMahallas || []).find(x => x.id === id) : null;
+  if (id && !m) return;
+  mbMahEditId = id;
+  const d = draft || (m ? { name: m.name, district: m.district || '', bankers: m.bankers || '', streets: m.streets || '', population: m.population, households: m.households, families: m.families, unemployed: m.unemployed, migrants: m.migrants, disabled: m.disabled, lowIncome: m.lowIncomeFamilies, microprojectsPlan: m.microprojectsPlan, seven: m.seven || {} } : { name: '', district: '', bankers: '', streets: '', seven: {} });
+  const v = x => mbEsc(x == null ? '' : x);
+  const names = (mbBankUsers || []).map(u => u.fullName || u.login);
+  const cur = String(d.bankers || '').trim();
+  const opts = ['<option value="">Не назначен</option>'].concat(names.map(n => `<option value="${mbEsc(n)}"${mbNorm(n) === mbNorm(cur) ? ' selected' : ''}>${mbEsc(n)}</option>`));
+  if (cur && !names.some(n => mbNorm(n) === mbNorm(cur))) opts.push(`<option value="${mbEsc(cur)}" selected>${mbEsc(cur)}</option>`);
+  const fld = (k, l) => `<div class="mb-f"><label>${l}</label><input class="input" id="mbMf_${k}" inputmode="numeric" value="${v(d[k])}"></div>`;
+  const hist = id ? (mbHist || []).filter(x => x.id === id).sort((a, b) => b.at - a.at) : [];
+  const vis = {};
+  if (m) { const mk = mbNorm(m.name); mbDoneRows().filter(s => mbNorm(s.mahalla) === mk).forEach(s => { const k = String(s.createdBy || '—'); vis[k] = (vis[k] || 0) + 1; }); }
+  const visRows = Object.keys(vis).sort((a, b) => vis[b] - vis[a]);
+  const dtf = ms => ms ? new Date(Number(ms)).toLocaleDateString('ru-RU') : '';
+  mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">${m ? mbEsc(m.name) : 'Новая махалля'}</div><div class="mb-ds">${m && m.infoUpdatedAt ? 'обновлено ' + dtf(m.infoUpdatedAt) + (m.infoUpdatedBy ? ', ' + mbEsc(m.infoUpdatedBy) : '') : ''}</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
+    <div class="mb-db">${warn ? `<div class="mb-warn">${mbEsc(warn.message)}${warn.existingId ? ` <a href="#" onclick="mbMahForm('${mbEsc(warn.existingId)}');return false">Открыть существующую</a>` : ''}</div>` : ''}
+    <div class="mb-sec">Основное</div><div class="mb-g2"><div class="mb-f"><label>Название</label><input class="input" id="mbMf_name" value="${v(d.name)}"></div><div class="mb-f"><label>Район</label><input class="input" id="mbMf_district" value="${v(d.district)}"></div></div>
+    <div class="mb-f" style="margin-top:8px"><label>Банкир</label><select class="select" id="mbMf_bankers">${opts.join('')}</select></div>
+    <div class="mb-f" style="margin-top:8px"><label>Улицы</label><input class="input" id="mbMf_streets" value="${v(d.streets)}"></div>
+    <div class="mb-sec">Данные махалли</div><div class="mb-g2">${fld('population', 'Население')}${fld('households', 'Домов')}${fld('families', 'Семей')}${fld('unemployed', 'Безработных')}${fld('migrants', 'Мигрантов')}${fld('disabled', 'Инвалидов')}${fld('lowIncome', 'В соцреестре')}${fld('microprojectsPlan', 'План микропроектов')}</div>
+    <div class="mb-sec">Семёрка</div>${MB_SEVEN_KEYS.map(r => { const s = (d.seven || {})[r.k] || {}; return `<div class="mb-s7"><span>${r.l}</span><input class="input" id="mbMs_${r.k}_n" placeholder="Фамилия Имя" value="${v(s.name)}"><input class="input" id="mbMs_${r.k}_p" placeholder="Телефон" inputmode="numeric" value="${v(s.phone)}"></div>`; }).join('')}
+    ${id ? `<div class="mb-sec">Визиты по банкирам</div>${visRows.length ? visRows.map(k => `<div class="mb-kv"><span>${mbEsc(k)}</span><b>${vis[k]}</b></div>`).join('') : '<div class="mb-count">Визитов нет</div>'}
+    <div class="mb-sec">История закреплений</div>${hist.length ? `<div class="mb-hist">${hist.map(x => `<div><b>${dtf(x.at)}</b> · ${mbEsc(x.from || 'не назначен')} → <b>${mbEsc(x.to || 'не назначен')}</b><br><span style="color:var(--muted);font-size:11.5px">${mbEsc(x.note)}${x.by ? ' · ' + mbEsc(x.by) : ''}</span></div>`).join('')}</div>` : '<div class="mb-count">Записей нет</div>'}` : ''}
+    </div>
+    <div class="mb-foot"><button class="btn" id="mbMahSave" onclick="mbMahSave()">Сохранить</button>${id ? '<button class="btn mb-btn-del" onclick="mbMahDelAsk()">Удалить</button>' : ''}</div>`);
+}
+function mbMahCollect() {
+  const g = k => document.getElementById('mbMf_' + k).value.trim();
+  const fields = { name: g('name'), district: g('district'), streets: g('streets'), bankers: document.getElementById('mbMf_bankers').value.trim() };
+  ['population', 'households', 'families', 'unemployed', 'migrants', 'disabled', 'lowIncome', 'microprojectsPlan'].forEach(k => { fields[k] = g(k).replace(/\s/g, ''); });
+  const seven = {};
+  MB_SEVEN_KEYS.forEach(r => { seven[r.k] = { name: document.getElementById('mbMs_' + r.k + '_n').value.trim(), phone: document.getElementById('mbMs_' + r.k + '_p').value.trim() }; });
+  return { fields, seven };
+}
+async function mbMahSave() {
+  const { fields, seven } = mbMahCollect();
+  if (!fields.name) { alert('Укажите название махалли'); return; }
+  const b = document.getElementById('mbMahSave'); if (b) { b.disabled = true; b.textContent = 'Сохранение...'; }
+  const r = await postWebAction({ webAction: 'mbAdminMahallaSave', sessionId: localStorage.getItem('msbSessionId'), mahallaId: mbMahEditId || '', fields, seven });
+  if (!r || !r.success) {
+    if (r && r.duplicate) { mbMahForm(mbMahEditId, Object.assign({}, fields, { seven, lowIncome: fields.lowIncome }), r); return; }
+    if (b) { b.disabled = false; b.textContent = 'Сохранить'; }
+    alert((r && r.message) || 'Не удалось сохранить'); return;
+  }
+  await mbMahReload();
+  mbBankClose();
+}
+async function mbMahReload() {
+  const sid = localStorage.getItem('msbSessionId');
+  try { allMahallas = await fetchJSON('mahallas') || []; } catch (e) {}
+  try { const hr = await postWebAction({ webAction: 'mbMahallaHistory', sessionId: sid }); mbHist = hr && hr.success ? hr.items : []; } catch (e) {}
+  mbRenderBankers();
+}
+function mbMahDelAsk() {
+  const m = (allMahallas || []).find(x => x.id === mbMahEditId); if (!m) return;
+  mbModal(`<h3 style="margin:0 0 10px">Удалить махаллю?</h3><div style="font-size:14px;line-height:1.5;margin-bottom:16px"><b>${mbEsc(m.name)}</b><br>Удаление возможно только если по махалле нет визитов.</div>
+    <div style="display:flex;gap:8px"><button class="btn mb-btn-del" style="flex:1" id="mbMahDelGo" onclick="mbMahDelGo()">Удалить</button><button class="btn btn-secondary" style="flex:1" onclick="mbModalClose()">Отмена</button></div>`);
+}
+async function mbMahDelGo() {
+  const b = document.getElementById('mbMahDelGo'); if (b) { b.disabled = true; b.textContent = 'Удаление...'; }
+  const r = await postWebAction({ webAction: 'mbAdminMahallaDelete', sessionId: localStorage.getItem('msbSessionId'), mahallaId: mbMahEditId });
+  mbModalClose();
+  if (!r || !r.success) { alert((r && r.message) || 'Не удалось удалить'); return; }
+  mbBankClose(); await mbMahReload();
+}
+
+// ---------- Дубликаты ----------
+let mbDupData = null, mbDupKeep = {};
+async function mbDupOpen() {
+  mbModal('<div class="loading">Поиск дубликатов...</div>');
+  const r = await postWebAction({ webAction: 'mbDupScan', sessionId: localStorage.getItem('msbSessionId') });
+  if (!r || !r.success) { mbModalClose(); alert((r && r.message) || 'Не удалось выполнить поиск'); return; }
+  mbDupData = r; mbDupKeep = {};
+  mbDupRender();
+}
+function mbDupRender() {
+  const d = mbDupData; if (!d) return;
+  const mg = d.mahallas.map((g, gi) => {
+    const keep = mbDupKeep['m' + gi] !== undefined ? mbDupKeep['m' + gi] : g.items.slice().sort((a, b) => b.visits - a.visits || (b.district ? 1 : 0) - (a.district ? 1 : 0))[0].id;
+    return `<div class="mb-dg"><div class="t">Махалли · «${mbEsc(g.items[0].name)}»</div><table class="mb-table"><thead><tr><th>Оставить</th><th>Название в таблице</th><th>Район</th><th>Банкир</th><th class="mb-num">Домов</th><th class="mb-num">Визитов</th></tr></thead><tbody>
+    ${g.items.map(it => `<tr class="${it.id === keep ? '' : 'bad'}"><td><input type="radio" name="dm${gi}" ${it.id === keep ? 'checked' : ''} onclick="mbDupKeep['m${gi}']='${mbEsc(it.id)}';mbDupRender()"></td><td>${mbEsc(it.name)}</td><td>${mbEsc(it.district)}</td><td>${mbEsc(it.bankers) || '<span style="color:var(--muted)">не назначен</span>'}</td><td class="mb-num">${mbFmt(it.households)}</td><td class="mb-num">${it.visits}</td></tr>`).join('')}</tbody></table>
+    <div style="margin-top:8px"><button class="btn mb-btn-del" onclick="mbDupMergeM(${gi})">Объединить, лишнее удалить</button></div></div>`;
+  }).join('');
+  const bg = d.bankers.map((g, gi) => {
+    const keep = mbDupKeep['b' + gi] !== undefined ? mbDupKeep['b' + gi] : g.items.slice().sort((a, b) => b.visits - a.visits || b.fullName.length - a.fullName.length)[0].userId;
+    return `<div class="mb-dg"><div class="t">Банкиры · «${mbEsc(g.items[0].fullName)}»</div><table class="mb-table"><thead><tr><th>Оставить</th><th>ФИО</th><th>Логин</th><th class="mb-num">Махалли</th><th class="mb-num">Визитов</th></tr></thead><tbody>
+    ${g.items.map(it => `<tr class="${it.userId === keep ? '' : 'bad'}"><td><input type="radio" name="db${gi}" ${it.userId === keep ? 'checked' : ''} onclick="mbDupKeep['b${gi}']='${mbEsc(it.userId)}';mbDupRender()"></td><td>${mbEsc(it.fullName)}</td><td>${mbEsc(it.login)}</td><td class="mb-num">${it.mahallas}</td><td class="mb-num">${it.visits}</td></tr>`).join('')}</tbody></table>
+    <div style="margin-top:8px"><button class="btn mb-btn-del" onclick="mbDupMergeB(${gi})">Объединить, лишнего удалить</button></div></div>`;
+  }).join('');
+  const rg = d.rows.map(r => `<div class="mb-dg"><div class="t">В махалле «${mbEsc(r.name)}» банкир указан дважды</div>${r.bankers.map(n => `<span class="mb-chip">${mbEsc(n)}</span>`).join('')} <button class="btn btn-secondary" onclick="mbDupRow('${mbEsc(r.id)}')">Оставить одного</button></div>`).join('');
+  const empty = !d.mahallas.length && !d.bankers.length && !d.rows.length;
+  mbModal(`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="margin:0">Найденные дубликаты</h3><button class="close-btn" onclick="mbModalClose()">×</button></div>${empty ? '<div class="loading">Дубликатов нет</div>' : mg + bg + rg}`);
+}
+async function mbDupDo(payload, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Выполняется...'; }
+  const r = await postWebAction(Object.assign({ sessionId: localStorage.getItem('msbSessionId') }, payload, { webAction: 'mbDupResolve' }));
+  if (!r || !r.success) { alert((r && r.message) || 'Не удалось выполнить'); if (btn) { btn.disabled = false; } return false; }
+  return true;
+}
+async function mbDupAfter() {
+  await mbBankLoad();
+  mbRenderBankers();
+  const r = await postWebAction({ webAction: 'mbDupScan', sessionId: localStorage.getItem('msbSessionId') });
+  if (r && r.success) { mbDupData = r; mbDupKeep = {}; mbDupRender(); }
+}
+async function mbDupMergeM(gi) {
+  const g = mbDupData.mahallas[gi]; const keep = mbDupKeep['m' + gi] !== undefined ? mbDupKeep['m' + gi] : g.items.slice().sort((a, b) => b.visits - a.visits || (b.district ? 1 : 0) - (a.district ? 1 : 0))[0].id;
+  if (!confirm('Объединить дубликаты? Лишняя запись будет удалена, визиты сохранятся.')) return;
+  for (const it of g.items) { if (it.id === keep) continue; if (!(await mbDupDo({ type: 'mahalla', keepId: keep, removeId: it.id }, event && event.target))) return; }
+  await mbDupAfter();
+}
+async function mbDupMergeB(gi) {
+  const g = mbDupData.bankers[gi]; const keep = mbDupKeep['b' + gi] !== undefined ? mbDupKeep['b' + gi] : g.items.slice().sort((a, b) => b.visits - a.visits || b.fullName.length - a.fullName.length)[0].userId;
+  if (!confirm('Объединить банкиров? Лишняя учётная запись будет удалена, визиты и махалли перейдут на оставшуюся.')) return;
+  for (const it of g.items) { if (it.userId === keep) continue; if (!(await mbDupDo({ type: 'banker', keepUserId: keep, removeUserId: it.userId }, event && event.target))) return; }
+  await mbDupAfter();
+}
+async function mbDupRow(id) { if (await mbDupDo({ type: 'row', mahallaId: id }, event && event.target)) await mbDupAfter(); }
 
 // ---------- Дашборд ----------
 function mbStatsOf(rows) {
@@ -16565,6 +16727,7 @@ function mbRenderStats() {
 }
 
 // ---------- Статистика: период, KPI, воронка, банкиры ----------
+let mbHist = [], mbMahQ2 = '', mbMahDist = '', mbMahBankF = '', mbMahEditId = null;
 let mbStPer = 'month', mbStQ = '', mbStDist = '', mbStSort = { k: 'visits', d: -1 }, mbFnBank = '', mbFnMah = '', mbMicro = [], mbBankArchive = [], mbBankSub = 'active';
 const MB_STPER = [['today', 'Сегодня'], ['week', 'Неделя'], ['month', 'Месяц'], ['all', 'Всё время']];
 const MB_BIZ_YES = ['Интерес', 'Бизнес уже есть'];
