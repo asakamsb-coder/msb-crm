@@ -1685,6 +1685,7 @@ body.role-mahalla-banker .footer{display:none;}
 .m-svfoot{flex:none;background:#fff;padding:10px 14px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -4px 18px rgba(0,0,0,.06);}
 .m-svfoot .m-big{max-width:560px;margin:0 auto;}
 .m-hint{font-size:12.5px;color:#B76E00;min-height:16px;margin-bottom:8px;text-align:center;}
+.ob-sm{display:block;font-size:11.5px;color:#6B7280;font-weight:400;margin-top:2px;white-space:normal;max-width:190px}.ob-chk{border:1.5px dashed #E3A9A4;background:#FFF8F7;border-radius:14px;padding:12px}.ob-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ob-b{border-radius:10px;padding:10px;font-weight:800;font-size:14px;border:1.5px solid #D9DCE1;background:#fff;cursor:pointer;color:#333}.ob-b.ok.on{background:#1E9E5A;border-color:#1E9E5A;color:#fff}.ob-b.no.on{background:#C4231A;border-color:#C4231A;color:#fff}.ob-lb{font-size:12px;font-weight:800;color:#6B7280;margin-top:12px}.ob-rs{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.ob-rs span{border:1.5px solid #D9DCE1;background:#fff;border-radius:16px;padding:7px 13px;font-weight:700;font-size:13.5px;color:#333;cursor:pointer}.ob-rs span.on{background:#141414;border-color:#141414;color:#fff}.ob-hist{font-size:12.5px;color:#555;line-height:1.7}
 .ob-sub{display:flex;gap:6px;margin-bottom:14px;border-bottom:2px solid #EEF0F3}.ob-sub span{padding:10px 18px;font-weight:700;font-size:15px;color:#6B7280;cursor:pointer;margin-bottom:-2px;border-bottom:3px solid transparent}.ob-sub span.on{color:#C4231A;border-bottom-color:#C4231A}.ob-sub small{background:#EEF0F3;border-radius:10px;padding:1px 8px;margin-left:7px;font-size:12px}.ob-sub span.on small{background:#FBDAD7;color:#9B1C12}.ob-two{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin:4px 0 14px}.ob-two h4{margin:0 0 8px;font-size:15px}.ob-sp{display:grid;grid-template-columns:150px 1fr 70px;gap:12px;align-items:center;margin:6px 0;font-size:13.5px;font-weight:600;color:#444}.ob-sp div{background:#F1F2F5;border-radius:6px;height:16px}.ob-sp i{display:block;height:16px;border-radius:6px}.ob-sp b{text-align:right}@media(max-width:900px){.ob-two{grid-template-columns:1fr}}
 .mb-kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin:10px 0 12px}.mb-kpi{border-radius:14px;padding:11px 12px;border-left:5px solid #9BA0AB;background:#F5F6F8}.mb-kpi b{display:block;font-size:22px;line-height:1.1}.mb-kpi span{font-size:11.5px;color:#4B5563}
 .mb-kpi.k1{background:#EEF2FF;border-color:#4F6AF5}.mb-kpi.k2{background:#E3F5EA;border-color:#1E9E5A}.mb-kpi.k3{background:#FFF1D6;border-color:#E39A00}.mb-kpi.k4{background:#FFEBDD;border-color:#E8700B}.mb-kpi.k5{background:#F1EAFB;border-color:#7A4FD0}.mb-kpi.k6{background:#FDECEA;border-color:#C4231A}.mb-kpi.k7{background:#E2F4F7;border-color:#0F8FA6}
@@ -3571,6 +3572,8 @@ body.role-mahalla-banker .footer{display:none;}
       <div class="info-label" style="margin-bottom:8px;">Фото объекта</div>
       <div id="mdPhotos" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
     </div>
+
+    <div id="mbChkBoxP" style="margin-bottom:18px;"></div>
 
     <button class="btn" style="width:100%;" id="mdEditBtn" onclick="closeMicroprojectDetail();openMicroprojectForm('edit', mdCurrentId)">✏️ Редактировать проект</button>
     <button class="btn btn-secondary" style="width:100%;margin-top:10px;background:var(--red);display:none;" id="mdDeleteBtn" onclick="deleteMicroprojectConfirm()">🗑 Удалить проект</button>
@@ -17473,10 +17476,70 @@ function mbRenderObhodVisits() {
     <div class="client-table-wrap"><table class="mb-table mb-wide"><thead><tr><th class="mb-num">№</th><th>Дата</th><th>Махалля</th><th>Адрес</th><th>ФИО владельца</th><th>Телефон</th><th class="mb-num">Состав семьи</th><th class="mb-num">Безработных</th><th>Интерес к бизнесу</th><th>Сфера</th><th>Поддержка</th><th class="mb-num">Доход, сум</th><th>Статус дома</th><th>Банкир</th><th>Статус</th></tr></thead><tbody>${list || '<tr><td colspan="15" class="loading">Нет визитов за выбранный период</td></tr>'}</tbody></table></div>
     <div class="mb-count">Показано ${slice.length} из ${filtered.length}</div>${pg}`;
 }
+// ===================== Проверка интереса / микропроекта администратором =====================
+const MB_CHK_OK = [['call', 'Подтвердил по звонку'], ['onsite', 'Проверено на месте'], ['photo', 'Фото соответствует'], ['land', 'Есть участок / помещение'], ['equip', 'Есть оборудование'], ['other', 'Другое…']];
+const MB_CHK_NO = [['other_person', 'Другой человек'], ['fraud', 'Обманная информация'], ['refused', 'Отказался от бизнеса'], ['bad_phone', 'Неверный номер'], ['bad_address', 'Не тот адрес'], ['dup', 'Дубль'], ['mismatch', 'Данные не совпали'], ['other', 'Другое…']];
+let mbChk = { kind: '', id: '', status: '', tags: [], comment: '', busy: false, err: '' };
+const mbChkOf = (kind, s) => (kind === 'visit' ? s.bizCheck : s.check) || null;
+function mbChkLabel(st, t) { const a = (st === 'ok' ? MB_CHK_OK : MB_CHK_NO).find(x => x[0] === t); return a ? a[1] : t; }
+function mbChkStatusOf(s, kind) { const c = mbChkOf(kind, s); return c && c.status ? c.status : 'none'; }
+function mbChkChip(c, full) {
+  const dt = ms => { const d = new Date(Number(ms)); return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); };
+  if (!c || !c.status) return '<span class="mb-bd" style="background:#ECEEF1;color:#5B6270">Не проверено</span>';
+  const cls = c.status === 'ok' ? 'g' : c.status === 'no' ? 'r' : 'a';
+  const txt = c.status === 'ok' ? '✓ Подтверждено' : c.status === 'no' ? '✕ Не подтверждено' : '☎ Не дозвонились';
+  const why = (c.tags || []).map(t => mbChkLabel(c.status, t)).join(', ');
+  const sub = [full ? why : (c.status === 'no' ? why : ''), c.by ? mbShortName(c.by) : '', c.at ? dt(c.at) : ''].filter(Boolean).join(' · ');
+  return `<span class="mb-bd ${cls}">${txt}</span>${sub ? `<span class="ob-sm">${mbEsc(sub)}</span>` : ''}`;
+}
+function mbChkOpen(kind, id) { mbChk = { kind, id: String(id), status: '', tags: [], comment: '', busy: false, err: '' }; mbChkRender(); }
+function mbChkRec() { const list = mbChk.kind === 'visit' ? (allObhodSurveys || []) : (allMicroprojects || []); return list.find(x => String(x.id) === mbChk.id) || null; }
+function mbChkRender() {
+  const box = document.getElementById(mbChk.kind === 'visit' ? 'mbChkBox' : 'mbChkBoxP'); if (!box) return;
+  if (!mbIsAdm()) { box.innerHTML = ''; return; }
+  const s = mbChkRec(); if (!s) { box.innerHTML = ''; return; }
+  const c = mbChkOf(mbChk.kind, s); const st = mbChk.status;
+  let phone = String((mbChk.kind === 'visit' ? s.phone : s.applicantContact) || '').replace(/[^\d+]/g, ''); if (/^\d{9}$/.test(phone)) phone = '+998' + phone; else if (/^998\d{9}$/.test(phone)) phone = '+' + phone;
+  const tagsList = st === 'ok' ? MB_CHK_OK : st === 'no' ? MB_CHK_NO : [];
+  const dt = ms => { const d = new Date(Number(ms)); return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); };
+  const hist = ((c && c.hist) || []).slice().reverse();
+  const hl = h => `${dt(h.at)} · ${mbEsc(mbShortName(h.by || ''))} · ${h.status === 'ok' ? '✓ Подтверждено' : h.status === 'no' ? '✕ Не подтверждено' : '☎ Не дозвонились'}${(h.tags || []).length ? ' — ' + mbEsc(h.tags.map(t => mbChkLabel(h.status, t)).join(', ')) : ''}${h.comment ? ' («' + mbEsc(h.comment) + '»)' : ''}`;
+  box.innerHTML = `<div class="mb-sec">Проверка ${mbChk.kind === 'visit' ? 'интереса к бизнесу' : 'микропроекта'}</div>
+    <div class="ob-chk"><div style="margin-bottom:8px">Статус: ${mbChkChip(c, true)}</div>
+    ${phone ? `<a class="btn" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px" href="tel:${mbEsc(phone)}">☎ Позвонить ${mbEsc(phone)}</a>` : ''}
+    <div class="ob-btns"><button class="ob-b ok${st === 'ok' ? ' on' : ''}" onclick="mbChkSet('ok')">✓ Подтвердить</button><button class="ob-b no${st === 'no' ? ' on' : ''}" onclick="mbChkSet('no')">✕ Не подтверждено</button><button class="ob-b nd" style="grid-column:1/3" ${mbChk.busy ? 'disabled' : ''} onclick="mbChkSave('nocall')">☎ Не дозвонились</button></div>
+    ${st ? `<div class="ob-lb">${st === 'ok' ? 'ОСНОВАНИЕ (можно несколько)' : 'ПРИЧИНА (одна)'}</div><div class="ob-rs">${tagsList.map(([k, l]) => `<span class="${mbChk.tags.indexOf(k) !== -1 ? 'on' : ''}" onclick="mbChkTag('${k}')">${l}</span>`).join('')}</div>
+      <input class="input" id="mbChkComment" style="margin-top:10px" placeholder="Комментарий${mbChk.tags.indexOf('other') !== -1 ? ' (обязательно)' : ' (необязательно)'}" value="${mbEsc(mbChk.comment)}" oninput="mbChk.comment=this.value">
+      ${mbChk.err ? `<div class="mb-warn" style="margin-top:8px">${mbEsc(mbChk.err)}</div>` : ''}
+      <button class="btn" style="width:100%;margin-top:10px;${st === 'no' ? 'background:#C4231A' : 'background:#1E9E5A'}" ${mbChk.busy ? 'disabled' : ''} onclick="mbChkSave('${st}')">${mbChk.busy ? 'Сохранение...' : 'Сохранить проверку'}</button>` : ''}</div>
+    ${hist.length ? `<div class="mb-sec">История проверок</div><div class="ob-hist">${hist.map(h => `<div>${hl(h)}</div>`).join('')}</div>` : ''}`;
+}
+function mbChkSet(st) { mbChk.status = mbChk.status === st ? '' : st; mbChk.tags = []; mbChk.err = ''; mbChkRender(); }
+function mbChkTag(t) {
+  if (mbChk.status === 'no') mbChk.tags = mbChk.tags[0] === t ? [] : [t];
+  else { const i = mbChk.tags.indexOf(t); if (i === -1) mbChk.tags.push(t); else mbChk.tags.splice(i, 1); }
+  mbChk.err = ''; mbChkRender();
+}
+async function mbChkSave(status) {
+  if (mbChk.busy) return;
+  if (status === 'ok' && !mbChk.tags.length) { mbChk.err = 'Выберите основание подтверждения'; mbChkRender(); return; }
+  if (status === 'no' && !mbChk.tags.length) { mbChk.err = 'Выберите причину'; mbChkRender(); return; }
+  if (mbChk.tags.indexOf('other') !== -1 && !String(mbChk.comment).trim()) { mbChk.err = 'Для «Другое» напишите комментарий'; mbChkRender(); return; }
+  mbChk.busy = true; mbChk.err = ''; mbChkRender();
+  let r = null;
+  try { r = await postWebAction({ webAction: 'mbBizCheckSave', sessionId: localStorage.getItem('msbSessionId'), kind: mbChk.kind, id: mbChk.id, status, tags: status === 'nocall' ? [] : mbChk.tags, comment: mbChk.comment }, 0); } catch (e) { r = null; }
+  mbChk.busy = false;
+  if (!r || !r.success) { mbChk.err = (r && r.message) || 'Не удалось сохранить. Проверьте связь.'; mbChkRender(); return; }
+  const s = mbChkRec(); if (s) { if (mbChk.kind === 'visit') s.bizCheck = r.check; else s.check = r.check; }
+  mbChk.status = ''; mbChk.tags = []; mbChk.comment = '';
+  mbChkRender();
+  if (document.getElementById('obhodListBox') && typeof mbRenderObhod === 'function' && mbAdminTab === 'mbObhod' && mbObSub !== 'visits') mbRenderObhod();
+}
+
 // ===================== ОБХОД: подвкладки «Интерес к бизнесу» и «Микропроекты» =====================
 let mbObSub = 'visits', mbObPg = 0;
-let mbObBizF = { q: '', mahalla: '', banker: '', sphere: '', support: '', proj: '' };
-let mbObPrjF = { q: '', mahalla: '', banker: '', industry: '' };
+let mbObBizF = { q: '', mahalla: '', banker: '', sphere: '', support: '', proj: '', chk: '' };
+let mbObPrjF = { q: '', mahalla: '', banker: '', industry: '', chk: '' };
 function mbObTabs() {
   const real = (allObhodSurveys || []).filter(s => mbIsPhysical(s) && (s.source === 'mobile' || s.visitStatus));
   const nV = real.length;
@@ -17504,6 +17567,7 @@ function mbObPager(n, ps, fn) {
   const pages = Math.max(1, Math.ceil(n / ps)); if (mbObPg >= pages) mbObPg = pages - 1;
   return pages > 1 ? `<div class="mb-pager"><button class="btn btn-secondary" ${mbObPg === 0 ? 'disabled' : ''} onclick="mbObPg--;${fn}()">‹</button><span>${mbObPg + 1} / ${pages}</span><button class="btn btn-secondary" ${mbObPg >= pages - 1 ? 'disabled' : ''} onclick="mbObPg++;${fn}()">›</button></div>` : '';
 }
+function mbChkXl(c) { if (!c || !c.status) return ['Не проверено', '', '', '']; return [c.status === 'ok' ? 'Подтверждено' : c.status === 'no' ? 'Не подтверждено' : 'Не дозвонились', (c.tags || []).map(t => mbChkLabel(c.status, t)).join(', '), c.comment || '', c.by || '']; }
 const mbPhone9 = v => String(v || '').replace(/\D/g, '').slice(-9);
 function mbProjOfVisit(s) {
   const ph = mbPhone9(s.phone), mk = mbNorm(s.mahalla), nm = mbNorm(String(s.headName || '').split(/\s+/).slice(0, 2).join(' '));
@@ -17516,11 +17580,11 @@ function mbBizRows(ignoreFilters) {
   const doneHouses = m.size;
   let rows = Array.from(m.values()).filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1);
   rows.forEach(s => { s.__prj = mbProjOfVisit(s); });
-  const base = rows;
+  const base = rows.filter(s => mbChkStatusOf(s, 'visit') !== 'no');
   if (!ignoreFilters) {
     const q = mbNorm(g.q);
     rows = rows.filter(s => (!g.mahalla || s.mahalla === g.mahalla) && (!g.banker || s.createdBy === g.banker) && (!g.sphere || s.sector === g.sphere)
-      && (!g.support || (s.finance || []).indexOf(g.support) !== -1) && (!g.proj || (g.proj === 'yes' ? !!s.__prj : !s.__prj))
+      && (!g.chk || mbChkStatusOf(s, 'visit') === g.chk) && (!g.support || (s.finance || []).indexOf(g.support) !== -1) && (!g.proj || (g.proj === 'yes' ? !!s.__prj : !s.__prj))
       && (!q || mbNorm([s.headName, s.address, s.phone, s.businessIdea].join(' ')).indexOf(q) !== -1));
   }
   return { rows: rows.sort((a, b) => mbVisitTs(b) - mbVisitTs(a)), base, doneHouses };
@@ -17535,7 +17599,7 @@ function mbRenderObBiz() {
   const pc = doneHouses ? Math.round(base.length / doneHouses * 100) + '%' : '—';
   const dt = ms => { if (!ms) return ''; const d = new Date(Number(ms)); return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); };
   const slice = rows.slice(mbObPg * PS, mbObPg * PS + PS); const dash = '<span style="color:#9BA0AB">—</span>';
-  const body = slice.map(s => `<tr class="mb-row" onclick="mbOpenVisit('${encodeURIComponent(s.id)}')"><td>${dt(s.finishedAt)}</td><td>${mbEsc(s.mahalla)}</td><td>${mbEsc(s.address || '—')}</td><td><b>${mbEsc(s.headName)}</b></td><td>${mbEsc(s.phone ? '+' + String(s.phone).replace(/^\+/, '') : '')}</td><td>${mbEsc(s.createdBy)}${mbIsArchived(s.createdBy) ? ' <span style="color:#9BA0AB;font-size:11.5px">(уволен)</span>' : ''}</td><td><span class="mb-bd ${MB_BIZ_CLS[s.businessInterest] || 'a'}">${mbEsc(s.businessInterest)}</span></td><td>${s.sector ? mbEsc(s.sector) : dash}</td><td>${s.businessIdea ? mbEsc(s.businessIdea) : dash}</td><td>${(s.finance || []).length ? (s.finance || []).map(x => `<span class="mb-bd b">${mbEsc(MB_FIN_LABEL[x] || x)}</span>`).join(' ') : dash}</td><td class="mb-num">${s.income ? mbFmt(mbNum(s.income)) : dash}</td><td>${s.hasLand === 'Да' ? mbEsc(mbSot(mbNum(s.freeLandSotka) || 0)) : dash}</td><td>${s.__prj ? '<span class="mb-bd g">Создан</span>' : '<span class="mb-bd" style="background:#ECEEF1;color:#5B6270">Нет</span>'}</td></tr>`).join('');
+  const body = slice.map(s => `<tr class="mb-row" onclick="mbOpenVisit('${encodeURIComponent(s.id)}')"><td>${dt(s.finishedAt)}</td><td>${mbEsc(s.mahalla)}</td><td>${mbEsc(s.address || '—')}</td><td><b>${mbEsc(s.headName)}</b></td><td>${mbEsc(s.phone ? '+' + String(s.phone).replace(/^\+/, '') : '')}</td><td>${mbEsc(s.createdBy)}${mbIsArchived(s.createdBy) ? ' <span style="color:#9BA0AB;font-size:11.5px">(уволен)</span>' : ''}</td><td><span class="mb-bd ${MB_BIZ_CLS[s.businessInterest] || 'a'}">${mbEsc(s.businessInterest)}</span></td><td>${s.sector ? mbEsc(s.sector) : dash}</td><td>${s.businessIdea ? mbEsc(s.businessIdea) : dash}</td><td>${(s.finance || []).length ? (s.finance || []).map(x => `<span class="mb-bd b">${mbEsc(MB_FIN_LABEL[x] || x)}</span>`).join(' ') : dash}</td><td class="mb-num">${s.income ? mbFmt(mbNum(s.income)) : dash}</td><td>${s.hasLand === 'Да' ? mbEsc(mbSot(mbNum(s.freeLandSotka) || 0)) : dash}</td><td>${s.__prj ? '<span class="mb-bd g">Создан</span>' : '<span class="mb-bd" style="background:#ECEEF1;color:#5B6270">Нет</span>'}</td><td>${mbChkChip(mbChkOf('visit', s))}</td></tr>`).join('');
   const mahNames = mbMahs().map(m => m.name).filter(Boolean).sort((a, b) => a.localeCompare(b)); const bankNames = mbBankerNames();
   const supOpt = ['', 'subsidy', 'loan', 'credit', 'none'].map(k => `<option value="${k}"${g.support === k ? ' selected' : ''}>${k ? MB_FIN_LABEL[k] : 'Вид поддержки'}</option>`).join('');
   const prOpt = [['', 'Проект: все'], ['yes', 'Проект создан'], ['no', 'Проекта нет']].map(([k, l]) => `<option value="${k}"${g.proj === k ? ' selected' : ''}>${l}</option>`).join('');
@@ -17544,23 +17608,24 @@ function mbRenderObBiz() {
     <div class="mb-kpis" style="grid-template-columns:repeat(5,1fr)">${kpi(mbFmt(base.length), 'интересуются бизнесом', 'k7')}${kpi(pc, 'от опрошенных домов', 'k1')}${kpi(mbFmt(needSup), 'нужна поддержка', 'k3')}${kpi(mbFmt(withPrj), 'проект создан', 'k2')}${kpi(mbFmt(base.length - withPrj), 'ещё без проекта', 'k6')}</div>
     <div class="ob-two"><div><h4>По сферам</h4>${mbObBars(spheres.slice(0, 6), '#C4231A')}</div><div><h4>Вид поддержки</h4>${mbObBars(sup, '#3D5FD1')}</div></div>
     ${mbObPeriodHtml('mbRenderObBiz')}
-    <div class="mb-filters" style="grid-template-columns:1.6fr 1.2fr 1.2fr 1fr 1fr 1fr">
+    <div class="mb-filters" style="grid-template-columns:1.6fr 1.2fr 1.2fr 1fr 1fr 1fr 1fr">
       <input class="input" placeholder="Поиск: ФИО, адрес, телефон, идея" value="${mbEsc(g.q)}" oninput="mbObBizF.q=this.value;mbObPg=0;clearTimeout(mbObhodT);mbObhodT=setTimeout(mbRenderObBizKeep,250)">
       <select class="select" onchange="mbObBizF.mahalla=this.value;mbObPg=0;mbRenderObBiz()">${mbObOpt(mahNames, g.mahalla, 'Все махалли (' + mahNames.length + ')')}</select>
       <select class="select" onchange="mbObBizF.banker=this.value;mbObPg=0;mbRenderObBiz()">${mbObOpt(bankNames, g.banker, 'Все банкиры (' + bankNames.length + ')')}</select>
       <select class="select" onchange="mbObBizF.sphere=this.value;mbObPg=0;mbRenderObBiz()">${mbObOpt(spheres.map(x => x[0]), g.sphere, 'Все сферы')}</select>
       <select class="select" onchange="mbObBizF.support=this.value;mbObPg=0;mbRenderObBiz()">${supOpt}</select>
-      <select class="select" onchange="mbObBizF.proj=this.value;mbObPg=0;mbRenderObBiz()">${prOpt}</select></div>
-    <div class="client-table-wrap"><table class="mb-table mb-wide"><thead><tr><th>Дата</th><th>Махалля</th><th>Адрес</th><th>ФИО</th><th>Телефон</th><th>Банкир</th><th>Интерес</th><th>Сфера</th><th>Идея</th><th>Поддержка</th><th class="mb-num">Доход, сум</th><th>Участок</th><th>Проект</th></tr></thead><tbody>${body || '<tr><td colspan="13" class="loading">Нет данных за выбранный период</td></tr>'}</tbody></table></div>
+      <select class="select" onchange="mbObBizF.proj=this.value;mbObPg=0;mbRenderObBiz()">${prOpt}</select>
+      <select class="select" onchange="mbObBizF.chk=this.value;mbObPg=0;mbRenderObBiz()">${[['', 'Проверка: все'], ['none', 'Не проверено'], ['ok', 'Подтверждено'], ['no', 'Не подтверждено'], ['nocall', 'Не дозвонились']].map(([k, l]) => `<option value="${k}"${g.chk === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="client-table-wrap"><table class="mb-table mb-wide"><thead><tr><th>Дата</th><th>Махалля</th><th>Адрес</th><th>ФИО</th><th>Телефон</th><th>Банкир</th><th>Интерес</th><th>Сфера</th><th>Идея</th><th>Поддержка</th><th class="mb-num">Доход, сум</th><th>Участок</th><th>Проект</th><th>Проверка админа</th></tr></thead><tbody>${body || '<tr><td colspan="14" class="loading">Нет данных за выбранный период</td></tr>'}</tbody></table></div>
     <div class="mb-count">Показано ${slice.length} из ${rows.length}</div>${mbObPager(rows.length, PS, 'mbRenderObBiz')}`;
 }
 function mbRenderObBizKeep() { const el = document.activeElement; const pos = el && el.selectionStart; mbRenderObBiz(); const inp = document.querySelector('#obhodListBox .mb-filters input'); if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch (e) {} } }
 function mbObBizExport() {
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё загружается. Повторите через несколько секунд.'); return; }
   const { rows } = mbBizRows(); const dt = ms => ms ? new Date(Number(ms)).toLocaleString('ru-RU') : '';
-  const data = [['№', 'Дата', 'Махалля', 'Адрес', 'ФИО', 'Телефон', 'Банкир', 'Интерес', 'Сфера', 'Идея', 'Поддержка', 'Доход, сум', 'Участок, соток', 'Проект']];
-  rows.forEach((s, i) => data.push([i + 1, dt(s.finishedAt), s.mahalla, s.address, s.headName, s.phone, s.createdBy + (mbIsArchived(s.createdBy) ? ' (уволен)' : ''), s.businessInterest, s.sector, s.businessIdea, (s.finance || []).map(x => MB_FIN_LABEL[x] || x).join(', '), mbNum(s.income) || '', s.hasLand === 'Да' ? mbNum(s.freeLandSotka) : '', s.__prj ? 'Создан' : 'Нет']));
-  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols'] = [5, 17, 26, 26, 30, 16, 28, 16, 18, 34, 24, 14, 12, 10].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:N' + data.length }; ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+  const data = [['№', 'Дата', 'Махалля', 'Адрес', 'ФИО', 'Телефон', 'Банкир', 'Интерес', 'Сфера', 'Идея', 'Поддержка', 'Доход, сум', 'Участок, соток', 'Проект', 'Проверка админа', 'Основание / причина', 'Комментарий проверки', 'Проверил']];
+  rows.forEach((s, i) => data.push([i + 1, dt(s.finishedAt), s.mahalla, s.address, s.headName, s.phone, s.createdBy + (mbIsArchived(s.createdBy) ? ' (уволен)' : ''), s.businessInterest, s.sector, s.businessIdea, (s.finance || []).map(x => MB_FIN_LABEL[x] || x).join(', '), mbNum(s.income) || '', s.hasLand === 'Да' ? mbNum(s.freeLandSotka) : '', s.__prj ? 'Создан' : 'Нет', ...mbChkXl(s.bizCheck)]));
+  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols'] = [5, 17, 26, 26, 30, 16, 28, 16, 18, 34, 24, 14, 12, 10, 18, 34, 30, 20].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:R' + data.length }; ws['!freeze'] = { xSplit: 0, ySplit: 1 };
   XLSX.utils.book_append_sheet(wb, ws, 'Интерес к бизнесу'); XLSX.writeFile(wb, 'Интерес к бизнесу ' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 // ---- Микропроекты ----
@@ -17568,11 +17633,11 @@ const mbPrjCredit = p => mbNum(p.creditNeeded);
 const mbPrjPhotos = p => String(p.photoUrls || '').split(/[\s,;|]+/).filter(u => /^https?:/.test(u)).length;
 function mbPrjRows() {
   const f = mbObhodFilter, g = mbObPrjF; const [t1, t2] = mbPeriodRange(f); const q = mbNorm(g.q);
-  return (allMicroprojects || []).filter(p => { const t = mbMsOf(p.createdAt); return (f.period === 'all' || (t >= t1 && t < t2)) && (!g.mahalla || String(p.mahalla).trim() === g.mahalla) && (!g.banker || p.banker === g.banker) && (!g.industry || p.industry === g.industry)
+  return (allMicroprojects || []).filter(p => { const t = mbMsOf(p.createdAt); return (f.period === 'all' || (t >= t1 && t < t2)) && (!g.mahalla || String(p.mahalla).trim() === g.mahalla) && (!g.banker || p.banker === g.banker) && (!g.industry || p.industry === g.industry) && (!g.chk || mbChkStatusOf(p, 'project') === g.chk)
     && (!q || mbNorm([p.projectName, p.applicantName, p.applicantContact, p.pinfl, p.inn].join(' ')).indexOf(q) !== -1); }).sort((a, b) => mbMsOf(b.createdAt) - mbMsOf(a.createdAt));
 }
 function mbRenderObProj() {
-  const rows = mbPrjRows(); const g = mbObPrjF; const PS = 50; const mln = v => Math.round(v / 1e6 * 10) / 10;
+  const allRows = mbPrjRows(); const rows = allRows.filter(p => mbChkStatusOf(p, 'project') !== 'no'); const g = mbObPrjF; const PS = 50; const mln = v => Math.round(v / 1e6 * 10) / 10;
   const sum = fn => rows.reduce((a, p) => a + fn(p), 0);
   const kpi = (v, l, c) => `<div class="mb-kpi ${c}"><b>${v}</b><span>${l}</span></div>`;
   const byInd = {}; rows.forEach(p => { const k = p.industry || '—'; byInd[k] = (byInd[k] || 0) + mbNum(p.totalCost); });
@@ -17580,9 +17645,9 @@ function mbRenderObProj() {
   const byB = {}; rows.forEach(p => { const k = p.banker ? mbShortName(p.banker) : '—'; byB[k] = (byB[k] || 0) + 1; });
   let bl = Object.keys(byB).map(k => [k, byB[k]]).sort((a, b) => b[1] - a[1]); if (bl.length > 5) { const rest = bl.slice(4).reduce((a, x) => a + x[1], 0); bl = bl.slice(0, 4).concat([['Остальные', rest]]); }
   const dash = '<span style="color:#9BA0AB">—</span>';
-  const slice = rows.slice(mbObPg * PS, mbObPg * PS + PS);
+  const slice = allRows.slice(mbObPg * PS, mbObPg * PS + PS);
   const body = slice.map(p => { const cr = mbPrjCredit(p); const ph = mbPrjPhotos(p);
-    return `<tr class="mb-row" onclick="openMicroprojectDetail('${mbEsc(p.id).replace(/'/g, '&#39;')}')"><td>${mbEsc(p.createdAt)}</td><td>${mbEsc(p.mahalla)}</td><td><b>${mbEsc(p.projectName)}</b></td><td>${mbEsc(p.applicantName)}</td><td>${mbEsc(p.applicantContact)}</td><td>${p.subjectStatus ? mbEsc(p.subjectStatus) : dash}</td><td>${p.industry ? mbEsc(p.industry) : dash}</td><td class="mb-num">${mbFmt(mln(mbNum(p.totalCost)))} млн</td><td class="mb-num">${mbFmt(mln(mbNum(p.ownFunds)))} млн</td><td>${cr > 0 ? `<span class="mb-bd a">Нужен</span> <span style="color:#6B7280;font-size:12px">${mbFmt(mln(cr))} млн</span>` : '<span class="mb-bd" style="background:#ECEEF1;color:#5B6270">Не нужен</span>'}</td><td class="mb-num">${mbFmt(mbNum(p.newJobs))}</td><td>${p.banker ? mbEsc(p.banker) + (mbIsArchived(p.banker) ? ' <span style="color:#9BA0AB;font-size:11.5px">(уволен)</span>' : '') : dash}</td><td>${ph ? '📷 ' + ph : dash}</td><td>${p.status ? `<span class="mb-bd b">${mbEsc(p.status)}</span>` : dash}</td></tr>`; }).join('');
+    return `<tr class="mb-row" onclick="openMicroprojectDetail('${mbEsc(p.id).replace(/'/g, '&#39;')}')"><td>${mbEsc(p.createdAt)}</td><td>${mbEsc(p.mahalla)}</td><td><b>${mbEsc(p.projectName)}</b></td><td>${mbEsc(p.applicantName)}</td><td>${mbEsc(p.applicantContact)}</td><td>${p.subjectStatus ? mbEsc(p.subjectStatus) : dash}</td><td>${p.industry ? mbEsc(p.industry) : dash}</td><td class="mb-num">${mbFmt(mln(mbNum(p.totalCost)))} млн</td><td class="mb-num">${mbFmt(mln(mbNum(p.ownFunds)))} млн</td><td>${cr > 0 ? `<span class="mb-bd a">Нужен</span> <span style="color:#6B7280;font-size:12px">${mbFmt(mln(cr))} млн</span>` : '<span class="mb-bd" style="background:#ECEEF1;color:#5B6270">Не нужен</span>'}</td><td class="mb-num">${mbFmt(mbNum(p.newJobs))}</td><td>${p.banker ? mbEsc(p.banker) + (mbIsArchived(p.banker) ? ' <span style="color:#9BA0AB;font-size:11.5px">(уволен)</span>' : '') : dash}</td><td>${ph ? '📷 ' + ph : dash}</td><td>${p.status ? `<span class="mb-bd b">${mbEsc(p.status)}</span>` : dash}</td><td>${mbChkChip(mbChkOf('project', p))}</td></tr>`; }).join('');
   const mahNames = mbMahs().map(m => m.name).filter(Boolean).sort((a, b) => a.localeCompare(b)); const bankNames = mbBankerNames();
   const inds = Array.from(new Set((allMicroprojects || []).map(p => p.industry).filter(Boolean))).sort();
   document.getElementById('obhodListBox').innerHTML = `${mbObTabs()}
@@ -17590,21 +17655,22 @@ function mbRenderObProj() {
     <div class="mb-kpis" style="grid-template-columns:repeat(6,1fr)">${kpi(mbFmt(rows.length), 'микропроектов', 'k2')}${kpi(mbFmt(mln(sum(p => mbNum(p.totalCost)))), 'общая сумма, млн сум', 'k1')}${kpi(mbFmt(mln(sum(p => mbNum(p.ownFunds)))), 'свои средства, млн', 'k5')}${kpi(mbFmt(mln(sum(mbPrjCredit))), 'нужен кредит, млн', 'k3')}${kpi(mbFmt(sum(p => mbNum(p.newJobs))), 'новых рабочих мест', 'k7')}${kpi(mbFmt(rows.filter(p => String(p.needsSubsidy) === 'Да').length), 'нужна субсидия', 'k6')}</div>
     <div class="ob-two"><div><h4>По отраслям (млн сум)</h4>${mbObBars(ind, '#2E9E5B')}</div><div><h4>По банкирам</h4>${mbObBars(bl, '#7A55C9')}</div></div>
     ${mbObPeriodHtml('mbRenderObProj')}
-    <div class="mb-filters" style="grid-template-columns:1.6fr 1.2fr 1.2fr 1fr">
+    <div class="mb-filters" style="grid-template-columns:1.6fr 1.2fr 1.2fr 1fr 1fr">
       <input class="input" placeholder="Поиск: проект, инициатор, телефон" value="${mbEsc(g.q)}" oninput="mbObPrjF.q=this.value;mbObPg=0;clearTimeout(mbObhodT);mbObhodT=setTimeout(mbRenderObProjKeep,250)">
       <select class="select" onchange="mbObPrjF.mahalla=this.value;mbObPg=0;mbRenderObProj()">${mbObOpt(mahNames, g.mahalla, 'Все махалли (' + mahNames.length + ')')}</select>
       <select class="select" onchange="mbObPrjF.banker=this.value;mbObPg=0;mbRenderObProj()">${mbObOpt(bankNames, g.banker, 'Все банкиры (' + bankNames.length + ')')}</select>
-      <select class="select" onchange="mbObPrjF.industry=this.value;mbObPg=0;mbRenderObProj()">${mbObOpt(inds, g.industry, 'Все отрасли')}</select></div>
-    <div class="client-table-wrap"><table class="mb-table mb-wide"><thead><tr><th>Дата</th><th>Махалля</th><th>Проект</th><th>Инициатор</th><th>Телефон</th><th>Статус субъекта</th><th>Отрасль</th><th class="mb-num">Стоимость</th><th class="mb-num">Свои</th><th>Кредит</th><th class="mb-num">Раб. мест</th><th>Банкир</th><th>Фото</th><th>Статус</th></tr></thead><tbody>${body || '<tr><td colspan="14" class="loading">Нет микропроектов за выбранный период</td></tr>'}</tbody></table></div>
-    <div class="mb-count">Показано ${slice.length} из ${rows.length}</div>${mbObPager(rows.length, PS, 'mbRenderObProj')}`;
+      <select class="select" onchange="mbObPrjF.industry=this.value;mbObPg=0;mbRenderObProj()">${mbObOpt(inds, g.industry, 'Все отрасли')}</select>
+      <select class="select" onchange="mbObPrjF.chk=this.value;mbObPg=0;mbRenderObProj()">${[['', 'Проверка: все'], ['none', 'Не проверено'], ['ok', 'Подтверждено'], ['no', 'Не подтверждено'], ['nocall', 'Не дозвонились']].map(([k, l]) => `<option value="${k}"${g.chk === k ? ' selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div class="client-table-wrap"><table class="mb-table mb-wide"><thead><tr><th>Дата</th><th>Махалля</th><th>Проект</th><th>Инициатор</th><th>Телефон</th><th>Статус субъекта</th><th>Отрасль</th><th class="mb-num">Стоимость</th><th class="mb-num">Свои</th><th>Кредит</th><th class="mb-num">Раб. мест</th><th>Банкир</th><th>Фото</th><th>Статус</th><th>Проверка админа</th></tr></thead><tbody>${body || '<tr><td colspan="15" class="loading">Нет микропроектов за выбранный период</td></tr>'}</tbody></table></div>
+    <div class="mb-count">Показано ${slice.length} из ${allRows.length}</div>${mbObPager(allRows.length, PS, 'mbRenderObProj')}`;
 }
 function mbRenderObProjKeep() { const el = document.activeElement; const pos = el && el.selectionStart; mbRenderObProj(); const inp = document.querySelector('#obhodListBox .mb-filters input'); if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch (e) {} } }
 function mbObProjExport() {
   if (typeof XLSX === 'undefined') { alert('Библиотека Excel ещё загружается. Повторите через несколько секунд.'); return; }
   const rows = mbPrjRows();
-  const data = [['№', 'Дата', 'Махалля', 'Проект', 'Инициатор', 'Телефон', 'Статус субъекта', 'Отрасль', 'Стоимость, сум', 'Свои средства, сум', 'Нужен кредит, сум', 'Субсидия', 'Рабочих мест', 'Банкир', 'Фото', 'Статус']];
-  rows.forEach((p, i) => data.push([i + 1, p.createdAt, p.mahalla, p.projectName, p.applicantName, p.applicantContact, p.subjectStatus, p.industry, mbNum(p.totalCost), mbNum(p.ownFunds), mbPrjCredit(p) || '', p.needsSubsidy, mbNum(p.newJobs), (p.banker || '') + (p.banker && mbIsArchived(p.banker) ? ' (уволен)' : ''), mbPrjPhotos(p), p.status]));
-  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols'] = [5, 17, 26, 30, 28, 16, 16, 18, 15, 15, 15, 10, 10, 28, 7, 16].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:P' + data.length };
+  const data = [['№', 'Дата', 'Махалля', 'Проект', 'Инициатор', 'Телефон', 'Статус субъекта', 'Отрасль', 'Стоимость, сум', 'Свои средства, сум', 'Нужен кредит, сум', 'Субсидия', 'Рабочих мест', 'Банкир', 'Фото', 'Статус', 'Проверка админа', 'Основание / причина', 'Комментарий проверки', 'Проверил']];
+  rows.forEach((p, i) => data.push([i + 1, p.createdAt, p.mahalla, p.projectName, p.applicantName, p.applicantContact, p.subjectStatus, p.industry, mbNum(p.totalCost), mbNum(p.ownFunds), mbPrjCredit(p) || '', p.needsSubsidy, mbNum(p.newJobs), (p.banker || '') + (p.banker && mbIsArchived(p.banker) ? ' (уволен)' : ''), mbPrjPhotos(p), p.status, ...mbChkXl(p.check)]));
+  const wb = XLSX.utils.book_new(); const ws = XLSX.utils.aoa_to_sheet(data); ws['!cols'] = [5, 17, 26, 30, 28, 16, 16, 18, 15, 15, 15, 10, 10, 28, 7, 16, 18, 34, 30, 20].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:T' + data.length };
   XLSX.utils.book_append_sheet(wb, ws, 'Микропроекты'); XLSX.writeFile(wb, 'Микропроекты ' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
@@ -17658,8 +17724,9 @@ function mbOpenVisit(enc) {
     ['Скорость между визитами', '', !fl.some(f => f.code === 'impossible_speed')],
     ['Доход и статус', '', !fl.some(f => f.code === 'income_status')]
   ].map(c => `<div class="mb-chk ${c[2] ? 'ok' : 'bad'}"><i></i><span>${c[0]}</span><b>${c[1]}</b></div>`).join('');
+  const chkBlock = (mbIsAdm() && !mbIsRetry(s) && MB_BIZ_YES.indexOf(s.businessInterest) !== -1) ? '<div id="mbChkBox"></div>' : '';
   const body = `
-    <div class="mb-sec">Проверки</div>${checks}
+    ${chkBlock}<div class="mb-sec">Проверки</div>${checks}
     ${fl.length ? '<div class="mb-sec">Флаги</div>' + fl.map(f => `<div class="mb-flagline">${mbEsc(f.message || MB_FLAG_LABEL[f.code] || f.code)}</div>`).join('') : ''}
     ${photos.length ? '<div class="mb-sec">Фото</div><div class="mb-photos">' + photos.map(u => `<a href="${mbEsc(u)}" target="_blank" rel="noopener"><img src="${mbEsc(u)}" loading="lazy"></a>`).join('') + '</div>' : ''}
     <div class="mb-sec">Визит</div>
@@ -17684,6 +17751,7 @@ function mbOpenVisit(enc) {
   document.getElementById('mbVisitBody').innerHTML = body;
   document.getElementById('mbVisitFoot').innerHTML = foot;
   document.getElementById('mbVisitOverlay').classList.add('open');
+  if (chkBlock) mbChkOpen('visit', s.id);
   document.getElementById('mbVisitDrawer').classList.add('open');
 }
 function mbCloseVisit() {
@@ -18021,7 +18089,7 @@ var MB_ADM_UZ = {"микропроектов":"mikroloyihalar","Статус с�
 "Удалён":"O‘chirilgan","Удалена":"O‘chirilgan","Кем":"Kim tomonidan","Махалли при удалении":"O‘chirilgandagi mahallalar","Банкир при удалении":"O‘chirilgandagi bankir","Окончательное удаление":"Yakuniy o‘chirish","Восстановить":"Tiklash","Архив пуст":"Arxiv bo‘sh","завтра":"ertaga","сегодня":"bugun","виз.":"tashrif",
 "Был закреплён":"Avval biriktirilgan","Назначить":"Tayinlash","Все махалли закреплены":"Barcha mahallalar biriktirilgan","Нет махаллей":"Mahallalar yo‘q",
 "Поиск по названию":"Nomi bo‘yicha qidirish","Все районы":"Barcha tumanlar","Все банкиры":"Barcha bankirlar","Все махалли":"Barcha mahallalar","Все статусы":"Barcha maqomlar","Переход данных":"Ma‘lumotlar o‘tishi","В махалле":"Mahallada","Новому":"Yangisiga","Население":"Aholi","Семёрка":"Yettilik","Действия":"Amallar","вне плана":"reja tashqarisida","изменено":"o‘zgargan","Отменить":"Bekor qilish","Отмена":"Bekor qilish","Сохранить":"Saqlash","данные перейдут новому банкиру:":"ma‘lumotlar yangi bankirga o‘tadi:","Снять банкира":"Bankirni olib tashlash","Поиск банкира":"Bankirni qidirish","Сейчас:":"Hozir:","Банкир не назначен":"Bankir biriktirilmagan","Не найдено":"Topilmadi",
-"Новая махалля":"Yangi mahalla","обновлено":"yangilangan","Основное":"Asosiy","Код махалли *":"Mahalla kodi *","Код махалли":"Mahalla kodi","Код":"Kod","Код: ровно 7 цифр, например 3501002":"Kod: roppa-rosa 7 ta raqam, masalan 3501002","Махалля с таким кодом уже есть:":"Bunday kodli mahalla allaqachon mavjud:","7 дней":"7 kun","интересуются бизнесом":"biznesga qiziqadi","от опрошенных домов":"so‘ralgan uylardan","нужна поддержка":"qo‘llab-quvvatlash kerak","проект создан":"loyiha yaratilgan","ещё без проекта":"hali loyihasiz","По сферам":"Sohalar bo‘yicha","Вид поддержки":"Qo‘llab-quvvatlash turi","Все сферы":"Barcha sohalar","Проект: все":"Loyiha: hammasi","Проект создан":"Loyiha yaratilgan","Проекта нет":"Loyiha yo‘q","Поиск: ФИО, адрес, телефон, идея":"Qidiruv: F.I.Sh., manzil, telefon, g‘oya","Идея":"G‘oya","Участок":"Uchastka","Создан":"Yaratilgan","общая сумма, млн сум":"umumiy summa, mln so‘m","свои средства, млн":"o‘z mablag‘i, mln","нужен кредит, млн":"kredit kerak, mln","новых рабочих мест":"yangi ish o‘rinlari","нужна субсидия":"subsidiya kerak","По отраслям (млн сум)":"Sohalar bo‘yicha (mln so‘m)","По банкирам":"Bankirlar bo‘yicha","Все отрасли":"Barcha sohalar","Поиск: проект, инициатор, телефон":"Qidiruv: loyiha, tashabbuskor, telefon","Свои":"O‘z","Раб. мест":"Ish o‘rinlari","Нужен":"Kerak","Не нужен":"Kerak emas","Нет данных за выбранный период":"Tanlangan davrda ma’lumot yo‘q","Нет микропроектов за выбранный период":"Tanlangan davrda mikroloyihalar yo‘q","Повторный":"Qayta","уволен":"ishdan bo‘shagan","Визитов за месяц":"Oylik tashriflar","Визитов за всё время":"Butun davr tashriflari","Охват текущих махаллей":"Joriy mahallalar qamrovi","Опрошено дворов":"So‘ralgan hovlilar","Название в таблице":"Jadvaldagi nomi","Название *":"Nomi *","Название":"Nomi","Район":"Tuman","Банкир:":"Bankir:","Банкир":"Bankir","Улицы":"Ko‘chalar","Данные махалли":"Mahalla ma‘lumotlari","Данные обхода":"Aylanish ma‘lumotlari","Данные":"Ma‘lumotlar","Семей":"Oilalar","Безработных 18+":"Ishsizlar 18+","Безработных":"Ishsizlar","безработных":"ishsizlar","Мигрантов":"Migrantlar","Инвалидов":"Nogironlar","В соцреестре":"Ijtimoiy reyestrda","В реестре":"Reyestrda","План микропроектов":"Mikroloyihalar rejasi",
+"Новая махалля":"Yangi mahalla","обновлено":"yangilangan","Основное":"Asosiy","Код махалли *":"Mahalla kodi *","Код махалли":"Mahalla kodi","Код":"Kod","Код: ровно 7 цифр, например 3501002":"Kod: roppa-rosa 7 ta raqam, masalan 3501002","Махалля с таким кодом уже есть:":"Bunday kodli mahalla allaqachon mavjud:","7 дней":"7 kun","Проверка админа":"Admin tekshiruvi","Не проверено":"Tekshirilmagan","✓ Подтверждено":"✓ Tasdiqlangan","✕ Не подтверждено":"✕ Tasdiqlanmagan","☎ Не дозвонились":"☎ Telefon ko‘tarmadi","Проверка: все":"Tekshiruv: hammasi","Подтверждено":"Tasdiqlangan","Не подтверждено":"Tasdiqlanmagan","Не дозвонились":"Telefon ko‘tarmadi","Статус:":"Holat:","✓ Подтвердить":"✓ Tasdiqlash","Подтвердить":"Tasdiqlash","ОСНОВАНИЕ (можно несколько)":"ASOS (bir nechta mumkin)","ПРИЧИНА (одна)":"SABAB (bitta)","Подтвердил по звонку":"Qo‘ng‘iroq orqali tasdiqladi","Проверено на месте":"Joyida tekshirildi","Фото соответствует":"Rasm mos keladi","Есть участок / помещение":"Uchastka / xona bor","Есть оборудование":"Uskuna bor","Другое…":"Boshqa…","Другой человек":"Boshqa odam","Обманная информация":"Yolg‘on ma’lumot","Отказался от бизнеса":"Biznesdan voz kechdi","Неверный номер":"Noto‘g‘ri raqam","Не тот адрес":"Manzil boshqa","Дубль":"Takror","Данные не совпали":"Ma’lumotlar mos kelmadi","Комментарий (необязательно)":"Izoh (ixtiyoriy)","Комментарий (обязательно)":"Izoh (majburiy)","Сохранить проверку":"Tekshiruvni saqlash","Сохранение...":"Saqlanmoqda...","История проверок":"Tekshiruvlar tarixi","Проверка интереса к бизнесу":"Biznesga qiziqishni tekshirish","Проверка микропроекта":"Mikroloyihani tekshirish","☎ Позвонить":"☎ Qo‘ng‘iroq qilish","интересуются бизнесом":"biznesga qiziqadi","от опрошенных домов":"so‘ralgan uylardan","нужна поддержка":"qo‘llab-quvvatlash kerak","проект создан":"loyiha yaratilgan","ещё без проекта":"hali loyihasiz","По сферам":"Sohalar bo‘yicha","Вид поддержки":"Qo‘llab-quvvatlash turi","Все сферы":"Barcha sohalar","Проект: все":"Loyiha: hammasi","Проект создан":"Loyiha yaratilgan","Проекта нет":"Loyiha yo‘q","Поиск: ФИО, адрес, телефон, идея":"Qidiruv: F.I.Sh., manzil, telefon, g‘oya","Идея":"G‘oya","Участок":"Uchastka","Создан":"Yaratilgan","общая сумма, млн сум":"umumiy summa, mln so‘m","свои средства, млн":"o‘z mablag‘i, mln","нужен кредит, млн":"kredit kerak, mln","новых рабочих мест":"yangi ish o‘rinlari","нужна субсидия":"subsidiya kerak","По отраслям (млн сум)":"Sohalar bo‘yicha (mln so‘m)","По банкирам":"Bankirlar bo‘yicha","Все отрасли":"Barcha sohalar","Поиск: проект, инициатор, телефон":"Qidiruv: loyiha, tashabbuskor, telefon","Свои":"O‘z","Раб. мест":"Ish o‘rinlari","Нужен":"Kerak","Не нужен":"Kerak emas","Нет данных за выбранный период":"Tanlangan davrda ma’lumot yo‘q","Нет микропроектов за выбранный период":"Tanlangan davrda mikroloyihalar yo‘q","Повторный":"Qayta","уволен":"ishdan bo‘shagan","Визитов за месяц":"Oylik tashriflar","Визитов за всё время":"Butun davr tashriflari","Охват текущих махаллей":"Joriy mahallalar qamrovi","Опрошено дворов":"So‘ralgan hovlilar","Название в таблице":"Jadvaldagi nomi","Название *":"Nomi *","Название":"Nomi","Район":"Tuman","Банкир:":"Bankir:","Банкир":"Bankir","Улицы":"Ko‘chalar","Данные махалли":"Mahalla ma‘lumotlari","Данные обхода":"Aylanish ma‘lumotlari","Данные":"Ma‘lumotlar","Семей":"Oilalar","Безработных 18+":"Ishsizlar 18+","Безработных":"Ishsizlar","безработных":"ishsizlar","Мигрантов":"Migrantlar","Инвалидов":"Nogironlar","В соцреестре":"Ijtimoiy reyestrda","В реестре":"Reyestrda","План микропроектов":"Mikroloyihalar rejasi",
 "Председатель махалли":"Mahalla raisi","Помощник хокима":"Hokim yordamchisi","Соцработник":"Ijtimoiy xodim","Лидер молодёжи":"Yoshlar yetakchisi","Активист (женщины)":"Faol (ayollar)","Налоговый инспектор":"Soliq inspektori","Инспектор профилактики":"Profilaktika inspektori","Фамилия Имя":"Familiya Ism","Телефон":"Telefon",
 "Визиты по банкирам":"Bankirlar bo‘yicha tashriflar","Визитов нет":"Tashriflar yo‘q","История закреплений":"Biriktirishlar tarixi","Записей нет":"Yozuvlar yo‘q","Такая махалля уже есть":"Bunday mahalla allaqachon mavjud","Открыть существующую":"Mavjudini ochish",
 "Махалля уйдёт в архив. Визиты и данные сохраняются, банкир открепляется. Из архива махаллю можно восстановить.":"Mahalla arxivga o‘tadi. Tashriflar va ma‘lumotlar saqlanadi, bankir biriktirilmaydi. Mahallani arxivdan tiklash mumkin.",
@@ -18061,7 +18129,7 @@ function mbAdmTrStr(s) {
   return r.replace(MB_ADM_CACHE, m => MB_ADM_UZ[m]);
 }
 var mbAdmOrig = new WeakMap(), mbAdmDone = new WeakMap(), mbAdmAttrOrig = new WeakMap();
-var MB_ADM_ROOTS = '#mahallaPage,#mbBankDrawer,#mbModalBg,#mbVisitDrawer';
+var MB_ADM_ROOTS = '#mahallaPage,#mbBankDrawer,#mbModalBg,#mbVisitDrawer,#microprojectDetailDrawer';
 function mbAdmActive() { return (localStorage.getItem('msbAppLang') || 'ru') === 'uz' && !document.body.classList.contains('role-mahalla-banker'); }
 function mbAdmSkip(n) { const t = n.parentNode && n.parentNode.nodeName; return t === 'TEXTAREA' || t === 'SCRIPT' || t === 'STYLE'; }
 function mbAdmText(n) {
@@ -20619,6 +20687,7 @@ function openMicroprojectDetail(id) {
   if (!p) { alert('Проект не найден'); return; }
 
   mdCurrentId = id;
+  { const bx = document.getElementById('mbChkBoxP'); if (bx) { bx.innerHTML = ''; if (mbIsAdm()) mbChkOpen('project', id); } }
 
   document.getElementById('mdName').innerText = safe(p.projectName);
   document.getElementById('mdSubtitle').innerText = safe(p.mahalla) + ' • ' + safe(p.applicantName);
