@@ -344,6 +344,7 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .summary-card .small{font-size:13px;color:var(--muted);margin-bottom:7px;}
 .summary-card .big{font-size:22px;font-weight:800;}
 .client-table-wrap{overflow-x:auto;}
+.mb-kpi-wrap{max-height:calc(100vh - 120px);overflow:auto;}.mb-kpi-wrap .mb-table th{position:sticky;top:0;z-index:3;background:#fff;box-shadow:0 1px 0 var(--line);}
 .nowrap{white-space:nowrap;}
 /* Широкая таблица NPL (юр.лица) — показывает все поля из выгрузки,
    поэтому не сжимаем колонки под ширину экрана, а даём прокрутку
@@ -17018,7 +17019,7 @@ function mbBankKpis(per) {
     const dists = Array.from(new Set(r.ids.map(id => mah[id] && mah[id].district).filter(Boolean)));
     return { name: r.name, login: r.login, ids: r.ids, houses: r.houses, district: dists.join(', '), visits: inP.length, done: done.length, retry: inP.length - done.length,
       cover: mbCoverOf(r, mine.filter(s => !mbIsRetry(s) && s.review !== 'rejected')), interest: done.filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1).length,
-      proj: prP.length, sum: prP.reduce((x, p) => x + mbNum(p.totalCost), 0), projAll: pr.length, plan, last, lastAct, today: todayN, mine };
+      proj: prP.length, sum: prP.reduce((x, p) => x + mbNum(p.totalCost), 0), projAll: pr.length, plan, last, lastAct, today: todayN, total: mine.length, mine };
   });
   const ranked = out.filter(x => x.houses > 0).sort((x, y) => y.visits - x.visits || y.cover - x.cover);
   const n = ranked.length;
@@ -17127,7 +17128,7 @@ function mbBankKpiHtml() {
   const dists = Array.from(new Set(all.flatMap(x => x.district.split(', ')).filter(Boolean))).sort();
   let rows = all.filter(x => (!mbStQ || x.name.toLowerCase().includes(mbStQ.toLowerCase())) && (!mbStDist || x.district.split(', ').indexOf(mbStDist) !== -1));
   const k = mbStSort.k, dir = mbStSort.d;
-  rows.sort((x, y) => { const a = x[k], b = y[k]; return (typeof a === 'string' ? a.localeCompare(b) : (a - b)) * dir; });
+  rows.sort((x, y) => { const a = x[k], b = y[k]; const c = (typeof a === 'string' ? a.localeCompare(b) : (a - b)) * dir; return c || (y.total - x.total) || y.visits - x.visits; });
   const th = (key, label, num) => `<th class="${num ? 'mb-num ' : ''}st-sort" onclick="mbStSortBy('${key}')">${label}${k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
   const gl = { g: 'Отлично', a: 'Средне', r: 'Слабо' };
   const endDay = mbStPer === 'today' && new Date().getHours() >= 16;
@@ -17142,12 +17143,12 @@ function mbBankKpiHtml() {
     else if (ms >= t0 - 86400000) t = 'вчера, ' + new Date(ms).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     else t = Math.floor((t0 - ms) / 86400000) + 1 + ' дн. назад';
     c = m <= 30 ? 'g' : m <= 1440 ? 'y' : 'r';
-    return '<span class="mb-dot ' + c + '"></span>' + t;
+    return '<span style="white-space:nowrap"><span class="mb-dot ' + c + '"></span>' + t + '</span>';
   };
   const lastTxt = ms => { if (!ms) return '—'; const days = Math.floor((Date.now() - ms) / 86400000); return days >= 3 ? `<b class="st-late">${days} дн. назад</b>` : new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
   return `<div class="panel"><div class="mb-head"><h2>KPI банкиров</h2><div style="display:flex;gap:8px"><button class="btn" id="mbEffBtn" onclick="mbEffXlsx()">Скачать Excel</button></div></div><div id="mbPassportSlot"></div>
       <div class="mb-filters2">${mbPeriodHtml(mbStPer, 'mbStSetPer')}<input class="input" style="max-width:240px" placeholder="Поиск по ФИО" value="${mbEsc(mbStQ)}" oninput="mbStQ=this.value;mbStSearchDeb()"><select class="select" style="max-width:200px" onchange="mbStDist=this.value;mbRenderStats()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbStDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select></div>
-      <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th>${th('name', 'Банкир')}<th>Махалля</th>${th('houses', 'Домов', 1)}${th('today', 'Сегодня', 1)}${th('visits', 'Визитов', 1)}${th('cover', 'Охват', 1)}${th('done', 'Опрошено', 1)}${th('interest', 'Интерес', 1)}${th('proj', 'Проектов', 1)}${th('sum', 'Сумма, млн', 1)}${th('retry', 'Повторно', 1)}${th('projAll', 'План проектов', 1)}${th('last', 'Последний визит')}${th('lastAct', 'Последняя активность')}<th>Оценка</th></tr></thead><tbody>
+      <div class="client-table-wrap mb-kpi-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th>${th('name', 'Банкир')}<th>Махалля</th>${th('houses', 'Домов', 1)}${th('today', 'Сегодня', 1)}${th('visits', 'Визитов', 1)}${th('cover', 'Охват', 1)}${th('done', 'Опрошено', 1)}${th('interest', 'Интерес', 1)}${th('proj', 'Проектов', 1)}${th('sum', 'Сумма, млн', 1)}${th('retry', 'Повторно', 1)}${th('projAll', 'План проектов', 1)}${th('last', 'Последний визит')}${th('lastAct', 'Последняя активность')}<th>Оценка</th></tr></thead><tbody>
       ${rows.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td class="mb-num">${i + 1}</td><td><div class="mb-nm">${mbAv(x.name, x.login, 34)}<b>${mbEsc(mbShortName(x.name))}</b></div></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', ') || '—')}</td><td class="mb-num">${mbFmt(x.houses)}</td><td class="mb-num"><span class="mb-today${x.today ? '' : ' z'}">${x.today}</span></td><td class="mb-num${x.visits === 0 ? ' mb-red' : ''}"><span class="${lowV(x) ? 'mb-box' : ''}"><b>${x.visits}</b></span></td><td class="mb-num">${mbFmt1(x.cover)}%</td><td class="mb-num">${x.done}</td><td class="mb-num">${x.interest}</td><td class="mb-num">${x.proj}</td><td class="mb-num">${mbFmt1(x.sum / 1e6)}</td><td class="mb-num">${x.retry}</td><td class="mb-num">${x.plan ? x.projAll + ' / ' + mbFmt(x.plan) + ' · ' + Math.round(x.projAll / x.plan * 100) + '%' : x.projAll}</td><td><span class="${earlyL(x) ? 'mb-box' : ''}">${lastTxt(x.last)}</span></td><td>${actTxt(x.lastAct)}</td><td><span class="mb-bd ${x.grade}">${gl[x.grade]}</span></td></tr>`).join('') || '<tr><td colspan="14">Нет данных</td></tr>'}
       </tbody></table></div></div>`;
 }
