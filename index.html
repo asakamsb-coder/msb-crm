@@ -1588,13 +1588,17 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .st-ps{display:inline-block;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:800;background:#E3F5EA;color:#14804A}.st-ps.w{background:#FDECEA;color:#B3261E}
 .st-od{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.st-od .it{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:9px 0;border-top:1px solid #EEF0F3;font-size:12.5px}.st-od .it b{font-size:15px;text-align:right}.st-od .it .pb{grid-column:1/3;height:4px;background:#EEF0F3;border-radius:3px;overflow:hidden}.st-od .it .pb u{display:block;height:100%;background:#9BA0AB}.st-od .it.r b{color:#B71F17}.st-od .it.r .pb u{background:#B71F17}.st-od small{color:#9BA0AB;font-size:11px;font-weight:600;margin-left:4px}.st-d.mu{color:#9BA0AB}
 @media(max-width:1100px){.st-kp,.st-two,.st-row3{grid-template-columns:1fr}.st-grp{padding:0 0 14px !important;border:0 !important}}
-.mb-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex:none;overflow:hidden;color:#fff;font-weight:800;vertical-align:middle;box-shadow:0 0 0 1px var(--line);}.mb-av{position:relative;}.mb-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}.mb-nm{display:flex;align-items:center;gap:10px;min-width:0;}.mb-nm b{white-space:nowrap;}
+.mb-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex:none;overflow:hidden;color:#fff;font-weight:800;vertical-align:middle;box-shadow:0 0 0 1px var(--line);}.mb-av.zm{cursor:zoom-in;}.mb-zoom{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:400;display:none;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;}.mb-zoom.open{display:flex;}.mb-zoom img{max-width:min(92vw,720px);max-height:88vh;border-radius:16px;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,.5);}.mb-zoom b{position:absolute;top:14px;right:20px;color:#fff;font-size:34px;font-weight:400;line-height:1;}
+.mb-av{position:relative;}.mb-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}.mb-nm{display:flex;align-items:center;gap:10px;min-width:0;}.mb-nm b{white-space:nowrap;}
 .mb-table{width:100%;border-collapse:collapse;font-size:13.5px;}
 .mb-table th{text-align:left;font-weight:700;color:var(--muted);font-size:12px;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
 .mb-table td{padding:11px 12px;border-bottom:1px solid var(--line);}
 .mb-table tr:last-child td{border-bottom:none;}
 .mb-num{text-align:right !important;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .mb-red{color:#B3261E;font-weight:700;background:#FBE9E7;}
+.mb-box{display:inline-block;white-space:nowrap;border:2px solid #E11D1D;border-radius:9px;padding:2px 9px;color:#B3261E;font-weight:800;background:#FFF5F5;}
+.mb-today{display:inline-block;min-width:30px;text-align:center;background:#E8F1FF;color:#1D4ED8;border-radius:9px;padding:2px 9px;font-weight:800;}.mb-today.z{background:#F1F2F4;color:#8A8F98;}
+.mb-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:baseline;}.mb-dot.g{background:#22C55E}.mb-dot.y{background:#F59E0B}.mb-dot.r{background:#EF4444}.mb-dot.gr{background:#C3C7CD}
 .mb-warn{color:#B76E00;}
 .mb-row{cursor:pointer;}.mb-row:hover td{background:#FAFAF7;}
 .mb-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
@@ -16285,6 +16289,7 @@ function mbApplyBundle(b) {
   mbBankArchive = b.archive || [];
   mbHist = b.history || [];
   mbMahArch = b.mahArchive || [];
+  mbSeen = b.seen || {};
   mbMicro = (Array.isArray(b.micro) ? b.micro : []).filter(p => !mbIsArchived(p.banker));
 }
 // Справочники (махалли, банкиры, архив, история, микропроекты) — один запрос
@@ -16297,7 +16302,7 @@ async function mbCoreLoad(force) {
   allMahallas = mahallas || [];
   allMicroprojects = micro || [];
   mbBankUsers = (users || []).filter(u => u.role === 'MAHALLA_BANKER' && u.active !== false);
-  if (!isAdmin) { mbBankArchive = []; mbHist = []; mbMahArch = []; }
+  if (!isAdmin) { mbBankArchive = []; mbHist = []; mbMahArch = []; mbSeen = {}; }
   mbMicro = (Array.isArray(micro) ? micro : []).filter(p => !mbIsArchived(p.banker));
   mahallaDataLoaded = true;
 }
@@ -16375,11 +16380,19 @@ function mbMahs() {
 }
 function mbArchKeys() { const k = new Set(); (mbBankArchive || []).forEach(a => { k.add(mbNorm(a.fullName)); k.add(mbNorm(a.login)); }); k.delete(''); return k; }
 function mbIsArchived(name) { const n = mbNorm(name); return !!n && mbArchKeys().has(n); }
+var mbSeen = {};
 const MB_AV_COLORS = ['#8a5cf6', '#0ea5a4', '#e8590c', '#2f6fed', '#c2255c', '#2b8a3e', '#7048e8', '#d9480f'];
 function mbUserPhoto(name, login) {
   const a = mbNorm(name), b = mbNorm(login);
   const u = (mbBankUsers || []).find(x => (a && mbNorm(x.fullName) === a) || (b && mbNorm(x.login) === b) || (a && mbNorm(x.login) === a));
   return u && /^https?:/.test(u.photoUrl || '') ? u.photoUrl : '';
+}
+function mbPhotoZoom(ev, el) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  const img = el && el.querySelector('img'); if (!img) return;
+  let z = document.getElementById('mbZoom');
+  if (!z) { z = document.createElement('div'); z.id = 'mbZoom'; z.className = 'mb-zoom'; z.innerHTML = '<b>×</b><img alt="">'; z.onclick = () => z.classList.remove('open'); document.body.appendChild(z); document.addEventListener('keydown', e => { if (e.key === 'Escape') z.classList.remove('open'); }); }
+  z.querySelector('img').src = img.src; z.classList.add('open');
 }
 function mbAv(name, login, size) {
   size = size || 32;
@@ -16389,7 +16402,7 @@ function mbAv(name, login, size) {
   const bg = MB_AV_COLORS[h % MB_AV_COLORS.length];
   const ph = mbUserPhoto(name, login);
   const st = 'width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.38) + 'px;background:' + bg;
-  return '<span class="mb-av" style="' + st + '">' + mbEsc(ini) + (ph ? '<img src="' + mbEsc(ph) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
+  return '<span class="mb-av' + (ph ? ' zm' : '') + '" style="' + st + '"' + (ph ? ' onclick="mbPhotoZoom(event,this)"' : '') + '>' + mbEsc(ini) + (ph ? '<img src="' + mbEsc(ph) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove(\'zm\');this.parentNode.removeAttribute(\'onclick\');this.remove()">' : '') + '</span>';
 }
 function mbBankList() {
   const users = mbBankUsers;
@@ -16987,7 +17000,7 @@ function mbStRange(per) {
 function mbMobileRows(withArch) { return (allObhodSurveys || []).filter(s => (withArch || !mbIsArchived(s.createdBy)) && mbIsPhysical(s) && (s.source === 'mobile' || s.visitStatus) && s.review !== 'rejected'); }
 function mbBankKeys(r) { return [mbNorm(r.name), mbNorm(r.login)].filter(Boolean); }
 function mbBankKpis(per) {
-  const [a, b] = mbStRange(per);
+  const [a, b] = mbStRange(per); const d0 = mbStRange('today')[0];
   const list = mbBankList(); const rows = mbMobileRows(); const micro = (mbMicro || []).filter(p => p.banker);
   const mah = {}; mbMahs().forEach(m => { mah[m.id] = m; });
   const out = list.map(r => {
@@ -16998,11 +17011,14 @@ function mbBankKpis(per) {
     const pr = micro.filter(p => keys.indexOf(mbNorm(p.banker)) !== -1);
     const prP = pr.filter(p => { const t = mbMsOf(p.createdAt); return t >= a && t < b; });
     const last = mine.reduce((m, s) => Math.max(m, Number(s.finishedAt) || 0), 0);
+    const todayN = mine.filter(s => (Number(s.finishedAt) || 0) >= d0).length;
+    const seenAt = Math.max(0, ...keys.map(k => Number(mbSeen[k]) || 0));
+    const lastAct = Math.max(last, seenAt);
     const plan = r.ids.reduce((x, id) => x + (mah[id] ? mbNum(mah[id].microprojectsPlan) : 0), 0);
     const dists = Array.from(new Set(r.ids.map(id => mah[id] && mah[id].district).filter(Boolean)));
     return { name: r.name, login: r.login, ids: r.ids, houses: r.houses, district: dists.join(', '), visits: inP.length, done: done.length, retry: inP.length - done.length,
       cover: mbCoverOf(r, mine.filter(s => !mbIsRetry(s) && s.review !== 'rejected')), interest: done.filter(s => MB_BIZ_YES.indexOf(s.businessInterest) !== -1).length,
-      proj: prP.length, sum: prP.reduce((x, p) => x + mbNum(p.totalCost), 0), projAll: pr.length, plan, last, mine };
+      proj: prP.length, sum: prP.reduce((x, p) => x + mbNum(p.totalCost), 0), projAll: pr.length, plan, last, lastAct, today: todayN, mine };
   });
   const ranked = out.filter(x => x.houses > 0).sort((x, y) => y.visits - x.visits || y.cover - x.cover);
   const n = ranked.length;
@@ -17114,11 +17130,25 @@ function mbBankKpiHtml() {
   rows.sort((x, y) => { const a = x[k], b = y[k]; return (typeof a === 'string' ? a.localeCompare(b) : (a - b)) * dir; });
   const th = (key, label, num) => `<th class="${num ? 'mb-num ' : ''}st-sort" onclick="mbStSortBy('${key}')">${label}${k === key ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
   const gl = { g: 'Отлично', a: 'Средне', r: 'Слабо' };
+  const endDay = mbStPer === 'today' && new Date().getHours() >= 16;
+  const lowV = x => endDay && x.visits < 20;
+  const earlyL = x => endDay && x.last >= mbStRange('today')[0] && new Date(x.last).getHours() < 16;
+  const actTxt = ms => {
+    if (!ms) return '<span class="mb-dot gr"></span>нет входов';
+    const m = Math.floor((Date.now() - ms) / 60000);
+    const t0 = mbStRange('today')[0];
+    let c = 'g', t;
+    if (m < 1) t = 'только что'; else if (m < 60) t = m + ' мин назад'; else if (ms >= t0) t = Math.floor(m / 60) + ' ч назад';
+    else if (ms >= t0 - 86400000) t = 'вчера, ' + new Date(ms).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    else t = Math.floor((t0 - ms) / 86400000) + 1 + ' дн. назад';
+    c = m <= 30 ? 'g' : m <= 1440 ? 'y' : 'r';
+    return '<span class="mb-dot ' + c + '"></span>' + t;
+  };
   const lastTxt = ms => { if (!ms) return '—'; const days = Math.floor((Date.now() - ms) / 86400000); return days >= 3 ? `<b class="st-late">${days} дн. назад</b>` : new Date(ms).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); };
-  return `<div class="panel"><div class="mb-head"><h2>KPI банкиров</h2><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="mbUploadBtn" style="display:none" onclick="mbTogglePassport()">Загрузить паспорта</button></div></div><div id="mbPassportSlot"></div>
+  return `<div class="panel"><div class="mb-head"><h2>KPI банкиров</h2><div style="display:flex;gap:8px"><button class="btn" id="mbEffBtn" onclick="mbEffXlsx()">Скачать Excel</button></div></div><div id="mbPassportSlot"></div>
       <div class="mb-filters2">${mbPeriodHtml(mbStPer, 'mbStSetPer')}<input class="input" style="max-width:240px" placeholder="Поиск по ФИО" value="${mbEsc(mbStQ)}" oninput="mbStQ=this.value;mbStSearchDeb()"><select class="select" style="max-width:200px" onchange="mbStDist=this.value;mbRenderStats()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbStDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select></div>
-      <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th>${th('name', 'Банкир')}<th>Махалля</th>${th('houses', 'Домов', 1)}${th('visits', 'Визитов', 1)}${th('cover', 'Охват', 1)}${th('done', 'Опрошено', 1)}${th('interest', 'Интерес', 1)}${th('proj', 'Проектов', 1)}${th('sum', 'Сумма, млн', 1)}${th('retry', 'Повторно', 1)}${th('projAll', 'План проектов', 1)}${th('last', 'Последний визит')}<th>Оценка</th></tr></thead><tbody>
-      ${rows.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td class="mb-num">${i + 1}</td><td><div class="mb-nm">${mbAv(x.name, x.login, 34)}<b>${mbEsc(mbShortName(x.name))}</b></div></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', ') || '—')}</td><td class="mb-num">${mbFmt(x.houses)}</td><td class="mb-num${x.visits === 0 ? ' mb-red' : ''}"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td><td class="mb-num">${x.done}</td><td class="mb-num">${x.interest}</td><td class="mb-num">${x.proj}</td><td class="mb-num">${mbFmt1(x.sum / 1e6)}</td><td class="mb-num">${x.retry}</td><td class="mb-num">${x.plan ? x.projAll + ' / ' + mbFmt(x.plan) + ' · ' + Math.round(x.projAll / x.plan * 100) + '%' : x.projAll}</td><td>${lastTxt(x.last)}</td><td><span class="mb-bd ${x.grade}">${gl[x.grade]}</span></td></tr>`).join('') || '<tr><td colspan="14">Нет данных</td></tr>'}
+      <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th>${th('name', 'Банкир')}<th>Махалля</th>${th('houses', 'Домов', 1)}${th('today', 'Сегодня', 1)}${th('visits', 'Визитов', 1)}${th('cover', 'Охват', 1)}${th('done', 'Опрошено', 1)}${th('interest', 'Интерес', 1)}${th('proj', 'Проектов', 1)}${th('sum', 'Сумма, млн', 1)}${th('retry', 'Повторно', 1)}${th('projAll', 'План проектов', 1)}${th('last', 'Последний визит')}${th('lastAct', 'Последняя активность')}<th>Оценка</th></tr></thead><tbody>
+      ${rows.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td class="mb-num">${i + 1}</td><td><div class="mb-nm">${mbAv(x.name, x.login, 34)}<b>${mbEsc(mbShortName(x.name))}</b></div></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', ') || '—')}</td><td class="mb-num">${mbFmt(x.houses)}</td><td class="mb-num"><span class="mb-today${x.today ? '' : ' z'}">${x.today}</span></td><td class="mb-num${x.visits === 0 ? ' mb-red' : ''}"><span class="${lowV(x) ? 'mb-box' : ''}"><b>${x.visits}</b></span></td><td class="mb-num">${mbFmt1(x.cover)}%</td><td class="mb-num">${x.done}</td><td class="mb-num">${x.interest}</td><td class="mb-num">${x.proj}</td><td class="mb-num">${mbFmt1(x.sum / 1e6)}</td><td class="mb-num">${x.retry}</td><td class="mb-num">${x.plan ? x.projAll + ' / ' + mbFmt(x.plan) + ' · ' + Math.round(x.projAll / x.plan * 100) + '%' : x.projAll}</td><td><span class="${earlyL(x) ? 'mb-box' : ''}">${lastTxt(x.last)}</span></td><td>${actTxt(x.lastAct)}</td><td><span class="mb-bd ${x.grade}">${gl[x.grade]}</span></td></tr>`).join('') || '<tr><td colspan="14">Нет данных</td></tr>'}
       </tbody></table></div></div>`;
 }
 let mbOdPer = 'all';
@@ -17451,6 +17481,204 @@ function xlMahStats(d) {
     const bn = String(m.bankers || '').split(/[,;\n]/).map(x => x.trim()).filter(x => x && !mbIsArchived(x)).map(mbShortName).join(', ');
     return { name: m.name, district: m.district || '', banker: bn, pop: mbNum(m.population), houses, done: e.done, cover: houses ? e.done / houses : 0, un: e.un, abroad: e.abroad, proj: pr[k] || 0 }; });
 }
+// ---------- Excel: эффективность банкиров ----------
+function mbEffDayKey(ms) { const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function mbEffData(per) {
+  const NORM = 20, END_H = 16, now = new Date(), t0 = new Date(now); t0.setHours(0, 0, 0, 0);
+  const todayMs = t0.getTime(), todayEnded = now.getHours() >= END_H;
+  const rows = mbMobileRows();
+  const allTs = rows.map(s => Number(s.finishedAt) || 0).filter(Boolean);
+  let a = mbStRange(per)[0]; if (!a) a = allTs.length ? Math.min.apply(null, allTs) : todayMs;
+  const s0 = new Date(a); s0.setHours(0, 0, 0, 0); a = s0.getTime();
+  const days = []; for (let t = a; t <= todayMs; t += 86400000) { const d = new Date(t); days.push({ ms: t, key: mbEffDayKey(t), sun: d.getDay() === 0 }); }
+  const rejected = (allObhodSurveys || []).filter(s => mbIsPhysical(s) && s.source === 'mobile' && s.review === 'rejected');
+  const kp = mbBankKpis(per).filter(x => x.houses > 0 || x.visits > 0);
+  const list = kp.map(x => {
+    const keys = mbBankKeys(x); const own = r => keys.indexOf(mbNorm(r.createdBy)) !== -1;
+    const mine = x.mine.filter(s => { const t = Number(s.finishedAt) || 0; return t >= a; });
+    const cnt = {}, last = {};
+    mine.forEach(s => { const t = Number(s.finishedAt) || 0; if (!t) return; const k = mbEffDayKey(t); cnt[k] = (cnt[k] || 0) + 1; if (!last[k] || t > last[k]) last[k] = t; });
+    const rej = rejected.filter(r => own(r) && (Number(r.finishedAt) || 0) >= a).length;
+    let work = 0, norm = 0, low = 0, early = 0, active = 0;
+    days.forEach(d => {
+      const c = cnt[d.key] || 0, ended = d.ms < todayMs || todayEnded;
+      if (c > 0) active++;
+      if (!d.sun || c > 0) work++;
+      if (ended && (!d.sun || c > 0)) {
+        if (c >= NORM) norm++; else low++;
+        if (c > 0 && new Date(last[d.key]).getHours() < END_H) early++;
+      }
+    });
+    work = Math.max(1, work);
+    const visits = mine.length, retry = mine.filter(s => mbIsRetry(s)).length, done = visits - retry;
+    const quality = visits + rej ? Math.max(0, (done) / (visits + rej)) * 100 : 0;
+    const perDay = visits / work;
+    const resultSc = x.plan > 0 ? Math.min(1, x.projAll / x.plan) * 100 : Math.min(1, (done ? x.interest / done : 0) / 0.2) * 100;
+    const endedDays = Math.max(1, norm + low);
+    const disc = (0.6 * Math.min(1, norm / endedDays) + 0.4 * (active ? 1 - early / active : 0)) * 100;
+    return { name: x.name, login: x.login, mah: x.ids.map(mbMahName).join(', '), houses: x.houses, visits, cover: x.cover, perDay, active, norm, low, early, quality, disc, resultSc, interest: x.interest, projAll: x.projAll, plan: x.plan, rej, retry, done, cnt, last: x.last };
+  });
+  const W = [0.30, 0.25, 0.20, 0.15, 0.10], TARGET = 30;
+  list.forEach(r => {
+    r.sc = [Math.round(Math.min(1, r.cover / TARGET) * 100), Math.round(Math.min(1, r.perDay / NORM) * 100), Math.round(r.disc), Math.round(r.quality), Math.round(r.resultSc)];
+    r.score = Math.round(r.sc.reduce((s, v, i) => s + v * W[i], 0) / W.reduce((s, v) => s + v, 0));
+    r.tier = r.score >= 70 ? 'Эффективный' : r.score >= 40 ? 'Средний' : 'Неэффективный';
+  });
+  list.sort((x, y) => y.score - x.score || y.visits - x.visits);
+  const shown = days.filter(d => !d.sun || list.some(r => r.cnt[d.key])).slice(-31);
+  return { list, days: shown, a, W, TARGET, NORM, END_H, rows, todayEnded };
+}
+async function mbEffXlsx() {
+  const btn = document.getElementById('mbEffBtn'); const old = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Формируется…'; }
+  try {
+    const EJ = await nplLoadExcelJs();
+    const wb = mbEffBuild(EJ);
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob); const el = document.createElement('a');
+    const d = new Date(); el.href = url; el.download = 'Effektivnost_bankirov_' + mbStPer + '_' + String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear() + '.xlsx';
+    document.body.appendChild(el); el.click(); el.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) { console.error(e); alert('Не удалось сформировать файл: ' + (e && e.message || e)); }
+  if (btn) { btn.disabled = false; btn.textContent = old; }
+}
+function mbEffBuild(EJ) {
+  const D = mbEffData(mbStPer); const L = D.list;
+  const per = (MB_STPER.find(x => x[0] === mbStPer) || [])[1] || '';
+  const f2 = ms => new Date(ms).toLocaleDateString('ru-RU');
+  const sub = 'Период: ' + per + ' · с ' + f2(D.a) + ' по ' + f2(Date.now()) + ' · сформировано ' + new Date().toLocaleString('ru-RU');
+  const wb = new EJ.Workbook(); wb.creator = 'MSB CRM'; wb.created = new Date();
+  const fill = c => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: c } });
+  const cfFill = c => ({ type: 'pattern', pattern: 'solid', bgColor: { argb: c } });
+  const Y = 'FFFFF2B3';
+  const n = L.length, R0 = 5, R1 = R0 + n - 1;
+  // ---- Методика (создаём первой по порядку листов позже) ----
+  const wsR = xlSheet(wb, 'Рейтинг', 'Эффективность банкиров · Asakabank, Нукус', sub, 19);
+  const wsB = xlSheet(wb, 'Банкир', 'Карточка банкира', sub, 4, 'FF2F6FED');
+  const wsD = xlSheet(wb, 'По дням', 'Визиты по дням · норма ' + D.NORM + ' в день', sub, D.days.length + 3, 'FFE8590C');
+  const wsM = xlSheet(wb, 'Методика', 'Методика оценки эффективности', sub, 4, 'FF2B8A3E');
+  const wsX = xlSheet(wb, 'Данные', 'Все визиты за период', sub, 9, 'FF6B7280');
+  // ---- Методика ----
+  const mrows = [
+    ['Охват домов', 'Доля домов махалли, где проведён опрос', D.W[0], 'охват не ниже целевого'],
+    ['Темп', 'Среднее число визитов в рабочий день', D.W[1], D.NORM + ' и более визитов в день'],
+    ['Дисциплина', 'Дни с нормой и дни, когда закончил раньше ' + D.END_H + ':00', D.W[2], 'норма каждый день, работа до ' + D.END_H + ':00 и позже'],
+    ['Качество', 'Доля визитов, принятых без отказа и повторного захода', D.W[3], 'все визиты приняты'],
+    ['Результат', 'Микропроекты по плану, а без плана — интерес к бизнесу', D.W[4], 'план проектов выполнен']
+  ];
+  xlTable(wsM, 4, [{ h: 'Показатель', w: 22 }, { h: 'Что измеряет', w: 58 }, { h: 'Вес', w: 12, fmt: '0%', al: 'center' }, { h: 'Полный балл при', w: 44 }], mrows.map(r => [{ v: r[0], b: true }, r[1], { v: r[2], f: Y, b: true, al: 'center' }, r[3]]));
+  wsM.getCell('C5').numFmt = '0%';
+  wsM.getCell('A10').value = 'Итого'; wsM.getCell('A10').font = { bold: true, name: 'Calibri' };
+  wsM.getCell('C10').value = { formula: 'SUM(C5:C9)', result: 1 }; wsM.getCell('C10').numFmt = '0%'; wsM.getCell('C10').font = { bold: true, name: 'Calibri' }; wsM.getCell('C10').alignment = { horizontal: 'center' };
+  xlTable(wsM, 11, [{ h: 'Оценка' }, { h: '' }, { h: 'Балл от', fmt: '0', al: 'center' }, { h: '' }], [
+    [{ v: 'Эффективный', f: XL.gF, t: XL.gT, b: true }, '', { v: 70, f: Y, b: true, al: 'center' }, ''],
+    [{ v: 'Средний', f: XL.aF, t: XL.aT, b: true }, '', { v: 40, f: Y, b: true, al: 'center' }, ''],
+    [{ v: 'Неэффективный', f: XL.rF, t: XL.rT, b: true }, '', { v: 0, al: 'center' }, '']], { keepWidth: true });
+  xlTable(wsM, 15, [{ h: 'Норма' }, { h: '' }, { h: 'Значение', al: 'center' }, { h: '' }], [
+    ['Целевой охват домов, %', '', { v: D.TARGET, f: Y, b: true, al: 'center' }, ''],
+    ['Визитов в день', '', { v: D.NORM, al: 'center' }, ''],
+    ['Конец рабочего дня', '', { v: D.END_H + ':00', al: 'center' }, '']], { keepWidth: true });
+  // ---- Рейтинг ----
+  const cols = [
+    { h: '№', w: 5, al: 'center' }, { h: 'Банкир', w: 26 }, { h: 'Махалли', w: 34 }, { h: 'Домов', w: 9, fmt: '#,##0' }, { h: 'Визитов', w: 10, fmt: '#,##0' },
+    { h: 'Охват, %', w: 10, fmt: '0.0' }, { h: 'Визитов в день', w: 11, fmt: '0.0' }, { h: 'Дней с визитами', w: 11, fmt: '0' }, { h: 'Дней с нормой', w: 10, fmt: '0' },
+    { h: 'Дней, закончил раньше ' + D.END_H + ':00', w: 14, fmt: '0' }, { h: 'Дней ниже нормы', w: 10, fmt: '0' }, { h: 'Принято, %', w: 10, fmt: '0' },
+    { h: 'Охват, балл', w: 10, fmt: '0' }, { h: 'Темп, балл', w: 10, fmt: '0' }, { h: 'Дисциплина, балл', w: 13, fmt: '0' }, { h: 'Качество, балл', w: 11, fmt: '0' }, { h: 'Результат, балл', w: 12, fmt: '0' },
+    { h: 'Балл 0–100', w: 10, fmt: '0', al: 'center' }, { h: 'Оценка', w: 16, al: 'center' }];
+  const body = L.map((r, i) => [i + 1, { v: r.name, b: true }, r.mah, r.houses, r.visits, Math.round(r.cover * 10) / 10, Math.round(r.perDay * 10) / 10, r.active, r.norm, r.early, r.low, Math.round(r.quality),
+    null, null, r.sc[2], null, r.sc[4], null, null]);
+  xlTable(wsR, 4, cols, body, { filter: true, keepWidth: false });
+  L.forEach((r, i) => {
+    const rr = R0 + i;
+    wsR.getCell(rr, 13).value = { formula: 'ROUND(MIN(1,F' + rr + '/Методика!$C$16)*100,0)', result: r.sc[0] };
+    wsR.getCell(rr, 14).value = { formula: 'ROUND(MIN(1,G' + rr + '/Методика!$C$17)*100,0)', result: r.sc[1] };
+    wsR.getCell(rr, 16).value = { formula: 'ROUND(L' + rr + ',0)', result: r.sc[3] };
+    wsR.getCell(rr, 18).value = { formula: 'ROUND((M' + rr + '*Методика!$C$5+N' + rr + '*Методика!$C$6+O' + rr + '*Методика!$C$7+P' + rr + '*Методика!$C$8+Q' + rr + '*Методика!$C$9)/Методика!$C$10,0)', result: r.score };
+    wsR.getCell(rr, 19).value = { formula: 'IF(R' + rr + '>=Методика!$C$12,"Эффективный",IF(R' + rr + '>=Методика!$C$13,"Средний","Неэффективный"))', result: r.tier };
+    wsR.getCell(rr, 18).font = { name: 'Calibri', size: 11, bold: true }; wsR.getCell(rr, 19).font = { name: 'Calibri', size: 10.5, bold: true };
+    [13, 14, 16].forEach(c => { wsR.getCell(rr, c).numFmt = '0'; });
+    for (let c = 8; c <= 19; c++) wsR.getCell(rr, c).alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+  const tr = R1 + 2; // итоги
+  const sumRow = (label, col, fn) => { };
+  wsR.getCell(tr, 2).value = 'Итого / среднее'; wsR.getCell(tr, 2).font = { name: 'Calibri', bold: true };
+  const avgOf = k => L.length ? L.reduce((s, r) => s + k(r), 0) / L.length : 0;
+  wsR.getCell(tr, 4).value = { formula: 'SUM(D' + R0 + ':D' + R1 + ')', result: L.reduce((s, r) => s + r.houses, 0) };
+  wsR.getCell(tr, 5).value = { formula: 'SUM(E' + R0 + ':E' + R1 + ')', result: L.reduce((s, r) => s + r.visits, 0) };
+  [[6, 'F', avgOf(r => r.cover), '0.0'], [7, 'G', avgOf(r => r.perDay), '0.0'], [12, 'L', avgOf(r => r.quality), '0'], [18, 'R', avgOf(r => r.score), '0']].forEach(([c, ch, v, f]) => { wsR.getCell(tr, c).value = { formula: 'AVERAGE(' + ch + R0 + ':' + ch + R1 + ')', result: v }; wsR.getCell(tr, c).numFmt = f; });
+  for (let c = 1; c <= 19; c++) { const cell = wsR.getCell(tr, c); cell.font = { name: 'Calibri', size: 10.5, bold: true }; cell.fill = fill(XL.pink); cell.border = xlBorder(); }
+  [['Эффективных', 'Эффективный', 'gF', 'gT'], ['Средних', 'Средний', 'aF', 'aT'], ['Неэффективных', 'Неэффективный', 'rF', 'rT']].forEach((x, i) => {
+    const rr = tr + 1 + i; wsR.getCell(rr, 2).value = x[0]; wsR.getCell(rr, 2).font = { name: 'Calibri', bold: true, color: { argb: XL[x[3]] } };
+    wsR.getCell(rr, 3).value = { formula: 'COUNTIF(S' + R0 + ':S' + R1 + ',"' + x[1] + '")', result: L.filter(r => r.tier === x[1]).length };
+    wsR.getCell(rr, 3).alignment = { horizontal: 'left' }; wsR.getCell(rr, 3).font = { name: 'Calibri', bold: true };
+  });
+  wsR.views = [{ state: 'frozen', xSplit: 2, ySplit: 4 }];
+  const rng = (c) => c + R0 + ':' + c + R1;
+  wsR.addConditionalFormatting({ ref: rng('S'), rules: [
+    { type: 'cellIs', operator: 'equal', formulae: ['"Эффективный"'], priority: 1, style: { fill: cfFill(XL.gF), font: { color: { argb: XL.gT }, bold: true } } },
+    { type: 'cellIs', operator: 'equal', formulae: ['"Средний"'], priority: 2, style: { fill: cfFill(XL.aF), font: { color: { argb: XL.aT }, bold: true } } },
+    { type: 'cellIs', operator: 'equal', formulae: ['"Неэффективный"'], priority: 3, style: { fill: cfFill(XL.rF), font: { color: { argb: XL.rT }, bold: true } } }] });
+  const red = { fill: cfFill(XL.rF), font: { color: { argb: XL.rT }, bold: true } };
+  wsR.addConditionalFormatting({ ref: rng('G'), rules: [{ type: 'cellIs', operator: 'lessThan', formulae: [D.NORM], priority: 4, style: red }] });
+  wsR.addConditionalFormatting({ ref: rng('J'), rules: [{ type: 'cellIs', operator: 'greaterThanOrEqual', formulae: [5], priority: 5, style: red }] });
+  wsR.addConditionalFormatting({ ref: rng('K'), rules: [{ type: 'cellIs', operator: 'greaterThanOrEqual', formulae: [8], priority: 6, style: red }] });
+  wsR.addConditionalFormatting({ ref: rng('R'), rules: [{ type: 'dataBar', priority: 7, gradient: false, cfvo: [{ type: 'num', value: 0 }, { type: 'num', value: 100 }], color: { argb: 'FF9EC5FE' } }] });
+  wsR.addConditionalFormatting({ ref: rng('F'), rules: [{ type: 'dataBar', priority: 8, gradient: false, cfvo: [{ type: 'num', value: 0 }, { type: 'max' }], color: { argb: 'FFB7E4C7' } }] });
+  // ---- По дням ----
+  const dh = [{ h: 'Банкир', w: 26 }].concat(D.days.map(d => ({ h: new Date(d.ms).toLocaleDateString('ru-RU', { weekday: 'short', day: '2-digit', month: '2-digit' }), w: 7.5, fmt: '0', al: 'center' }))).concat([{ h: 'Дней с нормой', w: 11, fmt: '0', al: 'center' }, { h: 'Итого', w: 9, fmt: '0', al: 'center' }]);
+  const drows = L.map(r => [{ v: r.name, b: true }].concat(D.days.map(d => r.cnt[d.key] || 0)).concat([null, null]));
+  xlTable(wsD, 4, dh, drows, { keepWidth: false });
+  const lc = D.days.length + 1; const colL = k => { let s = '', x = k; while (x > 0) { const m = (x - 1) % 26; s = String.fromCharCode(65 + m) + s; x = Math.floor((x - 1) / 26); } return s; };
+  L.forEach((r, i) => {
+    const rr = R0 + i, a1 = 'B' + rr, a2 = colL(lc) + rr;
+    wsD.getCell(rr, lc + 1).value = { formula: 'COUNTIF(' + a1 + ':' + a2 + ',">="&Методика!$C$17)', result: D.days.filter(d => (r.cnt[d.key] || 0) >= D.NORM).length };
+    wsD.getCell(rr, lc + 2).value = { formula: 'SUM(' + a1 + ':' + a2 + ')', result: D.days.reduce((s, d) => s + (r.cnt[d.key] || 0), 0) };
+    wsD.getCell(rr, lc + 1).alignment = { horizontal: 'center' }; wsD.getCell(rr, lc + 2).alignment = { horizontal: 'center' }; wsD.getCell(rr, lc + 2).font = { name: 'Calibri', bold: true };
+  });
+  const dref = 'B' + R0 + ':' + colL(lc) + R1;
+  wsD.addConditionalFormatting({ ref: dref, rules: [
+    { type: 'cellIs', operator: 'equal', formulae: [0], priority: 1, style: { fill: cfFill('FFF3F4F6'), font: { color: { argb: 'FF9CA3AF' } } } },
+    { type: 'cellIs', operator: 'lessThan', formulae: [D.NORM], priority: 2, style: { fill: cfFill(XL.rF), font: { color: { argb: XL.rT }, bold: true } } },
+    { type: 'cellIs', operator: 'greaterThanOrEqual', formulae: [D.NORM], priority: 3, style: { fill: cfFill(XL.gF), font: { color: { argb: XL.gT }, bold: true } } }] });
+  wsD.views = [{ state: 'frozen', xSplit: 1, ySplit: 4 }];
+  // ---- Банкир (карточка) ----
+  wsB.getColumn(1).width = 34; wsB.getColumn(2).width = 30; wsB.getColumn(3).width = 14; wsB.getColumn(4).width = 14;
+  wsB.getCell('A4').value = 'Банкир'; wsB.getCell('A4').font = { name: 'Calibri', bold: true, size: 12 };
+  const sel = wsB.getCell('B4'); sel.value = L.length ? L[0].name : ''; sel.fill = fill(Y); sel.font = { name: 'Calibri', bold: true, size: 12 }; sel.border = xlBorder();
+  if (L.length) sel.dataValidation = { type: 'list', allowBlank: false, formulae: ['Рейтинг!$B$' + R0 + ':$B$' + R1] };
+  const first = L[0] || {};
+  const idx = (col) => 'INDEX(Рейтинг!$' + col + '$' + R0 + ':$' + col + '$' + R1 + ',MATCH($B$4,Рейтинг!$B$' + R0 + ':$B$' + R1 + ',0))';
+  const items = [['Махалли', 'C', first.mah, null], ['Домов', 'D', first.houses, '#,##0'], ['Визитов за период', 'E', first.visits, '#,##0'], ['Охват, %', 'F', Math.round((first.cover || 0) * 10) / 10, '0.0'],
+    ['Визитов в день', 'G', Math.round((first.perDay || 0) * 10) / 10, '0.0'], ['Дней с визитами', 'H', first.active, '0'], ['Дней с нормой', 'I', first.norm, '0'], ['Дней, закончил раньше ' + D.END_H + ':00', 'J', first.early, '0'],
+    ['Дней ниже нормы', 'K', first.low, '0'], ['Принято, %', 'L', Math.round(first.quality || 0), '0'], ['Балл 0–100', 'R', first.score, '0'], ['Оценка', 'S', first.tier, null]];
+  items.forEach((it, i) => {
+    const rr = 6 + i; wsB.getCell(rr, 1).value = it[0]; wsB.getCell(rr, 1).font = { name: 'Calibri', size: 11 }; wsB.getCell(rr, 1).border = xlBorder();
+    const c = wsB.getCell(rr, 2); c.value = L.length ? { formula: idx(it[1]), result: it[2] === undefined ? '' : it[2] } : ''; c.font = { name: 'Calibri', size: 11, bold: true }; c.border = xlBorder(); c.alignment = { horizontal: 'left' }; if (it[3]) c.numFmt = it[3];
+  });
+  wsB.addConditionalFormatting({ ref: 'B17', rules: [
+    { type: 'cellIs', operator: 'equal', formulae: ['"Эффективный"'], priority: 1, style: { fill: cfFill(XL.gF), font: { color: { argb: XL.gT }, bold: true } } },
+    { type: 'cellIs', operator: 'equal', formulae: ['"Средний"'], priority: 2, style: { fill: cfFill(XL.aF), font: { color: { argb: XL.aT }, bold: true } } },
+    { type: 'cellIs', operator: 'equal', formulae: ['"Неэффективный"'], priority: 3, style: { fill: cfFill(XL.rF), font: { color: { argb: XL.rT }, bold: true } } }] });
+  const dRow = 20; wsB.getCell(dRow - 1, 1).value = 'Визиты по дням'; wsB.getCell(dRow - 1, 1).font = { name: 'Calibri', bold: true, size: 12, color: { argb: 'FF8F1812' } };
+  D.days.forEach((d, k) => {
+    const rr = dRow + k; wsB.getCell(rr, 1).value = new Date(d.ms).toLocaleDateString('ru-RU', { weekday: 'short', day: '2-digit', month: '2-digit' }); wsB.getCell(rr, 1).border = xlBorder(); wsB.getCell(rr, 1).font = { name: 'Calibri', size: 10.5 };
+    const c = wsB.getCell(rr, 2); c.value = L.length ? { formula: 'INDEX(\'По дням\'!$B$' + R0 + ':$' + colL(lc) + '$' + R1 + ',MATCH($B$4,\'По дням\'!$A$' + R0 + ':$A$' + R1 + ',0),' + (k + 1) + ')', result: (first.cnt && first.cnt[d.key]) || 0 } : 0;
+    c.border = xlBorder(); c.alignment = { horizontal: 'left' }; c.font = { name: 'Calibri', size: 10.5, bold: true };
+  });
+  if (D.days.length) wsB.addConditionalFormatting({ ref: 'B' + dRow + ':B' + (dRow + D.days.length - 1), rules: [
+    { type: 'cellIs', operator: 'equal', formulae: [0], priority: 1, style: { fill: cfFill('FFF3F4F6'), font: { color: { argb: 'FF9CA3AF' } } } },
+    { type: 'cellIs', operator: 'lessThan', formulae: [D.NORM], priority: 2, style: { fill: cfFill(XL.rF), font: { color: { argb: XL.rT }, bold: true } } },
+    { type: 'cellIs', operator: 'greaterThanOrEqual', formulae: [D.NORM], priority: 3, style: { fill: cfFill(XL.gF), font: { color: { argb: XL.gT }, bold: true } } }] });
+  // ---- Данные ----
+  const dt = ms => ms ? new Date(Number(ms)) : null;
+  const vis = D.rows.filter(s => (Number(s.finishedAt) || 0) >= D.a).sort((x, y) => (Number(y.finishedAt) || 0) - (Number(x.finishedAt) || 0)).slice(0, 20000);
+  xlTable(wsX, 4, [{ h: 'Дата и время', w: 18, fmt: 'dd.mm.yyyy hh:mm' }, { h: 'Банкир', w: 26 }, { h: 'Махалля', w: 28 }, { h: 'Адрес', w: 36 }, { h: 'Владелец', w: 26 }, { h: 'Телефон', w: 16 }, { h: 'Статус', w: 14 }, { h: 'Проверка', w: 14 }, { h: 'Членов семьи', w: 11, fmt: '0' }],
+    vis.map(s => [dt(s.finishedAt), mbShortName(s.createdBy), s.mahalla, s.address, s.headName, s.phone, mbIsRetry(s) ? 'Повторно' : 'Опрошен', s.review === 'pending' ? 'На проверке' : '', mbNum(s.familySize)]), { filter: true });
+  wsX.views = [{ state: 'frozen', ySplit: 4 }];
+  wb.worksheets.forEach(w => { w.properties.defaultRowHeight = 18; });
+  return wb;
+}
+
 async function mbStatXlsx() {
   const btn = document.getElementById('mbXlBtn'); const old = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Формируется…'; }
@@ -18172,7 +18400,7 @@ var MB_ADM_UZ = {"микропроектов":"mikroloyihalar","Статус с�
 "визитов:":"tashriflar:","домов:":"uylar:","Найденные дубликаты":"Topilgan dublikatlar","Дубликатов нет":"Dublikatlar yo‘q","Оставить одного":"Bittasini qoldirish","Оставить":"Qoldirish","Объединить, лишнее удалить":"Birlashtirish, ortiqchasini o‘chirish","Объединить, лишнего удалить":"Birlashtirish, ortiqchasini o‘chirish","Дубликаты":"Dublikatlar",
 "Только латиница: Фамилия Имя Отчество":"Faqat lotin harflari: Familiya Ism Sharif","Укажите фамилию и имя":"Familiya va ismni kiriting","Банкир с таким ФИО уже есть:":"Bunday F.I.Sh. li bankir allaqachon mavjud:","Махалли банкира":"Bankir mahallalari","Показатели":"Ko‘rsatkichlar",
 "Визиты за 14 дней":"14 kunlik tashriflar","Последние визиты":"Oxirgi tashriflar","Последний визит":"Oxirgi tashrif","Показать карту":"Xaritani ko‘rsatish","Карта визитов":"Tashriflar xaritasi","Визитов":"Tashriflar","Визиты":"Tashriflar","Проекты предпринимателей из махаллей, которые ведёт закреплённый банкир.":"Biriktirilgan bankir olib boradigan mahallalardagi tadbirkorlar loyihalari.",
-"KPI банкиров":"Bankirlar KPI","Общая картина по всем махаллям":"Barcha mahallalar bo‘yicha umumiy ko‘rinish","Нарастающий":"O‘sib boruvchi","Динамика обхода · 5 дней":"Aylanish dinamikasi · 5 kun","Качественная воронка результатов":"Natijalarning sifat voronkasi","Топ 5 лучших":"Eng yaxshi 5 ta","Топ 5 худших":"Eng yomon 5 ta","Посещено":"Tashrif qilingan","Интерес → проект":"Qiziqish → loyiha","Интерес к бизнесу: все":"Biznesga qiziqish: hammasi","Интерес к бизнесу":"Biznesga qiziqish","интерес к бизнесу":"biznesga qiziqish","Интерес":"Qiziqish",
+"KPI банкиров":"Bankirlar KPI","Последняя активность":"Oxirgi faollik","только что":"hozirgina","нет входов":"kirmagan","Скачать Excel":"Excel yuklab olish","Общая картина по всем махаллям":"Barcha mahallalar bo‘yicha umumiy ko‘rinish","Нарастающий":"O‘sib boruvchi","Динамика обхода · 5 дней":"Aylanish dinamikasi · 5 kun","Качественная воронка результатов":"Natijalarning sifat voronkasi","Топ 5 лучших":"Eng yaxshi 5 ta","Топ 5 худших":"Eng yomon 5 ta","Посещено":"Tashrif qilingan","Интерес → проект":"Qiziqish → loyiha","Интерес к бизнесу: все":"Biznesga qiziqish: hammasi","Интерес к бизнесу":"Biznesga qiziqish","интерес к бизнесу":"biznesga qiziqish","Интерес":"Qiziqish",
 "Скачать в Excel":"Excel’ga yuklab olish","Скачать как изображение":"Rasm sifatida yuklab olish","Сегодня":"Bugun","Неделя":"Hafta","Месяц":"Oy","Всё время":"Butun davr","За месяц":"Oy uchun","Прошлый месяц":"O‘tgan oy","Вчера":"Kecha","Период…":"Davr…",
 "Проектов на 100 домов":"100 uyga loyihalar","Проектов":"Loyihalar","Проекты":"Loyihalar","Микропроект создан":"Mikroloyiha yaratildi","Микропроекты":"Mikroloyihalar","Охват":"Qamrov","Оценка":"Baho","Самозанятых и с бизнесом":"O‘zini o‘zi band qilgan va biznesli","Сумма проектов, млн":"Loyihalar summasi, mln","Сумма, млн":"Summa, mln","План проектов":"Loyihalar rejasi","Финансирование":"Moliyalashtirish","Флагов проверки:":"Tekshiruv belgilari:","Бизнес уже есть":"Biznes allaqachon bor","Нужна поддержка":"Qo‘llab-quvvatlash kerak","Бизнес-план":"Biznes-reja","Место":"O‘rin",
 "Поиск: ФИО, адрес, телефон":"Qidiruv: F.I.Sh., manzil, telefon","Поиск по проекту, инициатору, ПИНФЛ/ИНН":"Loyiha, tashabbuskor, JSHSHIR/STIR bo‘yicha qidirish","Адрес":"Manzil","Владелец":"Egasi","Доход, сум":"Daromad, so‘m","Дата":"Sana","Сфера":"Soha","Отрасль":"Soha","Субсидия":"Subsidiya","Состав семьи":"Oila tarkibi","Статус дома":"Uy maqomi","Статус":"Maqom","Инициатор":"Tashabbuskor","Стоимость":"Qiymati","Проект":"Loyiha","Нет":"Yo‘q",
@@ -18187,7 +18415,7 @@ var MB_ADM_UZ = {"микропроектов":"mikroloyihalar","Статус с�
 };
 var MB_ADM_RE = [
  [/(\d+) соток/g, '$1 sotix'], [/(\d+) млн/g, '$1 mln'], [/^(\d+) сотка$/g, '$1 sotix'],
- [/через (\d+) дн\./g, '$1 kundan keyin'],
+ [/через (\d+) дн\./g, '$1 kundan keyin'], [/(\d+) мин назад/g, '$1 daq. oldin'], [/(\d+) ч назад/g, '$1 soat oldin'], [/(\d+) дн\. назад/g, '$1 kun oldin'], [/вчера, (\d\d:\d\d)/g, 'kecha, $1'],
  [/В махалле «([^»]*)» банкир указан дважды/g, '«$1» mahallasida bankir ikki marta ko‘rsatilgan'],
  [/Изменено махаллей: (\d+)/g, 'O‘zgargan mahallalar: $1'],
  [/Махалли · «/g, 'Mahallalar · «'], [/Банкиры · «/g, 'Bankirlar · «'],
