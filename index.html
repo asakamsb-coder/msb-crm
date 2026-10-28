@@ -16395,6 +16395,11 @@ function mbPhotoZoom(ev, el) {
   if (!z) { z = document.createElement('div'); z.id = 'mbZoom'; z.className = 'mb-zoom'; z.innerHTML = '<b>×</b><img alt="">'; z.onclick = () => z.classList.remove('open'); document.body.appendChild(z); document.addEventListener('keydown', e => { if (e.key === 'Escape') z.classList.remove('open'); }); }
   z.querySelector('img').src = img.src; z.classList.add('open');
 }
+function mbUserHire(name, login) {
+  const a = mbNorm(name), b = mbNorm(login);
+  const u = (mbBankUsers || []).find(x => (a && mbNorm(x.fullName) === a) || (b && mbNorm(x.login) === b));
+  return u && /^\d{4}-\d{2}-\d{2}$/.test(u.hireDate || '') ? u.hireDate : '';
+}
 function mbAv(name, login, size) {
   size = size || 32;
   const nm = String(name || login || '').trim();
@@ -16532,6 +16537,7 @@ function mbRenderBankEdit(err) {
     <div class="mb-sec">Данные</div>
     <div class="mb-f"><label>ФИО</label><input class="input" id="mbBcName" value="${mbEsc(r.name)}"></div>
     <div class="mb-f" style="margin-top:8px"><label>Логин</label><input class="input" id="mbBcLogin" value="${mbEsc(r.login)}"></div>
+    <div class="mb-f" style="margin-top:8px"><label>Дата принятия на работу</label><input class="input" id="mbBcHire" type="date" value="${mbEsc(mbUserHire(r.name, r.login))}"></div>
     <div class="mb-f" style="margin-top:8px"><label>Новый пароль</label><input class="input" id="mbBcPass" type="text" placeholder="Оставьте пустым, чтобы не менять"></div>
     ${err ? `<div class="mb-warn">${mbEsc(err)}</div>` : ''}
     <div class="mb-sec">Махалли банкира</div>${r.ids.length ? r.ids.map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') : '<div class="mb-count">Не назначены</div>'}
@@ -16558,16 +16564,17 @@ async function mbBankCardSave() {
   const name = document.getElementById('mbBcName').value.trim().replace(/\s+/g, ' ');
   const login = document.getElementById('mbBcLogin').value.trim().toLowerCase();
   const pass = document.getElementById('mbBcPass').value.trim();
+  window.mbBcHireKeep = (document.getElementById('mbBcHire') || {}).value || '';
   if (!MB_LATIN_RE.test(name) || name.split(' ').length < 2) { mbRenderBankEditKeep('ФИО: только латиница, фамилия и имя', name, login, pass); return; }
   if (!/^[a-z0-9._-]{3,40}$/.test(login)) { mbRenderBankEditKeep('Логин: латиница, цифры, точка (от 3 символов)', name, login, pass); return; }
   const b = document.getElementById('mbBcSave'); if (b) { b.disabled = true; b.textContent = 'Сохранение...'; }
-  const res = await postWebAction({ webAction: 'mbBankerUpdate', sessionId: localStorage.getItem('msbSessionId'), userId: r.id, fullName: name, login, password: pass });
+  const res = await postWebAction({ webAction: 'mbBankerUpdate', sessionId: localStorage.getItem('msbSessionId'), userId: r.id, fullName: name, login, password: pass, hireDate: (document.getElementById('mbBcHire') || {}).value || '' });
   if (!res || !res.success) { mbRenderBankEditKeep((res && res.message) || 'Не удалось сохранить', name, login, pass); return; }
   mbBankClose(); await mbAdminRender();
 }
 function mbRenderBankEditKeep(err, name, login, pass) {
   mbRenderBankEdit(err);
-  document.getElementById('mbBcName').value = name; document.getElementById('mbBcLogin').value = login; document.getElementById('mbBcPass').value = pass;
+  document.getElementById('mbBcName').value = name; document.getElementById('mbBcLogin').value = login; document.getElementById('mbBcPass').value = pass; if (window.mbBcHireKeep !== undefined) document.getElementById('mbBcHire').value = window.mbBcHireKeep;
 }
 
 // ---------- Добавить банкира ----------
@@ -18401,7 +18408,7 @@ var MB_ADM_UZ = {"микропроектов":"mikroloyihalar","Статус с�
 "визитов:":"tashriflar:","домов:":"uylar:","Найденные дубликаты":"Topilgan dublikatlar","Дубликатов нет":"Dublikatlar yo‘q","Оставить одного":"Bittasini qoldirish","Оставить":"Qoldirish","Объединить, лишнее удалить":"Birlashtirish, ortiqchasini o‘chirish","Объединить, лишнего удалить":"Birlashtirish, ortiqchasini o‘chirish","Дубликаты":"Dublikatlar",
 "Только латиница: Фамилия Имя Отчество":"Faqat lotin harflari: Familiya Ism Sharif","Укажите фамилию и имя":"Familiya va ismni kiriting","Банкир с таким ФИО уже есть:":"Bunday F.I.Sh. li bankir allaqachon mavjud:","Махалли банкира":"Bankir mahallalari","Показатели":"Ko‘rsatkichlar",
 "Визиты за 14 дней":"14 kunlik tashriflar","Последние визиты":"Oxirgi tashriflar","Последний визит":"Oxirgi tashrif","Показать карту":"Xaritani ko‘rsatish","Карта визитов":"Tashriflar xaritasi","Визитов":"Tashriflar","Визиты":"Tashriflar","Проекты предпринимателей из махаллей, которые ведёт закреплённый банкир.":"Biriktirilgan bankir olib boradigan mahallalardagi tadbirkorlar loyihalari.",
-"KPI банкиров":"Bankirlar KPI","Последняя активность":"Oxirgi faollik","только что":"hozirgina","нет входов":"kirmagan","Скачать Excel":"Excel yuklab olish","Общая картина по всем махаллям":"Barcha mahallalar bo‘yicha umumiy ko‘rinish","Нарастающий":"O‘sib boruvchi","Динамика обхода · 5 дней":"Aylanish dinamikasi · 5 kun","Качественная воронка результатов":"Natijalarning sifat voronkasi","Топ 5 лучших":"Eng yaxshi 5 ta","Топ 5 худших":"Eng yomon 5 ta","Посещено":"Tashrif qilingan","Интерес → проект":"Qiziqish → loyiha","Интерес к бизнесу: все":"Biznesga qiziqish: hammasi","Интерес к бизнесу":"Biznesga qiziqish","интерес к бизнесу":"biznesga qiziqish","Интерес":"Qiziqish",
+"KPI банкиров":"Bankirlar KPI","Последняя активность":"Oxirgi faollik","Дата принятия на работу":"Ishga qabul qilingan sana","только что":"hozirgina","нет входов":"kirmagan","Скачать Excel":"Excel yuklab olish","Общая картина по всем махаллям":"Barcha mahallalar bo‘yicha umumiy ko‘rinish","Нарастающий":"O‘sib boruvchi","Динамика обхода · 5 дней":"Aylanish dinamikasi · 5 kun","Качественная воронка результатов":"Natijalarning sifat voronkasi","Топ 5 лучших":"Eng yaxshi 5 ta","Топ 5 худших":"Eng yomon 5 ta","Посещено":"Tashrif qilingan","Интерес → проект":"Qiziqish → loyiha","Интерес к бизнесу: все":"Biznesga qiziqish: hammasi","Интерес к бизнесу":"Biznesga qiziqish","интерес к бизнесу":"biznesga qiziqish","Интерес":"Qiziqish",
 "Скачать в Excel":"Excel’ga yuklab olish","Скачать как изображение":"Rasm sifatida yuklab olish","Сегодня":"Bugun","Неделя":"Hafta","Месяц":"Oy","Всё время":"Butun davr","За месяц":"Oy uchun","Прошлый месяц":"O‘tgan oy","Вчера":"Kecha","Период…":"Davr…",
 "Проектов на 100 домов":"100 uyga loyihalar","Проектов":"Loyihalar","Проекты":"Loyihalar","Микропроект создан":"Mikroloyiha yaratildi","Микропроекты":"Mikroloyihalar","Охват":"Qamrov","Оценка":"Baho","Самозанятых и с бизнесом":"O‘zini o‘zi band qilgan va biznesli","Сумма проектов, млн":"Loyihalar summasi, mln","Сумма, млн":"Summa, mln","План проектов":"Loyihalar rejasi","Финансирование":"Moliyalashtirish","Флагов проверки:":"Tekshiruv belgilari:","Бизнес уже есть":"Biznes allaqachon bor","Нужна поддержка":"Qo‘llab-quvvatlash kerak","Бизнес-план":"Biznes-reja","Место":"O‘rin",
 "Поиск: ФИО, адрес, телефон":"Qidiruv: F.I.Sh., manzil, telefon","Поиск по проекту, инициатору, ПИНФЛ/ИНН":"Loyiha, tashabbuskor, JSHSHIR/STIR bo‘yicha qidirish","Адрес":"Manzil","Владелец":"Egasi","Доход, сум":"Daromad, so‘m","Дата":"Sana","Сфера":"Soha","Отрасль":"Soha","Субсидия":"Subsidiya","Состав семьи":"Oila tarkibi","Статус дома":"Uy maqomi","Статус":"Maqom","Инициатор":"Tashabbuskor","Стоимость":"Qiymati","Проект":"Loyiha","Нет":"Yo‘q",
