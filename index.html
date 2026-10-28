@@ -15519,6 +15519,7 @@ async function postWebAction(body, retriesLeft) {
     return { success: false, message: 'У вас доступ только на просмотр. Изменения и удаление недоступны.' };
   }
 
+  if (body.webAction && body.webAction !== 'mbBankBundle' && body.webAction !== 'mbDupScan') { try { mbMemClear(); } catch (e) {} }
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
@@ -15664,13 +15665,7 @@ async function loadMahallaData() {
   const microBox = document.getElementById('microprojectsBox');
 
   try {
-    const [mahallas, microprojects] = await Promise.all([
-      fetchJSON('mahallas'),
-      fetchJSON('microprojects')
-    ]);
-
-    allMahallas = mahallas || [];
-    allMicroprojects = microprojects || [];
+    await mbCoreLoad();
     mahallaDataLoaded = true;
 
     const isAdmin = currentUser && mbIsAdm();
@@ -16262,21 +16257,62 @@ function mbIsRetry(s) { return s.visitStatus === 'retry'; }
 function mbIsPhysical(s) { return (s.surveyType || 'Физический') !== 'Юридический'; }
 function mbDoneRows(withArch) { return (allObhodSurveys || []).filter(s => (withArch || !mbIsArchived(s.createdBy)) && mbIsPhysical(s) && !mbIsRetry(s) && s.review !== 'rejected'); }
 
-async function mbAdminLoad() {
-  const [surveys, mahallas] = await Promise.all([fetchJSON('obhodList'), fetchJSON('mahallas')]);
-  allObhodSurveys = surveys || [];
+// ---- Быстрая загрузка блока «Махалля»: общий кеш и один пакетный запрос ----
+const MB_TTL = 60000;
+const MB_MEM = {};
+function mbMemGet(key, loader, force) {
+  const c = MB_MEM[key];
+  if (!force && c && Date.now() - c.t < MB_TTL) return c.p;
+  const e = { t: Date.now(), p: null };
+  e.p = loader().catch(err => { if (MB_MEM[key] === e) delete MB_MEM[key]; throw err; });
+  MB_MEM[key] = e;
+  return e.p;
+}
+function mbMemClear() { Object.keys(MB_MEM).forEach(k => delete MB_MEM[k]); }
+function mbGetList(action, force) { return mbMemGet('get:' + action, () => fetchJSON(action), force); }
+function mbBundleGet(force) {
+  return mbMemGet('bundle', async () => {
+    const r = await postWebAction({ webAction: 'mbBankBundle', sessionId: localStorage.getItem('msbSessionId') });
+    if (!r || !r.success) throw new Error((r && r.message) || 'bundle');
+    return r;
+  }, force);
+}
+function mbApplyBundle(b) {
+  allMahallas = b.mahallas || [];
+  allMicroprojects = b.micro || [];
+  mbBankUsers = (b.users || []).filter(u => u.active !== false);
+  mbBankArchive = b.archive || [];
+  mbHist = b.history || [];
+  mbMahArch = b.mahArchive || [];
+  mbMicro = (Array.isArray(b.micro) ? b.micro : []).filter(p => !mbIsArchived(p.banker));
+}
+// Справочники (махалли, банкиры, архив, история, микропроекты) — один запрос
+async function mbCoreLoad(force) {
+  const isAdmin = currentUser && mbIsAdm();
+  if (isAdmin) {
+    try { mbApplyBundle(await mbBundleGet(force)); mahallaDataLoaded = true; return; } catch (e) { delete MB_MEM.bundle; }
+  }
+  const [users, micro, mahallas] = await Promise.all([mbGetList('users', force), mbGetList('microprojects', force).catch(() => []), mbGetList('mahallas', force)]);
   allMahallas = mahallas || [];
-  try {
-    if (currentUser && mbIsAdm()) {
-      const ar = await postWebAction({ webAction: 'listMahallaBankerArchive', sessionId: localStorage.getItem('msbSessionId') });
-      if (ar && ar.success) mbBankArchive = ar.items;
-    }
-  } catch (e) {}
+  allMicroprojects = micro || [];
+  mbBankUsers = (users || []).filter(u => u.role === 'MAHALLA_BANKER' && u.active !== false);
+  if (!isAdmin) { mbBankArchive = []; mbHist = []; mbMahArch = []; }
+  mbMicro = (Array.isArray(micro) ? micro : []).filter(p => !mbIsArchived(p.banker));
+  mahallaDataLoaded = true;
+}
+async function mbObhodLoad(force) {
+  allObhodSurveys = (await mbGetList('obhodList', force)) || [];
+}
+function mbAdminChrome() {
   const up = document.getElementById('mahallaPassportUploadPanel');
   const isAdmin = currentUser && mbIsAdm();
   const upBtn = document.getElementById('mbUploadBtn');
   if (upBtn) upBtn.style.display = isAdmin ? '' : 'none';
   if (up && !isAdmin) up.style.display = 'none';
+}
+async function mbAdminLoad(force) {
+  await Promise.all([mbCoreLoad(force), mbObhodLoad(force)]);
+  mbAdminChrome();
 }
 
 function showMahallaTab(tab) {
@@ -16288,18 +16324,37 @@ function showMahallaTab(tab) {
   mbAdminRender();
 }
 
-async function mbAdminRender() {
-  const box = document.getElementById(mbAdminTab === 'mbStats' ? 'mbStatsBody' : mbAdminTab === 'mbBank' ? 'mbBankBody' : 'obhodListBox');
-  try {
-    if (mbAdminTab === 'mbBank' || mbAdminTab === 'mbStats') await mbBankLoad(); else { await mbAdminLoad(); if (mbAdminTab === 'mbObhod' || mbAdminTab === 'obhod') await mbEnsureBankUsers(); }
-  } catch (e) {
-    console.error(e);
-    if (box) box.innerHTML = '<div class="loading">Не удалось загрузить данные. <a onclick="mbAdminRender()" style="color:var(--brand);font-weight:700;cursor:pointer;">Повторить</a></div>';
-    return;
-  }
+let mbRenderSeq = 0;
+function mbPaint() {
   if (mbAdminTab === 'mbStats') { mbRenderBankers(true); mbRenderStats(); }
   else if (mbAdminTab === 'mbBank') mbRenderBankers();
   else { mbRenderObhod(); checkObhodMapAccess(); }
+}
+async function mbAdminRender(force) {
+  const tab = mbAdminTab, seq = ++mbRenderSeq;
+  const box = document.getElementById(tab === 'mbStats' ? 'mbStatsBody' : tab === 'mbBank' ? 'mbBankBody' : 'obhodListBox');
+  const alive = () => seq === mbRenderSeq && tab === mbAdminTab;
+  // Данные уже есть в памяти — показываем сразу, а свежие подгружаем в фоне
+  const have = (allMahallas || []).length && (tab === 'mbBank' ? true : (allObhodSurveys || []).length);
+  if (have && force !== true) { try { mbPaint(); } catch (e) {} }
+  try {
+    if (tab === 'mbBank') {
+      await mbCoreLoad(force === true);
+      mbAdminChrome();
+      if (!alive()) return;
+      mbRenderBankers();               // сразу, не ждём тяжёлый список обхода
+      mbObhodLoad(force === true).then(() => { if (alive()) mbRenderBankers(); }).catch(() => {});
+      return;
+    }
+    await mbAdminLoad(force === true);
+    if (tab === 'mbObhod' || tab === 'obhod') await mbEnsureBankUsers();
+  } catch (e) {
+    console.error(e);
+    if (!have && box) box.innerHTML = '<div class="loading">Не удалось загрузить данные. <a onclick="mbAdminRender(true)" style="color:var(--brand);font-weight:700;cursor:pointer;">Повторить</a></div>';
+    return;
+  }
+  if (!alive()) return;
+  mbPaint();
 }
 
 // Совместимость: старая форма вызывает loadObhodList/loadObhodDashboard после сохранения
@@ -16336,18 +16391,9 @@ function mbBankList() {
   return rows;
 }
 async function mbBankLoad() {
-  const isAdmin = currentUser && mbIsAdm();
-  const sid = localStorage.getItem('msbSessionId');
-  const [users, micro, arch] = await Promise.all([
-    fetchJSON('users'),
-    fetchJSON('microprojects').catch(() => []),
-    isAdmin ? postWebAction({ webAction: 'listMahallaBankerArchive', sessionId: sid }).catch(() => null) : Promise.resolve(null),
-    mbAdminLoad()
-  ]);
-  mbBankUsers = (users || []).filter(u => u.role === 'MAHALLA_BANKER' && u.active !== false);
-  mbBankArchive = arch && arch.success ? arch.items : [];
-  if (isAdmin) { try { const hr = await postWebAction({ webAction: 'mbMahallaHistory', sessionId: sid }); mbHist = hr && hr.success ? hr.items : []; } catch (e) { mbHist = []; } try { const ar = await postWebAction({ webAction: 'mbMahallaArchiveList', sessionId: sid }); mbMahArch = ar && ar.success ? ar.items : []; } catch (e) { mbMahArch = []; } }
-  mbMicro = (Array.isArray(micro) ? micro : []).filter(p => !mbIsArchived(p.banker));
+  mbMemClear();
+  await Promise.all([mbCoreLoad(true), mbObhodLoad(true)]);
+  mbAdminChrome();
 }
 async function mbImportRoster() {
   if (!confirm('Загрузить ' + MB_ROSTER.length + ' махаллей из плана и назначить банкиров? Недостающие махалли будут созданы, у существующих обновится паспорт, план и банкир.')) return;
@@ -16691,10 +16737,8 @@ async function mbMahSave() {
   mbBankClose();
 }
 async function mbMahReload() {
-  const sid = localStorage.getItem('msbSessionId');
-  try { allMahallas = await fetchJSON('mahallas') || []; } catch (e) {}
-  try { const hr = await postWebAction({ webAction: 'mbMahallaHistory', sessionId: sid }); mbHist = hr && hr.success ? hr.items : []; } catch (e) {}
-  try { const ar = await postWebAction({ webAction: 'mbMahallaArchiveList', sessionId: sid }); mbMahArch = ar && ar.success ? ar.items : []; } catch (e) {}
+  mbMemClear();
+  try { await mbCoreLoad(true); } catch (e) {}
   mbRenderBankers();
 }
 function mbMahDelAsk(id) {
