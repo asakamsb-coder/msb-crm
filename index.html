@@ -16421,7 +16421,7 @@ async function mbBankDelGo(i) {
 }
 async function mbBankRestore(i) {
   const a = mbArchVisible()[i]; if (!a) return;
-  const res = await postWebAction({ webAction: 'restoreMahallaBanker', sessionId: localStorage.getItem('msbSessionId'), userId: a.userId });
+  const res = await postWebAction({ webAction: 'restoreMahallaBanker', sessionId: localStorage.getItem('msbSessionId'), userId: a.userId || '', login: a.login || '', fullName: a.fullName || '' });
   if (!res || !res.success) { alert((res && res.message) || 'Не удалось восстановить'); return; }
   await mbAdminRender();
 }
