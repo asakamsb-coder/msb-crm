@@ -1588,6 +1588,7 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .st-ps{display:inline-block;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:800;background:#E3F5EA;color:#14804A}.st-ps.w{background:#FDECEA;color:#B3261E}
 .st-od{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.st-od .it{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:9px 0;border-top:1px solid #EEF0F3;font-size:12.5px}.st-od .it b{font-size:15px;text-align:right}.st-od .it .pb{grid-column:1/3;height:4px;background:#EEF0F3;border-radius:3px;overflow:hidden}.st-od .it .pb u{display:block;height:100%;background:#9BA0AB}.st-od .it.r b{color:#B71F17}.st-od .it.r .pb u{background:#B71F17}.st-od small{color:#9BA0AB;font-size:11px;font-weight:600;margin-left:4px}.st-d.mu{color:#9BA0AB}
 @media(max-width:1100px){.st-kp,.st-two,.st-row3{grid-template-columns:1fr}.st-grp{padding:0 0 14px !important;border:0 !important}}
+.mb-av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex:none;overflow:hidden;color:#fff;font-weight:800;vertical-align:middle;box-shadow:0 0 0 1px var(--line);}.mb-av{position:relative;}.mb-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}.mb-nm{display:flex;align-items:center;gap:10px;min-width:0;}.mb-nm b{white-space:nowrap;}
 .mb-table{width:100%;border-collapse:collapse;font-size:13.5px;}
 .mb-table th{text-align:left;font-weight:700;color:var(--muted);font-size:12px;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
 .mb-table td{padding:11px 12px;border-bottom:1px solid var(--line);}
@@ -16374,6 +16375,22 @@ function mbMahs() {
 }
 function mbArchKeys() { const k = new Set(); (mbBankArchive || []).forEach(a => { k.add(mbNorm(a.fullName)); k.add(mbNorm(a.login)); }); k.delete(''); return k; }
 function mbIsArchived(name) { const n = mbNorm(name); return !!n && mbArchKeys().has(n); }
+const MB_AV_COLORS = ['#8a5cf6', '#0ea5a4', '#e8590c', '#2f6fed', '#c2255c', '#2b8a3e', '#7048e8', '#d9480f'];
+function mbUserPhoto(name, login) {
+  const a = mbNorm(name), b = mbNorm(login);
+  const u = (mbBankUsers || []).find(x => (a && mbNorm(x.fullName) === a) || (b && mbNorm(x.login) === b) || (a && mbNorm(x.login) === a));
+  return u && /^https?:/.test(u.photoUrl || '') ? u.photoUrl : '';
+}
+function mbAv(name, login, size) {
+  size = size || 32;
+  const nm = String(name || login || '').trim();
+  const ini = (nm.split(/\s+/).slice(0, 2).map(w => w.charAt(0)).join('') || '•').toUpperCase();
+  let h = 0; for (let i = 0; i < nm.length; i++) h = (h * 31 + nm.charCodeAt(i)) >>> 0;
+  const bg = MB_AV_COLORS[h % MB_AV_COLORS.length];
+  const ph = mbUserPhoto(name, login);
+  const st = 'width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.38) + 'px;background:' + bg;
+  return '<span class="mb-av" style="' + st + '">' + mbEsc(ini) + (ph ? '<img src="' + mbEsc(ph) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
+}
 function mbBankList() {
   const users = mbBankUsers;
   const rows = users.map(u => ({ id: u.id, name: u.fullName || u.login, login: u.login, active: u.active, unknown: false, ids: [] }));
@@ -16445,7 +16462,7 @@ function mbRenderBankers(silent) {
     const list = all.filter(r => (!mbBankQ || r.name.toLowerCase().includes(mbBankQ.toLowerCase())) && (mbBankF !== 'none' || !r.ids.length));
     body = `<div class="mb-filters" style="grid-template-columns:1.4fr 1fr"><input class="input" placeholder="Поиск по ФИО" value="${mbEsc(mbBankQ)}" oninput="mbBankQ=this.value;mbRenderBankersDebounced()"><select class="select" onchange="mbBankF=this.value;mbRenderBankers()"><option value="">Все</option><option value="none"${mbBankF === 'none' ? ' selected' : ''}>Без махаллей</option></select></div>
       <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th><th>ФИО</th><th>Логин</th><th>Прикреплённые махалли</th><th class="mb-num">Домов</th><th class="mb-num">Опрошено</th><th></th></tr></thead><tbody>
-      ${list.map((r, n) => `<tr class="mb-row" ${canEdit && !r.unknown ? `onclick="mbOpenBankEdit(${idx(r)})"` : ''}><td class="mb-num">${n + 1}</td><td><b>${mbEsc(r.name)}</b></td><td>${r.unknown ? '<span class="mb-bd a">нет в пользователях</span>' : mbEsc(r.login)}</td><td>${r.ids.length ? r.ids.slice(0, 2).map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') + (r.ids.length > 2 ? `<span class="mb-chip more">+${r.ids.length - 2}</span>` : '') : '<b style="color:#B76E00">Не назначены</b>'}</td><td class="mb-num">${mbFmt(r.houses)}</td><td class="mb-num">${r.visits}</td><td class="mb-num" style="white-space:nowrap">${canEdit && !r.unknown ? `<button class="btn mb-btn-del" onclick="event.stopPropagation();mbBankDelAsk(${idx(r)})">Удалить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Нет банкиров</td></tr>'}
+      ${list.map((r, n) => `<tr class="mb-row" ${canEdit && !r.unknown ? `onclick="mbOpenBankEdit(${idx(r)})"` : ''}><td class="mb-num">${n + 1}</td><td><div class="mb-nm">${mbAv(r.name, r.login, 40)}<b>${mbEsc(r.name)}</b></div></td><td>${r.unknown ? '<span class="mb-bd a">нет в пользователях</span>' : mbEsc(r.login)}</td><td>${r.ids.length ? r.ids.slice(0, 2).map(id => `<span class="mb-chip">${mbEsc(mbMahName(id))}</span>`).join('') + (r.ids.length > 2 ? `<span class="mb-chip more">+${r.ids.length - 2}</span>` : '') : '<b style="color:#B76E00">Не назначены</b>'}</td><td class="mb-num">${mbFmt(r.houses)}</td><td class="mb-num">${r.visits}</td><td class="mb-num" style="white-space:nowrap">${canEdit && !r.unknown ? `<button class="btn mb-btn-del" onclick="event.stopPropagation();mbBankDelAsk(${idx(r)})">Удалить</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="loading">Нет банкиров</td></tr>'}
       </tbody></table></div>`;
   }
   box.innerHTML = `<div class="panel"><div class="mb-head"><h2>Банкиры махалли</h2>${canEdit ? '<button class="btn" style="background:#F0412C" onclick="mbBankAdd()">Добавить банкира</button>' : ''}</div>
@@ -16496,8 +16513,9 @@ function mbBankMonth(r) {
 }
 function mbRenderBankEdit(err) {
   const r = window.mbBankAll[mbBankEdit]; if (!r) return;
-  mbBankDrawer(`<div class="mb-dh"><div><div class="mb-dt">${mbEsc(r.name)}</div><div class="mb-ds">${r.login ? 'Логин: ' + mbEsc(r.login) : ''}</div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
-    <div class="mb-db"><div class="mb-sec">Данные</div>
+  mbBankDrawer(`<div class="mb-dh"><div class="mb-nm" style="gap:14px">${mbAv(r.name, r.login, 64)}<div><div class="mb-dt">${mbEsc(r.name)}</div><div class="mb-ds">${r.login ? 'Логин: ' + mbEsc(r.login) : ''}</div></div></div><button class="close-btn" onclick="mbBankClose()">×</button></div>
+    <div class="mb-db"><div class="mb-sec">Фото</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-secondary" onclick="document.getElementById('mbBcPhoto').click()">Загрузить фото</button>${mbUserPhoto(r.name, r.login) ? '<button class="btn btn-secondary" onclick="mbBankPhotoRemove()">Удалить фото</button>' : ''}<input type="file" id="mbBcPhoto" accept="image/*" style="display:none" onchange="mbBankPhotoPick(event)"></div><div id="mbBcPhotoSt" class="mb-count"></div>
+    <div class="mb-sec">Данные</div>
     <div class="mb-f"><label>ФИО</label><input class="input" id="mbBcName" value="${mbEsc(r.name)}"></div>
     <div class="mb-f" style="margin-top:8px"><label>Логин</label><input class="input" id="mbBcLogin" value="${mbEsc(r.login)}"></div>
     <div class="mb-f" style="margin-top:8px"><label>Новый пароль</label><input class="input" id="mbBcPass" type="text" placeholder="Оставьте пустым, чтобы не менять"></div>
@@ -16506,6 +16524,20 @@ function mbRenderBankEdit(err) {
     <div class="mb-sec">Показатели</div><div class="mb-kv"><span>Домов</span><b>${mbFmt(r.houses)}</b></div><div class="mb-kv"><span>Визитов за месяц</span><b>${mbBankMonth(r)}</b></div><div class="mb-kv"><span>Визитов за всё время</span><b>${r.visits}</b></div><div class="mb-kv"><span>Охват текущих махаллей</span><b>${Math.round(r.cover || 0)}%</b></div></div>
     <div class="mb-foot"><button class="btn" id="mbBcSave" onclick="mbBankCardSave()">Сохранить</button><button class="btn btn-secondary" onclick="mbBankClose()">Отмена</button></div>`);
 }
+async function mbBankPhotoSend(payload) {
+  const r = window.mbBankAll[mbBankEdit]; if (!r) return;
+  const st = document.getElementById('mbBcPhotoSt'); if (st) st.textContent = 'Загрузка…';
+  const res = await postWebAction(Object.assign({ webAction: 'mbBankerPhotoSet', sessionId: localStorage.getItem('msbSessionId'), userId: r.id }, payload));
+  if (!res || !res.success) { if (st) st.textContent = (res && res.message) || 'Не удалось сохранить фото'; return; }
+  const u = (mbBankUsers || []).find(x => String(x.id) === String(r.id)); if (u) u.photoUrl = res.photoUrl || '';
+  mbMemClear(); mbRenderBankEdit(); mbRenderBankers(); if (mbAdminTab === 'mbStats') mbRenderStats();
+}
+async function mbBankPhotoPick(e) {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  try { const x = await resizeImageFile(f, 480); await mbBankPhotoSend({ base64: x.base64, mimeType: x.mimeType }); }
+  catch (err) { const st = document.getElementById('mbBcPhotoSt'); if (st) st.textContent = 'Не удалось обработать фото'; }
+}
+function mbBankPhotoRemove() { mbBankPhotoSend({ remove: true }); }
 const MB_LATIN_RE = /^[A-Za-z][A-Za-z'ʻʼ‘’`\- ]*$/;
 async function mbBankCardSave() {
   const r = window.mbBankAll[mbBankEdit]; if (!r) return;
@@ -16925,7 +16957,7 @@ function mbBankerMetrics() {
 function mbDur(sec) { return sec ? Math.floor(sec / 60) + ' мин ' + Math.round(sec % 60) + ' с' : '—'; }
 function mbRankCard(title, list, worst) {
   const mx = Math.max(1, ...list.map(b => b.cover));
-  return `<div class="panel"><h2 style="margin-bottom:14px;">${title}</h2>${list.length ? list.map((b, i) => `<div class="mb-rk${worst ? ' w' : ''}"><span class="mb-pos">${i + 1}</span><div class="mb-rkb"><div class="mb-rkn">${mbEsc(b.name)}</div><div class="mb-rks">${b.ids.length ? b.ids.map(id => mbEsc(mbMahName(id))).join(' · ') : 'Махалли не назначены'}</div><div class="mb-bt" style="margin-top:6px"><i style="width:${Math.max(2, Math.round(b.cover / mx * 100))}%"></i></div></div><div class="mb-rkv"><b>${b.cover.toFixed(1)}%</b><span>${b.visits} / ${mbFmt(b.houses)}</span></div></div>`).join('') : '<div class="loading">Нет данных</div>'}</div>`;
+  return `<div class="panel"><h2 style="margin-bottom:14px;">${title}</h2>${list.length ? list.map((b, i) => `<div class="mb-rk${worst ? ' w' : ''}"><span class="mb-pos">${i + 1}</span>${mbAv(b.name, b.login, 34)}<div class="mb-rkb"><div class="mb-rkn">${mbEsc(b.name)}</div><div class="mb-rks">${b.ids.length ? b.ids.map(id => mbEsc(mbMahName(id))).join(' · ') : 'Махалли не назначены'}</div><div class="mb-bt" style="margin-top:6px"><i style="width:${Math.max(2, Math.round(b.cover / mx * 100))}%"></i></div></div><div class="mb-rkv"><b>${b.cover.toFixed(1)}%</b><span>${b.visits} / ${mbFmt(b.houses)}</span></div></div>`).join('') : '<div class="loading">Нет данных</div>'}</div>`;
 }
 function mbRenderStats() {
   const box = document.getElementById('mbStatsBody'); if (!box) return;
@@ -17086,7 +17118,7 @@ function mbBankKpiHtml() {
   return `<div class="panel"><div class="mb-head"><h2>KPI банкиров</h2><div style="display:flex;gap:8px"><button class="btn btn-secondary" id="mbUploadBtn" style="display:none" onclick="mbTogglePassport()">Загрузить паспорта</button></div></div><div id="mbPassportSlot"></div>
       <div class="mb-filters2">${mbPeriodHtml(mbStPer, 'mbStSetPer')}<input class="input" style="max-width:240px" placeholder="Поиск по ФИО" value="${mbEsc(mbStQ)}" oninput="mbStQ=this.value;mbStSearchDeb()"><select class="select" style="max-width:200px" onchange="mbStDist=this.value;mbRenderStats()"><option value="">Все районы</option>${dists.map(d => `<option${d === mbStDist ? ' selected' : ''}>${mbEsc(d)}</option>`).join('')}</select></div>
       <div class="client-table-wrap"><table class="mb-table"><thead><tr><th class="mb-num">№</th>${th('name', 'Банкир')}<th>Махалля</th>${th('houses', 'Домов', 1)}${th('visits', 'Визитов', 1)}${th('cover', 'Охват', 1)}${th('done', 'Опрошено', 1)}${th('interest', 'Интерес', 1)}${th('proj', 'Проектов', 1)}${th('sum', 'Сумма, млн', 1)}${th('retry', 'Повторно', 1)}${th('projAll', 'План проектов', 1)}${th('last', 'Последний визит')}<th>Оценка</th></tr></thead><tbody>
-      ${rows.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td class="mb-num">${i + 1}</td><td><b>${mbEsc(mbShortName(x.name))}</b></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', ') || '—')}</td><td class="mb-num">${mbFmt(x.houses)}</td><td class="mb-num${x.visits === 0 ? ' mb-red' : ''}"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td><td class="mb-num">${x.done}</td><td class="mb-num">${x.interest}</td><td class="mb-num">${x.proj}</td><td class="mb-num">${mbFmt1(x.sum / 1e6)}</td><td class="mb-num">${x.retry}</td><td class="mb-num">${x.plan ? x.projAll + ' / ' + mbFmt(x.plan) + ' · ' + Math.round(x.projAll / x.plan * 100) + '%' : x.projAll}</td><td>${lastTxt(x.last)}</td><td><span class="mb-bd ${x.grade}">${gl[x.grade]}</span></td></tr>`).join('') || '<tr><td colspan="14">Нет данных</td></tr>'}
+      ${rows.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td class="mb-num">${i + 1}</td><td><div class="mb-nm">${mbAv(x.name, x.login, 34)}<b>${mbEsc(mbShortName(x.name))}</b></div></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', ') || '—')}</td><td class="mb-num">${mbFmt(x.houses)}</td><td class="mb-num${x.visits === 0 ? ' mb-red' : ''}"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td><td class="mb-num">${x.done}</td><td class="mb-num">${x.interest}</td><td class="mb-num">${x.proj}</td><td class="mb-num">${mbFmt1(x.sum / 1e6)}</td><td class="mb-num">${x.retry}</td><td class="mb-num">${x.plan ? x.projAll + ' / ' + mbFmt(x.plan) + ' · ' + Math.round(x.projAll / x.plan * 100) + '%' : x.projAll}</td><td>${lastTxt(x.last)}</td><td><span class="mb-bd ${x.grade}">${gl[x.grade]}</span></td></tr>`).join('') || '<tr><td colspan="14">Нет данных</td></tr>'}
       </tbody></table></div></div>`;
 }
 let mbOdPer = 'all';
@@ -17118,7 +17150,7 @@ function mbRow3Html() {
   const all = mbBankKpis(mbStPer);
   const withH = all.filter(x => x.houses > 0).sort((x, y) => y.visits - x.visits || y.cover - x.cover);
   const top = withH.slice(0, 5), worst = withH.slice(-5).reverse();
-  const rk = (list, bad) => `<div class="st-card"><h3 class="st-ct ${bad ? 'b' : 'g'}">${bad ? 'Топ 5 худших' : 'Топ 5 лучших'}</h3><table class="mb-table st-rt"><thead><tr><th></th><th>Банкир</th><th>Махалля</th><th class="mb-num">Визитов</th><th class="mb-num">Охват</th></tr></thead><tbody>${list.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td><span class="st-ps${bad ? ' w' : ''}">${bad ? withH.length - i : i + 1}</span></td><td><b>${mbEsc(mbShortName(x.name))}</b></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', '))}</td><td class="mb-num"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td></tr>`).join('') || '<tr><td colspan="5">Нет данных</td></tr>'}</tbody></table></div>`;
+  const rk = (list, bad) => `<div class="st-card"><h3 class="st-ct ${bad ? 'b' : 'g'}">${bad ? 'Топ 5 худших' : 'Топ 5 лучших'}</h3><table class="mb-table st-rt"><thead><tr><th></th><th>Банкир</th><th>Махалля</th><th class="mb-num">Визитов</th><th class="mb-num">Охват</th></tr></thead><tbody>${list.map((x, i) => `<tr class="mb-row" onclick="mbBankCard('${mbEsc(x.login || x.name).replace(/'/g, '&#39;')}')"><td><span class="st-ps${bad ? ' w' : ''}">${bad ? withH.length - i : i + 1}</span></td><td><div class="mb-nm">${mbAv(x.name, x.login, 30)}<b>${mbEsc(mbShortName(x.name))}</b></div></td><td>${mbEsc(x.ids.slice(0, 2).map(mbMahName).join(', '))}</td><td class="mb-num"><b>${x.visits}</b></td><td class="mb-num">${mbFmt1(x.cover)}%</td></tr>`).join('') || '<tr><td colspan="5">Нет данных</td></tr>'}</tbody></table></div>`;
   const rows = mbOdRows(); const c = mbOdCount(rows);
   const item = x => {
     const [k, l, , red] = x; let v = c[k] || 0; const den = x[2] === 'fam' ? c.fam : c.mem; const w = k === 'fam' || k === 'mem' ? 100 : (den ? Math.max(1, Math.min(100, Math.round(v / den * 100))) : 0);
