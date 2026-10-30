@@ -2176,6 +2176,7 @@ body.role-mahalla-banker .footer{display:none;}
         <input type="file" id="nplFile" accept=".xlsx,.xls" style="font-size:12px;max-width:220px;">
         <button class="btn" style="padding:6px 14px;font-size:13px;min-height:0;" onclick="uploadNplFile()">Загрузить</button>
       </div>
+      <div id="nplUploadWhen" style="margin-top:6px;font-size:12.5px;font-weight:700;color:#1f2937;display:none;"></div>
       <div id="nplUploadStatus" style="margin-top:6px;font-size:12px;color:var(--muted);"></div>
     </div>
   </div>
@@ -9248,6 +9249,12 @@ function renderNplPage() {
     {
       let when = '';
       if (pf && pf.date) { const d = new Date(pf.date); if (!isNaN(d.getTime())) when = ' · файл от ' + d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }
+      const uw = document.getElementById('nplUploadWhen');
+      if (uw) {
+        const d0 = pf && pf.date ? new Date(pf.date) : null;
+        if (d0 && !isNaN(d0.getTime())) { uw.innerText = 'Файл загружен: ' + d0.toLocaleDateString('ru-RU') + ' в ' + d0.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); uw.style.display = ''; }
+        else uw.style.display = 'none';
+      }
       let warn = '';
       if (pf && (Number(pf.skipN) > 0 || Number(pf.textN) > 0)) warn = ' · ⚠ пропущено строк: ' + (Number(pf.skipN) || 0) + (pf.skipSum ? ' на ' + fm(pf.skipSum) : '') + (pf.textN ? ', текстовых сумм: ' + pf.textN : '');
       setT('ndPfCount', pfOk ? pf.clients + ' клиентов · ' + (pf.loans || 0) + ' кредитов' + when + warn : 'нет полного файла портфеля');
