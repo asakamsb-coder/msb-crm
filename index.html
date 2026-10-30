@@ -1163,6 +1163,19 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .nd-split .n{font-size:11px;color:var(--muted);margin:0 0 2px;}
 .nd-split .a{font-size:14px;font-weight:700;margin:0;}
 .nd-split .c{font-size:11px;color:var(--muted);margin:2px 0 0;}
+.nd-card.blue{border-left:3px solid #2f6fed;border-radius:0 12px 12px 0;}.nd-card.green{border-left:3px solid #1e8e4e;border-radius:0 12px 12px 0;}.nd-card.purple{border-left:3px solid #7c3aed;border-radius:0 12px 12px 0;}
+#nplTabPanelDash .nd-l{color:#1f2937;font-weight:700;font-size:13px;}#nplTabPanelDash .nd-s,#nplTabPanelDash .nd-split .n,#nplTabPanelDash .nd-split .c{color:#374151;font-weight:600;}
+#nplTabPanelDash .nd-split .n{font-size:12px;}#nplTabPanelDash .nd-split .c,#nplTabPanelDash .nd-s{font-size:12.5px;}#nplTabPanelDash .nd-split .a{font-size:15px;}
+.v-blue{color:#1d4ed8;}.v-amber{color:#b45309;}.v-red{color:#b91c1c;}.v-green{color:#15803d;}.v-orange{color:#c2410c;}
+.nd-lt{font-size:15px;font-weight:900;letter-spacing:.5px;text-transform:uppercase;margin:0 0 6px;color:#111;}
+.nd-who{display:inline-block;font-size:10.5px;font-weight:800;border-radius:6px;padding:2px 8px;margin-bottom:6px;color:#fff;}.nd-who.f{background:#7c3aed;}.nd-who.j{background:#2f6fed;}
+.nd-st{padding:8px 0;border-top:1px solid var(--line);}.nd-st.first{border-top:none;}.nd-st .t{display:flex;justify-content:space-between;align-items:baseline;}.nd-st .t b{font-size:13px;color:#111;}.nd-st .t span{font-size:11px;color:#374151;font-weight:600;}
+.nd-st .m{font-size:17px;font-weight:700;margin:2px 0 5px;}.nd-st .m small{font-size:12px;color:#374151;font-weight:600;}
+.nd-pb{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;}.nd-pb i{display:block;height:100%;background:#1e8e4e;border-radius:4px;}
+.nd-cap{display:flex;justify-content:space-between;font-size:11.5px;margin-top:4px;color:#374151;font-weight:600;}.nd-cap b{color:#15803d;}.nd-cap em{font-style:normal;color:#b91c1c;font-weight:700;}
+.nd-bk{width:100%;border-collapse:collapse;font-size:13.5px;}.nd-bk th{text-align:right;font-size:12px;color:#1f2937;padding:8px 10px;border-bottom:2px solid var(--line);font-weight:700;}.nd-bk th:first-child,.nd-bk th.l{text-align:left;}
+.nd-bk td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}.nd-bk td:first-child,.nd-bk td.l{text-align:left;font-weight:700;}.nd-bk .k2{display:block;font-size:11px;color:#374151;font-weight:600;}
+.nd-bk .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;}.nd-bk .bar{display:inline-block;height:9px;border-radius:5px;vertical-align:middle;margin-right:8px;}.nd-bk tr.tot td{font-weight:800;background:#f6f7f9;border-bottom:none;}
 .nd-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px;}
 .nd-g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:20px;}
 @media(max-width:900px){.nd-g3,.nd-g4{grid-template-columns:repeat(2,minmax(0,1fr));}}
@@ -2069,21 +2082,18 @@ body.role-mahalla-banker .footer{display:none;}
   </div>
 </section>
 <section id="nplPage" class="page">
-  <div class="header">
+  <div class="header" style="margin-bottom:16px;">
     <div>
       <h1>NPL / ПРОСРОЧКА ПО КЛИЕНТУ</h1>
-      <p>Юр. лица — просрочка от 1 дня, физ. лица — только 90+. Несколько кредитов клиента объединяются в одну карточку.</p>
-      <p id="nplPerfNote" style="font-size:11px;color:var(--muted);margin:4px 0 0;"></p>
+      <p id="nplPerfNote" style="display:none"></p>
     </div>
-  </div>
-
-  <div id="nplUploadPanel" style="margin-bottom:20px;padding:16px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;">
-    <label style="display:block;font-size:13px;font-weight:700;margin-bottom:8px;">Загрузить NPL-выгрузку (Excel)</label>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-      <input type="file" id="nplFile" accept=".xlsx,.xls">
-      <button class="btn" onclick="uploadNplFile()">Загрузить</button>
+    <div id="nplUploadPanel" title="Загрузить NPL-выгрузку (Excel)" style="padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="file" id="nplFile" accept=".xlsx,.xls" style="font-size:12px;max-width:220px;">
+        <button class="btn" style="padding:6px 14px;font-size:13px;min-height:0;" onclick="uploadNplFile()">Загрузить</button>
+      </div>
+      <div id="nplUploadStatus" style="margin-top:6px;font-size:12px;color:var(--muted);"></div>
     </div>
-    <div id="nplUploadStatus" style="margin-top:10px;font-size:13px;color:var(--muted);"></div>
   </div>
 
   <div id="nplEmptyState" class="loading">Загружаю данные NPL…</div>
@@ -2101,37 +2111,59 @@ body.role-mahalla-banker .footer{display:none;}
 
     <div id="nplTabPanelDash">
       <h2 style="font-size:16px;margin:0 0 14px;">1. Дашборд</h2>
-      <div class="nd-g3">
-        <div class="nd-card">
+      <div class="nd-g4" style="margin-bottom:10px;">
+        <div class="nd-card blue">
           <p class="nd-l">Текущий портфель</p>
-          <p class="nd-v" id="ndPfTotal">...</p>
+          <p class="nd-v v-blue" id="ndPfTotal">...</p>
           <p class="nd-s" id="ndPfCount"></p>
           <div class="nd-split">
             <div><p class="n">Юридические лица</p><p class="a" id="ndPfJ">—</p><p class="c" id="ndPfJc"></p></div>
             <div><p class="n">Физические лица</p><p class="a" id="ndPfP">—</p><p class="c" id="ndPfPc"></p></div>
           </div>
         </div>
-        <div class="nd-card">
+        <div class="nd-card orange">
+          <p class="nd-l">Просрочка</p>
+          <p class="nd-v v-amber" id="ndOv">...</p>
+          <p class="nd-s" id="ndOvC"></p>
+          <div class="nd-split">
+            <div><p class="n">Юридические лица</p><p class="a" id="ndOvJ">—</p><p class="c" id="ndOvJc"></p></div>
+            <div><p class="n">Физические лица</p><p class="a" id="ndOvP">—</p><p class="c" id="ndOvPc"></p></div>
+          </div>
+        </div>
+        <div class="nd-card red">
           <p class="nd-l">NPL 90+</p>
-          <p class="nd-v" id="ndNplTotal">...</p>
+          <p class="nd-v v-red" id="ndNplTotal">...</p>
           <p class="nd-s" id="ndNplCount"></p>
           <div class="nd-split">
             <div><p class="n">Юридические лица</p><p class="a" id="ndNplJ">—</p><p class="c" id="ndNplJc"></p></div>
             <div><p class="n">Физические лица</p><p class="a" id="ndNplP">—</p><p class="c" id="ndNplPc"></p></div>
           </div>
         </div>
-        <div class="nd-card">
+        <div class="nd-card green">
           <p class="nd-l">Резерв</p>
-          <p class="nd-v" id="ndReserve">...</p>
+          <p class="nd-v v-green" id="ndReserve">...</p>
           <p class="nd-s" id="ndReservePct"></p>
         </div>
       </div>
-      <div class="nd-g4">
-        <div class="nd-card orange"><p class="nd-l">Ожидаемый NPL</p><p class="nd-v" id="ndExp">...</p><p class="nd-s" id="ndExpC"></p></div>
-        <div class="nd-card red"><p class="nd-l">FPD · первый платёж</p><p class="nd-v" id="ndFpd">...</p><p class="nd-s" id="ndFpdC"></p></div>
-        <div class="nd-card orange"><p class="nd-l">SPD · второй платёж</p><p class="nd-v" id="ndSpd">...</p><p class="nd-s" id="ndSpdC"></p></div>
-        <div class="nd-card orange"><p class="nd-l">TPD · третий платёж</p><p class="nd-v" id="ndTpd">...</p><p class="nd-s" id="ndTpdC"></p></div>
+      <div class="nd-g4" style="align-items:stretch;">
+        <div class="nd-card orange">
+          <p class="nd-l">Ожидаемый NPL</p><p class="nd-v v-orange" id="ndExp">...</p><p class="nd-s" id="ndExpC"></p>
+          <div class="nd-split">
+            <div><p class="n">Юридические лица</p><p class="a" id="ndExpJ">—</p><p class="c" id="ndExpJc"></p></div>
+            <div><p class="n">Физические лица</p><p class="a" id="ndExpP">—</p><p class="c" id="ndExpPc"></p></div>
+          </div>
+        </div>
+        <div class="nd-card red">
+          <p class="nd-l">FPD · первый платёж</p><p class="nd-v v-red" id="ndFpd">...</p><p class="nd-s" id="ndFpdC"></p>
+          <div class="nd-split">
+            <div><p class="n">Юридические лица</p><p class="a" id="ndFpdJ">—</p><p class="c" id="ndFpdJc"></p></div>
+            <div><p class="n">Физические лица</p><p class="a" id="ndFpdP">—</p><p class="c" id="ndFpdPc"></p></div>
+          </div>
+        </div>
+        <div class="nd-card purple" id="ndLegalP"></div>
+        <div class="nd-card blue" id="ndLegalJ"></div>
       </div>
+      <div class="nd-card orange" style="margin-bottom:20px;"><p class="nd-l" style="font-size:14px;">Просрочка по срокам</p><div id="ndOvTerms" class="client-table-wrap"></div></div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 10px;">
         <h3 style="font-size:14px;margin:0;">Юридические лица по категориям риска</h3>
@@ -9157,14 +9189,64 @@ function renderNplPage() {
     setT('ndReserve', fm(reserve)); setT('ndReservePct', nplAll > 0 ? pct(reserve, nplAll) + ' от NPL' : '');
     const pfOf = g => g.portfolioSum || g.totalDebtSum;
     setT('ndExp', fm(sumBy(expectedGroups, pfOf))); setT('ndExpC', expectedGroups.length + ' клиентов');
-    const earlyAll = nplDashEarlyLoans('all');
-    ['fpd', 'spd', 'tpd'].forEach(function(cat) {
-      const arr = earlyAll.filter(x => x.e.cat === cat);
-      const id = cat === 'fpd' ? 'ndFpd' : cat === 'spd' ? 'ndSpd' : 'ndTpd';
-      const sum = arr.reduce((t, x) => t + (Number(x.l.portfolio) || Number(x.l.totalDebt) || 0), 0);
-      setT(id, fm(sum));
-      setT(id + 'C', arr.length + ' анкет · EPD ' + arr.filter(x => x.e.epd).length);
+    // ---- Просрочка (от 1 дня): юр./физ. лица ----
+    const ovSum = g => nplIsNplClient(g) ? (Number(g.nplSum) || 0) : (Number(pfOf(g)) || 0);
+    const ovJ = allGroups.filter(g => g.subject === 'J' && g.maxDays >= 1), ovP = allGroups.filter(g => g.subject === 'P' && g.maxDays >= 1);
+    const ovJs = sumBy(ovJ, ovSum), ovPs = sumBy(ovP, ovSum), ovAll = ovJs + ovPs;
+    setT('ndOv', fm(ovAll)); setT('ndOvC', (ovJ.length + ovP.length) + ' клиентов' + (pfOk ? ' · ' + pct(ovAll, pf.sum) + ' портфеля' : ''));
+    setT('ndOvJ', fm(ovJs)); setT('ndOvJc', ovJ.length + ' клиентов' + (pfOk ? ' · ' + pct(ovJs, pf.jSum) : ''));
+    setT('ndOvP', fm(ovPs)); setT('ndOvPc', ovP.length + ' клиентов' + (pfOk ? ' · ' + pct(ovPs, pf.pSum) : ''));
+
+    // ---- Ожидаемый NPL: разбивка ----
+    const expJ = expectedGroups.filter(g => g.subject === 'J'), expP = expectedGroups.filter(g => g.subject === 'P');
+    setT('ndExpJ', fm(sumBy(expJ, pfOf))); setT('ndExpJc', expJ.length + ' клиентов');
+    setT('ndExpP', fm(sumBy(expP, pfOf))); setT('ndExpPc', expP.length + ' клиентов');
+
+    // ---- FPD: юр. (анкеты по существующему правилу) и физ. лица (то же правило по возрасту кредита) ----
+    const loanSum = l => Number(l.portfolio) || Number(l.totalDebt) || 0;
+    const fpdJ = nplDashEarlyLoans('all').filter(x => x.e.cat === 'fpd').map(x => ({ l: x.l, epd: x.e.epd }));
+    const fpdP = [];
+    allGroups.forEach(g => { if (g.subject !== 'P') return; g.loans.forEach(l => {
+      const days = nplLoanDays(l), age = nplLoanAgeDays(l);
+      if (days >= 1 && age !== null && age >= 0 && age - days >= 0 && age - days <= 45) fpdP.push({ l: l, epd: age <= 183 });
+    }); });
+    const fJs = fpdJ.reduce((t, x) => t + loanSum(x.l), 0), fPs = fpdP.reduce((t, x) => t + loanSum(x.l), 0);
+    setT('ndFpd', fm(fJs + fPs)); setT('ndFpdC', (fpdJ.length + fpdP.length) + ' анкет · EPD ' + (fpdJ.filter(x => x.epd).length + fpdP.filter(x => x.epd).length));
+    setT('ndFpdJ', fm(fJs)); setT('ndFpdJc', fpdJ.length + ' анкет · EPD ' + fpdJ.filter(x => x.epd).length);
+    setT('ndFpdP', fm(fPs)); setT('ndFpdPc', fpdP.length + ' анкет · EPD ' + fpdP.filter(x => x.epd).length);
+
+    // ---- ЮРИДИЧЕСКИЙ СТАТУС: МИБ 90+, суд 60+, судебный приказ 75+ ----
+    const legalCard = (subj, cls) => {
+      const grp = allGroups.filter(g => g.subject === subj);
+      const st = (days, key, doneL, missL) => {
+        const arr = grp.filter(g => g.maxDays >= days);
+        const done = arr.filter(g => stLegalFlags(g)[key]).length;
+        return { n: arr.length, sum: sumBy(arr, ovSum), done: done, miss: arr.length - done, p: arr.length ? Math.round(done / arr.length * 100) : 0, doneL: doneL, missL: missL };
+      };
+      const row = (name, thr, x, first) => '<div class="nd-st' + (first ? ' first' : '') + '"><div class="t"><b>' + name + '</b><span>' + thr + '</span></div>'
+        + '<div class="m">' + x.n + ' <small>клиентов · ' + fm(x.sum) + '</small></div><div class="nd-pb"><i style="width:' + x.p + '%"></i></div>'
+        + '<div class="nd-cap"><span>' + x.doneL + ': <b>' + x.done + '</b></span><em>' + x.missL + ': ' + x.miss + '</em></div></div>';
+      return '<p class="nd-lt">Юридический статус</p><span class="nd-who ' + cls + '">' + (subj === 'P' ? 'ФИЗИЧЕСКИЕ ЛИЦА' : 'ЮРИДИЧЕСКИЕ ЛИЦА') + '</span>'
+        + row('МИБ', '90+ дн.', st(90, 'mib', 'в МИБ', 'не передано'), true)
+        + row('Передано в суд', '60+ дн.', st(60, 'courtAny', 'передано', 'не передано'))
+        + row('Судебный приказ', '75+ дн.', st(75, 'order', 'получен', 'не оформлен'));
+    };
+    const lp = document.getElementById('ndLegalP'); if (lp) lp.innerHTML = legalCard('P', 'f');
+    const lj = document.getElementById('ndLegalJ'); if (lj) lj.innerHTML = legalCard('J', 'j');
+
+    // ---- Просрочка по срокам ----
+    const bks = [['1 – 29', 1, 29, '#f6c667'], ['30 – 59', 30, 59, '#f0a23a'], ['60 – 89', 60, 89, '#e8782f'], ['90 – 180', 90, 180, '#dc5b3a'], ['181 – 365', 181, 365, '#c93a34'], ['более 365', 366, 1e9, '#8f1d1d']];
+    const bRows = bks.map(b => {
+      const j = ovJ.filter(g => g.maxDays >= b[1] && g.maxDays <= b[2]), p = ovP.filter(g => g.maxDays >= b[1] && g.maxDays <= b[2]);
+      return { l: b[0], c: b[3], js: sumBy(j, ovSum), jn: j.length, ps: sumBy(p, ovSum), pn: p.length };
     });
+    const bTot = bRows.reduce((t, r) => t + r.js + r.ps, 0) || 1;
+    const cell = (sum, n) => fm(sum) + '<span class="k2">' + n + ' клиентов</span>';
+    const tb = document.getElementById('ndOvTerms');
+    if (tb) tb.innerHTML = '<table class="nd-bk"><thead><tr><th>Срок, дней</th><th>Юридические лица</th><th>Физические лица</th><th>Всего</th><th class="l">Доля</th></tr></thead><tbody>'
+      + bRows.map(r => { const t = r.js + r.ps, w = Math.round(t / bTot * 190);
+        return '<tr><td><i class="dot" style="background:' + r.c + '"></i>' + r.l + '</td><td>' + cell(r.js, r.jn) + '</td><td>' + cell(r.ps, r.pn) + '</td><td><b>' + fm(t) + '</b><span class="k2">' + (r.jn + r.pn) + ' клиентов</span></td><td class="l"><i class="bar" style="width:' + Math.max(w, 3) + 'px;background:' + r.c + '"></i>' + nplFmtPct(t / bTot * 100) + '%</td></tr>'; }).join('')
+      + '<tr class="tot"><td>Всего</td><td>' + cell(bRows.reduce((t, r) => t + r.js, 0), ovJ.length) + '</td><td>' + cell(bRows.reduce((t, r) => t + r.ps, 0), ovP.length) + '</td><td>' + cell(bTot === 1 && !ovAll ? 0 : ovAll, ovJ.length + ovP.length) + '</td><td class="l">100%</td></tr></tbody></table>';
   }
 
   // ---- Дашборд: юр.лица по категориям риска (FPD/SPD/TPD/EPD — по анкетам) ----
