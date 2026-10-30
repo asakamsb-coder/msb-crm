@@ -12809,7 +12809,7 @@ function cdBuildRows(subj, range, vi) {
       zero: gs.filter(g => !seen[g.key]).length, zeroN: nplG.filter(g => !seen[g.key]).length,
       keys: gs.map(g => g.key), share: gs.length / totalCnt * 100, avg: gs.length ? openPf / gs.length : 0, openPf: openPf
     };
-  }).sort((x, y) => y.pfSum - x.pfSum);
+  }).filter(r => r.nCnt > 0).sort((x, y) => y.pfSum - x.pfSum);
 }
 function cdPct(a, b) { return b ? Math.round(a / b * 1000) / 10 : null; }
 function cdPg(p, hi) {
