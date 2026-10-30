@@ -2280,7 +2280,7 @@ body.role-mahalla-banker .footer{display:none;}
     </div>
 
     <div id="nplTabPanelIndiv" style="margin-top:12px;display:none;">
-      <h2 style="font-size:16px;margin:0 0 8px;">Физические лица</h2>
+      <h2 id="nplFlTitle" style="font-size:16px;margin:0 0 8px;">Физические лица</h2>
       <div id="nplFlSeg" class="fl-seg"></div>
       <div id="nplFlKs" class="fl-ks"></div>
       <div class="fl-bar">
@@ -9090,8 +9090,8 @@ function setNplPageTab(tab) {
   const act = (id, on) => { const b = document.getElementById(id); if (b) b.classList.toggle('active', !!on); };
   act('nplPageTabDash', tab === 'dashboard'); act('nplPageTabClients', tab === 'clients'); act('nplPageTabStats', tab === 'stats');
   show('nplTabPanelDash', tab === 'dashboard');
-  show('nplTabPanelLegalAll', nplTabIs('legal'));
-  show('nplTabPanelIndiv', nplTabIs('indiv'));
+  show('nplTabPanelLegalAll', false);
+  show('nplTabPanelIndiv', nplTabIs('indiv') || nplTabIs('legal'));
   show('nplTabPanelArchive', nplTabIs('archive'));
   show('nplTabPanelStats', tab === 'stats');
   const bar = document.getElementById('nplClientsBar');
@@ -9296,58 +9296,14 @@ function renderNplPage() {
       + '<tr class="tot"><td>Всего</td><td>' + cell(bRows.reduce((t, r) => t + r.js, 0), ovJ.length) + '</td><td>' + cell(bRows.reduce((t, r) => t + r.ps, 0), ovP.length) + '</td><td>' + cell(bTot === 1 && !ovAll ? 0 : ovAll, ovJ.length + ovP.length) + '</td><td class="l">100%</td></tr></tbody></table>';
   }
 
-  // ---- Пункт 2: юр.лица — ВСЕ, просрочка 1+ (широкая таблица, 50 строк/стр.) ----
-  if (nplTabIs('legal')) {
-    const tbody = document.getElementById('nplLegalAllTableBody');
-    let clients = legalAllGroups.slice();
-    const query = normalizeText((document.getElementById('nplLegalAllSearchInput')?.value || '').trim());
-    if (query) {
-      clients = clients.filter(c => normalizeText([c.clientName, c.pin, c.displayClientId, c.contractIdsJoined].join(' ')).includes(query));
-    }
-    clients.sort((a, b) => b.nplSum - a.nplSum);
-
-    const totalPages = Math.max(1, Math.ceil(clients.length / NPL_PAGE_SIZE));
-    if (nplLegalAllPage > totalPages) nplLegalAllPage = totalPages;
-    const pageStart = (nplLegalAllPage - 1) * NPL_PAGE_SIZE;
-    const pageClients = clients.slice(pageStart, pageStart + NPL_PAGE_SIZE);
-
-    if (!clients.length) {
-      tbody.innerHTML = '<tr><td colspan="23" class="loading">Ничего не найдено</td></tr>';
-    } else {
-      tbody.innerHTML = pageClients.map((c, i) => `
-        <tr class="clickable-row" onclick="openNplClientDetail('${encodeURIComponent(c.key)}')">
-          <td class="nowrap">${pageStart + i + 1}</td>
-          <td>${safe(c.clientName)}</td>
-          <td class="nowrap">${safe(c.pin) || '—'}</td>
-          <td class="nowrap">${c.loans.length}</td>
-          <td class="nowrap">${formatMoney(c.totalDebtSum)}</td>
-          <td class="nowrap">${formatMoney(c.nplSum)}</td>
-          <td class="nowrap">${formatMoney(c.currentBalanceSum)}</td>
-          <td class="nowrap">${formatMoney(c.revisedBalanceSum)}</td>
-          <td class="nowrap">${formatMoney(c.overdueBalanceSum)}</td>
-          <td class="nowrap">${c.maxDaysOverdue}</td>
-          <td class="nowrap">${formatMoney(c.totalInterestSum)}</td>
-          <td class="nowrap">${formatMoney(c.accruedInterestSum)}</td>
-          <td class="nowrap">${formatMoney(c.overdueInterestSum)}</td>
-          <td class="nowrap">${c.maxDaysOverdueInterest}</td>
-          <td class="nowrap"><b>${c.maxDays}</b></td>
-          <td class="nowrap">${formatMoney(c.reserveSum)}</td>
-          <td class="nowrap">${safe(c.officerJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.courtOrderNumberJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.courtOrderDateJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.mibCaseJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.mibDateJoined) || '—'}</td>
-          <td class="nowrap">${safe(c.phoneJoined) || '—'}</td>
-          <td class="nowrap" style="text-align:right;color:var(--muted);">›</td>
-        </tr>`).join('');
-    }
-
-    renderNplPager('nplLegalAllPager', 'legal', nplLegalAllPage, clients.length);
-  }
-
   // ---- Физические лица: подвкладки (Просроченные / Все / NPL / FPD / Юр. статус) ----
-  if (nplTabIs('indiv')) {
-    nplFlCtx = { over: indivAllGroups, all: filterForCollector(allGroups.filter(g => g.subject === 'P')) };
+  if (nplTabIs('indiv') || nplTabIs('legal')) {
+    const flSubj = nplTabIs('legal') ? 'J' : 'P';
+    nplFlEnsureSubj(flSubj);
+    nplFlGroupsFn = subj => filterForCollector(allGroups.filter(g => g.subject === subj));
+    nplFlCtx = flSubj === 'J'
+      ? { over: legalAllGroups, all: nplFlGroupsFn('J') }
+      : { over: indivAllGroups, all: nplFlGroupsFn('P') };
     nplFlRender();
   }
   try {
@@ -12668,17 +12624,20 @@ function nplPhonesChanged(keyEnc) {
   else openNplExtraModal(keyEnc);
 }
 
-// ======================= Физические лица: подвкладки, юр. статусы, Excel =======================
+// ======================= Клиенты (ФЛ и ЮЛ): подвкладки, юр. статусы по файлам, Excel =======================
 let nplFlSub = 'over';
 let nplFlOpen = '';
+let nplFlSubj = 'P';
 let nplFlCtx = { over: [], all: [] };
+let nplFlGroupsFn = null;
 let nplFlLast = null;
 let nplFlPopState = null;
-const nplFlF = { term: [], leg: '', basis: '', coll: '', epd: '' };
-const NPL_FL_SUBS = [['over', 'Просроченные'], ['all', 'Все'], ['npl', 'NPL 90+'], ['fpd', 'FPD'], ['leg', 'Юр. статус']];
+const nplFlF = { term: [], leg: '', basis: '', coll: '', epd: '', cat: '' };
 const NPL_FL_TERMS = [['0', 'Без просрочки'], ['1', '1 – 29 дней'], ['2', '30 – 59 дней'], ['3', '60 – 89 дней'], ['4', '90 – 180 дней'], ['5', '181 – 365 дней'], ['6', 'Более 365 дней']];
 const NPL_FL_TERM_SHORT = { '0': 'без просрочки', '1': '1–29', '2': '30–59', '3': '60–89', '4': '90–180', '5': '181–365', '6': '365+' };
 const NPL_FL_CLIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5-6.5a3 3 0 0 0-6-6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5-6.5"/></svg>';
+function nplFlIsJ() { return nplFlSubj === 'J'; }
+function nplFlSubs() { return [['over', 'Просроченные'], ['all', 'Все'], ['npl', 'NPL 90+'], ['fpd', nplFlIsJ() ? 'FPD · SPD · TPD' : 'FPD'], ['leg', 'Юр. статус']]; }
 
 function nplFlTermOf(d) {
   d = Number(d) || 0;
@@ -12690,17 +12649,23 @@ function nplFlOvSum(g) { return nplIsNplClient(g) ? (Number(g.nplSum) || 0) : (N
 function nplFlMln(v) { return Math.round((Number(v) || 0) / 1e5) / 10; }
 function nplFlCollId(g) { return String(allNplAssignments[g.key] || '').trim(); }
 
-// Анкеты клиента-ФЛ, подходящие под FPD (первый платёж): старт просрочки ≤ 45 дн.
+// Ранние дефолты по анкетам. ФЛ: FPD (старт просрочки ≤ 45 дн.). ЮЛ: FPD / SPD / TPD по правилу дашборда.
 function nplFlFpdLoans(g) {
   if (g._flFpd !== undefined) return g._flFpd;
   const out = [];
   (g.loans || []).forEach(function(l) {
-    const days = nplLoanDays(l), age = nplLoanAgeDays(l);
-    if (days >= 1 && age !== null && age >= 0 && age - days >= 0 && age - days <= 45) out.push({ l: l, days: days, age: age, epd: age <= 183 });
+    if (g.subject === 'J') {
+      const e = nplLoanEarlyInfo(l);
+      if (e) out.push({ l: l, days: e.days, age: e.age, gap: e.gap, cat: e.cat, epd: e.epd });
+    } else {
+      const days = nplLoanDays(l), age = nplLoanAgeDays(l);
+      if (days >= 1 && age !== null && age >= 0 && age - days >= 0 && age - days <= 45) out.push({ l: l, days: days, age: age, gap: age - days, cat: 'fpd', epd: age <= 183 });
+    }
   });
   g._flFpd = out;
   return out;
 }
+function nplFlIsFpd(g) { return nplFlFpdLoans(g).some(x => x.cat === 'fpd'); }
 
 function nplFlFiles(key, kind) {
   if (kind === 'mib') return (allNplMib.files || {})[key] || [];
@@ -12708,80 +12673,65 @@ function nplFlFiles(key, kind) {
   return all.filter(function(f) { const isOrd = /^\[приказ\]/i.test(String(f.name || '')); return kind === 'ord' ? isOrd : !isOrd; });
 }
 function nplFlFileLabel(n) { return String(n || '').replace(/^\[(приказ|иск)\]\s*/i, ''); }
-
-function nplFlLegCell(g, kind, f) {
-  const th = kind === 'isk' ? 60 : kind === 'ord' ? 75 : 90;
-  const yes = kind === 'isk' ? f.courtAny : kind === 'ord' ? f.order : f.mib;
-  if ((Number(g.maxDays) || 0) < th && !yes) return '<span class="fl-z">–</span>';
-  const n = nplFlFiles(g.key, kind).length;
-  return '<span class="fl-lc" onclick="nplFlOpenPop(event,\'' + encodeURIComponent(g.key) + '\',\'' + kind + '\')"><span class="fl-ico ' + (yes ? 'y' : 'x') + '">' + (yes ? '✓' : '✕') + '</span><span class="fl-clip' + (n ? ' on' : '') + '">' + NPL_FL_CLIP + '</span></span>';
-}
-function nplFlLegXl(g, kind, f) {
-  const th = kind === 'isk' ? 60 : kind === 'ord' ? 75 : 90;
-  const yes = kind === 'isk' ? f.courtAny : kind === 'ord' ? f.order : f.mib;
-  if ((Number(g.maxDays) || 0) < th && !yes) return { v: '–', t: XL.grey, al: 'center' };
-  return yes ? { v: '✓ Есть', f: XL.gF, t: XL.gT, b: true, al: 'center' } : { v: '✕ Нет', f: XL.rF, t: XL.rT, b: true, al: 'center' };
+// Статус этапа считается ТОЛЬКО по загруженному файлу
+function nplFlSt(g) {
+  return { courtAny: nplFlFiles(g.key, 'isk').length > 0, order: nplFlFiles(g.key, 'ord').length > 0, mib: nplFlFiles(g.key, 'mib').length > 0 };
 }
 function nplFlMibCase(g) {
   const m = (allNplMib.data || {})[g.key] || {};
   return String(m.caseNumber || m.caseId || g.mibCaseJoined || '');
 }
-
-// Колонки: ui(it) -> <td>…</td>; xl(it) -> значение для Excel
-function nplFlCols(sub) {
-  const nm = it => '<td class="fl-nm">' + safe(it.g.clientName) + '</td>';
-  const id = it => '<td class="fl-id">' + (safe(it.g.displayClientId) || '—') + '</td>';
-  const coll = it => { const e = nplFlCollId(it.g); return '<td>' + (e ? safe(nplCollectorLabel(e)) : '<span class="fl-z">—</span>') + '</td>'; };
-  const dys = it => '<td class="r">' + nplFlDays(it.days) + '</td>';
-  const dysX = it => { const d = it.days; return { v: d, f: d >= 90 ? XL.rF : d >= 60 ? XL.aF : null, t: d >= 90 ? XL.rT : d >= 60 ? XL.aT : undefined, b: true, al: 'center' }; };
-  const term = it => '<td class="c">' + nplFlTermTag(it.days) + '</td>';
-  const termX = it => { const t = nplFlTermOf(it.days); const hot = t >= '4'; const warm = t === '2' || t === '3'; return { v: NPL_FL_TERM_SHORT[t] + (t === '0' ? '' : ' дн.'), f: hot ? XL.rF : warm ? XL.aF : t === '0' ? XL.gF : null, t: hot ? XL.rT : warm ? XL.aT : t === '0' ? XL.gT : undefined, b: true, al: 'center' }; };
-  const leg = (k) => [it => '<td class="c">' + nplFlLegCell(it.g, k, it.f) + '</td>', it => nplFlLegXl(it.g, k, it.f)];
-  const money = (h, fn) => ({ h: h, w: 14, fmt: '#,##0.0', r: true, ui: it => '<td class="r">' + formatMoney(fn(it)) + '</td>', xl: it => nplFlMln(fn(it)) });
-  const C = {
-    name: { h: 'Клиент', w: 38, ui: nm, xl: it => it.g.clientName },
-    id: { h: 'ID клиента', w: 13, ui: id, xl: it => String(it.g.displayClientId || '') },
-    pin: { h: 'ПИНФЛ', w: 16, ui: null, xl: it => String(it.g.pin || '') },
-    days: { h: 'Дней', w: 9, r: true, ui: dys, xl: dysX, al: 'center' },
-    term: { h: 'Срок', w: 14, c: true, ui: term, xl: termX, al: 'center' },
-    isk: { h: 'Иск', w: 11, c: true, ui: leg('isk')[0], xl: leg('isk')[1], al: 'center' },
-    ord: { h: 'Приказ', w: 11, c: true, ui: leg('ord')[0], xl: leg('ord')[1], al: 'center' },
-    mib: { h: 'МИБ', w: 11, c: true, ui: leg('mib')[0], xl: leg('mib')[1], al: 'center' },
-    mibCase: { h: 'Дело МИБ', w: 14, ui: it => '<td class="fl-id">' + (safe(nplFlMibCase(it.g)) || '<span class="fl-z">–</span>') + '</td>', xl: it => nplFlMibCase(it.g) },
-    phone: { h: 'Телефон', w: 16, ui: it => '<td>' + (safe(String(it.g.phoneJoined || '').split(';')[0]) || '<span class="fl-z">—</span>') + '</td>', xl: it => xlPhone(String(it.g.phoneJoined || '').split(';')[0]) },
-    coll: { h: 'Взыскатель', w: 26, ui: coll, xl: it => { const e = nplFlCollId(it.g); return e ? nplCollectorLabel(e) : 'Не назначен'; } }
-  };
-  C.over = money('Просрочка, млн', it => nplFlOvSum(it.g)); C.over.h = 'Просрочка'; C.over.hx = 'Просрочка, млн';
-  C.pf = money('Портфель', it => it.g.portfolioSum || it.g.totalDebtSum); C.pf.hx = 'Портфель, млн';
-  C.npl = money('Сумма NPL', it => it.g.nplSum); C.npl.hx = 'Сумма NPL, млн';
-  C.res = money('Резерв', it => it.g.reserveSum); C.res.hx = 'Резерв, млн';
-  C.sum = money('Сумма', it => nplFlOvSum(it.g)); C.sum.hx = 'Сумма, млн';
-  C.basis = { h: 'Осн.', w: 10, c: true, ui: it => '<td class="c">' + (it.g.maxDays >= 60 ? '<span class="fl-tg fl-t60">60+</span>' : '<span class="fl-tg fl-tf">FPD</span>') + '</td>', xl: it => it.g.maxDays >= 60 ? { v: '60+', f: XL.rF, t: XL.rT, b: true, al: 'center' } : { v: 'FPD', f: XL.aF, t: XL.aT, b: true, al: 'center' }, al: 'center' };
-  C.insp = { h: 'Инспектор МИБ', w: 24, ui: null, xl: it => String(((allNplMib.data || {})[it.g.key] || {}).inspectorName || '') };
-  // FPD: по анкетам
-  C.loan = { h: '№ анкеты', w: 13, ui: it => '<td class="fl-id">' + safe(it.fl.l.contractId) + '</td>', xl: it => String(it.fl.l.contractId) };
-  C.open = { h: 'Дата выдачи', w: 13, ui: it => '<td>' + nplFmtDateRu(it.fl.l.openDate) + '</td>', xl: it => nplFmtDateRu(it.fl.l.openDate) };
-  C.age = { h: 'Возраст, дн.', w: 12, r: true, ui: it => '<td class="r">' + it.fl.age + '</td>', xl: it => it.fl.age };
-  C.lpf = { h: 'Портфель анкеты', w: 15, fmt: '#,##0.0', r: true, ui: it => '<td class="r">' + formatMoney(Number(it.fl.l.portfolio) || Number(it.fl.l.totalDebt) || 0) + '</td>', xl: it => nplFlMln(Number(it.fl.l.portfolio) || Number(it.fl.l.totalDebt) || 0) }; C.lpf.hx = 'Портфель анкеты, млн';
-  C.epd = { h: 'EPD', w: 9, c: true, ui: it => '<td class="c">' + (it.fl.epd ? '<span class="fl-tg fl-t60">EPD</span>' : '<span class="fl-z">–</span>') + '</td>', xl: it => it.fl.epd ? { v: 'EPD', f: XL.rF, t: XL.rT, b: true, al: 'center' } : { v: '–', t: XL.grey, al: 'center' }, al: 'center' };
-  const L = {
-    over: ['name', 'id', 'over', 'days', 'term', 'isk', 'ord', 'mib', 'phone', 'coll'],
-    all: ['name', 'id', 'pf', 'over', 'days', 'term', 'phone', 'coll'],
-    npl: ['name', 'id', 'npl', 'days', 'res', 'isk', 'ord', 'mib', 'coll'],
-    fpd: ['name', 'id', 'loan', 'open', 'age', 'days', 'lpf', 'epd', 'coll'],
-    leg: ['name', 'id', 'basis', 'sum', 'days', 'isk', 'ord', 'mib', 'mibCase', 'coll']
-  };
-  const X = { over: ['name', 'id', 'pin', 'over', 'days', 'term', 'isk', 'ord', 'mib', 'mibCase', 'phone', 'coll'], all: L.all.concat([]), npl: ['name', 'id', 'pin', 'npl', 'days', 'term', 'res', 'isk', 'ord', 'mib', 'mibCase', 'coll'], fpd: L.fpd.concat([]), leg: ['name', 'id', 'basis', 'sum', 'days', 'isk', 'ord', 'mib', 'mibCase', 'insp', 'coll'] };
-  return { ui: L[sub].map(k => C[k]), xl: X[sub].map(k => C[k]) };
+function nplFlLegCell(g, kind, f) {
+  const th = kind === 'isk' ? 60 : kind === 'ord' ? 75 : 90;
+  const yes = kind === 'isk' ? f.courtAny : kind === 'ord' ? f.order : f.mib;
+  if ((Number(g.maxDays) || 0) < th && !yes) return '<span class="fl-z">–</span>';
+  return '<span class="fl-lc" onclick="nplFlOpenPop(event,\'' + encodeURIComponent(g.key) + '\',\'' + kind + '\')"><span class="fl-ico ' + (yes ? 'y' : 'x') + '">' + (yes ? '✓' : '✕') + '</span><span class="fl-clip' + (yes ? ' on' : '') + '">' + NPL_FL_CLIP + '</span></span>';
 }
 
-// Базовый список (без фильтров) для подвкладки
+function nplFlCols(sub) {
+  const J = nplFlIsJ();
+  const nm = it => '<td class="fl-nm">' + safe(it.g.clientName) + '</td>';
+  const id = it => '<td class="fl-id">' + (J ? (safe(it.g.pin) || '—') : (safe(it.g.displayClientId) || '—')) + '</td>';
+  const coll = it => { const e = nplFlCollId(it.g); return '<td>' + (e ? safe(nplCollectorLabel(e)) : '<span class="fl-z">—</span>') + '</td>'; };
+  const dys = it => '<td class="r">' + nplFlDays(it.days) + '</td>';
+  const term = it => '<td class="c">' + nplFlTermTag(it.days) + '</td>';
+  const leg = k => it => '<td class="c">' + nplFlLegCell(it.g, k, it.f) + '</td>';
+  const money = (h, fn) => ({ h: h, r: true, ui: it => '<td class="r">' + formatMoney(fn(it)) + '</td>' });
+  const C = {
+    name: { h: 'Клиент', ui: nm }, id: { h: J ? 'ИНН' : 'ID клиента', ui: id },
+    days: { h: 'Дней', r: true, ui: dys }, term: { h: 'Срок', c: true, ui: term },
+    isk: { h: 'Иск', c: true, ui: leg('isk') }, ord: { h: 'Приказ', c: true, ui: leg('ord') }, mib: { h: 'МИБ', c: true, ui: leg('mib') },
+    mibCase: { h: 'Дело МИБ', ui: it => '<td class="fl-id">' + (safe(nplFlMibCase(it.g)) || '<span class="fl-z">–</span>') + '</td>' },
+    phone: { h: 'Телефон', ui: it => '<td>' + (safe(String(it.g.phoneJoined || '').split(';')[0]) || '<span class="fl-z">—</span>') + '</td>' },
+    coll: { h: 'Взыскатель', ui: coll },
+    loans: { h: 'Анкет', c: true, ui: it => '<td class="c">' + (it.g.loans || []).length + '</td>' },
+    over: money('Просрочка', it => nplFlOvSum(it.g)), pf: money('Портфель', it => it.g.portfolioSum || it.g.totalDebtSum),
+    npl: money('Сумма NPL', it => it.g.nplSum), res: money('Резерв', it => it.g.reserveSum), sum: money('Сумма', it => nplFlOvSum(it.g)),
+    basis: { h: 'Осн.', c: true, ui: it => '<td class="c">' + (it.g.maxDays >= 60 ? '<span class="fl-tg fl-t60">60+</span>' : '<span class="fl-tg fl-tf">FPD</span>') + '</td>' },
+    loan: { h: '№ анкеты', ui: it => '<td class="fl-id">' + safe(it.fl.l.contractId) + '</td>' },
+    open: { h: 'Дата выдачи', ui: it => '<td>' + nplFmtDateRu(it.fl.l.openDate) + '</td>' },
+    age: { h: 'Возраст', r: true, ui: it => '<td class="r">' + it.fl.age + '</td>' },
+    gap: { h: 'Старт просрочки', r: true, ui: it => '<td class="r">' + it.fl.gap + ' дн.</td>' },
+    lpf: { h: 'Портфель анкеты', r: true, ui: it => '<td class="r">' + formatMoney(Number(it.fl.l.portfolio) || Number(it.fl.l.totalDebt) || 0) + '</td>' },
+    cat: { h: 'Категория', c: true, ui: it => '<td class="c"><span class="fl-tg fl-tb' + (it.fl.cat === 'fpd' ? 3 : it.fl.cat === 'spd' ? 4 : 5) + '">' + (NPL_RISK_LABELS[it.fl.cat] || it.fl.cat) + '</span></td>' },
+    epd: { h: 'EPD', c: true, ui: it => '<td class="c">' + (it.fl.epd ? '<span class="fl-tg fl-t60">EPD</span>' : '<span class="fl-z">–</span>') + '</td>' }
+  };
+  const L = {
+    over: J ? ['name', 'id', 'over', 'days', 'term', 'isk', 'ord', 'mib', 'loans', 'coll'] : ['name', 'id', 'over', 'days', 'term', 'isk', 'ord', 'mib', 'phone', 'coll'],
+    all: J ? ['name', 'id', 'pf', 'over', 'days', 'term', 'loans', 'coll'] : ['name', 'id', 'pf', 'over', 'days', 'term', 'phone', 'coll'],
+    npl: ['name', 'id', 'npl', 'days', 'res', 'isk', 'ord', 'mib', 'coll'],
+    fpd: J ? ['name', 'id', 'loan', 'open', 'age', 'days', 'gap', 'lpf', 'cat', 'epd', 'coll'] : ['name', 'id', 'loan', 'open', 'age', 'days', 'lpf', 'epd', 'coll'],
+    leg: ['name', 'id', 'basis', 'sum', 'days', 'isk', 'ord', 'mib', 'mibCase', 'coll']
+  };
+  return L[sub].map(k => C[k]);
+}
+
 function nplFlBase(sub) {
   const c = nplFlCtx;
   if (sub === 'over') return c.over.map(g => ({ g: g, days: g.maxDays }));
   if (sub === 'all') return c.all.map(g => ({ g: g, days: g.maxDays }));
   if (sub === 'npl') return c.over.filter(nplIsNplClient).map(g => ({ g: g, days: g.maxDays }));
-  if (sub === 'leg') return c.over.filter(g => g.maxDays >= 60 || nplFlFpdLoans(g).length).map(g => ({ g: g, days: g.maxDays }));
+  if (sub === 'leg') return c.over.filter(g => g.maxDays >= 60 || nplFlIsFpd(g)).map(g => ({ g: g, days: g.maxDays }));
   const out = [];
   c.over.forEach(g => nplFlFpdLoans(g).forEach(fl => out.push({ g: g, days: fl.days, fl: fl })));
   return out;
@@ -12791,7 +12741,7 @@ function nplFlCount(sub) {
   if (sub === 'over') return c.over.length;
   if (sub === 'all') return c.all.length;
   if (sub === 'npl') return c.over.filter(nplIsNplClient).length;
-  if (sub === 'leg') return c.over.filter(g => g.maxDays >= 60 || nplFlFpdLoans(g).length).length;
+  if (sub === 'leg') return c.over.filter(g => g.maxDays >= 60 || nplFlIsFpd(g)).length;
   return c.over.reduce((t, g) => t + nplFlFpdLoans(g).length, 0);
 }
 
@@ -12803,9 +12753,10 @@ function nplFlFiltered(sub) {
   if (nplFlF.coll) rows = rows.filter(it => nplFlF.coll === '__none' ? !nplFlCollId(it.g) : nplFlCollId(it.g) === nplFlF.coll);
   if (sub === 'leg' && nplFlF.basis) rows = rows.filter(it => nplFlF.basis === '60' ? it.g.maxDays >= 60 : it.g.maxDays < 60);
   if (sub === 'fpd' && nplFlF.epd) rows = rows.filter(it => it.fl.epd);
+  if (sub === 'fpd' && nplFlF.cat) rows = rows.filter(it => it.fl.cat === nplFlF.cat);
   if (sub !== 'fpd' && nplFlF.leg) {
     rows = rows.filter(function(it) {
-      const d = it.g.maxDays, f = stLegalFlags(it.g); it.f = f;
+      const d = it.g.maxDays, f = nplFlSt(it.g); it.f = f;
       return nplFlF.leg === 'nocourt' ? (d >= 60 && !f.courtAny) : nplFlF.leg === 'noorder' ? (d >= 75 && !f.order) : nplFlF.leg === 'nomib' ? (d >= 90 && !f.mib) : f.mib;
     });
   }
@@ -12825,21 +12776,25 @@ function nplFlKsHtml(sub) {
   if (sub === 'all') {
     const ov = base.filter(it => it.g.maxDays >= 1), cl = base.filter(it => it.g.maxDays < 1);
     const pf = a => a.reduce((t, it) => t + (Number(it.g.portfolioSum || it.g.totalDebtSum) || 0), 0);
-    return K('#2f6fed', 'Портфель ФЛ в файле', formatMoney(pf(base)) + ' · ' + base.length) + K('#1e8e4e', 'Без просрочки', formatMoney(pf(cl)) + ' · ' + cl.length) + K('#e8782f', 'С просрочкой', formatMoney(pf(ov)) + ' · ' + ov.length) + K('#7c3aed', 'Кредитов', base.reduce((t, it) => t + (it.g.loans || []).length, 0));
+    return K('#2f6fed', 'Портфель в файле', formatMoney(pf(base)) + ' · ' + base.length) + K('#1e8e4e', 'Без просрочки', formatMoney(pf(cl)) + ' · ' + cl.length) + K('#e8782f', 'С просрочкой', formatMoney(pf(ov)) + ' · ' + ov.length) + K('#7c3aed', 'Кредитов', base.reduce((t, it) => t + (it.g.loans || []).length, 0));
   }
   if (sub === 'npl') {
     const exp = c.over.filter(g => !nplIsNplClient(g) && g.maxDays >= 60);
     return K('#dc2626', 'NPL 90+', formatMoney(base.reduce((t, it) => t + (Number(it.g.nplSum) || 0), 0)) + ' · ' + base.length) + K('#1e8e4e', 'Резерв', formatMoney(base.reduce((t, it) => t + (Number(it.g.reserveSum) || 0), 0))) + K('#e8782f', 'Ожидаемый NPL 60–89', formatMoney(exp.reduce((t, g) => t + (Number(g.portfolioSum || g.totalDebtSum) || 0), 0)) + ' · ' + exp.length) + K('#7c3aed', 'Без взыскателя', noColl);
   }
   if (sub === 'fpd') {
-    const sum = base.reduce((t, it) => t + (Number(it.fl.l.portfolio) || Number(it.fl.l.totalDebt) || 0), 0);
+    const ln = it => Number(it.fl.l.portfolio) || Number(it.fl.l.totalDebt) || 0;
+    if (nplFlIsJ()) {
+      const by = k => base.filter(it => it.fl.cat === k);
+      const s = a => formatMoney(a.reduce((t, it) => t + ln(it), 0)) + ' · ' + a.length + ' анкет';
+      return K('#dc2626', 'FPD', s(by('fpd'))) + K('#e8782f', 'SPD', s(by('spd'))) + K('#7c3aed', 'TPD', s(by('tpd'))) + K('#2f6fed', 'EPD до 6 мес.', base.filter(it => it.fl.epd).length + ' анкет');
+    }
     const avg = base.length ? Math.round(base.reduce((t, it) => t + it.days, 0) / base.length) : 0;
-    return K('#dc2626', 'FPD', formatMoney(sum) + ' · ' + base.length + ' анкет') + K('#e8782f', 'EPD до 6 мес.', base.filter(it => it.fl.epd).length) + K('#2f6fed', 'Средняя просрочка', avg + ' дн.') + K('#7c3aed', 'Без взыскателя', noColl);
+    return K('#dc2626', 'FPD', formatMoney(base.reduce((t, it) => t + ln(it), 0)) + ' · ' + base.length + ' анкет') + K('#e8782f', 'EPD до 6 мес.', base.filter(it => it.fl.epd).length) + K('#2f6fed', 'Средняя просрочка', avg + ' дн.') + K('#7c3aed', 'Без взыскателя', noColl);
   }
-  const s = a => a.length;
   let m90 = 0, m90y = 0, c60 = 0, c60y = 0, o75 = 0, o75y = 0;
-  base.forEach(it => { const d = it.g.maxDays, f = stLegalFlags(it.g); if (d >= 60) { c60++; if (f.courtAny) c60y++; } if (d >= 75) { o75++; if (f.order) o75y++; } if (d >= 90) { m90++; if (f.mib) m90y++; } });
-  return K('#7c3aed', 'МИБ 90+', m90y + ' / ' + m90) + K('#e8782f', 'Суд 60+', c60y + ' / ' + c60) + K('#dc2626', 'Приказ 75+', o75y + ' / ' + o75) + K('#2f6fed', 'FPD', c.over.reduce((t, g) => t + nplFlFpdLoans(g).length, 0) + ' анкет');
+  base.forEach(it => { const d = it.g.maxDays, f = nplFlSt(it.g); if (d >= 60) { c60++; if (f.courtAny) c60y++; } if (d >= 75) { o75++; if (f.order) o75y++; } if (d >= 90) { m90++; if (f.mib) m90y++; } });
+  return K('#7c3aed', 'МИБ 90+ · файл', m90y + ' / ' + m90) + K('#e8782f', 'Суд 60+ · файл', c60y + ' / ' + c60) + K('#dc2626', 'Приказ 75+ · файл', o75y + ' / ' + o75) + K('#2f6fed', 'Не загружен', (c60 - c60y) + (o75 - o75y) + (m90 - m90y) + ' из ' + (c60 + o75 + m90));
 }
 
 function nplFlDefs(sub) {
@@ -12848,8 +12803,9 @@ function nplFlDefs(sub) {
   const d = [];
   d.push({ id: 'term', label: 'Срок', type: 'multi', opts: NPL_FL_TERMS.filter(t => sub === 'all' || t[0] !== '0').map(t => [t[0], t[1], tc[t[0]] || 0]) });
   if (sub === 'leg') d.push({ id: 'basis', label: 'Основание', type: 'single', opts: [['', 'Все'], ['60', '60+ дней'], ['fpd', 'FPD']] });
+  if (sub === 'fpd' && nplFlIsJ()) d.push({ id: 'cat', label: 'Категория', type: 'single', opts: [['', 'Все'], ['fpd', 'FPD · 1 платёж'], ['spd', 'SPD · 2 платёж'], ['tpd', 'TPD · 3 платёж']] });
   if (sub === 'fpd') d.push({ id: 'epd', label: 'EPD', type: 'single', opts: [['', 'Все'], ['epd', 'EPD до 6 мес.']] });
-  if (sub !== 'fpd') d.push({ id: 'leg', label: sub === 'leg' ? 'Не оформлено' : 'Юр. статус', type: 'single', opts: [['', 'Все'], ['nocourt', 'Не в суде (60+)'], ['noorder', 'Нет приказа (75+)'], ['nomib', 'Не в МИБ (90+)'], ['mib', 'В МИБ']] });
+  if (sub !== 'fpd') d.push({ id: 'leg', label: sub === 'leg' ? 'Не загружен' : 'Юр. статус', type: 'single', opts: [['', 'Все'], ['nocourt', 'Нет файла иска (60+)'], ['noorder', 'Нет файла приказа (75+)'], ['nomib', 'Нет файла МИБ (90+)'], ['mib', 'Файл МИБ есть']] });
   const ids = {}; base.forEach(it => { const e = nplFlCollId(it.g); if (e) ids[e] = (ids[e] || 0) + 1; });
   const co = [['', 'Все'], ['__none', 'Без взыскателя']].concat(Object.keys(ids).sort((a, b) => ids[b] - ids[a]).map(e => [e, nplCollectorLabel(e)]));
   d.push({ id: 'coll', label: 'Взыскатель', type: 'single', opts: co });
@@ -12881,34 +12837,39 @@ function nplFlPick(id, v) {
   nplIndivPage = 1; nplFlRender();
 }
 function nplFlResetF(id) { nplFlF[id] = Array.isArray(nplFlF[id]) ? [] : ''; nplIndivPage = 1; nplFlRender(); }
-function nplFlSetSub(sub) {
-  nplFlSub = sub; nplFlOpen = ''; nplIndivPage = 1; nplFlHidePop();
-  nplFlF.term = []; nplFlF.leg = ''; nplFlF.basis = ''; nplFlF.coll = ''; nplFlF.epd = '';
-  nplFlRender();
+function nplFlResetAll() { nplFlF.term = []; nplFlF.leg = ''; nplFlF.basis = ''; nplFlF.coll = ''; nplFlF.epd = ''; nplFlF.cat = ''; }
+function nplFlSetSub(sub) { nplFlSub = sub; nplFlOpen = ''; nplIndivPage = 1; nplFlHidePop(); nplFlResetAll(); nplFlRender(); }
+// Переключение ФЛ ↔ ЮЛ: сбрасываем подвкладку, фильтры и поиск
+function nplFlEnsureSubj(subj) {
+  if (nplFlSubj === subj) return;
+  nplFlSubj = subj; nplFlSub = 'over'; nplFlOpen = ''; nplIndivPage = 1; nplFlHidePop(); nplFlResetAll();
+  const inp = document.getElementById('nplIndivSearchInput'); if (inp) inp.value = '';
 }
 
 function nplFlRender() {
   const head = document.getElementById('nplIndivHead'), tbody = document.getElementById('nplIndivTableBody');
   if (!head || !tbody) return;
   const sub = nplFlSub;
+  const ttl = document.getElementById('nplFlTitle'); if (ttl) ttl.innerText = nplFlIsJ() ? 'Юридические лица' : 'Физические лица';
+  const inp = document.getElementById('nplIndivSearchInput'); if (inp) inp.placeholder = nplFlIsJ() ? 'Поиск: название, ИНН, № анкеты' : 'Поиск: ФИО, ПИНФЛ, ID, № анкеты';
   const seg = document.getElementById('nplFlSeg');
-  if (seg) seg.innerHTML = NPL_FL_SUBS.map(s => '<span class="' + (s[0] === sub ? 'a' : '') + '" onclick="nplFlSetSub(\'' + s[0] + '\')">' + s[1] + '<i>' + nplFlCount(s[0]).toLocaleString('ru-RU') + '</i></span>').join('');
+  if (seg) seg.innerHTML = nplFlSubs().map(s => '<span class="' + (s[0] === sub ? 'a' : '') + '" onclick="nplFlSetSub(\'' + s[0] + '\')">' + s[1] + '<i>' + nplFlCount(s[0]).toLocaleString('ru-RU') + '</i></span>').join('');
   const ks = document.getElementById('nplFlKs'); if (ks) ks.innerHTML = nplFlKsHtml(sub);
   nplFlRenderDds();
   const cols = nplFlCols(sub);
   const rows = nplFlFiltered(sub);
   nplFlLast = { sub: sub, rows: rows };
-  head.innerHTML = '<tr><th class="fl-n">№</th>' + cols.ui.map(c => '<th class="' + (c.r ? 'r' : c.c ? 'c' : '') + '">' + c.h + '</th>').join('') + '</tr>';
+  head.innerHTML = '<tr><th class="fl-n">№</th>' + cols.map(c => '<th class="' + (c.r ? 'r' : c.c ? 'c' : '') + '">' + c.h + '</th>').join('') + '</tr>';
   const totalPages = Math.max(1, Math.ceil(rows.length / NPL_PAGE_SIZE));
   if (nplIndivPage > totalPages) nplIndivPage = totalPages;
   const start = (nplIndivPage - 1) * NPL_PAGE_SIZE;
   const page = rows.slice(start, start + NPL_PAGE_SIZE);
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="' + (cols.ui.length + 1) + '" class="loading">Ничего не найдено</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="' + (cols.length + 1) + '" class="loading">Ничего не найдено</td></tr>';
   } else {
     tbody.innerHTML = page.map(function(it, i) {
-      if (!it.f && sub !== 'all' && sub !== 'fpd') it.f = stLegalFlags(it.g);
-      return '<tr onclick="openNplClientDetail(\'' + encodeURIComponent(it.g.key) + '\')"><td class="fl-n">' + (start + i + 1) + '</td>' + cols.ui.map(c => c.ui(it)).join('') + '</tr>';
+      if (!it.f && sub !== 'all' && sub !== 'fpd') it.f = nplFlSt(it.g);
+      return '<tr onclick="openNplClientDetail(\'' + encodeURIComponent(it.g.key) + '\')"><td class="fl-n">' + (start + i + 1) + '</td>' + cols.map(c => c.ui(it)).join('') + '</tr>';
     }).join('');
   }
   const foot = document.getElementById('nplFlFoot');
@@ -12916,7 +12877,7 @@ function nplFlRender() {
   renderNplPager('nplIndivPager', 'indiv', nplIndivPage, rows.length, sub === 'fpd' ? 'анкет' : 'клиентов');
 }
 
-// ---------- всплывающее окно: файлы и статус (иск / приказ / МИБ) ----------
+// ---------- всплывающее окно: файлы (иск / приказ / МИБ) ----------
 function nplFlHidePop() { const p = document.getElementById('nplFlPop'); if (p) p.style.display = 'none'; nplFlPopState = null; }
 function nplFlOpenPop(ev, k, kind) {
   ev.stopPropagation();
@@ -12939,21 +12900,22 @@ function nplFlDrawPop() {
 function nplFlPopHtml(k, kind) {
   const key = decodeURIComponent(k), g = nplGroupsByKey[key];
   if (!g) return '';
-  const f = stLegalFlags(g), court = (allNplCourt.data || {})[key] || {}, mibD = (allNplMib.data || {})[key] || {};
+  const court = (allNplCourt.data || {})[key] || {};
   const T = { isk: 'Иск · суд', ord: 'Судебный приказ', mib: 'МИБ · исполнение' };
-  const yes = kind === 'isk' ? f.courtAny : kind === 'ord' ? f.order : f.mib;
-  let meta;
-  if (kind === 'isk') meta = yes ? (court.caseStatus || 'Передано в суд') : 'Не передано в суд';
-  else if (kind === 'ord') meta = yes ? (g.courtOrderNumberJoined ? '№ ' + g.courtOrderNumberJoined + (g.courtOrderDateJoined ? ' от ' + g.courtOrderDateJoined : '') : 'Приказ получен') : 'Приказ не оформлен';
-  else meta = yes ? (nplFlMibCase(g) ? 'Дело ' + nplFlMibCase(g) : 'Передано в МИБ') : 'Не передано в МИБ';
-  const can = kind === 'mib' ? canEditNplMib() : canEditNplCourt();
   const files = nplFlFiles(key, kind);
+  const yes = files.length > 0;
+  let extra = '';
+  if (kind === 'isk' && court.caseStatus) extra = 'Статус: ' + court.caseStatus;
+  if (kind === 'ord' && g.courtOrderNumberJoined) extra = '№ ' + g.courtOrderNumberJoined + (g.courtOrderDateJoined ? ' от ' + g.courtOrderDateJoined : '');
+  if (kind === 'mib' && nplFlMibCase(g)) extra = 'Дело ' + nplFlMibCase(g);
+  const meta = (yes ? 'Файл загружен' : 'Файл не загружен') + (extra ? ' · ' + extra : '');
+  const can = kind === 'mib' ? canEditNplMib() : canEditNplCourt();
   const fl = files.map(function(x) {
     return '<div class="fl-pf"><a href="' + safe(x.url) + '" target="_blank" rel="noopener" title="' + safe(nplFlFileLabel(x.name)) + '">' + safe(nplFlFileLabel(x.name)) + '</a>' + (can ? '<em onclick="nplFlDelFile(\'' + k + '\',\'' + kind + '\',\'' + encodeURIComponent(x.url) + '\')">удалить</em>' : '') + '</div>';
-  }).join('') || '<p style="margin:0 0 6px;">Файлов нет</p>';
+  }).join('');
   let act = '';
-  if (can && !yes && kind === 'isk') act += '<span class="fl-up l" onclick="nplFlSetStatus(\'' + k + '\',\'На рассмотрении\')">Отметить: передано в суд</span>';
-  if (can && !yes && kind === 'ord') act += '<span class="fl-up l" onclick="nplFlSetStatus(\'' + k + '\',\'Решение вынесено\')">Отметить: приказ получен</span>';
+  if (can && kind === 'isk' && !court.caseStatus) act += '<span class="fl-up l" onclick="nplFlSetStatus(\'' + k + '\',\'На рассмотрении\')">Отметить: передано в суд</span>';
+  if (can && kind === 'ord' && court.caseStatus !== 'Решение вынесено') act += '<span class="fl-up l" onclick="nplFlSetStatus(\'' + k + '\',\'Решение вынесено\')">Отметить: приказ получен</span>';
   if (can) act = '<label class="fl-up">⬆ Загрузить файл<input type="file" style="display:none;" onchange="nplFlUpload(\'' + k + '\',\'' + kind + '\',this)"></label>' + act;
   return '<h5>' + T[kind] + ' · ' + safe(g.clientName) + '</h5><p>' + safe(meta) + '</p>' + fl + act +
     '<span class="fl-up l" onclick="nplFlHidePop();openNplClientDetail(\'' + k + '\')">Открыть карточку клиента</span><div class="fl-msg" id="nplFlPopMsg"></div>';
@@ -13002,7 +12964,7 @@ async function nplFlSetStatus(k, status) {
   } catch (e) { console.error(e); nplFlMsg('Не удалось связаться с сервером', true); }
 }
 function nplFlAfterChange() {
-  try { if (nplFlLast && document.getElementById('nplIndivTableBody') && nplTabIs('indiv')) nplFlRender(); } catch (e) { console.error(e); }
+  try { if (nplFlLast && document.getElementById('nplIndivTableBody') && (nplTabIs('indiv') || nplTabIs('legal'))) nplFlRender(); } catch (e) { console.error(e); }
   try { if (nplFlPopState) nplFlDrawPop(); } catch (e) { console.error(e); }
 }
 document.addEventListener('click', function(ev) {
@@ -13012,63 +12974,126 @@ document.addEventListener('click', function(ev) {
 document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') { nplFlHidePop(); if (nplFlOpen) { nplFlOpen = ''; nplFlRenderDds(); } } });
 window.addEventListener('scroll', function() { if (nplFlPopState) nplFlHidePop(); }, true);
 
-// ---------- Excel ----------
+// ---------- Excel: один лист «Клиенты» со всеми данными + «Сводка» + «Статьи» ----------
+function nplFlCategory(g) {
+  const d = Number(g.maxDays) || 0;
+  if (d >= 90) return 'NPL 90+';
+  if (d >= 60) return 'Ожидаемый NPL';
+  const fp = nplFlFpdLoans(g).find(x => x.cat === 'fpd') || nplFlFpdLoans(g)[0];
+  if (fp) return NPL_RISK_LABELS[fp.cat] || 'FPD';
+  return d >= 1 ? 'Просрочка 1–59' : '—';
+}
 async function nplFlExcel() {
   const btn = document.getElementById('nplFlXlBtn');
   try {
     if (btn) { btn.disabled = true; btn.innerText = 'Формирую…'; }
     const ExcelJS = await nplLoadExcelJs();
-    const sub = nplFlSub, subName = (NPL_FL_SUBS.find(s => s[0] === sub) || [])[1] || '';
-    const rows = nplFlFiltered(sub);
-    if (!rows.length) { alert('Нет данных для выгрузки'); return; }
-    rows.forEach(it => { if (!it.f) it.f = stLegalFlags(it.g); });
-    const cols = nplFlCols(sub).xl;
+    const fnG = nplFlGroupsFn || (s => nplFlCtx.all);
+    const groups = fnG('P').concat(fnG('J')).sort((a, b) => ((Number(b.maxDays) || 0) - (Number(a.maxDays) || 0)) || (nplFlOvSum(b) - nplFlOvSum(a)));
+    if (!groups.length) { alert('Нет данных для выгрузки'); return; }
     const today = new Date();
     const dateRu = nplPad2(today.getDate()) + '.' + nplPad2(today.getMonth() + 1) + '.' + today.getFullYear();
     const wb = new ExcelJS.Workbook(); wb.creator = 'MSB CRM'; wb.created = today;
-    const nc = cols.length + 1;
-    const ws = xlSheet(wb, subName, 'Физические лица · ' + subName, 'Asakabank, Нукусский филиал · на ' + dateRu + ' · ' + rows.length.toLocaleString('ru-RU') + (sub === 'fpd' ? ' анкет' : ' клиентов') + ' · сортировка: дней просрочки ↓', nc);
-    const tcols = [{ h: '№', w: 6, al: 'center', fmt: '0' }].concat(cols.map(c => ({ h: c.hx || c.h, w: c.w, fmt: c.fmt, al: c.al, wrap: false })));
-    const body = rows.map((it, i) => [{ v: i + 1, t: XL.grey, al: 'center' }].concat(cols.map(c => c.xl(it))));
-    // итоговая строка: SUBTOTAL по числовым колонкам (учитывает автофильтр)
-    const HR = 4, first = HR + 1, last = HR + rows.length;
-    const totRow = [{ v: 'ИТОГО', b: true }].concat(cols.map(function(c, i) {
-      if (c.fmt === '#,##0.0') {
-        const L = ws.getColumn(i + 2).letter, sum = rows.reduce((t, it) => t + (Number(c.xl(it)) || 0), 0);
-        return { v: { formula: 'SUBTOTAL(109,' + L + first + ':' + L + last + ')', result: Math.round(sum * 10) / 10 }, fmt: '#,##0.0', b: true, al: 'right' };
-      }
-      return c === cols[0] ? { v: rows.length.toLocaleString('ru-RU') + (sub === 'fpd' ? ' анкет' : ' клиентов'), b: true } : { v: null };
-    }));
-    totRow[0] = { v: null }; totRow[1] = { v: 'ИТОГО · ' + rows.length.toLocaleString('ru-RU') + (sub === 'fpd' ? ' анкет' : ' клиентов'), b: true };
+    const cell = (g, k) => {
+      const d = Number(g.maxDays) || 0, th = k === 'isk' ? 60 : k === 'ord' ? 75 : 90, n = nplFlFiles(g.key, k).length;
+      if (d < th && !n) return { v: '–', t: XL.grey, al: 'center' };
+      return n ? { v: '✓ Файл есть', f: XL.gF, t: XL.gT, b: true, al: 'center' } : { v: '✕ Не загружен', f: XL.rF, t: XL.rT, b: true, al: 'center' };
+    };
+    const actsOf = g => (((allNplMib.data || {})[g.key] || {}).actions || []).filter(a => a && a.article);
+    const cols = [
+      { h: '№', w: 6, al: 'center' }, { h: 'Тип', w: 7, al: 'center' }, { h: 'Клиент', w: 36 }, { h: 'ID клиента', w: 13 }, { h: 'ПИНФЛ / ИНН', w: 15 },
+      { h: 'Портфель, млн', w: 14, fmt: '#,##0.0' }, { h: 'Просрочка, млн', w: 14, fmt: '#,##0.0' }, { h: 'NPL, млн', w: 11, fmt: '#,##0.0' }, { h: 'Резерв, млн', w: 11, fmt: '#,##0.0' },
+      { h: 'Дней', w: 8, al: 'center' }, { h: 'Срок', w: 14, al: 'center' }, { h: 'Категория', w: 16, al: 'center' }, { h: 'Анкет', w: 7, al: 'center' },
+      { h: 'Иск', w: 15, al: 'center' }, { h: 'Приказ', w: 15, al: 'center' }, { h: 'МИБ', w: 15, al: 'center' },
+      { h: 'Статус суда', w: 17 }, { h: '№ приказа', w: 13 }, { h: 'Дата приказа', w: 12, al: 'center' },
+      { h: 'Дело МИБ', w: 13 }, { h: 'Инспектор МИБ', w: 18 }, { h: 'Статьи МИБ (дата)', w: 46, wrap: true }, { h: 'Телефон', w: 17 }, { h: 'Взыскатель', w: 26 }
+    ];
+    const nc = cols.length;
+    const body = groups.map(function(g, i) {
+      const d = Number(g.maxDays) || 0, t = nplFlTermOf(d), court = (allNplCourt.data || {})[g.key] || {}, mib = (allNplMib.data || {})[g.key] || {};
+      const hot = t >= '4', warm = t === '2' || t === '3';
+      const cat = nplFlCategory(g);
+      const catS = cat === 'NPL 90+' ? { v: cat, f: XL.rF, t: XL.rT, b: true, al: 'center' } : (cat === 'Ожидаемый NPL' || /^FPD|^SPD|^TPD/.test(cat)) ? { v: cat, f: XL.aF, t: XL.aT, b: true, al: 'center' } : { v: cat, al: 'center' };
+      const emp = nplFlCollId(g);
+      const arts = actsOf(g).map(a => '• ' + a.article + (a.date ? ' — ' + a.date : '')).join('\n');
+      return [
+        { v: i + 1, t: XL.grey, al: 'center' }, { v: g.subject === 'J' ? 'ЮЛ' : 'ФЛ', t: g.subject === 'J' ? 'FF1D4ED8' : 'FF6D28D9', b: true, al: 'center' },
+        g.clientName, String(g.displayClientId || ''), String(g.pin || ''),
+        nplFlMln(g.portfolioSum || g.totalDebtSum), d >= 1 ? nplFlMln(nplFlOvSum(g)) : 0, nplFlMln(g.nplSum), nplFlMln(g.reserveSum),
+        { v: d, f: d >= 90 ? XL.rF : d >= 60 ? XL.aF : null, t: d >= 90 ? XL.rT : d >= 60 ? XL.aT : undefined, b: true, al: 'center' },
+        { v: NPL_FL_TERM_SHORT[t] + (t === '0' ? '' : ' дн.'), f: hot ? XL.rF : warm ? XL.aF : t === '0' ? XL.gF : null, t: hot ? XL.rT : warm ? XL.aT : t === '0' ? XL.gT : undefined, b: true, al: 'center' },
+        catS, (g.loans || []).length,
+        cell(g, 'isk'), cell(g, 'ord'), cell(g, 'mib'),
+        court.caseStatus ? { v: court.caseStatus, t: court.caseStatus === 'Решение вынесено' ? XL.gT : XL.aT, b: true } : '',
+        String(g.courtOrderNumberJoined || ''), String(g.courtOrderDateJoined || ''),
+        nplFlMibCase(g), String(mib.inspectorName || ''), arts,
+        xlPhone(String(g.phoneJoined || '').split(';')[0]), emp ? nplCollectorLabel(emp) : 'Не назначен'
+      ];
+    });
+    const HR = 4, first = HR + 1, last = HR + groups.length;
+    const ws = xlSheet(wb, 'Клиенты', 'Клиенты · NPL / Просрочка', 'Asakabank, Нукусский филиал · на ' + dateRu + ' · ' + groups.length.toLocaleString('ru-RU') + ' клиентов (ФЛ и ЮЛ) · сортировка: дней просрочки ↓', nc);
     ws.getRow(3).height = 8;
-    xlTable(ws, HR, tcols, body.concat([totRow]), { filter: false, total: true });
+    const totRow = new Array(nc).fill(null).map(() => ({ v: null }));
+    totRow[2] = { v: 'ИТОГО · ' + groups.length.toLocaleString('ru-RU') + ' клиентов', b: true };
+    [5, 6, 7, 8].forEach(function(ci) {
+      const L = ws.getColumn(ci + 1).letter, sum = body.reduce((t, r) => t + (Number(r[ci]) || 0), 0);
+      totRow[ci] = { v: { formula: 'SUBTOTAL(109,' + L + first + ':' + L + last + ')', result: Math.round(sum * 10) / 10 }, fmt: '#,##0.0', b: true, al: 'right' };
+    });
+    xlTable(ws, HR, cols, body.concat([totRow]), { total: true });
+    body.forEach(function(r, i) { const n = String(r[21] || '').split('\n').length; if (n > 1) ws.getRow(first + i).height = 15 * n + 3; });
     ws.autoFilter = { from: { row: HR, column: 1 }, to: { row: last, column: nc } };
-    ws.views = [{ state: 'frozen', xSplit: 2, ySplit: HR, showGridLines: false }];
-    // Сводка
-    const all = nplFlCtx.over;
-    const ws2 = xlSheet(wb, 'Сводка', 'Физические лица · сводка', 'Asakabank, Нукусский филиал · на ' + dateRu + ' · клиенты с просрочкой от 1 дня', 5, 'FF2F6FED');
+    ws.views = [{ state: 'frozen', xSplit: 3, ySplit: HR, showGridLines: false }];
+
+    // ----- Сводка -----
+    const ws2 = xlSheet(wb, 'Сводка', 'Клиенты · сводка', 'Asakabank, Нукусский филиал · на ' + dateRu + ' · клиенты с просрочкой от 1 дня', 5, 'FF2F6FED');
     ws2.views = [{ showGridLines: false }];
+    const ov = groups.filter(g => (Number(g.maxDays) || 0) >= 1);
     xlSection(ws2, 4, 'По срокам просрочки', 5);
-    const tb = NPL_FL_TERMS.filter(t => t[0] !== '0').map(t => { const a = all.filter(g => nplFlTermOf(g.maxDays) === t[0]); return { n: t[1], c: a.length, s: a.reduce((x, g) => x + nplFlOvSum(g), 0) }; });
+    const tb = NPL_FL_TERMS.filter(t => t[0] !== '0').map(t => { const a = ov.filter(g => nplFlTermOf(g.maxDays) === t[0]); return { n: t[1], p: a.filter(g => g.subject !== 'J').length, j: a.filter(g => g.subject === 'J').length, s: a.reduce((x, g) => x + nplFlOvSum(g), 0) }; });
     const tS = tb.reduce((x, r) => x + r.s, 0) || 1;
-    const termRows = tb.map(r => [r.n, { v: r.c, al: 'center' }, nplFlMln(r.s), { v: r.s / tS, fmt: '0.0%' }]);
-    const tcols2 = [{ h: 'Срок', w: 26 }, { h: 'Клиентов', w: 14, al: 'center' }, { h: 'Сумма, млн', w: 18, fmt: '#,##0.0' }, { h: 'Доля', w: 12, fmt: '0.0%' }];
-    termRows.push([{ v: 'Всего', b: true }, { v: all.length, b: true, al: 'center' }, { v: nplFlMln(tb.reduce((x, r) => x + r.s, 0)), b: true, fmt: '#,##0.0' }, { v: 1, fmt: '0.0%', b: true }]);
-    xlTable(ws2, 5, tcols2, termRows, { total: true });
-    xlBars(ws2, 'C6:C' + (5 + tb.length), 'FFE8782F');
-    let r0 = 5 + termRows.length + 2;
-    xlSection(ws2, r0, 'Юридический путь (клиенты от 60 дней)', 5);
-    let c60 = 0, c60y = 0, o75 = 0, o75y = 0, m90 = 0, m90y = 0;
-    all.forEach(g => { const d = g.maxDays, f = stLegalFlags(g); if (d >= 60) { c60++; if (f.courtAny) c60y++; } if (d >= 75) { o75++; if (f.order) o75y++; } if (d >= 90) { m90++; if (f.mib) m90y++; } });
-    const pc = (a, b) => b ? a / b : 0;
-    const stg = [['Иск · суд', '60+ дн.', c60y, c60], ['Судебный приказ', '75+ дн.', o75y, o75], ['МИБ · исполнение', '90+ дн.', m90y, m90]];
-    const lrows = stg.map(s => [s[0], { v: s[1], al: 'center' }, { v: s[2], al: 'center', f: XL.gF, t: XL.gT, b: true }, { v: s[3] - s[2], al: 'center', f: s[3] - s[2] ? XL.rF : XL.gF, t: s[3] - s[2] ? XL.rT : XL.gT, b: true }, { v: pc(s[2], s[3]), fmt: '0.0%' }]);
-    xlTable(ws2, r0 + 1, [{ h: 'Этап', w: 26 }, { h: 'Порог', w: 14, al: 'center' }, { h: 'Сделано', w: 18, al: 'center' }, { h: 'Не сделано', w: 12, al: 'center' }, { h: 'Дисциплина', w: 30, fmt: '0.0%' }], lrows, {});
-    xlBars(ws2, 'E' + (r0 + 2) + ':E' + (r0 + 1 + lrows.length), 'FF8FD1A8');
+    const termRows = tb.map(r => [r.n, { v: r.p, al: 'center' }, { v: r.j, al: 'center' }, nplFlMln(r.s), { v: r.s / tS, fmt: '0.0%' }]);
+    termRows.push([{ v: 'Всего', b: true }, { v: tb.reduce((x, r) => x + r.p, 0), b: true, al: 'center' }, { v: tb.reduce((x, r) => x + r.j, 0), b: true, al: 'center' }, { v: nplFlMln(tS === 1 && !tb.length ? 0 : tb.reduce((x, r) => x + r.s, 0)), b: true, fmt: '#,##0.0' }, { v: 1, fmt: '0.0%', b: true }]);
+    xlTable(ws2, 5, [{ h: 'Срок', w: 26 }, { h: 'ФЛ, клиентов', w: 16, al: 'center' }, { h: 'ЮЛ, клиентов', w: 16, al: 'center' }, { h: 'Сумма, млн', w: 18, fmt: '#,##0.0' }, { h: 'Доля', w: 14, fmt: '0.0%' }], termRows, { total: true });
+    xlBars(ws2, 'D6:D' + (5 + tb.length), 'FFE8782F');
+    const r0 = 5 + termRows.length + 2;
+    xlSection(ws2, r0, 'Юридический путь (файл загружен / не загружен)', 5);
+    const stg = [['Иск · суд', 60, 'isk'], ['Судебный приказ', 75, 'ord'], ['МИБ · исполнение', 90, 'mib']].map(function(s) {
+      const a = groups.filter(g => (Number(g.maxDays) || 0) >= s[1]); const y = a.filter(g => nplFlFiles(g.key, s[2]).length).length;
+      return [s[0], { v: s[1] + '+ дн.', al: 'center' }, { v: y, al: 'center', f: XL.gF, t: XL.gT, b: true }, { v: a.length - y, al: 'center', f: a.length - y ? XL.rF : XL.gF, t: a.length - y ? XL.rT : XL.gT, b: true }, { v: a.length ? y / a.length : 0, fmt: '0.0%' }];
+    });
+    xlTable(ws2, r0 + 1, [{ h: 'Этап', w: 26 }, { h: 'Порог', w: 16, al: 'center' }, { h: 'Файл есть', w: 16, al: 'center' }, { h: 'Не загружен', w: 18, al: 'center' }, { h: 'Дисциплина', w: 14, fmt: '0.0%' }], stg, {});
+    xlBars(ws2, 'E' + (r0 + 2) + ':E' + (r0 + 1 + stg.length), 'FF8FD1A8');
+
+    // ----- Статьи: по одной строке на статью / документ -----
+    const ws3 = xlSheet(wb, 'Статьи', 'Иск · суд · МИБ — статьи и документы', 'Asakabank, Нукусский филиал · на ' + dateRu + ' · по одной строке на каждую статью / документ', 8, 'FF7C3AED');
+    ws3.getRow(3).height = 8;
+    const rows3 = [];
+    const tp = g => g.subject === 'J' ? { v: 'ЮЛ', t: 'FF1D4ED8', b: true, al: 'center' } : { v: 'ФЛ', t: 'FF6D28D9', b: true, al: 'center' };
+    const fl = (g, k) => nplFlFiles(g.key, k).length ? { v: '✓ Файл есть', f: XL.gF, t: XL.gT, b: true } : { v: '✕ Не загружен', f: XL.rF, t: XL.rT, b: true };
+    groups.forEach(function(g) {
+      const d = Number(g.maxDays) || 0; if (d < 60) return;
+      const court = (allNplCourt.data || {})[g.key] || {};
+      const stage = (e, c) => ({ v: e, t: c, b: true });
+      rows3.push([tp(g), g.clientName, stage('Иск', XL.rT), court.caseStatus ? 'Иск о взыскании задолженности' : '—', '', court.caseStatus ? { v: court.caseStatus, b: true } : { v: 'Иск не подан', t: XL.rT, b: true }, fl(g, 'isk')]);
+      if (d >= 75 && (g.courtOrderNumberJoined || nplFlFiles(g.key, 'ord').length || court.caseStatus === 'Решение вынесено')) {
+        rows3.push([tp(g), g.clientName, stage('Суд', XL.aT), 'Судебный приказ' + (g.courtOrderNumberJoined ? ' № ' + g.courtOrderNumberJoined : ''), String(g.courtOrderDateJoined || ''), court.caseStatus || 'Решение вынесено', fl(g, 'ord')]);
+      }
+      if (d >= 90) {
+        const acts = actsOf(g), cs = nplFlMibCase(g) || (nplFlFiles(g.key, 'mib').length ? 'Передано в МИБ' : '');
+        if (acts.length) acts.forEach(a => rows3.push([tp(g), g.clientName, stage('МИБ', 'FF6D28D9'), a.article, String(a.date || ''), cs, fl(g, 'mib')]));
+        else rows3.push([tp(g), g.clientName, stage('МИБ', 'FF6D28D9'), '—', '', cs || { v: 'Не передано в МИБ', t: XL.rT, b: true }, fl(g, 'mib')]);
+      }
+    });
+    const c3 = [{ h: '№', w: 6, al: 'center' }, { h: 'Тип', w: 7, al: 'center' }, { h: 'Клиент', w: 38 }, { h: 'Этап', w: 9 }, { h: 'Статья / документ', w: 56 }, { h: 'Дата', w: 13, al: 'center' }, { h: 'Статус / дело МИБ', w: 24 }, { h: 'Файл', w: 17, al: 'center' }];
+    const body3 = rows3.map((r, i) => [{ v: i + 1, t: XL.grey, al: 'center' }].concat(r));
+    if (!body3.length) body3.push([{ v: null }, { v: null }, { v: 'Нет клиентов с просрочкой 60+ дней' }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }]);
+    xlTable(ws3, 4, c3, body3, { filter: true });
+    ws3.views = [{ state: 'frozen', ySplit: 4, showGridLines: false }];
+
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'NPL_Физлица_' + subName.replace(/\s+/g, '_') + '_' + nplLocalDateStr() + '.xlsx';
+    const a = document.createElement('a'); a.href = url; a.download = 'NPL_Клиенты_' + nplLocalDateStr() + '.xlsx';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
   } catch (e) {
@@ -13078,34 +13103,34 @@ async function nplFlExcel() {
   }
 }
 
-// ---------- Юридический путь в карточке заёмщика ----------
+// ---------- Юридический путь в карточке заёмщика (по файлам) ----------
 function renderNplLegalPath(g) {
   const d = Number(g.maxDays) || 0;
   if (d < 1 || g.archived) return '';
-  const f = stLegalFlags(g), k = encodeURIComponent(g.key);
+  const f = nplFlSt(g), k = encodeURIComponent(g.key);
   const court = (allNplCourt.data || {})[g.key] || {};
-  const fpd = g.subject === 'P' ? nplFlFpdLoans(g).length : 0;
+  const fpd = nplFlIsFpd(g);
   const steps = [
-    { kind: 'isk', t: 'Иск · суд', th: 60, yes: f.courtAny, can: canEditNplCourt(), done: court.caseStatus || 'Передано в суд' },
-    { kind: 'ord', t: 'Судебный приказ', th: 75, yes: f.order, can: canEditNplCourt(), done: g.courtOrderNumberJoined ? '№ ' + g.courtOrderNumberJoined : 'Приказ получен' },
-    { kind: 'mib', t: 'МИБ · исполнение', th: 90, yes: f.mib, can: canEditNplMib(), done: nplFlMibCase(g) ? 'Дело ' + nplFlMibCase(g) : 'Передано в МИБ' }
+    { kind: 'isk', t: 'Иск · суд', th: 60, yes: f.courtAny, can: canEditNplCourt(), note: court.caseStatus ? 'Статус: ' + court.caseStatus : '' },
+    { kind: 'ord', t: 'Судебный приказ', th: 75, yes: f.order, can: canEditNplCourt(), note: g.courtOrderNumberJoined ? '№ ' + g.courtOrderNumberJoined : '' },
+    { kind: 'mib', t: 'МИБ · исполнение', th: 90, yes: f.mib, can: canEditNplMib(), note: nplFlMibCase(g) ? 'Дело ' + nplFlMibCase(g) : '' }
   ];
   let badge;
-  if (d >= 90 && !f.mib) badge = ['#fde4e4', '#a11d1d', d + ' дн. · пора в МИБ'];
-  else if (d >= 75 && !f.order) badge = ['#fde4e4', '#a11d1d', d + ' дн. · нужен приказ'];
-  else if (d >= 60 && !f.courtAny) badge = ['#fde4e4', '#a11d1d', d + ' дн. · пора в суд'];
+  if (d >= 90 && !f.mib) badge = ['#fde4e4', '#a11d1d', d + ' дн. · нет файла МИБ'];
+  else if (d >= 75 && !f.order) badge = ['#fde4e4', '#a11d1d', d + ' дн. · нет файла приказа'];
+  else if (d >= 60 && !f.courtAny) badge = ['#fde4e4', '#a11d1d', d + ' дн. · нет файла иска'];
   else if (d >= 60) badge = ['#dff3e7', '#15803d', d + ' дн. · по графику'];
   else badge = ['#fde3c8', '#9a4a10', (fpd ? 'FPD · ' : '') + d + ' дн.'];
   const html = steps.map(function(s) {
     const n = nplFlFiles(g.key, s.kind).length;
     let body, dot, cls;
-    if (s.yes) { dot = '✓'; cls = 'lp-ok'; body = '<div class="lp-s"><b>' + safe(s.done) + '</b>' + (n ? ' · файлов: ' + n : '') + '</div>'; }
-    else if (d >= s.th) { dot = '✕'; cls = 'lp-no'; body = '<div class="lp-s"><span class="r">Не оформлен</span> · просрочено ' + (d - s.th) + ' дн. после порога</div>'; }
+    if (s.yes) { dot = '✓'; cls = 'lp-ok'; body = '<div class="lp-s"><b>Файл загружен</b> · файлов: ' + n + (s.note ? ' · ' + safe(s.note) : '') + '</div>'; }
+    else if (d >= s.th) { dot = '✕'; cls = 'lp-no'; body = '<div class="lp-s"><span class="r">Файл не загружен</span>' + (s.note ? ' · ' + safe(s.note) : '') + ' · просрочено ' + (d - s.th) + ' дн. после порога</div>'; }
     else { dot = '–'; cls = 'lp-wt'; body = '<div class="lp-s">Срок не наступил · осталось <b>' + (s.th - d) + ' дн.</b></div>'; }
     let ab = '';
     if (s.can && (s.yes || d >= s.th)) {
-      if (!s.yes && s.kind === 'isk') ab += '<button type="button" class="lp-ab" onclick="nplFlSetStatus(\'' + k + '\',\'На рассмотрении\')">Отметить: передано в суд</button>';
-      if (!s.yes && s.kind === 'ord') ab += '<button type="button" class="lp-ab" onclick="nplFlSetStatus(\'' + k + '\',\'Решение вынесено\')">Отметить: приказ получен</button>';
+      if (!s.yes && s.kind === 'isk' && !court.caseStatus) ab += '<button type="button" class="lp-ab" onclick="nplFlSetStatus(\'' + k + '\',\'На рассмотрении\')">Отметить: передано в суд</button>';
+      if (!s.yes && s.kind === 'ord' && court.caseStatus !== 'Решение вынесено') ab += '<button type="button" class="lp-ab" onclick="nplFlSetStatus(\'' + k + '\',\'Решение вынесено\')">Отметить: приказ получен</button>';
       if (!s.yes && s.kind === 'mib') ab += '<button type="button" class="lp-ab" onclick="switchNplDetailTab(\'legal\')">Внести МИБ</button>';
       ab += '<label class="lp-ab l">⬆ Файл<input type="file" style="display:none;" onchange="nplFlUpload(\'' + k + '\',\'' + s.kind + '\',this)"></label>';
     }
