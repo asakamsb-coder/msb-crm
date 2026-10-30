@@ -1825,7 +1825,7 @@ body.role-mahalla-banker .footer{display:none;}
   </div>
 
   <nav class="nav">
-    <a class="active" data-msb-only="true" onclick="showMsbSales(this)"><span class="icon"></span><span data-i18n="navSales">МСБ ПРОДАЖИ</span></a>
+    <a class="active" data-msb-only="true" data-hide-for-lawyer="true" onclick="showMsbSales(this)"><span class="icon"></span><span data-i18n="navSales">МСБ ПРОДАЖИ</span></a>
     <a data-msb-only="true" data-hide-for-collateral="true" onclick="showPage('nplPage', this)"><span class="icon"></span><span data-i18n="navNpl">NPL / ПРОСРОЧКА</span></a>
     <a data-admin="true" data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('slaPage', this)"><span class="icon"></span><span data-i18n="navSla">SLA КОНТРОЛЬ</span></a>
     <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('statsPage', this)"><span class="icon"></span><span data-i18n="navAccounting">БУХГАЛТЕРИЯ</span></a>
@@ -4800,6 +4800,10 @@ function tryAutoLogin() {
 // умолчанию, и кажется, что данные (например, в блоке NPL) "исчезли".
 function restoreLastPage() {
   if (typeof isMbShell === 'function' && isMbShell()) return;
+  if (currentUser && currentUser.role === 'LAWYER') {
+    const nl = document.querySelector(".nav a[onclick*=\"showPage('nplPage'\"]");
+    if (nl) { showPage('nplPage', nl); return; }
+  }
   let lastPage = null;
   try { lastPage = localStorage.getItem('msbLastPage'); } catch (e) {}
   if (!lastPage) return;
@@ -4933,6 +4937,15 @@ function applyRoleView() {
   document.querySelectorAll('[data-hide-for-monitor="true"]').forEach(el => {
     el.classList.toggle('hidden-by-role', isMonitorOnly);
   });
+
+  const isLawyer = currentUser.role === 'LAWYER';
+  document.querySelectorAll('[data-hide-for-lawyer="true"]').forEach(el => {
+    el.classList.toggle('hidden-by-role', isLawyer);
+  });
+  if (isLawyer) {
+    const nplLink = document.querySelector(".nav a[onclick*=\"showPage('nplPage'\"]");
+    if (nplLink) { document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active')); nplLink.classList.add('active'); }
+  }
 
   const isCollateralOfficer = currentUser.role === 'COLLATERAL_OFFICER';
   document.querySelectorAll('[data-hide-for-collateral="true"]').forEach(el => {
@@ -11981,7 +11994,7 @@ function canDeleteNplFile() {
 }
 
 function canEditNplMib() {
-  return !!currentUser && (currentUser.role === 'VZYSKATEL' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'MIB_OFFICER' || currentUser.role === 'CREDIT_MONITOR');
+  return !!currentUser && (currentUser.role === 'VZYSKATEL' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR' || currentUser.role === 'MIB_OFFICER' || currentUser.role === 'LAWYER' || currentUser.role === 'CREDIT_MONITOR');
 }
 
 function canEditNplCourt() {
