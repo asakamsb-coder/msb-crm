@@ -12749,12 +12749,12 @@ function cdRenderMove() {
 // ---------- Таблица «Взыскатели» ----------
 // Взыскатель клиента: сначала из самой выгрузки (ID сотрудник у анкет), если там пусто — из назначений
 function cdCollOf(g) {
-  if (g._cdColl !== undefined) return g._cdColl;
   const cnt = {};
   (g.loans || []).forEach(l => { const e = String(l.employeeId || '').trim(); if (e) cnt[e] = (cnt[e] || 0) + 1; });
   let best = '', bn = 0;
   Object.keys(cnt).forEach(e => { if (cnt[e] > bn) { bn = cnt[e]; best = e; } });
-  g._cdColl = best || String(allNplAssignments[g.key] || '').trim();
+  const man = String(allNplAssignments[g.key] || '').trim();
+  return (allNplAssignMeta && allNplAssignMeta[g.key] === 'm' && man) ? man : (best || man);
   return g._cdColl;
 }
 function cdBuildRows(subj, range, vi) {
@@ -12806,7 +12806,7 @@ function cdBuildRows(subj, range, vi) {
       pfCnt: gs.length + a.cnt, pfSum: openPf + a.pf, pfRetCnt: a.cnt, pfRetSum: a.pf,
       nCnt: nplG.length + a.nCnt, nSum: openNpl + a.nPf, nRetCnt: a.nCnt, nRetSum: a.nPf,
       visP: vP, visT: vT, visAvg: range.days ? vP / range.days : 0,
-      zero: gs.filter(g => !seen[g.key]).length, zeroN: nplG.filter(g => !seen[g.key]).length,
+      zero: gs.filter(g => g.maxDays >= 1 && !seen[g.key]).length, zeroN: nplG.filter(g => !seen[g.key]).length,
       keys: gs.map(g => g.key), share: gs.length / totalCnt * 100, avg: gs.length ? openPf / gs.length : 0, openPf: openPf
     };
   }).filter(r => r.nCnt > 0).sort((x, y) => y.pfSum - x.pfSum);
