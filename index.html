@@ -12747,6 +12747,16 @@ function cdRenderMove() {
 }
 
 // ---------- Таблица «Взыскатели» ----------
+// Взыскатель клиента: сначала из самой выгрузки (ID сотрудник у анкет), если там пусто — из назначений
+function cdCollOf(g) {
+  if (g._cdColl !== undefined) return g._cdColl;
+  const cnt = {};
+  (g.loans || []).forEach(l => { const e = String(l.employeeId || '').trim(); if (e) cnt[e] = (cnt[e] || 0) + 1; });
+  let best = '', bn = 0;
+  Object.keys(cnt).forEach(e => { if (cnt[e] > bn) { bn = cnt[e]; best = e; } });
+  g._cdColl = best || String(allNplAssignments[g.key] || '').trim();
+  return g._cdColl;
+}
 function cdBuildRows(subj, range, vi) {
   const hasIds = (allNplLoans || []).some(l => String(l.employeeId || '').trim());
   const inR = d => d >= range.from && d <= range.to;
@@ -12754,9 +12764,8 @@ function cdBuildRows(subj, range, vi) {
   const all = getNplGroupsCached().filter(g => g.subject === subj);
   const byEmp = {};
   all.forEach(function(g) {
-    const id = String(allNplAssignments[g.key] || '').trim();
+    const id = cdCollOf(g);
     if (!id || id === '9999') return;
-    if (hasIds && !g.loans.some(l => String(l.employeeId || '').trim() === id) && !(allNplAssignMeta && allNplAssignMeta[g.key] === 'm')) return;
     (byEmp[id] = byEmp[id] || []).push(g);
   });
   const arch = {};
@@ -12798,7 +12807,7 @@ function cdBuildRows(subj, range, vi) {
       nCnt: nplG.length + a.nCnt, nSum: openNpl + a.nPf, nRetCnt: a.nCnt, nRetSum: a.nPf,
       visP: vP, visT: vT, visAvg: range.days ? vP / range.days : 0,
       zero: gs.filter(g => !seen[g.key]).length, zeroN: nplG.filter(g => !seen[g.key]).length,
-      share: gs.length / totalCnt * 100, avg: gs.length ? openPf / gs.length : 0, openPf: openPf
+      keys: gs.map(g => g.key), share: gs.length / totalCnt * 100, avg: gs.length ? openPf / gs.length : 0, openPf: openPf
     };
   }).sort((x, y) => y.pfSum - x.pfSum);
 }
@@ -12820,7 +12829,10 @@ function cdRenderColl() {
   const cntP = getNplGroupsCached().filter(g => g.subject === 'P').length, cntJ = getNplGroupsCached().filter(g => g.subject === 'J').length;
   const M = stMoney, dash = '<span class="cd-z">—</span>';
   const sum = k => rows.reduce((t, r) => t + r[k], 0);
-  const noColl = getNplGroupsCached().filter(g => g.subject === cdSubj && nplIsNplClient(g) && !String(allNplAssignments[g.key] || '').trim());
+  const inRows = {}; rows.forEach(r => r.keys.forEach(k => { inRows[k] = true; }));
+  const allNpl = getNplGroupsCached().filter(g => g.subject === cdSubj && nplIsNplClient(g));
+  const noColl = allNpl.filter(g => !inRows[g.key]);
+  const allNplSum = allNpl.reduce((t, g) => t + (Number(g.nplSum) || 0), 0);
   const noCollSum = noColl.reduce((t, g) => t + (Number(g.nplSum) || 0), 0);
   const T = { pfCnt: sum('pfCnt'), pfSum: sum('pfSum'), pfRetCnt: sum('pfRetCnt'), pfRetSum: sum('pfRetSum'), nCnt: sum('nCnt'), nSum: sum('nSum'), nRetCnt: sum('nRetCnt'), nRetSum: sum('nRetSum'), visP: sum('visP'), visT: sum('visT'), zero: sum('zero'), zeroN: sum('zeroN'), cnt: sum('cnt'), openPf: sum('openPf') };
   const c = (a, b, vl) => '<div' + (vl ? ' class="vl"' : '') + '>' + a + (b ? '<span class="s2">' + b + '</span>' : '') + '</div>';
@@ -12832,6 +12844,7 @@ function cdRenderColl() {
       + '<div class="vl' + (!tot && o.zero >= 50 ? ' bad' : '') + '">' + o.zero + '</div><div' + (!tot && o.zeroN >= 20 ? ' class="bad"' : '') + '>' + o.zeroN + '</div>';
   };
   const gridTot = Object.assign({}, T);
+  const dashRow = '<div class="cd-g sum"><div>Всего NPL 90+ (как на дашборде)</div>' + c('', '', 1) + c('') + '<div></div>' + c(allNpl.length, M(allNplSum), 1) + '<div></div><div></div><div class="vl"></div><div></div><div></div><div class="vl"></div><div></div><div class="vl"></div><div></div></div>';
   const totRow = '<div class="cd-g sum"><div>Всего распределено</div>' + cell(null, gridTot)
     + '<div class="vl">100%</div><div>' + (T.cnt ? M(T.openPf / T.cnt) : dash) + '</div></div>';
   const ncRow = '<div class="cd-g sum n"><div class="red">Без взыскателя</div>' + c(dash, '', 1) + c(dash) + '<div></div>' + c(noColl.length, M(noCollSum), 1) + '<div></div><div></div><div class="vl"></div><div></div><div></div><div class="vl"></div><div></div><div class="vl"></div><div></div></div>';
@@ -12843,9 +12856,9 @@ function cdRenderColl() {
     + '<div class="vl">План<span class="s2">клиент / сумма</span></div><div>Погашено<span class="s2">клиент / сумма</span></div><div>% погаш.<span class="s2">по сумме</span></div>'
     + '<div class="vl">За период</div><div>Сегодня</div><div>В день<span class="s2">среднее</span></div><div class="vl">Все<span class="s2">клиенты</span></div><div>NPL<span class="s2">клиенты</span></div><div class="vl">Доля<span class="s2">от всех</span></div><div>На клиента<span class="s2">средняя сумма</span></div></div>';
   const tabs = '<div class="st-tabs" style="border:0;padding:0 0 12px;">' + [['P', 'Физические лица', cntP], ['J', 'Юридические лица', cntJ]].map(t => '<button type="button" class="st-tab' + (cdSubj === t[0] ? ' on' : '') + '" onclick="cdSetSubj(\'' + t[0] + '\')">' + t[1] + '<span class="n">' + (t[0] === cdSubj ? rows.length : '') + '</span></button>').join('') + '</div>';
-  cdLast = { rows: rows, range: range, subj: cdSubj, T: T, noColl: noColl.length, noCollSum: noCollSum };
+  cdLast = { rows: rows, range: range, subj: cdSubj, T: T, noColl: noColl.length, noCollSum: noCollSum, allNpl: allNpl.length, allNplSum: allNplSum };
   box.innerHTML = '<div class="cd-hd" style="margin-top:22px;"><h2>Взыскатели</h2><span style="display:inline-flex;gap:8px;align-items:center;">' + cdPeriodBtn('coll') + '<button type="button" class="btn btn-secondary" style="padding:7px 14px;font-size:13px;" onclick="cdExcel()">⬇ Excel</button></span></div>'
-    + tabs + '<div class="st-table"><div class="cd-in">' + H1 + H2 + (rows.length ? totRow + ncRow + body : '<div style="padding:14px;color:var(--muted);font-size:13px;">Нет взыскателей с клиентами этого типа.</div>') + '</div></div>';
+    + tabs + '<div class="st-table"><div class="cd-in">' + H1 + H2 + (rows.length ? totRow + ncRow + dashRow + body : '<div style="padding:14px;color:var(--muted);font-size:13px;">Нет взыскателей с клиентами этого типа.</div>') + '</div></div>';
 }
 let cdArchAsked = false;
 function cdOpenEmp(idEnc) { nplStatsSelectedEmp = decodeURIComponent(idEnc); setNplPageTab('stats'); }
@@ -12868,6 +12881,7 @@ async function cdExcel() {
     const T = L.T;
     body.push([{ v: null }, { v: 'Всего распределено', b: true }, { v: null }, T.pfCnt, mln(T.pfSum), T.pfRetCnt, mln(T.pfRetSum), cdPct(T.pfRetSum, T.pfSum) || 0, T.nCnt, mln(T.nSum), T.nRetCnt, mln(T.nRetSum), cdPct(T.nRetSum, T.nSum) || 0, T.visP, T.visT, r0.days ? Math.round(T.visP / r0.days * 10) / 10 : 0, T.zero, T.zeroN, 100, T.cnt ? mln(T.openPf / T.cnt) : 0]);
     body.push([{ v: null }, { v: 'Без взыскателя (NPL)', b: true, t: XL.rT }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, L.noColl, mln(L.noCollSum), { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }]);
+    body.push([{ v: null }, { v: 'Всего NPL 90+ (как на дашборде)', b: true }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, L.allNpl, mln(L.allNplSum), { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }]);
     xlTable(ws, 4, cols, body, { filter: false });
     ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 4, showGridLines: false }];
     const buf = await wb.xlsx.writeBuffer();
