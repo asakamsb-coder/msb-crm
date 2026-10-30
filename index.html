@@ -839,6 +839,29 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .lp-s b{color:#111}.lp-s .r{color:#b91c1c;font-weight:800}
 .lp-ab{display:inline-block;margin:6px 6px 0 0;background:#111;color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;border:none;font-family:inherit}
 .lp-ab.l{background:#fff;color:#111;border:1px solid var(--line)}
+.st-table{border:1px solid var(--line);border-radius:14px;overflow-x:auto;background:#fff}
+.st-tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line)}
+.st-tab{font-size:13px;padding:6px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-weight:600;font-family:inherit;color:#111}
+.st-tab.on{background:#111;color:#fff;border-color:#111}.st-tab .n{font-size:11px;opacity:.7;margin-left:5px}
+.st-ph{position:relative;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;border:2px solid #D7DCE3;background:#E8F0FE;color:#1F4E9C;font-weight:800;flex:none}
+.st-dot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;border:2px solid #fff}
+.st-nm{font-weight:800;font-size:13.5px;line-height:1.25}.pg{font-weight:800;padding:2px 8px;border-radius:8px;font-size:12px;display:inline-block}
+.pg.g{background:#EAF3DE;color:#27500A}.pg.y{background:#FAEEDA;color:#633806}.pg.rd{background:#FCEBEB;color:#791F1F}
+.cd-hd{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}.cd-hd h2{font-size:16px;margin:0}
+.cd-pw{position:relative;display:inline-block}.cd-pb{padding:8px 14px;border-radius:10px;background:#111;color:#fff;border:0;font-weight:800;font-size:13px;cursor:pointer}.cd-pb i{font-style:normal;margin-left:10px}
+.cd-menu{position:absolute;right:0;top:42px;width:250px;background:#fff;border:1px solid #D7DCE3;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.14);padding:6px;z-index:30;font-size:13px}
+.cd-mi{padding:8px 10px;border-radius:8px;cursor:pointer;color:#111}.cd-mi:hover{background:#F1F3F5}.cd-mi.a{background:#F1F3F5;font-weight:800}
+.cd-ms{border-top:1px solid #E5E7EB;margin:6px 0}.cd-mh{padding:4px 10px;font-weight:700;color:#374151}.cd-mr{display:flex;gap:6px;padding:0 6px 8px}.cd-mr input{flex:1;min-width:0;border:1px solid #D7DCE3;border-radius:8px;padding:6px;font-size:12px}
+.cd-ap{display:block;width:calc(100% - 12px);margin:0 6px 4px;padding:8px;border:0;border-radius:9px;background:#111;color:#fff;font-weight:800;cursor:pointer}
+.cd-rows{font-size:13px;line-height:2;margin-top:4px;color:#1f2937}.cd-rows>div{display:flex;justify-content:space-between;gap:8px}
+.cd-t{border-collapse:collapse;width:100%}.cd-t th{font-size:12px;color:#374151;padding:6px 10px;border-bottom:2px solid #111;text-align:left}.cd-t th.r,.cd-t td.r{text-align:right}.cd-t td{padding:9px 10px;border-bottom:1px solid #E5E7EB;font-size:13.5px}.cd-t td.nm{font-weight:700}.cd-t td.nm em{font-style:normal;color:#6b7280}.cd-t .s2{display:block;font-size:11px;color:#4b5563}
+.cd-z{color:#9aa1ad}.cd-in{min-width:1170px}
+.cd-g{display:grid;grid-template-columns:200px repeat(6,80px) repeat(3,66px) repeat(2,70px) repeat(2,70px);align-items:center;border-bottom:1px solid var(--line);font-size:12.5px}
+.cd-g>div{padding:6px 5px;text-align:right;line-height:1.3}.cd-g>div:first-child{text-align:left}.cd-g .s2{display:block;font-size:10.5px;color:#4b5563}
+.cd-g.gh{color:#374151;font-size:10.5px;font-weight:700}.cd-g.gh.top{border-bottom:0;font-size:12px;color:#111}.cd-g.gh.top>div{border-bottom:2px solid #111;text-align:center}.cd-g.gh.top>div:first-child{border:0}
+.cd-g.gh:not(.top){border-bottom:2px solid #111}.cd-g .sp3{grid-column:span 3}.cd-g .sp2{grid-column:span 2}
+.cd-g.sum{background:#F7F9FC;font-weight:800}.cd-g.sum.n{background:#FFF4F2}.cd-g .red{color:#B71F17}.cd-g .vl{border-left:1px solid var(--line)}.cd-g .bad{color:#C0392B;font-weight:800}
+.cd-g.row{cursor:pointer}.cd-g.row:hover{background:#F8FAFF}.cd-g .who{display:flex;gap:8px;align-items:center;text-align:left}.cd-g .st-nm{font-size:12.5px}
 .npl-detail-tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px;}
 .npl-detail-tab{flex:1;text-align:center;padding:10px 0;font-size:13px;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;}
 .npl-detail-tab.active{color:var(--text);font-weight:700;border-bottom-color:var(--brand);}
@@ -2224,11 +2247,12 @@ body.role-mahalla-banker .footer{display:none;}
         <div class="nd-card purple" id="ndLegalP"></div>
         <div class="nd-card blue" id="ndLegalJ"></div>
       </div>
-      <div class="nd-card orange" style="margin-bottom:20px;"><p class="nd-l" style="font-size:14px;">Просрочка по срокам</p><div id="ndOvTerms" class="client-table-wrap"></div></div>
+      <div id="ndMoveBox" style="margin-bottom:6px;"></div>
 
       <div style="display:flex;justify-content:flex-end;margin:0 0 16px;">
         <button type="button" class="btn btn-secondary" id="nplSvodBtn" onclick="exportNplSvodExcel()">Свод NPL (Excel)</button>
       </div>
+      <div id="ndCollBox" style="display:none;margin-bottom:20px;"></div>
     </div>
 
     <div id="nplClientsBar" style="display:none;gap:8px;flex-wrap:wrap;margin:0 0 14px;">
@@ -8167,6 +8191,8 @@ async function loadNplStatsInBackground() {
     allNplStats = (r && r.stats) || [];
     allNplTransfers = (r && r.transfers) || {};
     allNplStages = (r && r.stages) || [];
+    allNplMovement = (r && r.movement) || [];
+    try { cdRenderAll(); } catch (e) { console.error(e); }
     if (isVzShell() && document.getElementById('vzyskatelHomeBody')) {
       renderVzyskatelHome();
     }
@@ -9281,19 +9307,7 @@ function renderNplPage() {
     const lp = document.getElementById('ndLegalP'); if (lp) lp.innerHTML = legalCard('P', 'f');
     const lj = document.getElementById('ndLegalJ'); if (lj) lj.innerHTML = legalCard('J', 'j');
 
-    // ---- Просрочка по срокам ----
-    const bks = [['1 – 29', 1, 29, '#f6c667'], ['30 – 59', 30, 59, '#f0a23a'], ['60 – 89', 60, 89, '#e8782f'], ['90 – 180', 90, 180, '#dc5b3a'], ['181 – 365', 181, 365, '#c93a34'], ['более 365', 366, 1e9, '#8f1d1d']];
-    const bRows = bks.map(b => {
-      const j = ovJ.filter(g => g.maxDays >= b[1] && g.maxDays <= b[2]), p = ovP.filter(g => g.maxDays >= b[1] && g.maxDays <= b[2]);
-      return { l: b[0], c: b[3], js: sumBy(j, ovSum), jn: j.length, ps: sumBy(p, ovSum), pn: p.length };
-    });
-    const bTot = bRows.reduce((t, r) => t + r.js + r.ps, 0) || 1;
-    const cell = (sum, n) => fm(sum) + '<span class="k2">' + n + ' клиентов</span>';
-    const tb = document.getElementById('ndOvTerms');
-    if (tb) tb.innerHTML = '<table class="nd-bk"><thead><tr><th>Срок, дней</th><th>Юридические лица</th><th>Физические лица</th><th>Всего</th><th class="l">Доля</th></tr></thead><tbody>'
-      + bRows.map(r => { const t = r.js + r.ps, w = Math.round(t / bTot * 190);
-        return '<tr><td><i class="dot" style="background:' + r.c + '"></i>' + r.l + '</td><td>' + cell(r.js, r.jn) + '</td><td>' + cell(r.ps, r.pn) + '</td><td><b>' + fm(t) + '</b><span class="k2">' + (r.jn + r.pn) + ' клиентов</span></td><td class="l"><i class="bar" style="width:' + Math.max(w, 3) + 'px;background:' + r.c + '"></i>' + nplFmtPct(t / bTot * 100) + '%</td></tr>'; }).join('')
-      + '<tr class="tot"><td>Всего</td><td>' + cell(bRows.reduce((t, r) => t + r.js, 0), ovJ.length) + '</td><td>' + cell(bRows.reduce((t, r) => t + r.ps, 0), ovP.length) + '</td><td>' + cell(bTot === 1 && !ovAll ? 0 : ovAll, ovJ.length + ovP.length) + '</td><td class="l">100%</td></tr></tbody></table>';
+    try { cdRenderAll(); } catch (e) { console.error(e); }
   }
 
   // ---- Физические лица: подвкладки (Просроченные / Все / NPL / FPD / Юр. статус) ----
@@ -11135,6 +11149,8 @@ function renderNplStatsPanel() {
         </div>`).join('')}</div>` : ''}
     </div>` : '';
 
+  const selRow = nplStatsSelectedEmp ? rowsAll.find(r => r.id === nplStatsSelectedEmp) : null;
+  const selRowHtml = selRow ? `<div class="st-table" style="margin-bottom:14px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);"><b style="font-size:15px;">Взыскатель: ${safe(selRow.name)}</b><button type="button" class="btn btn-secondary" style="padding:5px 12px;font-size:12.5px;" onclick="selectNplStatsEmp('${encodeURIComponent(selRow.id)}')">Закрыть</button></div>${stDetailHtml(selRow)}</div>` : '';
   box.innerHTML = `
     <style>
       .st-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
@@ -11177,17 +11193,10 @@ function renderNplStatsPanel() {
       <span style="display:inline-flex;gap:8px;flex-wrap:wrap;"><button type="button" id="stRegBtn" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplRegistryExcel()">Реестр клиентов (Excel)</button>
       <button type="button" class="btn btn-secondary" style="padding:6px 14px;font-size:13px;" onclick="exportNplStatsExcel()">Скачать Excel</button></span>
     </div>
-    ${stTab === 'vis' ? '' : stToolbarHtml(rowsAll, srange)}
+    ${stToolbarHtml(rowsAll, srange)}
     ${stTab === 'vis' ? '' : kpis}
     ${stTab === 'vis' ? '' : legalHtml}
-    <div class="st-table">
-      <div class="st-tabs">${tabsHtml}</div>
-      ${stTab === 'vis' ? stVisitsHtml() : ''}
-      <div style="overflow-x:auto;${stTab === 'vis' ? 'display:none;' : ''}"><div class="st-in">
-        <div class="st-r st-hd"><div class="st-who" style="font-size:12px;">Взыскатель</div><div>План<span class="s2">клиентов / портфель</span></div><div>Возвращено<span class="s2">клиентов / портфель</span></div><div>% закрытия<span class="s2">клиенты / портфель</span></div><div>За день<span class="s2">клиентов / портфель</span></div><div>Визитов<span class="s2">за период / сегодня</span></div><div>90+ без МИБ и суда</div><div>Без контакта 7+</div><div>Последняя активность</div><div>Доля NPL</div></div>
-        ${body || '<div style="padding:14px;color:var(--muted);font-size:13px;">' + (activeRows.length ? 'В этой группе никого нет.' : 'Данных пока нет — статистика начнёт копиться после следующей загрузки выгрузки.') + '</div>'}
-      </div></div>
-    </div>
+    ${selRowHtml}
     ${stTab === 'vis' ? '' : stagesHtml}
     ${stTab === 'vis' ? '' : repayHtml}
     ${stTab === 'vis' ? '' : archHtml}
@@ -12622,6 +12631,251 @@ function nplPhonesChanged(keyEnc) {
   const box = document.getElementById('vzcPhones');
   if (box) box.innerHTML = vzcPhonesInner(key);
   else openNplExtraModal(keyEnc);
+}
+
+// ======================= Дашборд: движение NPL, миграция, таблица взыскателей =======================
+let allNplMovement = [];
+let cdSubj = 'P';
+let cdPeriod = 'm0';
+let cdFrom = '', cdTo = '';
+let cdMenuOpen = false;
+let cdLast = null;
+const CD_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+const CD_MONTHS_NOM = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+
+function cdRange() {
+  const now = new Date(), sod = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const ru = d => nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1) + '.' + d.getFullYear();
+  let f, t, label;
+  if (cdPeriod === 'custom') { f = stIsoParse(cdFrom) || sod; t = stIsoParse(cdTo) || f; label = f.getTime() === t.getTime() ? ru(f) : ru(f) + ' — ' + ru(t); }
+  else if (cdPeriod === 'today') { f = t = sod; label = 'Сегодня'; }
+  else if (cdPeriod === 'yest') { f = t = new Date(sod.getTime() - 86400000); label = 'Вчера'; }
+  else if (cdPeriod === 'week') { f = new Date(sod.getTime() - 6 * 86400000); t = sod; label = 'Неделя'; }
+  else {
+    const k = cdPeriod === 'm1' ? 1 : cdPeriod === 'm2' ? 2 : 0;
+    f = new Date(now.getFullYear(), now.getMonth() - k, 1); t = new Date(now.getFullYear(), now.getMonth() - k + 1, 0);
+    label = CD_MONTHS_NOM[f.getMonth()] + ' ' + f.getFullYear();
+  }
+  const end = t.getTime() < sod.getTime() ? t : sod;
+  const days = Math.max(1, Math.round((end.getTime() - f.getTime()) / 86400000) + 1);
+  return { from: stIso(f), to: stIso(t), label: label, days: days };
+}
+function cdPeriodItems() {
+  const now = new Date();
+  const m = k => { const d = new Date(now.getFullYear(), now.getMonth() - k, 1); return CD_MONTHS_NOM[d.getMonth()] + ' ' + d.getFullYear(); };
+  return [['today', 'Сегодня'], ['yest', 'Вчера'], ['week', 'Последние 7 дней'], ['m0', m(0)], ['m1', m(1)], ['m2', m(2)]];
+}
+function cdPeriodBtn(src) {
+  const r = cdRange();
+  const items = cdPeriodItems();
+  let menu = '';
+  if (cdMenuOpen === src) {
+    const rg = cdRange();
+    menu = '<div class="cd-menu">' + items.map(i => '<div class="cd-mi' + (cdPeriod === i[0] ? ' a' : '') + '" onclick="cdSetPeriod(\'' + i[0] + '\')">' + i[1] + (cdPeriod === i[0] ? ' ✓' : '') + '</div>').join('')
+      + '<div class="cd-ms"></div><div class="cd-mh">Свой период</div><div class="cd-mr"><input type="date" id="cdFromInp" value="' + (cdPeriod === 'custom' ? cdFrom : rg.from) + '"><input type="date" id="cdToInp" value="' + (cdPeriod === 'custom' ? cdTo : rg.to) + '"></div>'
+      + '<button type="button" class="cd-ap" onclick="cdApplyCustom()">Применить</button></div>';
+  }
+  return '<span class="cd-pw"><button type="button" class="cd-pb" onclick="cdToggleMenu(\'' + src + '\',event)">Период: ' + r.label + ' <i>▾</i></button>' + menu + '</span>';
+}
+function cdToggleMenu(src, ev) { if (ev) ev.stopPropagation(); cdMenuOpen = (cdMenuOpen === src) ? false : src; cdRenderAll(); }
+function cdSetPeriod(v) { cdPeriod = v; cdMenuOpen = false; cdRenderAll(); }
+function cdApplyCustom() {
+  const f = (document.getElementById('cdFromInp') || {}).value, t = (document.getElementById('cdToInp') || {}).value;
+  if (f) { cdFrom = f; cdTo = t && t >= f ? t : f; cdPeriod = 'custom'; }
+  cdMenuOpen = false; cdRenderAll();
+}
+document.addEventListener('click', function(ev) {
+  if (!cdMenuOpen) return;
+  if (ev.target.closest && ev.target.closest('.cd-pw')) return;
+  cdMenuOpen = false; try { cdRenderAll(); } catch (e) {}
+});
+function cdSetSubj(s) { cdSubj = s; cdRenderAll(); }
+function cdRenderAll() { try { cdRenderMove(); } catch (e) { console.error(e); } try { cdRenderColl(); } catch (e) { console.error(e); } }
+
+// ---------- Движение NPL и миграция ----------
+function cdMoveAgg(range) {
+  const out = { P: new Array(19).fill(0), J: new Array(19).fill(0) }, base = { P: null, J: null }, firstD = { P: '', J: '' }, has = { P: false, J: false };
+  (allNplMovement || []).forEach(function(r) {
+    if (r.date < range.from || r.date > range.to) return;
+    const o = out[r.subj]; if (!o) return;
+    has[r.subj] = true;
+    for (let i = 0; i < 14; i++) o[i] += Number(r.v[i]) || 0;
+    if (!firstD[r.subj] || r.date < firstD[r.subj]) { firstD[r.subj] = r.date; base[r.subj] = r.v.slice(14, 19); }
+  });
+  ['P', 'J'].forEach(s => { if (base[s]) for (let i = 0; i < 5; i++) out[s][14 + i] = Number(base[s][i]) || 0; });
+  return { v: out, any: has.P || has.J };
+}
+function cdRenderMove() {
+  const box = document.getElementById('ndMoveBox'); if (!box) return;
+  const range = cdRange();
+  const A = cdMoveAgg(range), P = A.v.P, J = A.v.J;
+  const head = '<div class="cd-hd"><h2>Движение NPL и миграция</h2>' + cdPeriodBtn('move') + '</div>';
+  if (!A.any) {
+    box.innerHTML = head + '<div class="nd-card" style="color:#374151;font-size:13.5px;font-weight:600;">За выбранный период данных нет. Движение и миграция копятся с каждой загрузки файла NPL (с момента обновления).</div>';
+    return;
+  }
+  const M = stMoney, num = n => Math.round(n).toLocaleString('ru-RU');
+  const inn = [P[0] + J[0], P[1] + J[1]], clo = [P[2] + J[2], P[3] + J[3]], low = [P[4] + J[4], P[5] + J[5]];
+  const out = [clo[0] + low[0], clo[1] + low[1]], net = [inn[0] - out[0], inn[1] - out[1]];
+  const sg = v => (v > 0 ? '+' : v < 0 ? '−' : '') + M(Math.abs(v));
+  const sn = v => (v > 0 ? '+' : v < 0 ? '−' : '') + num(Math.abs(v));
+  const card = (cls, vc, l, tot, sub, pj, pp) => '<div class="nd-card ' + cls + '"><p class="nd-l">' + l + '</p><p class="nd-v ' + vc + '">' + tot + '</p><p class="nd-s">' + sub + '</p>'
+    + '<div class="nd-split"><div><p class="n">Юридические лица</p><p class="a">' + pj[0] + '</p><p class="c">' + pj[1] + '</p></div><div><p class="n">Физические лица</p><p class="a">' + pp[0] + '</p><p class="c">' + pp[1] + '</p></div></div></div>';
+  const cl = n => num(n) + ' кл.';
+  const cards = '<div class="nd-g4">'
+    + card('red', 'v-red', 'Приход в NPL 90+', '+' + M(inn[1]), cl(inn[0]) + ' · перешли в 90+', ['+' + M(J[1]), cl(J[0])], ['+' + M(P[1]), cl(P[0])])
+    + card('green', 'v-green', 'Отток из NPL 90+', '−' + M(out[1]), cl(out[0]) + ' · вышли из 90+', ['−' + M(J[3] + J[5]), cl(J[2] + J[4])], ['−' + M(P[3] + P[5]), cl(P[2] + P[4])])
+    + card('orange', 'v-amber', 'Чистое изменение NPL', sg(net[1]), sn(net[0]) + ' кл. · ' + (net[1] > 0 ? 'рост' : net[1] < 0 ? 'снижение' : 'без изменений'), [sg(J[1] - J[3] - J[5]), sn(J[0] - J[2] - J[4]) + ' кл.'], [sg(P[1] - P[3] - P[5]), sn(P[0] - P[2] - P[4]) + ' кл.'])
+    + '<div class="nd-card blue"><p class="nd-l">Состав оттока</p><div class="cd-rows">'
+    + '<div><span>Закрыт (нет в файле)</span><b>' + num(clo[0]) + ' · ' + M(clo[1]) + '</b></div>'
+    + '<div><span>Просрочка ниже 90 дн.</span><b>' + num(low[0]) + ' · ' + M(low[1]) + '</b></div>'
+    + '</div></div></div>';
+  const pc = (n, b) => b ? Math.round(n / b * 1000) / 10 : null;
+  const pill = p => p === null ? '<span class="cd-z">—</span>' : '<span class="pg ' + (p >= 20 ? 'rd' : p >= 5 ? 'y' : 'g') + '">' + String(p).replace('.', ',') + '%</span>';
+  const pill2 = p => p === null ? '<span class="cd-z">—</span>' : '<span class="pg g">' + String(p).replace('.', ',') + '%</span>';
+  const tr = (a, b, nP, sP, nJ, sJ, base, good) => '<tr><td class="nm">' + a + ' <em>→</em> ' + b + '</td><td class="r">' + num(nP) + '<span class="s2">' + M(sP) + '</span></td><td class="r">' + num(nJ) + '<span class="s2">' + M(sJ) + '</span></td><td class="r">' + (good ? pill2(pc(nP + nJ, base)) : pill(pc(nP + nJ, base))) + '</td></tr>';
+  const bs = i => P[14 + i] + J[14 + i];
+  const tbl = '<div class="nd-card" style="margin-top:12px;padding:14px 18px;"><p class="nd-l" style="font-size:14px;margin-bottom:10px;">Миграция просрочки · ' + range.label + '</p><div style="overflow-x:auto;"><table class="cd-t"><thead><tr><th>Переход</th><th class="r">Физические лица<span class="s2">клиентов / сумма</span></th><th class="r">Юридические лица<span class="s2">клиентов / сумма</span></th><th class="r">Доля от корзины<span class="s2">все клиенты</span></th></tr></thead><tbody>'
+    + tr('Без просрочки', 'просрочка', P[6], P[7], J[6], J[7], bs(0))
+    + tr('1–29', '30+ дн.', P[8], P[9], J[8], J[9], bs(1))
+    + tr('30–59', '60+ дн.', P[10], P[11], J[10], J[11], bs(2))
+    + tr('60–89', 'NPL 90+', P[12], P[13], J[12], J[13], bs(3))
+    + tr('NPL 90+', 'закрыт', P[2], P[3], J[2], J[3], bs(4), true)
+    + tr('NPL 90+', 'ниже 90 дн.', P[4], P[5], J[4], J[5], bs(4), true)
+    + '</tbody></table></div></div>';
+  box.innerHTML = head + cards + tbl;
+}
+
+// ---------- Таблица «Взыскатели» ----------
+function cdBuildRows(subj, range, vi) {
+  const hasIds = (allNplLoans || []).some(l => String(l.employeeId || '').trim());
+  const inR = d => d >= range.from && d <= range.to;
+  const todayKey = stDayKey(new Date());
+  const all = getNplGroupsCached().filter(g => g.subject === subj);
+  const byEmp = {};
+  all.forEach(function(g) {
+    const id = String(allNplAssignments[g.key] || '').trim();
+    if (!id || id === '9999') return;
+    if (hasIds && !g.loans.some(l => String(l.employeeId || '').trim() === id) && !(allNplAssignMeta && allNplAssignMeta[g.key] === 'm')) return;
+    (byEmp[id] = byEmp[id] || []).push(g);
+  });
+  const arch = {};
+  Object.keys(allNplArchive || {}).forEach(function(k) {
+    const a = allNplArchive[k];
+    if (!a || a.status !== 'closed' || String(a.subject || '') !== subj) return;
+    if (!inR(stArchDate(a))) return;
+    const e = arch[a.employeeId] || (arch[a.employeeId] = { cnt: 0, pf: 0, nCnt: 0, nPf: 0 });
+    const d = Number(a.lastDebt) || 0;
+    e.cnt++; e.pf += d;
+    if ((Number(a.days) || 0) >= 90) { e.nCnt++; e.nPf += d; }
+  });
+  // визиты по периоду: по автору и по клиенту (только клиенты этого типа)
+  const grp = {}; all.forEach(g => { grp[g.key] = g; });
+  const seen = {}, byName = {};
+  Object.keys(allNplVisits || {}).forEach(function(k) {
+    if (!grp[k]) return;
+    (allNplVisits[k] || []).forEach(function(v) {
+      const d = stParseDt(v.addedAt); if (!d) return;
+      const dk = stDayKey(d);
+      const nm = String(v.addedBy || '').trim().toLowerCase();
+      (byName[nm] = byName[nm] || []).push({ d: d, dk: dk });
+      if (inR(dk)) seen[k] = true;
+    });
+  });
+  const ids = Object.keys(byEmp);
+  const totalCnt = ids.reduce((t, id) => t + byEmp[id].length, 0) || 1;
+  return ids.map(function(id) {
+    const gs = byEmp[id], user = stEmpUser(id), a = arch[id] || { cnt: 0, pf: 0, nCnt: 0, nPf: 0 };
+    const nm = String((user && user.fullName) || '').trim().toLowerCase();
+    const vis = (nm && byName[nm]) || [];
+    const vP = vis.filter(x => inR(x.dk)).length, vT = vis.filter(x => x.dk === todayKey).length;
+    const last = vis.reduce((m, x) => (!m || x.d > m) ? x.d : m, null);
+    const nplG = gs.filter(nplIsNplClient);
+    const openPf = gs.reduce((t, g) => t + stPf(g), 0), openNpl = nplG.reduce((t, g) => t + (Number(g.nplSum) || 0), 0);
+    return {
+      id: id, user: user, name: nplCollectorLabel(id), last: last, cnt: gs.length,
+      pfCnt: gs.length + a.cnt, pfSum: openPf + a.pf, pfRetCnt: a.cnt, pfRetSum: a.pf,
+      nCnt: nplG.length + a.nCnt, nSum: openNpl + a.nPf, nRetCnt: a.nCnt, nRetSum: a.nPf,
+      visP: vP, visT: vT, visAvg: range.days ? vP / range.days : 0,
+      zero: gs.filter(g => !seen[g.key]).length, zeroN: nplG.filter(g => !seen[g.key]).length,
+      share: gs.length / totalCnt * 100, avg: gs.length ? openPf / gs.length : 0, openPf: openPf
+    };
+  }).sort((x, y) => y.pfSum - x.pfSum);
+}
+function cdPct(a, b) { return b ? Math.round(a / b * 1000) / 10 : null; }
+function cdPg(p, hi) {
+  if (p === null) return '<span class="cd-z">—</span>';
+  const c = p >= hi ? 'g' : p >= hi / 3 ? 'y' : 'rd';
+  return '<span class="pg ' + c + '">' + String(p).replace('.', ',') + '%</span>';
+}
+function cdRenderColl() {
+  const box = document.getElementById('ndCollBox'); if (!box) return;
+  const role = currentUser && currentUser.role;
+  if (!(role === 'ADMIN' || role === 'DIRECTOR' || role === 'DEPUTY')) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  if (!nplArchiveLoaded && !cdArchAsked) { cdArchAsked = true; ensureNplArchive().then(cdRenderColl).catch(function(e) { console.error(e); }); }
+  const range = cdRange(), vi = null;
+  const rows = cdBuildRows(cdSubj, range, vi);
+  const archOk = nplArchiveLoaded;
+  const cntP = getNplGroupsCached().filter(g => g.subject === 'P').length, cntJ = getNplGroupsCached().filter(g => g.subject === 'J').length;
+  const M = stMoney, dash = '<span class="cd-z">—</span>';
+  const sum = k => rows.reduce((t, r) => t + r[k], 0);
+  const noColl = getNplGroupsCached().filter(g => g.subject === cdSubj && nplIsNplClient(g) && !String(allNplAssignments[g.key] || '').trim());
+  const noCollSum = noColl.reduce((t, g) => t + (Number(g.nplSum) || 0), 0);
+  const T = { pfCnt: sum('pfCnt'), pfSum: sum('pfSum'), pfRetCnt: sum('pfRetCnt'), pfRetSum: sum('pfRetSum'), nCnt: sum('nCnt'), nSum: sum('nSum'), nRetCnt: sum('nRetCnt'), nRetSum: sum('nRetSum'), visP: sum('visP'), visT: sum('visT'), zero: sum('zero'), zeroN: sum('zeroN'), cnt: sum('cnt'), openPf: sum('openPf') };
+  const c = (a, b, vl) => '<div' + (vl ? ' class="vl"' : '') + '>' + a + (b ? '<span class="s2">' + b + '</span>' : '') + '</div>';
+  const cell = (r, tot) => {
+    const o = tot || r;
+    return c(o.pfCnt, M(o.pfSum), 1) + c(archOk ? o.pfRetCnt : '…', archOk ? M(o.pfRetSum) : '') + '<div>' + (archOk ? cdPg(cdPct(o.pfRetSum, o.pfSum), 15) : dash) + '</div>'
+      + c(o.nCnt, M(o.nSum), 1) + c(archOk ? o.nRetCnt : '…', archOk ? M(o.nRetSum) : '') + '<div>' + (archOk ? cdPg(cdPct(o.nRetSum, o.nSum), 5) : dash) + '</div>'
+      + '<div class="vl">' + (o.visP || dash) + '</div><div>' + (o.visT || dash) + '</div><div>' + (tot ? (o.visP && range.days ? nplFmtPct(o.visP / range.days) : dash) : (o.visP ? nplFmtPct(o.visAvg) : dash)) + '</div>'
+      + '<div class="vl' + (!tot && o.zero >= 50 ? ' bad' : '') + '">' + o.zero + '</div><div' + (!tot && o.zeroN >= 20 ? ' class="bad"' : '') + '>' + o.zeroN + '</div>';
+  };
+  const gridTot = Object.assign({}, T);
+  const totRow = '<div class="cd-g sum"><div>Всего распределено</div>' + cell(null, gridTot)
+    + '<div class="vl">100%</div><div>' + (T.cnt ? M(T.openPf / T.cnt) : dash) + '</div></div>';
+  const ncRow = '<div class="cd-g sum n"><div class="red">Без взыскателя</div>' + c(dash, '', 1) + c(dash) + '<div></div>' + c(noColl.length, M(noCollSum), 1) + '<div></div><div></div><div class="vl"></div><div></div><div></div><div class="vl"></div><div></div><div class="vl"></div><div></div></div>';
+  const body = rows.map(function(r) {
+    return '<div class="cd-g row" onclick="cdOpenEmp(\'' + encodeURIComponent(r.id) + '\')"><div class="who">' + stAvatar(r, 30) + '<span class="st-nm">' + safe(r.name) + '</span></div>' + cell(r) + '<div class="vl">' + nplFmtPct(r.share) + '%</div><div>' + M(r.avg) + '</div></div>';
+  }).join('');
+  const H1 = '<div class="cd-g gh top"><div></div><div class="sp3">ПОРТФЕЛЬ</div><div class="sp3">NPL 90+</div><div class="sp3">ВИЗИТЫ · ' + safe(range.label.toUpperCase()) + '</div><div class="sp2">НУЛЕВОЙ ВИЗИТ</div><div class="sp2">НАГРУЗКА</div></div>';
+  const H2 = '<div class="cd-g gh"><div>Взыскатель</div><div class="vl">План<span class="s2">клиент / сумма</span></div><div>Погашено<span class="s2">клиент / сумма</span></div><div>% погаш.<span class="s2">по сумме</span></div>'
+    + '<div class="vl">План<span class="s2">клиент / сумма</span></div><div>Погашено<span class="s2">клиент / сумма</span></div><div>% погаш.<span class="s2">по сумме</span></div>'
+    + '<div class="vl">За период</div><div>Сегодня</div><div>В день<span class="s2">среднее</span></div><div class="vl">Все<span class="s2">клиенты</span></div><div>NPL<span class="s2">клиенты</span></div><div class="vl">Доля<span class="s2">от всех</span></div><div>На клиента<span class="s2">средняя сумма</span></div></div>';
+  const tabs = '<div class="st-tabs" style="border:0;padding:0 0 12px;">' + [['P', 'Физические лица', cntP], ['J', 'Юридические лица', cntJ]].map(t => '<button type="button" class="st-tab' + (cdSubj === t[0] ? ' on' : '') + '" onclick="cdSetSubj(\'' + t[0] + '\')">' + t[1] + '<span class="n">' + (t[0] === cdSubj ? rows.length : '') + '</span></button>').join('') + '</div>';
+  cdLast = { rows: rows, range: range, subj: cdSubj, T: T, noColl: noColl.length, noCollSum: noCollSum };
+  box.innerHTML = '<div class="cd-hd" style="margin-top:22px;"><h2>Взыскатели</h2><span style="display:inline-flex;gap:8px;align-items:center;">' + cdPeriodBtn('coll') + '<button type="button" class="btn btn-secondary" style="padding:7px 14px;font-size:13px;" onclick="cdExcel()">⬇ Excel</button></span></div>'
+    + tabs + '<div class="st-table"><div class="cd-in">' + H1 + H2 + (rows.length ? totRow + ncRow + body : '<div style="padding:14px;color:var(--muted);font-size:13px;">Нет взыскателей с клиентами этого типа.</div>') + '</div></div>';
+}
+let cdArchAsked = false;
+function cdOpenEmp(idEnc) { nplStatsSelectedEmp = decodeURIComponent(idEnc); setNplPageTab('stats'); }
+async function cdExcel() {
+  try {
+    if (!cdLast) return;
+    const ExcelJS = await nplLoadExcelJs();
+    const L = cdLast, r0 = L.range, J = L.subj === 'J';
+    const wb = new ExcelJS.Workbook(); wb.creator = 'MSB CRM';
+    const ws = xlSheet(wb, J ? 'Юр. лица' : 'Физ. лица', 'Взыскатели · ' + (J ? 'юридические лица' : 'физические лица'), 'Asakabank, Нукусский филиал · период: ' + r0.label + ' (' + r0.from + ' — ' + r0.to + ')', 16);
+    ws.getRow(3).height = 8;
+    const mln = v => Math.round((Number(v) || 0) / 1e5) / 10;
+    const cols = [{ h: '№', w: 5, al: 'center' }, { h: 'Взыскатель', w: 36 }, { h: 'ID', w: 9, al: 'center' },
+      { h: 'Портфель: план, клиентов', w: 13, al: 'center' }, { h: 'Портфель: план, млн', w: 13, fmt: '#,##0.0' }, { h: 'Портфель: погашено, клиентов', w: 13, al: 'center' }, { h: 'Портфель: погашено, млн', w: 13, fmt: '#,##0.0' }, { h: '% погашения', w: 11, fmt: '0.0' },
+      { h: 'NPL: план, клиентов', w: 12, al: 'center' }, { h: 'NPL: план, млн', w: 12, fmt: '#,##0.0' }, { h: 'NPL: погашено, клиентов', w: 12, al: 'center' }, { h: 'NPL: погашено, млн', w: 12, fmt: '#,##0.0' }, { h: '% погашения NPL', w: 11, fmt: '0.0' },
+      { h: 'Визитов за период', w: 11, al: 'center' }, { h: 'Визитов сегодня', w: 10, al: 'center' }, { h: 'Визитов в день', w: 10, fmt: '0.0' },
+      { h: 'Нулевой визит, клиентов', w: 12, al: 'center' }, { h: 'Нулевой визит, NPL', w: 12, al: 'center' }, { h: 'Доля клиентов, %', w: 11, fmt: '0.0' }, { h: 'На клиента, млн', w: 12, fmt: '#,##0.0' }];
+    const body = L.rows.map((r, i) => [i + 1, r.name, r.id, r.pfCnt, mln(r.pfSum), r.pfRetCnt, mln(r.pfRetSum), cdPct(r.pfRetSum, r.pfSum) || 0,
+      r.nCnt, mln(r.nSum), r.nRetCnt, mln(r.nRetSum), cdPct(r.nRetSum, r.nSum) || 0, r.visP, r.visT, Math.round(r.visAvg * 10) / 10, r.zero, r.zeroN, Math.round(r.share * 10) / 10, mln(r.avg)]);
+    const T = L.T;
+    body.push([{ v: null }, { v: 'Всего распределено', b: true }, { v: null }, T.pfCnt, mln(T.pfSum), T.pfRetCnt, mln(T.pfRetSum), cdPct(T.pfRetSum, T.pfSum) || 0, T.nCnt, mln(T.nSum), T.nRetCnt, mln(T.nRetSum), cdPct(T.nRetSum, T.nSum) || 0, T.visP, T.visT, r0.days ? Math.round(T.visP / r0.days * 10) / 10 : 0, T.zero, T.zeroN, 100, T.cnt ? mln(T.openPf / T.cnt) : 0]);
+    body.push([{ v: null }, { v: 'Без взыскателя (NPL)', b: true, t: XL.rT }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, L.noColl, mln(L.noCollSum), { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }, { v: null }]);
+    xlTable(ws, 4, cols, body, { filter: false });
+    ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 4, showGridLines: false }];
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'Взыскатели_' + (J ? 'ЮЛ' : 'ФЛ') + '_' + r0.from + '_' + r0.to + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) { console.error(e); alert('Не удалось сформировать Excel: ' + (e && e.message ? e.message : e)); }
 }
 
 // ======================= Клиенты (ФЛ и ЮЛ): подвкладки, юр. статусы по файлам, Excel =======================
