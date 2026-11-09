@@ -705,6 +705,49 @@ body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
 .vzf-kv .vzd-t,.vzs .vzd-t,#vzLoanOverlay .vzd-card .vzd-t{color:#3F3F46;}
 .vzs-opt .vzc-in{background:#fff;}
 .vzd-card textarea.vzc-in{margin-top:10px;display:block;}
+
+.vzh-hero{position:relative;overflow:hidden;background:linear-gradient(160deg,#D92B21,#9E1B14) !important;padding:16px 16px 84px !important;border-radius:0 0 28px 28px;}
+.vzh-in{position:relative;z-index:2;}
+.vzh-snow{position:absolute;inset:0;z-index:1;pointer-events:none;}
+.vzh-snow i{position:absolute;top:-10px;background:#fff;border-radius:50%;animation:vzhFall linear infinite;}
+@keyframes vzhFall{0%{transform:translate(0,-10px)}50%{transform:translate(var(--sw),120px)}100%{transform:translate(0,260px)}}
+@media (prefers-reduced-motion:reduce){.vzh-snow i{animation:none;}}
+.vzh-pl{margin-top:18px;font-size:13px;opacity:.9;}
+.vzh-pr{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.vzh-big{font-size:36px;font-weight:800;letter-spacing:-.5px;}
+.vzh-pill{background:rgba(255,255,255,.2);border-radius:12px;padding:4px 10px;font-size:12.5px;font-weight:700;}
+.vzh-body{margin-top:-56px !important;position:relative;z-index:3;}
+.vzh-two{background:#fff;border-radius:24px;padding:16px;display:flex;box-shadow:0 8px 22px rgba(20,20,30,.1);}
+.vzh-two>div:not(.vzh-sep){flex:1;cursor:pointer;}
+.vzh-sep{width:1px;background:#EEE;margin:0 14px;}
+.vzh-tl{font-size:12.5px;color:#3F3F46;font-weight:600;}
+.vzh-n{font-size:23px;font-weight:800;margin:2px 0 4px;}
+.vzh-chip{display:inline-block;border-radius:10px;padding:3px 9px;font-size:12px;font-weight:700;}
+.vzh-q{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px;}
+.vzh-q button{border:none;background:none;cursor:pointer;font-size:12px;font-weight:700;color:#141414;padding:0;text-align:center;font-family:inherit;}
+.vzh-qi{width:58px;height:58px;border-radius:20px;background:linear-gradient(145deg,#D92B21,#A81E16);color:#fff;margin:0 auto 7px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(196,35,26,.32);}
+.vzh-qs{color:#C4231A;font-size:11px;height:13px;font-weight:800;}
+.vzh-h{display:flex;justify-content:space-between;align-items:center;margin:10px 4px 0;font-size:17px;}
+.vzh-h a{font-size:12.5px;font-weight:800;color:#C4231A;cursor:pointer;}
+.vzh-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.vzh-tile{background:#fff;border-radius:20px;padding:13px;box-shadow:0 4px 14px rgba(20,20,30,.06);}
+.vzh-ti{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.vzh-tv{font-size:24px;font-weight:800;line-height:1;color:#141414;}
+.vzh-tile .vzh-tl{margin-top:4px;}
+.vzh-ts{font-size:11.5px;font-weight:700;margin-top:2px;}
+.vzh-card{background:#fff;border-radius:22px;padding:6px 16px;box-shadow:0 4px 14px rgba(20,20,30,.06);}
+.vzh-bar{margin:12px 0;}
+.vzh-bh{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:6px;color:#3F3F46;}
+.vzh-bh>b{color:#141414;}
+.vzh-bt{height:8px;background:#ECECF0;border-radius:5px;}
+.vzh-bt i{display:block;height:8px;border-radius:5px;}
+.vzh-tabs{display:flex;gap:6px;margin:10px 0 4px;}
+.vzh-tabs button{border:none;background:#F0F0F2;color:#141414;border-radius:14px;padding:6px 13px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;}
+.vzh-tabs button.a{background:#141414;color:#fff;}
+.vzh-hr{display:flex;gap:11px;align-items:center;padding:11px 0;border-top:1px solid #F0F0F3;cursor:pointer;}
+.vzh-hr b{font-size:13.5px;word-break:break-word;}
+.vzh-hi{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;}
+.vzh-hs{font-size:12px;color:#3F3F46;}
 .vzf-back{border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;}
 .vzf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
 .vzf-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:#F5F6F8;color:#141414;font-size:12.5px;font-weight:700;border:none;font-family:inherit;text-decoration:none;cursor:pointer;}
@@ -7334,6 +7377,117 @@ function vzStatCard(key, count, sub, maxCount) {
     <div class="vzd-bar"><i style="width:${pct}%;background:${c.color};"></i></div></button>`;
 }
 
+// ======================= Главный экран взыскателя (новый) =======================
+let allNplCalls = null, vzCallsLoading = false, vzHistTab = 'all';
+const VZ_SNOW = (function() {
+  let h = '', seed = 7;
+  const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  for (let i = 0; i < 30; i++) {
+    const s = [3, 4, 5, 6, 8][Math.floor(rnd() * 5)], d = 6 + rnd() * 6, dl = -rnd() * 12, sw = [-18, -10, 10, 18][Math.floor(rnd() * 4)];
+    h += '<i style="left:' + Math.floor(rnd() * 100) + '%;width:' + s + 'px;height:' + s + 'px;opacity:' + (0.45 + rnd() * 0.5).toFixed(2) + ';animation-duration:' + d.toFixed(1) + 's;animation-delay:' + dl.toFixed(1) + 's;--sw:' + sw + 'px"></i>';
+  }
+  return '<div class="vzh-snow">' + h + '</div>';
+})();
+
+function vzMyCalls() {
+  const me = String((currentUser && (currentUser.fullName || currentUser.login)) || '').trim().toLowerCase();
+  const lg = String((currentUser && currentUser.login) || '').trim().toLowerCase();
+  return (allNplCalls || []).filter(c => { const w = String(c.addedBy || '').trim().toLowerCase(); return (me && w === me) || (lg && String(c.login || '').toLowerCase() === lg); });
+}
+async function vzLoadCalls() {
+  if (vzCallsLoading || allNplCalls !== null) return;
+  vzCallsLoading = true;
+  try {
+    const r = await fetchJSON('nplCalls');
+    allNplCalls = Array.isArray(r) ? r : [];
+  } catch (e) { allNplCalls = []; console.error(e); }
+  vzCallsLoading = false;
+  const hb = document.getElementById('vzyskatelHomeBody');
+  if (hb && hb.offsetParent !== null) renderVzyskatelHome();
+}
+// Фиксируем нажатие «Позвонить» (звонок идёт через обычный набор номера)
+function vzLogCall(kEnc, phoneEnc, label) {
+  try {
+    const key = decodeURIComponent(kEnc), phone = decodeURIComponent(phoneEnc || '');
+    const g = nplGroupsByKey[key];
+    const d = new Date();
+    const stamp = nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + nplPad2(d.getHours()) + ':' + nplPad2(d.getMinutes());
+    if (allNplCalls === null) allNplCalls = [];
+    allNplCalls.unshift({ addedAt: stamp, key: key, clientName: g ? g.clientName : '', phone: phone, label: label || '', addedBy: (currentUser && (currentUser.fullName || currentUser.login)) || '', login: (currentUser && currentUser.login) || '' });
+    postWebAction({ webAction: 'addNplCall', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', phone: phone, label: label || '' }).catch(function(e) { console.error(e); });
+  } catch (e) { console.error(e); }
+}
+function vzSetHistTab(t) { vzHistTab = t; renderVzyskatelHome(); }
+
+function vzHomeHtml(c) {
+  const groups = c.groups, emp = String((currentUser && currentUser.employeeId) || '').trim();
+  const now = new Date(), tk = stDayKey(now), mk = tk.slice(0, 7);
+  const isTodayD = d => !!d && stDayKey(d) === tk, isMonD = d => !!d && stDayKey(d).slice(0, 7) === mk;
+  // просрочка и NPL
+  const ov = groups.filter(g => (Number(g.maxDays) || 0) >= 1);
+  const npl = groups.filter(g => (Number(g.maxDays) || 0) >= 90);
+  const nplSum = npl.reduce((t, g) => t + (Number(g.nplSum) || 0), 0);
+  // закрытые
+  let closedToday = 0;
+  try { const s = computeNplStats(emp); closedToday = s && s.today ? s.today.closed : 0; } catch (e) {}
+  // визиты
+  const myV = getMyNplVisitsFlat();
+  const vToday = myV.filter(v => isTodayD(stParseDt(v.addedAt))).length;
+  const vMonth = myV.filter(v => isMonD(stParseDt(v.addedAt))).length;
+  const visited = {};
+  Object.keys(allNplVisits || {}).forEach(k => (allNplVisits[k] || []).forEach(v => { if (isMonD(stParseDt(v.addedAt))) visited[k] = 1; }));
+  const noVisit = groups.filter(g => !visited[g.key]).length;
+  // звонки
+  const myC = vzMyCalls();
+  const cToday = {}, cMonth = {};
+  myC.forEach(x => { const d = stParseDt(x.addedAt); if (isMonD(d)) { cMonth[x.key] = 1; if (isTodayD(d)) cToday[x.key] = 1; } });
+  const callsKnown = allNplCalls !== null;
+  const noCall = groups.filter(g => !cMonth[g.key]).length;
+  const monthName = nplMonthNameGen ? nplMonthNameGen() : '';
+  const ic = (n, col, s) => appIcon(n, s || 18).replace('<svg', '<svg style="color:' + col + '"');
+  const tile = (icon, bg, fg, label, val, sub) => `<div class="vzh-tile"><div class="vzh-ti" style="background:${bg};color:${fg};">${appIcon(icon, 18)}</div><div class="vzh-tv">${val}</div><div class="vzh-tl">${label}</div><div class="vzh-ts" style="color:${fg};">${sub}</div></div>`;
+  const btn = (icon, t, on, sub) => `<button type="button" onclick="${on}"><div class="vzh-qi">${appIcon(icon, 24)}</div>${t}<div class="vzh-qs">${sub || ''}</div></button>`;
+  let prom = 0; try { prom = getMyPromises().filter(x => x.overdue || x.today).length; } catch (e) {}
+  // юридический статус
+  let c60 = 0, c60y = 0, o75 = 0, o75y = 0, m90 = 0, m90y = 0;
+  groups.forEach(g => { const d = Number(g.maxDays) || 0, f = nplFlSt(g); if (d >= 60) { c60++; if (f.courtAny) c60y++; } if (d >= 75) { o75++; if (f.order) o75y++; } if (d >= 90) { m90++; if (f.mib) m90y++; } });
+  const bar = (t, a, b, col) => { const pct = b ? Math.round(a / b * 100) : 0; return `<div class="vzh-bar"><div class="vzh-bh"><b>${t}</b><span><b style="color:#141414;">${a}</b> из ${b} · нет <b style="color:#A81E16;">${b - a}</b></span></div><div class="vzh-bt"><i style="width:${pct}%;background:${col};"></i></div></div>`; };
+  // история
+  const items = [];
+  myV.forEach(v => items.push({ t: 'v', d: stParseDt(v.addedAt), key: v.key, name: v.clientName || ((nplGroupsByKey[v.key] || {}).clientName), sub: 'Визит · ' + (v.status || '') + (v.clientStatus ? ' · ' + v.clientStatus : ''), at: v.addedAt }));
+  myC.forEach(x => items.push({ t: 'c', d: stParseDt(x.addedAt), key: x.key, name: x.clientName, sub: 'Звонок · ' + (x.label ? x.label + ' · ' : '') + x.phone, at: x.addedAt }));
+  const list = items.filter(i => i.d && (vzHistTab === 'all' || i.t === (vzHistTab === 'v' ? 'v' : 'c'))).sort((a, b) => b.d - a.d).slice(0, 8);
+  const whenOf = d => isTodayD(d) ? nplPad2(d.getHours()) + ':' + nplPad2(d.getMinutes()) : nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1);
+  const hrow = i => `<div class="vzh-hr" onclick="openVzClient('${encodeURIComponent(i.key)}')"><span class="vzh-hi" style="background:${i.t === 'c' ? '#EEF1FB' : '#E3F5EA'};color:${i.t === 'c' ? '#2A4BA0' : '#14693A'};">${appIcon(i.t === 'c' ? 'phone' : 'check', 17)}</span><div style="flex:1;min-width:0;"><b>${safe(i.name) || 'Клиент'}</b><div class="vzh-hs">${safe(i.sub)}</div></div><span class="vzh-hs">${whenOf(i.d)}</span></div>`;
+  const tab = (k, t) => `<button type="button" class="${vzHistTab === k ? 'a' : ''}" onclick="vzSetHistTab('${k}')">${t}</button>`;
+  return `
+    <div class="vzd-hero vzh-hero">${VZ_SNOW}
+      <div class="vzh-in"><div class="vzd-top"><div class="vzd-av">${c.photoHtml}</div><div style="min-width:0;"><div class="vzd-name">${safe(c.name)}</div><div class="sub">${c.roleLabel}</div></div></div>
+      <div class="vzh-pl">Общий портфель</div>
+      <div class="vzh-pr"><span class="vzh-big">${vzFmt(c.totalPf)}</span><span class="vzh-pill">${groups.length} клиентов</span></div></div>
+    </div>
+    <div class="vzd-body vzh-body">
+      <div class="vzh-two">
+        <div onclick="vzOpenClients('all')"><div class="vzh-tl">Просрочка</div><div class="vzh-n" style="color:#A81E16;">${vzFmt(c.overdueAll)}</div><span class="vzh-chip" style="background:#FBE4E1;color:#A81E16;">${ov.length} клиентов</span></div>
+        <div class="vzh-sep"></div>
+        <div onclick="vzOpenClients('npl')"><div class="vzh-tl">NPL 90+</div><div class="vzh-n">${vzFmt(nplSum)}</div><span class="vzh-chip" style="background:#141414;color:#fff;">${npl.length} клиентов</span></div>
+      </div>
+      <div class="vzh-q">${btn('users', 'Клиенты', "vzyskatelGoTo('clients')")}${btn('mappin', 'Рядом', 'openNearby()')}${btn('check', 'Визиты', 'openMyTasks()')}${btn('alert', 'Обещания', 'openPromises()', prom ? prom + ' срочно' : '')}</div>
+      <div class="vzh-h"><b>Работа за ${safe(monthName)}</b></div>
+      <div class="vzh-grid">
+        ${tile('check', '#E3F5EA', '#14693A', 'Закрыто', vzMonthClosed(), 'сегодня ' + closedToday)}
+        ${tile('search', '#FFF1CF', '#8A5A00', 'Визитов', vMonth, 'сегодня ' + vToday)}
+        ${tile('phone', '#EEF1FB', '#2A4BA0', 'Обзвонено', callsKnown ? Object.keys(cMonth).length : '…', 'сегодня ' + (callsKnown ? Object.keys(cToday).length : '…'))}
+        ${tile('users', '#FBE4E1', '#A81E16', 'Без визитов', noVisit, 'не звонили ' + (callsKnown ? noCall : '…'))}
+      </div>
+      <div class="vzh-h"><b>Юридический статус</b><a onclick="vzOpenClients('mib')">Подробнее</a></div>
+      <div class="vzh-card">${bar('Иск · 60+ дней', c60y, c60, '#1E9E5A')}${bar('Приказ · 75+ дней', o75y, o75, '#1E9E5A')}${bar('Передано в МИБ · 90+ дней', m90y, m90, '#7C3AED')}</div>
+      <div class="vzh-h"><b>История</b></div>
+      <div class="vzh-card"><div class="vzh-tabs">${tab('all', 'Все')}${tab('v', 'Визиты')}${tab('c', 'Звонки')}</div>
+        ${list.length ? list.map(hrow).join('') : '<div class="vzh-hs" style="padding:12px 0;">Пока пусто</div>'}</div>
+    </div>`;
+}
+
 function renderVzyskatelHome() {
   const box = document.getElementById('vzyskatelHomeBody');
   if (!box || !currentUser) return;
@@ -7404,6 +7558,11 @@ function renderVzyskatelHome() {
   const noId = isMon && vzScope === 'mine' && !String(currentUser.employeeId || '').trim()
     ? `<div class="vzd-t" style="margin-top:8px;color:#fff;opacity:.9;">ID сотрудника не указан — показаны все юр. лица.</div>` : '';
 
+  if (!isMon) {
+    box.innerHTML = vzHomeHtml({ groups: groups, name: name, photoHtml: photoHtml, roleLabel: roleLabel, totalPf: totalPf, overdueAll: overdueAll });
+    vzLoadCalls();
+    return;
+  }
   const tileA = isMon
     ? `<div class="vzd-card"><div class="vzd-t">Собрано данных</div><div class="vzd-num" style="margin-top:4px;">${surveyed}<span class="vzd-t" style="font-weight:400;"> из ${loansTotal}</span></div></div>`
     : `<div class="vzd-card"><div class="vzd-t">Закрыто за ${nplMonthNameGen()}</div><div class="vzd-num" style="margin-top:4px;">${vzMonthClosed()}</div></div>`;
@@ -7446,7 +7605,7 @@ function vzClientRowFl(g) {
       <div class="vzd-t">ПИНФЛ ${safe(g.pin || '—')}</div>
       <div class="vzd-t">${safe(ex.address || 'Адрес не указан')}</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">${chips}</div>
-      ${ph ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><b style="font-size:13px;">${safe(ph)}</b><a href="tel:${safe(ph.replace(/[^\d+]/g, ''))}" onclick="event.stopPropagation()" class="vzf-ib" style="background:#C4231A;color:#fff;text-decoration:none;">${appIcon('phone', 16)}</a></div>` : ''}</div></div>`;
+      ${ph ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><b style="font-size:13px;">${safe(ph)}</b><a href="tel:${safe(ph.replace(/[^\d+]/g, ''))}" onclick="event.stopPropagation();vzLogCall('${encodeURIComponent(g.key)}','${encodeURIComponent(ph)}','')" class="vzf-ib" style="background:#C4231A;color:#fff;text-decoration:none;">${appIcon('phone', 16)}</a></div>` : ''}</div></div>`;
 }
 function vzClientRowHtml(g) {
   if (g.subject !== 'J') return vzClientRowFl(g);
@@ -7966,7 +8125,7 @@ function vzRenderFlCard(box, g, l, ctx) {
   const act = (ic, t, attrs, on, dis) => `<${attrs.indexOf('href') > -1 ? 'a' : 'button type="button"'} class="vzf-act${on ? ' on' : ''}${dis ? ' dis' : ''}" ${attrs}><span class="vzf-ai">${ic}</span>${t}</${attrs.indexOf('href') > -1 ? 'a' : 'button'}>`;
   const call = !callNums.length ? act(appIcon('phone', 17), 'Позвонить', 'onclick="void 0"', 0, 1)
     : callNums.length > 1 ? act(appIcon('phone', 17), 'Позвонить', `onclick="vzCallPick('${kEnc}','${cEnc}')"`)
-    : act(appIcon('phone', 17), 'Позвонить', `href="tel:${safe(callNums[0].num.replace(/[^\d+]/g, ''))}"`);
+    : act(appIcon('phone', 17), 'Позвонить', `href="tel:${safe(callNums[0].num.replace(/[^\d+]/g, ''))}" onclick="vzLogCall('${kEnc}','${encodeURIComponent(callNums[0].num)}','')"`);
   const six = `<div class="vzf-grid">${call}${act(appIcon('mappin', 17), 'Маршрут', route, 0, !hasLoc)}${act(appIcon('plus', 17), 'Локация', `onclick="vzLocSheet('${kEnc}')"`)}${act(appIcon('check', 17), 'Визит', `onclick="vzOpenVisit('${kEnc}')"`)}${act(VZ_DOC_ICON, 'Анкета', `onclick="vzFlSetTab('a')"`, vzFlTab === 'a')}${act(appIcon('user', 17), 'Клиент', `onclick="vzFlSetTab('c')"`, vzFlTab === 'c')}</div>`;
   const sec = (t, x, r) => `<div class="vzd-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div class="vzd-h">${t}</div>${r || ''}</div>${x}</div>`;
   const kv = (k, v, b) => `<div class="vzf-kv"><div style="min-width:0;"><div class="vzd-t">${k}</div><div class="vzf-v">${v}</div></div><div class="vzf-b">${b || ''}</div></div>`;
@@ -7986,7 +8145,7 @@ function vzRenderFlCard(box, g, l, ctx) {
     const coll = (function() { try { const id = (typeof cdCollOf === 'function' ? cdCollOf(g) : '') || nplFlCollId(g); return id ? nplCollectorLabel(id) : ''; } catch (e) { return ''; } })();
     const filePh = String(g.phoneJoined || '').split(/[;,]/).map(x => x.trim()).filter(Boolean);
     const exPh = ex.phones || [];
-    const telRow = (n, sub) => `<a class="vzd-tel" href="tel:${safe(String(n).replace(/[^\d+]/g, ''))}"><div class="vzd-telc">${appIcon('phone', 16)}</div><div style="flex:1;min-width:0;"><b>${safe(n)}</b><div class="vzd-t">${sub}</div></div></a>`;
+    const telRow = (n, sub) => `<a class="vzd-tel" href="tel:${safe(String(n).replace(/[^\d+]/g, ''))}" onclick="vzLogCall('${kEnc}','${encodeURIComponent(n)}','')"><div class="vzd-telc">${appIcon('phone', 16)}</div><div style="flex:1;min-width:0;"><b>${safe(n)}</b><div class="vzd-t">${sub}</div></div></a>`;
     const visits = (allNplVisits[key] || []).slice(0, 3);
     const files = k => nplFlFiles(key, k).length;
     const fileRow = (n, ok) => `<div class="vzf-kv"><div class="vzf-v">${n}</div><span class="vzd-bd" style="background:${ok ? '#E3F5EA' : '#FBE4E1'};color:${ok ? '#14693A' : '#A81E16'};">${ok ? 'Файл есть' : 'Не загружен'}</span></div>`;
@@ -8152,7 +8311,7 @@ function vzCallPick(kEnc, cEnc) {
   if (!sh) { sh = document.createElement('div'); sh.id = 'vzCallSheet'; document.body.appendChild(sh); }
   sh.innerHTML = `<div class="vzcs-bg" onclick="vzCallClose()"></div>
     <div class="vzcs-box"><div class="vzcs-h">Кому позвонить?</div><div class="vzcs-s">${safe(g.clientName)}</div>
-      ${list.map(x => `<a class="vzcs-row" href="tel:${safe(x.num.replace(/[^\d+]/g, ''))}" onclick="setTimeout(vzCallClose,300)"><span class="vzcs-ic">${appIcon('phone', 18)}</span><span style="flex:1;min-width:0;"><b>${safe(x.num)}</b><span class="vzcs-l">${safe(x.label)}</span></span></a>`).join('')}
+      ${list.map(x => `<a class="vzcs-row" href="tel:${safe(x.num.replace(/[^\d+]/g, ''))}" onclick="vzLogCall('${kEnc}','${encodeURIComponent(x.num)}','${safe(String(x.label || '').split(' · ')[0])}');setTimeout(vzCallClose,300)"><span class="vzcs-ic">${appIcon('phone', 18)}</span><span style="flex:1;min-width:0;"><b>${safe(x.num)}</b><span class="vzcs-l">${safe(x.label)}</span></span></a>`).join('')}
       <button type="button" class="vzcs-cancel" onclick="vzCallClose()">Отмена</button></div>`;
   sh.classList.add('active');
 }
