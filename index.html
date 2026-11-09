@@ -702,6 +702,40 @@ body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
 .vzd-btn.s{background:#FBE4E1;color:#A81E16;}
 .vzd-chip{border:none;font-weight:500;color:#141414;}
 .vzd-chip.a{background:#141414;color:#fff;}
+.vzf-kv .vzd-t,.vzs .vzd-t,#vzLoanOverlay .vzd-card .vzd-t{color:#3F3F46;}
+.vzs-opt .vzc-in{background:#fff;}
+.vzd-card textarea.vzc-in{margin-top:10px;display:block;}
+.vzf-back{border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;}
+.vzf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+.vzf-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:#F5F6F8;color:#141414;font-size:12.5px;font-weight:700;border:none;font-family:inherit;text-decoration:none;cursor:pointer;}
+.vzf-act .vzf-ai{width:34px;height:34px;border-radius:50%;background:#fff;color:#C4231A;display:flex;align-items:center;justify-content:center;}
+.vzf-act.on{background:#C4231A;color:#fff;}.vzf-act.on .vzf-ai{background:rgba(255,255,255,.25);color:#fff;}
+.vzf-act.dis{opacity:.45;}
+.vzf-kv{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #EEE;font-size:13px;}
+.vzf-v{font-weight:700;word-break:break-word;font-size:13.5px;}
+.vzf-b{color:#444;font-size:18px;flex:none;}
+.vzf-ib{border:none;background:#F5F6F8;color:#C4231A;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.vzf-link{border:none;background:none;color:#C4231A;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:none;}
+.vzs{position:fixed;inset:0;z-index:200;}
+.vzs-bg{position:absolute;inset:0;background:rgba(0,0,0,.45);}
+.vzs-box{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:10px 16px 22px;max-height:85vh;overflow:auto;}
+.vzs-grip{width:40px;height:4px;border-radius:2px;background:#D5D5DA;margin:0 auto 12px;}
+.vzs-h{font-weight:800;font-size:16px;margin-bottom:10px;color:#141414;}
+.vzs-row{display:flex;justify-content:space-between;padding:14px 4px;border-bottom:1px solid #EEE;font-size:15px;color:#141414;cursor:pointer;}
+.vzs-row.on{color:#C4231A;font-weight:800;}
+.vzs-opt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:#F5F6F8;border:none;border-radius:16px;padding:12px;margin-bottom:10px;font-size:14px;font-family:inherit;color:#141414;}
+.vzs-ic{width:38px;height:38px;border-radius:50%;background:#C4231A;color:#fff;display:flex;align-items:center;justify-content:center;flex:none;}
+.vzs-go{width:100%;margin-top:10px;border:none;border-radius:14px;height:46px;background:#C4231A;color:#fff;font-weight:800;font-size:14px;font-family:inherit;cursor:pointer;}
+.vzs-fld{margin-top:10px;}
+.vzs-fld .vzd-t{margin-bottom:4px;}
+.vzs-sel{background:#F5F6F8;border-radius:14px;height:44px;padding:0 12px;display:flex;align-items:center;font-size:14px;font-weight:700;color:#141414;cursor:pointer;}
+.vzs-sel:after{content:'⌄';margin-left:auto;font-size:16px;}
+.vzs-doc{display:flex;gap:12px;align-items:center;background:#F5F6F8;border-radius:16px;padding:12px;margin-top:10px;cursor:pointer;}
+.vzv-r{display:flex;align-items:center;gap:10px;padding:10px 0;font-size:14px;color:#141414;}
+.vzv-r input{accent-color:#C4231A;width:18px;height:18px;}
+.vzv-dot{display:none;}
+.vzv-tile{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#F5F6F8;border-radius:14px;padding:14px 6px;font-size:13px;font-weight:700;color:#141414;cursor:pointer;}
+
 .vzd-reco{background:#fff;border:none;border-radius:20px;}
 .vzd-c-amb{background:#FFF1D6;color:#B76E00;}
 .vzd-sw{background:rgba(255,255,255,.18);}
@@ -7397,7 +7431,25 @@ function renderVzyskatelHome() {
 }
 
 // Строка клиента (карточка с цветной полосой по категории)
+function vzClientRowFl(g) {
+  const ex = allNplExtra[g.key] || {};
+  const r = nplRiskCategory(g), c = r ? VZ_CAT[r] : null;
+  const cs = ex.clientStatus, extra = (ex.phones || []).length;
+  const phones = String(g.phoneJoined || '').split(/[;,]/).map(x => x.trim()).filter(Boolean);
+  const ph = phones[0] || ((ex.phones || [])[0] || {}).phone || '';
+  const chips = (c ? `<span class="vzd-bd ${c.cls}">${safe(c.short)}</span>` : '') + vzLegalChipHtml(g)
+    + (extra ? `<span class="vzd-bd" style="background:#EEF1FB;color:#2A4BA0;">+${extra} доп. ${extra === 1 ? 'номер' : 'номера'}</span>` : '')
+    + (cs && cs.name ? `<span class="vzd-bd" style="background:#FBE4E1;color:#A81E16;">${safe(cs.name)}</span>` : '');
+  return `<div class="vzd-item" style="align-items:flex-start;" onclick="openVzClient('${encodeURIComponent(g.key)}')">
+    <div class="vzd-stripe" style="background:${c ? c.color : '#CFCBCB'};align-self:stretch;"></div>
+    <div style="flex:1;min-width:0;"><div style="display:flex;justify-content:space-between;gap:8px;"><div style="font-weight:800;font-size:13.5px;word-break:break-word;">${safe(g.clientName)}</div><div style="font-weight:800;font-size:13px;white-space:nowrap;">${vzFmt(vzGroupPf(g) || g.nplSum)}</div></div>
+      <div class="vzd-t">ПИНФЛ ${safe(g.pin || '—')}</div>
+      <div class="vzd-t">${safe(ex.address || 'Адрес не указан')}</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">${chips}</div>
+      ${ph ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><b style="font-size:13px;">${safe(ph)}</b><a href="tel:${safe(ph.replace(/[^\d+]/g, ''))}" onclick="event.stopPropagation()" class="vzf-ib" style="background:#C4231A;color:#fff;text-decoration:none;">${appIcon('phone', 16)}</a></div>` : ''}</div></div>`;
+}
 function vzClientRowHtml(g) {
+  if (g.subject !== 'J') return vzClientRowFl(g);
   const r = nplRiskCategory(g);
   const c = r ? VZ_CAT[r] : null;
   const color = c ? c.color : '#CFCBCB';
@@ -7436,9 +7488,11 @@ function vzClientsData() {
   const q = vzQuery.trim().toLowerCase();
   const match = g => !q || String(g.clientName || '').toLowerCase().includes(q) || String(g.pin || '').toLowerCase().includes(q) ||
     String(g.key || '').toLowerCase().includes(q) || g.loans.some(l => String(l.contractId).toLowerCase().includes(q));
-  const counts = { all: groups.length, fpd: 0, spd: 0, tpd: 0, exp: 0, npl: 0 };
+  const counts = { all: groups.length, fpd: 0, spd: 0, tpd: 0, exp: 0, npl: 0, mib: 0 };
+  const isMibG = g => (((allNplCourt.data || {})[g.key] || {}).caseStatus) === 'Передано в МИБ';
   groups.forEach(g => {
     const r = nplRiskCategory(g);
+    if (isMibG(g)) counts.mib++;
     if (r === 'exp') counts.exp++; else if (r === 'npl') counts.npl++;
     g.loans.forEach(l => { const e = nplLoanEarlyInfo(l); if (e) counts[e.cat]++; });
   });
@@ -7448,7 +7502,7 @@ function vzClientsData() {
     rows.sort((a, b) => (b.e.days - a.e.days) || (vzPf(b.l) - vzPf(a.l)));
   } else {
     const order = { fpd: 0, spd: 1, tpd: 2, npl: 3, exp: 4 };
-    rows = groups.filter(match).filter(g => vzFilter === 'all' || nplRiskCategory(g) === vzFilter)
+    rows = groups.filter(match).filter(g => vzFilter === 'all' || (vzFilter === 'mib' ? isMibG(g) : nplRiskCategory(g) === vzFilter))
       .sort((a, b) => ((order[nplRiskCategory(a)] === undefined ? 9 : order[nplRiskCategory(a)]) - (order[nplRiskCategory(b)] === undefined ? 9 : order[nplRiskCategory(b)])) || (b.maxDays - a.maxDays))
       .map(g => ({ g: g }));
   }
@@ -7460,7 +7514,7 @@ function renderVzClients() {
   if (!box) return;
   const d = vzClientsData();
   const isMon = nplMobileMonitor();
-  const chipDefs = [['all', 'Все'], ['fpd', 'FPD'], ['spd', 'SPD'], ['tpd', 'TPD'], ['exp', 'Ожид.'], ['npl', 'NPL']];
+  const chipDefs = [['all', 'Все'], ['fpd', 'FPD'], ['spd', 'SPD'], ['tpd', 'TPD'], ['exp', 'Ожид.'], ['npl', 'NPL'], ['mib', 'Передано в МИБ']];
   const chips = chipDefs.filter(c => c[0] === 'all' || d.counts[c[0]] > 0 || c[0] === vzFilter || isMon)
     .map(c => `<button type="button" class="vzd-chip ${vzFilter === c[0] ? 'a' : ''}" onclick="vzSetFilter('${c[0]}')">${c[1]} ${d.counts[c[0]]}</button>`).join('');
   const shown = d.rows.slice(0, vzLimit);
@@ -7584,6 +7638,377 @@ function renderVzClient(key) {
     </div>`;
 }
 
+// ======================= Карточка физлица (взыскатель) =======================
+// Шесть кнопок: Позвонить · Маршрут · Локация · Визит · Анкета · Клиент.
+// «Анкета» — всё про кредит, «Клиент» — всё про человека. ЮЛ остаются на прежней карточке.
+const VZ_CS_RULES = {
+  'Умер': { doc: 'Свидетельство о смерти', info: 'date', infoLabel: 'Дата смерти' },
+  'За границей': { info: 'text', infoLabel: 'Страна' },
+  'В местах лишения свободы': { doc: 'Справка или решение суда' },
+  'Тяжело болен': { doc: 'Справка' },
+  'Банкрот': { doc: 'Решение суда' },
+  'Переехал': {}, 'Отказывается платить': {}, 'Нет денег': {}
+};
+const VZ_RELATIONS = ['Жена', 'Муж', 'Отец', 'Мать', 'Брат', 'Сестра', 'Сын', 'Дочь', 'Сосед', 'Коллега', 'Друг', 'Работодатель', 'Другое'];
+let vzFlTab = 'a';
+let vzPickState = null;
+let vzVd = {};          // черновик визита: статус клиента, документ, родство
+let vzPhoneRel = '';
+let vzCsDoc = null;     // выбранный документ статуса (base64)
+
+const VZ_DOC_ICON = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>';
+const VZ_COPY_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>';
+const VZ_EDIT_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+
+function vzLegalChipHtml(g) {
+  const st = ((allNplCourt.data || {})[g.key] || {}).caseStatus;
+  const map = { 'Передано в МИБ': ['#E8EEFB', '#A81E16'], 'Решение вынесено': ['#E3F5EA', '#14693A'], 'На рассмотрении': ['#FFF1CF', '#8A5A00'] };
+  const m = map[st];
+  return m ? `<span class="vzd-bd" style="background:${m[0]};color:${m[1]};">${safe(st)}</span>` : '<span class="vzd-bd" style="background:#F0F0F2;color:#555;">Без статуса</span>';
+}
+function vzClientStatusOf(key) { return ((allNplExtra[key] || {}).clientStatus) || null; }
+
+// ---------- нижний лист (выбор из списка / форма) ----------
+function vzSheetOpen(html) {
+  vzSheetClose();
+  const sh = document.createElement('div'); sh.id = 'vzSheet'; sh.className = 'vzs';
+  sh.innerHTML = '<div class="vzs-bg" onclick="vzSheetClose()"></div><div class="vzs-box"><div class="vzs-grip"></div>' + html + '</div>';
+  document.body.appendChild(sh);
+}
+function vzSheetClose() { const s = document.getElementById('vzSheet'); if (s) s.remove(); }
+function vzPick(title, items, cur, cb) {
+  vzPickState = { items: items, cb: cb };
+  vzSheetOpen('<div class="vzs-h">' + safe(title) + '</div>' + items.map(function(it, i) {
+    return '<div class="vzs-row' + (it === cur ? ' on' : '') + '" onclick="vzPickDone(' + i + ')"><span>' + safe(it) + '</span>' + (it === cur ? '<b>✓</b>' : '') + '</div>';
+  }).join(''));
+}
+function vzPickDone(i) {
+  const st = vzPickState; if (!st) return;
+  vzSheetClose();
+  st.cb(st.items[i]);
+}
+function vzReadImage(file, cb) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      let w = img.width, h = img.height; const mx = 1600;
+      if (w > mx) { h = Math.round(h * mx / w); w = mx; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      const url = c.toDataURL('image/jpeg', 0.8);
+      cb({ base64: url.split(',')[1], mimeType: 'image/jpeg', dataUrl: url });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function vzFlKey() { return vzLoanCtx ? vzLoanCtx.key : ''; }
+function vzFlEnc() { return encodeURIComponent(vzFlKey()); }
+
+// ---------- вкладки ----------
+function vzFlSetTab(t) { vzFlTab = t; renderVzLoan(); const o = document.getElementById('vzLoanOverlay'); if (o) o.scrollTop = 0; }
+
+// ---------- локация ----------
+function vzLocSheet(kEnc) {
+  vzSheetOpen(`<div class="vzs-h">Локация клиента</div>
+    <button type="button" class="vzs-opt" onclick="vzLocGps('${kEnc}')"><span class="vzs-ic">${appIcon('mappin', 18)}</span><span><b>Я у клиента сейчас</b></span></button>
+    <div class="vzs-opt" style="display:block;"><div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;"><span class="vzs-ic" style="background:#fff;color:#C4231A;border:1px solid #eee;">${appIcon('search', 18)}</span><b>Указать на карте</b></div>
+      <input id="vzLocInput" class="vzc-in" placeholder="41.3775, 60.3619" inputmode="decimal">
+      <button type="button" class="vzs-go" onclick="vzLocManual('${kEnc}')">Сохранить локацию</button></div>`);
+}
+function vzLocGps(kEnc) {
+  if (!navigator.geolocation) { alert('Геолокация не поддерживается'); return; }
+  navigator.geolocation.getCurrentPosition(
+    function(pos) { vzLocSave(kEnc, pos.coords.latitude.toFixed(6), pos.coords.longitude.toFixed(6)); },
+    function(err) { alert('Не удалось определить местоположение: ' + err.message); },
+    { enableHighAccuracy: true, timeout: 10000 });
+}
+function vzLocManual(kEnc) {
+  const v = (document.getElementById('vzLocInput') || {}).value || '';
+  const m = v.replace(',', ' ').match(/(-?\d+(?:[.,]\d+)?)\s+(-?\d+(?:[.,]\d+)?)/);
+  if (!m) { alert('Введите координаты: широта, долгота'); return; }
+  const lat = parseFloat(m[1].replace(',', '.')), lng = parseFloat(m[2].replace(',', '.'));
+  if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) { alert('Некорректные координаты'); return; }
+  vzLocSave(kEnc, lat.toFixed(6), lng.toFixed(6));
+}
+async function vzLocSave(kEnc, lat, lng, address) {
+  const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key], ex = allNplExtra[key] || {};
+  const addr = address !== undefined ? address : (ex.address || '');
+  try {
+    const r = await postWebAction({ webAction: 'setNplLocation', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', address: addr, lat: lat === undefined ? (ex.lat || '') : lat, lng: lng === undefined ? (ex.lng || '') : lng });
+    if (r.success) {
+      allNplExtra[key] = allNplExtra[key] || {};
+      allNplExtra[key].address = addr;
+      if (lat !== undefined) { allNplExtra[key].lat = lat; allNplExtra[key].lng = lng; }
+      vzSheetClose(); renderVzLoan();
+    } else alert(r.message || 'Не удалось сохранить');
+  } catch (e) { alert('Не удалось связаться с сервером'); console.error(e); }
+}
+function vzAddrSheet(kEnc) {
+  const ex = allNplExtra[decodeURIComponent(kEnc)] || {};
+  vzSheetOpen(`<div class="vzs-h">Адрес</div><textarea id="vzAddrInput" class="vzc-in" style="min-height:90px;">${safe(ex.address || '')}</textarea>
+    <button type="button" class="vzs-go" onclick="vzLocSave('${kEnc}', undefined, undefined, document.getElementById('vzAddrInput').value.trim())">Сохранить</button>`);
+}
+
+// ---------- статус клиента ----------
+function vzCsOpen(kEnc) {
+  const key = decodeURIComponent(kEnc), cur = vzClientStatusOf(key);
+  vzPick('Статус клиента', ['Не выбран'].concat(Object.keys(VZ_CS_RULES)), cur ? cur.name : 'Не выбран', function(v) {
+    if (v === 'Не выбран') { vzCsSave(kEnc, '', '', null); return; }
+    const rule = VZ_CS_RULES[v];
+    if (rule.doc || rule.info) vzCsForm(kEnc, v); else vzCsSave(kEnc, v, '', null);
+  });
+}
+function vzCsFormHtml(name, withKeep, keepDoc) {
+  const rule = VZ_CS_RULES[name] || {};
+  return (rule.doc ? `<label class="vzs-doc" id="vzCsDocBox"><span class="vzs-ic" style="background:#C4231A;color:#fff;">${appIcon('upload', 18)}</span><span><b>${safe(rule.doc)}</b><div class="vzd-t" id="vzCsDocName">${keepDoc ? 'Загружен' : 'Фото документа'}</div></span><input type="file" accept="image/*" style="display:none;" onchange="vzCsPickDoc(this)"></label>` : '')
+    + (rule.info ? `<div class="vzs-fld"><div class="vzd-t">${safe(rule.infoLabel)}</div><input id="vzCsInfo" class="vzc-in" ${rule.info === 'date' ? 'type="date"' : 'type="text"'}></div>` : '');
+}
+function vzCsPickDoc(inp) {
+  if (!inp.files || !inp.files[0]) return;
+  const nm = document.getElementById('vzCsDocName'); if (nm) nm.innerText = 'Загрузка…';
+  vzReadImage(inp.files[0], function(img) { vzCsDoc = img; if (nm) nm.innerText = 'Фото выбрано'; });
+}
+function vzCsForm(kEnc, name) {
+  vzCsDoc = null;
+  const cur = vzClientStatusOf(decodeURIComponent(kEnc));
+  const keep = cur && cur.name === name && cur.docUrl;
+  vzSheetOpen(`<div class="vzs-h">${safe(name)}</div>${vzCsFormHtml(name, true, keep)}<div id="vzCsErr" class="vzd-t" style="color:#A81E16;"></div>
+    <button type="button" class="vzs-go" onclick="vzCsSubmit('${kEnc}','${safe(name)}')">Сохранить</button>`);
+}
+function vzCsSubmit(kEnc, name) {
+  const rule = VZ_CS_RULES[name] || {}, key = decodeURIComponent(kEnc), cur = vzClientStatusOf(key);
+  const info = ((document.getElementById('vzCsInfo') || {}).value || '').trim();
+  const err = document.getElementById('vzCsErr');
+  if (rule.doc && !vzCsDoc && !(cur && cur.name === name && cur.docUrl)) { if (err) err.innerText = 'Загрузите документ'; return; }
+  if (rule.info && !info) { if (err) err.innerText = rule.infoLabel + ': не указано'; return; }
+  vzCsSave(kEnc, name, info, vzCsDoc);
+}
+async function vzCsSave(kEnc, name, info, doc) {
+  const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key];
+  try {
+    const r = await postWebAction({ webAction: 'setNplClientStatus', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', clientStatus: name, statusInfo: info, statusDoc: doc ? { base64: doc.base64, mimeType: doc.mimeType } : null });
+    if (r.success) {
+      allNplExtra[key] = allNplExtra[key] || {}; allNplExtra[key].clientStatus = r.clientStatus || null;
+      vzCsDoc = null; vzSheetClose(); renderVzLoan();
+    } else { const e = document.getElementById('vzCsErr'); if (e) e.innerText = r.message || 'Не удалось сохранить'; else alert(r.message || 'Не удалось сохранить'); }
+  } catch (e) { alert('Не удалось связаться с сервером'); console.error(e); }
+}
+
+// ---------- дополнительные номера ----------
+async function vzPostPhone(key, name, phone, rel) {
+  const g = nplGroupsByKey[key];
+  const r = await postWebAction({ webAction: 'addNplPhone', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', name: name, label: rel || 'Другое', phone: phone });
+  if (r.success) { allNplExtra[key] = allNplExtra[key] || {}; allNplExtra[key].phones = r.phones; }
+  return r;
+}
+function vzPhoneSheet(kEnc) {
+  vzPhoneRel = '';
+  vzSheetOpen(`<div class="vzs-h">Дополнительный номер</div>
+    <div class="vzs-fld"><div class="vzd-t">Фамилия и имя</div><input id="vzpName" class="vzc-in"></div>
+    <div class="vzs-fld"><div class="vzd-t">Номер</div><input id="vzpNum" class="vzc-in" type="tel" placeholder="+998 __ ___ __ __"></div>
+    <div class="vzs-fld" onclick="vzRelPick('vzpRel')"><div class="vzd-t">Кем приходится</div><div class="vzs-sel" id="vzpRel">Не выбран</div></div>
+    <div id="vzpErr" class="vzd-t" style="color:#A81E16;"></div>
+    <button type="button" class="vzs-go" onclick="vzPhoneSave('${kEnc}')">+ Добавить номер</button>`);
+}
+function vzRelPick(elId) {
+  const keep = { n: (document.getElementById('vzpName') || document.getElementById('vzvName') || {}).value, p: (document.getElementById('vzpNum') || document.getElementById('vzvNum') || {}).value };
+  vzPick('Кем приходится', VZ_RELATIONS, vzPhoneRel, function(v) {
+    vzPhoneRel = v;
+    if (document.getElementById('vzpName')) { vzPhoneSheetReopen(elId, keep); return; }
+    const el = document.getElementById(elId); if (el) el.innerText = v;
+  });
+}
+function vzPhoneSheetReopen(elId, keep) {
+  // нижний лист выбора закрыл форму — открываем форму снова с введёнными значениями
+  vzSheetOpen(`<div class="vzs-h">Дополнительный номер</div>
+    <div class="vzs-fld"><div class="vzd-t">Фамилия и имя</div><input id="vzpName" class="vzc-in" value="${safe(keep.n || '')}"></div>
+    <div class="vzs-fld"><div class="vzd-t">Номер</div><input id="vzpNum" class="vzc-in" type="tel" placeholder="+998 __ ___ __ __" value="${safe(keep.p || '')}"></div>
+    <div class="vzs-fld" onclick="vzRelPick('vzpRel')"><div class="vzd-t">Кем приходится</div><div class="vzs-sel" id="vzpRel">${safe(vzPhoneRel || 'Не выбран')}</div></div>
+    <div id="vzpErr" class="vzd-t" style="color:#A81E16;"></div>
+    <button type="button" class="vzs-go" onclick="vzPhoneSave('${vzFlEnc()}')">+ Добавить номер</button>`);
+}
+async function vzPhoneSave(kEnc) {
+  const key = decodeURIComponent(kEnc), err = document.getElementById('vzpErr');
+  const name = ((document.getElementById('vzpName') || {}).value || '').trim(), phone = ((document.getElementById('vzpNum') || {}).value || '').trim();
+  if (!name) { if (err) err.innerText = 'Укажите фамилию и имя'; return; }
+  if (!phone) { if (err) err.innerText = 'Введите номер'; return; }
+  if (!vzPhoneRel) { if (err) err.innerText = 'Выберите, кем приходится'; return; }
+  try {
+    const r = await vzPostPhone(key, name, phone, vzPhoneRel);
+    if (r.success) { vzSheetClose(); renderVzLoan(); } else if (err) err.innerText = r.message || 'Не удалось добавить';
+  } catch (e) { if (err) err.innerText = 'Не удалось связаться с сервером'; console.error(e); }
+}
+
+// ---------- экран «Юридический статус» ----------
+function vzOpenLegal(kEnc) {
+  const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key]; if (!g) return;
+  const box = document.getElementById('vzLoanOverlay');
+  box.innerHTML = `<div class="vzd-hero" style="padding-bottom:30px;"><div class="vzd-top"><button type="button" onclick="renderVzLoan()" aria-label="Назад" class="vzf-back">‹</button>
+    <div style="min-width:0;"><div class="vzd-name">Юридический статус</div><div class="sub">${safe(g.clientName)}</div></div></div></div>
+    <div class="vzd-body" style="margin-top:-18px;"><div class="vzd-card" id="vzcLegalBody" style="border-top:none;margin-top:0;">${renderNplLegalStatusTab(g)}</div></div>`;
+  box.scrollTop = 0;
+}
+
+// ---------- экран «Визит» ----------
+function vzOpenVisit(kEnc) {
+  const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key]; if (!g) return;
+  nplVisitDraft[key] = {}; vzVd = { cs: '', info: '', doc: null }; vzPhoneRel = '';
+  vzRenderVisit();
+}
+function vzRenderVisit() {
+  const key = vzFlKey(), kEnc = vzFlEnc(), g = nplGroupsByKey[key]; if (!g) return;
+  const box = document.getElementById('vzLoanOverlay');
+  const visits = (allNplVisits[key] || []).slice();
+  const todayV = visits.find(nplVisitIsToday) || null;
+  const hist = visits.map(v => `<div style="padding:8px 0;border-bottom:1px solid #EEE;font-size:13px;"><b>${safe(v.addedAt)}</b>${v.suspicious ? ' <span class="vzd-bd" style="background:#FFF1CF;color:#8A5A00;">сомнительный</span>' : ''}<div class="vzd-t">${safe(v.addedBy)} · ${safe(v.status)}${v.clientStatus ? ' · ' + safe(v.clientStatus) : ''}${v.comment ? ' — ' + safe(v.comment) : ''}</div></div>`).join('') || '<div class="vzd-t">Визитов ещё не было</div>';
+  const top = `<div class="vzd-hero" style="padding-bottom:46px;"><div class="vzd-top"><button type="button" onclick="renderVzLoan()" aria-label="Назад" class="vzf-back">‹</button><div style="min-width:0;"><div class="vzd-name">Визит</div><div class="sub">${safe(g.clientName)}</div></div></div></div>`;
+  if (todayV) {
+    box.innerHTML = top + `<div class="vzd-body" style="margin-top:-30px;"><div style="background:#E3F5EA;border-radius:20px;padding:16px;"><div style="display:flex;gap:12px;align-items:center;"><div class="vzd-ico" style="background:#1E9E5A;color:#fff;">${appIcon('check', 18)}</div><div><div style="font-weight:800;font-size:15px;">Сегодня визит внесён</div><div class="vzd-t" style="color:#2d6a45;">${safe(todayV.addedAt)} · ${safe(todayV.addedBy)} · ${safe(todayV.status)}</div></div></div>${todayV.id && nplCanEditVisit(todayV) ? `<button type="button" class="vzd-btn s" style="margin-top:12px;background:#fff;" onclick="nplVisitEditOpen('${kEnc}','${encodeURIComponent(todayV.id)}')">Изменить визит</button>` : ''}</div>
+      <div class="vzd-card"><div class="vzd-h" style="margin-bottom:2px;">История визитов (${visits.length})</div>${hist}</div></div>`;
+    return;
+  }
+  const radios = NPL_VISIT_STATUSES.map((s, i) => `<label class="vzv-r"><input type="radio" name="nplVisitStatus_${kEnc}" value="${safe(s)}" ${i === 0 ? 'checked' : ''}><span class="vzv-dot"></span>${safe(s)}</label>`).join('');
+  const rule = VZ_CS_RULES[vzVd.cs] || {};
+  const csExtra = vzVd.cs ? ((rule.doc ? `<label class="vzs-doc"><span class="vzs-ic" style="background:#C4231A;color:#fff;">${appIcon('upload', 18)}</span><span><b>${safe(rule.doc)}</b><div class="vzd-t" id="vzvDocName">${vzVd.doc ? 'Фото выбрано' : 'Фото документа'}</div></span><input type="file" accept="image/*" style="display:none;" onchange="vzVisitPickDoc(this)"></label>` : '') + (rule.info ? `<div class="vzs-fld"><div class="vzd-t">${safe(rule.infoLabel)}</div><input id="vzvInfo" class="vzc-in" ${rule.info === 'date' ? 'type="date"' : 'type="text"'} value="${safe(vzVd.info)}" oninput="vzVd.info=this.value"></div>` : '')) : '';
+  const addedList = ((allNplExtra[key] || {}).phones || []).map(p => `<div class="vzd-tel" style="margin-top:6px;"><div class="vzd-telc">${appIcon('phone', 15)}</div><div><b style="font-size:13.5px;">${safe(p.name || p.phone)}</b><div class="vzd-t">${safe(p.label || 'Другое')} · ${safe(p.phone)}</div></div></div>`).join('');
+  box.innerHTML = top + `<div class="vzd-body" style="margin-top:-30px;">
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Результат визита</div>${radios}</div>
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Статус клиента</div>
+      <div class="vzs-fld" onclick="vzVisitCs()"><div class="vzd-t">Статус</div><div class="vzs-sel">${safe(vzVd.cs || 'Не выбран')}</div></div>${csExtra}</div>
+    <div class="vzd-card"><div style="display:flex;gap:10px;">
+      <div class="vzv-tile" onclick="captureNplVisitGeo('${kEnc}')">${appIcon('mappin', 20)}<span id="nplVisitGeoStatus_${kEnc}">Место</span></div>
+      <label class="vzv-tile">${appIcon('camera', 20)}<span>Фото</span><input type="file" accept="image/*" capture="environment" style="display:none;" id="nplVisitPhotoInput_${kEnc}" onchange="captureNplVisitPhoto('${kEnc}', this)"></label></div>
+      <div id="nplVisitPhotoPreview_${kEnc}" style="margin-top:8px;"></div></div>
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Обещание клиента</div>
+      <div style="display:flex;gap:10px;"><div class="vzs-fld" style="flex:1;"><div class="vzd-t">Дата</div><input type="date" id="nplVisitPromiseDate_${kEnc}" class="vzc-in"></div><div class="vzs-fld" style="flex:1;"><div class="vzd-t">Сумма</div><input type="number" id="nplVisitPromiseAmount_${kEnc}" class="vzc-in"></div></div>
+      <textarea id="nplVisitComment_${kEnc}" class="vzc-in" placeholder="Комментарий" style="min-height:70px;"></textarea></div>
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Дополнительный номер</div>${addedList}
+      <div class="vzs-fld" style="margin-top:8px;"><div class="vzd-t">Фамилия и имя</div><input id="vzvName" class="vzc-in"></div>
+      <div class="vzs-fld"><div class="vzd-t">Номер</div><input id="vzvNum" class="vzc-in" type="tel" placeholder="+998 __ ___ __ __"></div>
+      <div class="vzs-fld" onclick="vzRelPick('vzvRel')"><div class="vzd-t">Кем приходится</div><div class="vzs-sel" id="vzvRel">${safe(vzPhoneRel || 'Не выбран')}</div></div>
+      <div id="vzvPhoneErr" class="vzd-t" style="color:#A81E16;"></div>
+      <button type="button" class="vzs-go" style="background:#FBE4E1;color:#A81E16;" onclick="vzVisitAddPhone()">+ Добавить номер</button></div>
+    <button type="button" class="vzd-btn p" onclick="vzVisitConfirm('${kEnc}')">Подтвердить визит</button>
+    <div id="nplVisitConfirmStatus_${kEnc}" class="vzd-t" style="text-align:center;"></div>
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:2px;">История визитов (${visits.length})</div>${hist}</div></div>`;
+}
+function vzVisitSnapshot() {
+  const k = vzFlEnc(), g = id => document.getElementById(id);
+  return { status: (document.querySelector('input[name="nplVisitStatus_' + k + '"]:checked') || {}).value || '', pd: (g('nplVisitPromiseDate_' + k) || {}).value || '', pa: (g('nplVisitPromiseAmount_' + k) || {}).value || '', cm: (g('nplVisitComment_' + k) || {}).value || '', n: (g('vzvName') || {}).value || '', p: (g('vzvNum') || {}).value || '' };
+}
+function vzVisitRestore(s) {
+  const k = vzFlEnc(), g = id => document.getElementById(id);
+  const r = Array.from(document.querySelectorAll('input[name="nplVisitStatus_' + k + '"]')).find(x => x.value === s.status); if (r) r.checked = true;
+  if (g('nplVisitPromiseDate_' + k)) g('nplVisitPromiseDate_' + k).value = s.pd;
+  if (g('nplVisitPromiseAmount_' + k)) g('nplVisitPromiseAmount_' + k).value = s.pa;
+  if (g('nplVisitComment_' + k)) g('nplVisitComment_' + k).value = s.cm;
+  if (g('vzvName')) g('vzvName').value = s.n;
+  if (g('vzvNum')) g('vzvNum').value = s.p;
+}
+function vzVisitCs() {
+  const snap = vzVisitSnapshot();
+  vzPick('Статус клиента', ['Не выбран'].concat(Object.keys(VZ_CS_RULES)), vzVd.cs || 'Не выбран', function(v) {
+    vzVd.cs = v === 'Не выбран' ? '' : v; vzVd.info = ''; vzVd.doc = null;
+    vzRenderVisit(); vzVisitRestore(snap);
+  });
+}
+function vzVisitPickDoc(inp) {
+  if (!inp.files || !inp.files[0]) return;
+  const nm = document.getElementById('vzvDocName'); if (nm) nm.innerText = 'Загрузка…';
+  vzReadImage(inp.files[0], function(img) { vzVd.doc = img; if (nm) nm.innerText = 'Фото выбрано'; });
+}
+async function vzVisitAddPhone() {
+  const key = vzFlKey(), err = document.getElementById('vzvPhoneErr');
+  const name = ((document.getElementById('vzvName') || {}).value || '').trim(), phone = ((document.getElementById('vzvNum') || {}).value || '').trim();
+  if (!name) { err.innerText = 'Укажите фамилию и имя'; return; }
+  if (!phone) { err.innerText = 'Введите номер'; return; }
+  if (!vzPhoneRel) { err.innerText = 'Выберите, кем приходится'; return; }
+  const snap = vzVisitSnapshot();
+  try {
+    const r = await vzPostPhone(key, name, phone, vzPhoneRel);
+    if (r.success) { vzPhoneRel = ''; snap.n = ''; snap.p = ''; vzRenderVisit(); vzVisitRestore(snap); }
+    else err.innerText = r.message || 'Не удалось добавить';
+  } catch (e) { err.innerText = 'Не удалось связаться с сервером'; console.error(e); }
+}
+async function vzVisitConfirm(kEnc) {
+  const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key], st = document.getElementById('nplVisitConfirmStatus_' + kEnc);
+  const s = vzVisitSnapshot(), draft = nplVisitDraft[key] || {};
+  const bad = t => { st.style.color = 'var(--red)'; st.innerText = t; };
+  if (!s.status) { bad('Выберите результат визита'); return; }
+  const rule = VZ_CS_RULES[vzVd.cs] || {};
+  if (vzVd.cs && rule.doc && !vzVd.doc) { bad('Загрузите документ: ' + rule.doc); return; }
+  if (vzVd.cs && rule.info && !String(vzVd.info || '').trim()) { bad(rule.infoLabel + ': не указано'); return; }
+  if (nplVisitSaving) return;
+  nplVisitSaving = true; st.style.color = 'var(--muted)'; st.innerText = 'Сохранение...';
+  const suspicious = draft.distance !== undefined && draft.distance !== '' && draft.distance > NPL_VISIT_GEOFENCE_METERS;
+  try {
+    const r = await postWebAction({ webAction: 'addNplVisit', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', status: s.status, lat: draft.lat || '', lng: draft.lng || '', distance: draft.distance !== undefined ? draft.distance : '', suspicious: suspicious, photo: draft.photoBase64 ? { base64: draft.photoBase64, mimeType: draft.photoMime } : null, promiseDate: s.pd, promiseAmount: s.pa, comment: s.cm.trim(), clientStatus: vzVd.cs, statusInfo: vzVd.info || '', statusDoc: vzVd.doc ? { base64: vzVd.doc.base64, mimeType: vzVd.doc.mimeType } : null });
+    if (r.success) {
+      delete nplVisitDraft[key];
+      allNplVisits = (await fetchJSON('nplVisits')) || {};
+      try { const ex = await fetchJSON('nplExtra'); if (ex) allNplExtra = ex; } catch (e) {}
+      vzFlTab = 'c'; renderVzLoan();
+    } else if (r.duplicate) { bad(r.message); try { allNplVisits = (await fetchJSON('nplVisits')) || {}; vzRenderVisit(); } catch (e) {} }
+    else bad(r.message || 'Не удалось сохранить визит');
+  } catch (e) { bad('Не удалось связаться с сервером'); console.error(e); }
+  finally { nplVisitSaving = false; }
+}
+
+// ---------- карточка ФЛ: шапка, 6 кнопок и две вкладки ----------
+function vzRenderFlCard(box, g, l, ctx) {
+  const key = g.key, kEnc = encodeURIComponent(key), cEnc = encodeURIComponent(String(l.contractId));
+  const ex = allNplExtra[key] || {};
+  const hasLoc = !!(ex.lat && ex.lng);
+  const callNums = vzCallNumbers(g, l);
+  const route = hasLoc ? `href="geo:${ex.lat},${ex.lng}?q=${ex.lat},${ex.lng}(${encodeURIComponent(g.clientName)})"` : `onclick="vzLocSheet('${kEnc}')"`;
+  const act = (ic, t, attrs, on, dis) => `<${attrs.indexOf('href') > -1 ? 'a' : 'button type="button"'} class="vzf-act${on ? ' on' : ''}${dis ? ' dis' : ''}" ${attrs}><span class="vzf-ai">${ic}</span>${t}</${attrs.indexOf('href') > -1 ? 'a' : 'button'}>`;
+  const call = !callNums.length ? act(appIcon('phone', 17), 'Позвонить', 'onclick="void 0"', 0, 1)
+    : callNums.length > 1 ? act(appIcon('phone', 17), 'Позвонить', `onclick="vzCallPick('${kEnc}','${cEnc}')"`)
+    : act(appIcon('phone', 17), 'Позвонить', `href="tel:${safe(callNums[0].num.replace(/[^\d+]/g, ''))}"`);
+  const six = `<div class="vzf-grid">${call}${act(appIcon('mappin', 17), 'Маршрут', route, 0, !hasLoc)}${act(appIcon('plus', 17), 'Локация', `onclick="vzLocSheet('${kEnc}')"`)}${act(appIcon('check', 17), 'Визит', `onclick="vzOpenVisit('${kEnc}')"`)}${act(VZ_DOC_ICON, 'Анкета', `onclick="vzFlSetTab('a')"`, vzFlTab === 'a')}${act(appIcon('user', 17), 'Клиент', `onclick="vzFlSetTab('c')"`, vzFlTab === 'c')}</div>`;
+  const sec = (t, x, r) => `<div class="vzd-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div class="vzd-h">${t}</div>${r || ''}</div>${x}</div>`;
+  const kv = (k, v, b) => `<div class="vzf-kv"><div style="min-width:0;"><div class="vzd-t">${k}</div><div class="vzf-v">${v}</div></div><div class="vzf-b">${b || ''}</div></div>`;
+  let body = '';
+  if (vzFlTab === 'a') {
+    const sw = g.loans.length > 1 ? `<div class="vzd-card" style="padding:10px 12px;"><div class="vzd-chips">${ctx.sortedLoans.map(x => `<button type="button" class="vzd-chip ${String(x.contractId) === String(l.contractId) ? 'a' : ''}" onclick="vzSwitchLoan('${encodeURIComponent(String(x.contractId))}')">№ ${safe(x.contractId)}</button>`).join('')}</div></div>` : '';
+    const rows = a => a.filter(x => x[1] !== '').map(x => ctx.crRow(x[0], x[1])).join('') || '<div class="vzd-t">Нет данных</div>';
+    const money = ctx.money, dd = n => nplSaneDays(n) ? nplSaneDays(n) + ' дн' : '';
+    body = sw + (ctx.reco ? `<div class="vzd-reco"><div class="vzd-ico vzd-c-amb">${appIcon('alert', 19)}</div><div><div class="vzd-h" style="color:#633806;">Рекомендация</div><div class="vzd-t" style="color:#7A5200;">${safe(ctx.reco)}</div></div></div>` : '')
+      + sec('Кредитные данные', rows([['Тип кредита', safe(l.productType || '') === '—' ? '' : safe(l.productType || '')], ['Дата выдачи', l.openDate ? safe(nplFmtDateRu(l.openDate)) : ''], ['Текущий остаток', money(l.currentBalance)], ['Пересмотренный остаток', money(l.revisedBalance)], ['Всего задолженность', money(l.totalDebt)], ['Резерв', money(l.reserve)], ['Портфель', money(ctx.pf)], ['NPL анкеты', money(l.totalNpl)]]))
+      + sec('Просрочка', rows([['Просроченный основной долг', money(l.overdueBalance)], ['Просроченные проценты', money(l.overdueInterest)], ['Начисленные проценты', money(l.accruedInterest)], ['Всего проценты', money(l.totalInterest)], ['Дни просрочки (основной долг)', dd(l.daysOverdue)], ['Дни просрочки (проценты)', dd(l.daysOverdueInterest)]]))
+      + sec('Суд и МИБ', rows([['Приказ суда', l.courtOrderNumber ? safe(l.courtOrderNumber) + (l.courtOrderDate ? ' · ' + safe(l.courtOrderDate) : '') : ''], ['МИБ', l.mibCase ? safe(l.mibCase) + (l.mibDate ? ' · ' + safe(l.mibDate) : '') : '']]))
+      + ctx.path;
+  } else {
+    const cs = vzClientStatusOf(key);
+    const pin = String(g.pin || '');
+    const coll = (function() { try { const id = (typeof cdCollOf === 'function' ? cdCollOf(g) : '') || nplFlCollId(g); return id ? nplCollectorLabel(id) : ''; } catch (e) { return ''; } })();
+    const filePh = String(g.phoneJoined || '').split(/[;,]/).map(x => x.trim()).filter(Boolean);
+    const exPh = ex.phones || [];
+    const telRow = (n, sub) => `<a class="vzd-tel" href="tel:${safe(String(n).replace(/[^\d+]/g, ''))}"><div class="vzd-telc">${appIcon('phone', 16)}</div><div style="flex:1;min-width:0;"><b>${safe(n)}</b><div class="vzd-t">${sub}</div></div></a>`;
+    const visits = (allNplVisits[key] || []).slice(0, 3);
+    const files = k => nplFlFiles(key, k).length;
+    const fileRow = (n, ok) => `<div class="vzf-kv"><div class="vzf-v">${n}</div><span class="vzd-bd" style="background:${ok ? '#E3F5EA' : '#FBE4E1'};color:${ok ? '#14693A' : '#A81E16'};">${ok ? 'Файл есть' : 'Не загружен'}</span></div>`;
+    const ls = vzLegalSummary(g);
+    body = sec('Данные клиента', kv('ПИНФЛ', safe(pin) || '—', pin ? `<button type="button" class="vzf-ib" onclick="copyNplValue('${encodeURIComponent(pin)}', this)" aria-label="Копировать">${VZ_COPY_ICON}</button>` : '')
+        + kv('Адрес', safe(ex.address || '—'), `<button type="button" class="vzf-ib" onclick="vzAddrSheet('${kEnc}')" aria-label="Изменить адрес">${VZ_EDIT_ICON}</button>`)
+        + kv('Взыскатель', safe(coll || '—')))
+      + sec('Статусы', `<div onclick="vzOpenLegal('${kEnc}')" style="cursor:pointer;">${kv('Юридический статус', safe(ls.sub) + ' · ' + safe(ls.chip), '›')}</div><div onclick="vzCsOpen('${kEnc}')" style="cursor:pointer;">${kv('Статус клиента', safe(cs ? cs.name + (cs.info ? ' · ' + cs.info : '') : 'Не выбран'), '⌄')}</div>`)
+      + sec('Телефоны', filePh.map(n => telRow(n, 'Клиент · из выгрузки')).join('') + exPh.map(p => telRow(p.phone, safe((p.name ? p.name + ' · ' : '') + (p.label || 'Другое')))).join(''), `<button type="button" class="vzf-link" onclick="vzPhoneSheet('${kEnc}')">+ Номер</button>`)
+      + sec('Визиты (' + (allNplVisits[key] || []).length + ')', (visits.map(v => `<div style="padding:7px 0;border-bottom:1px solid #EEE;font-size:13px;"><b>${safe(v.addedAt)}</b><div class="vzd-t">${safe(v.addedBy)} · ${safe(v.status)}${v.clientStatus ? ' · ' + safe(v.clientStatus) : ''}</div></div>`).join('') || '<div class="vzd-t">Визитов ещё не было</div>'), `<button type="button" class="vzf-link" onclick="vzOpenVisit('${kEnc}')">Внести визит</button>`)
+      + sec('Документы', fileRow('Иск', files('isk')) + fileRow('Судебный приказ', files('ord')) + fileRow('МИБ', files('mib')) + (cs && cs.docUrl ? `<div class="vzf-kv"><div class="vzf-v">${safe(cs.name)}</div><a href="${safe(cs.docUrl)}" target="_blank" class="vzf-link">Открыть</a></div>` : ''));
+  }
+  box.innerHTML = `
+    <div class="vzd-hero" style="padding-bottom:50px;">
+      <div class="vzd-top"><button type="button" onclick="closeVzLoan()" aria-label="Назад" class="vzf-back">‹</button>
+        <div style="min-width:0;"><div class="vzd-name">Анкета № ${safe(l.contractId)}</div><div class="sub">${safe(g.clientName)} · ${vzFmt(ctx.pf)}</div></div></div>
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">${ctx.c ? `<span class="vzd-bd" style="background:#fff;color:#C4231A;">${safe(ctx.c.label)}</span>` : ''}<span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">${ctx.days} дн.</span><span class="vzd-bd" style="background:rgba(255,255,255,.22);color:#fff;">анкет: ${g.loans.length}</span></div></div>
+    <div class="vzd-body" style="margin-top:-30px;">
+      <div class="vzd-card"><div class="vzd-h">${safe(g.clientName)}</div><div class="vzd-t">ФЛ · ID ${safe(g.displayClientId || g.key)}</div>${six}</div>
+      ${body}</div>`;
+}
+
 function renderVzLoan() {
   const box = document.getElementById('vzLoanOverlay');
   if (!box || !vzLoanCtx) return;
@@ -7662,6 +8087,9 @@ function renderVzLoan() {
         <div class="vzd-card" ${tileOpen} style="cursor:pointer;padding:12px;"><div class="vzd-tile"><div class="vzd-ico">${appIcon('mappin', 18)}</div><div><div class="vzd-h">Залог</div><div class="vzd-t">${colTxt}</div></div></div></div>
       </div>`;
 
+  if (g.subject !== 'J') { const flRow = (label, val) => crRow(label, val).replace('color:#6B7280', 'color:#3F3F46');
+    const flReco = String(reco).replace(/выезд на бизнес и залог/g, 'выезд к клиенту').replace(/проверить, работает ли бизнес, оценить залог, /g, '').replace(/выезд, проверка бизнеса и залога, /g, 'выезд, ').replace(/оценить залог, /g, '').replace(/актуальность залога, обновить данные о бизнесе и /g, '');
+    vzRenderFlCard(box, g, l, { sortedLoans: sortedLoans, crRow: flRow, money: money, reco: flReco, pf: pf, path: path, c: c, days: days }); return; }
   const callNums = vzCallNumbers(g, l);
   const callBtn = callNums.length > 1 && exPh.length
     ? `<button type="button" class="vzd-btn s" onclick="vzCallPick('${kEnc}','${cEnc}')">${appIcon('phone', 16)} Позвонить клиенту</button>`
@@ -12907,7 +13335,7 @@ let nplFlCtx = { over: [], all: [] };
 let nplFlGroupsFn = null;
 let nplFlLast = null;
 let nplFlPopState = null;
-const nplFlF = { term: [], leg: '', basis: '', coll: '', epd: '', cat: '' };
+const nplFlF = { term: [], leg: '', basis: '', coll: '', epd: '', cat: '', xph: '' };
 const NPL_FL_TERMS = [['0', 'Без просрочки'], ['1', '1 – 29 дней'], ['2', '30 – 59 дней'], ['3', '60 – 89 дней'], ['4', '90 – 180 дней'], ['5', '181 – 365 дней'], ['6', 'Более 365 дней']];
 const NPL_FL_TERM_SHORT = { '0': 'без просрочки', '1': '1–29', '2': '30–59', '3': '60–89', '4': '90–180', '5': '181–365', '6': '365+' };
 const NPL_FL_CLIP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5-6.5a3 3 0 0 0-6-6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5-6.5"/></svg>';
@@ -12981,6 +13409,9 @@ function nplFlLegCell(g, kind, f) {
   return '<span class="fl-lc" onclick="nplFlOpenPop(event,\'' + encodeURIComponent(g.key) + '\',\'' + kind + '\')"><span class="fl-ico ' + (yes ? 'y' : 'x') + '">' + (yes ? '✓' : '✕') + '</span><span class="fl-clip' + (yes ? ' on' : '') + '">' + NPL_FL_CLIP + '</span></span>';
 }
 
+function nplFlXph(g) { return ((allNplExtra[g.key] || {}).phones || []); }
+function nplFlXphWho(g) { return nplFlXph(g).map(p => (p.name ? p.name + ' ' : '') + '(' + (p.label || 'Другое') + ')').join('; '); }
+function nplFlLegSt(g) { return ((allNplCourt.data || {})[g.key] || {}).caseStatus || ''; }
 function nplFlCols(sub) {
   const J = nplFlIsJ();
   const nm = it => '<td class="fl-nm">' + safe(it.g.clientName) + '</td>';
@@ -12996,6 +13427,11 @@ function nplFlCols(sub) {
     isk: { h: 'Иск', c: true, ui: leg('isk') }, ord: { h: 'Приказ', c: true, ui: leg('ord') }, mib: { h: 'МИБ', c: true, ui: leg('mib') },
     mibCase: { h: 'Дело МИБ', ui: it => '<td class="fl-id">' + (safe(nplFlMibCase(it.g)) || '<span class="fl-z">–</span>') + '</td>' },
     phone: { h: 'Телефон', ui: it => '<td>' + (safe(String(it.g.phoneJoined || '').split(';')[0]) || '<span class="fl-z">—</span>') + '</td>' },
+    pin: { h: 'ПИНФЛ', ui: it => '<td class="fl-id">' + (safe(it.g.pin) || '<span class="fl-z">—</span>') + '</td>' },
+    addr: { h: 'Адрес', ui: it => '<td style="max-width:220px;">' + (safe((allNplExtra[it.g.key] || {}).address || '') || '<span class="fl-z">—</span>') + '</td>' },
+    legst: { h: 'Юр. статус', ui: it => '<td>' + (safe(nplFlLegSt(it.g)) || '<span class="fl-z">Без статуса</span>') + '</td>' },
+    xph: { h: 'Доп. номера', ui: it => { const a = nplFlXph(it.g); return '<td>' + (a.length ? '<b>' + a.length + '</b> · ' + safe(a.map(p => (p.name || '') + ' (' + (p.label || 'Другое') + ')').join('; ')) : '<span class="fl-z">—</span>') + '</td>'; } },
+    cstat: { h: 'Статус клиента', ui: it => { const c = (allNplExtra[it.g.key] || {}).clientStatus; return '<td>' + (c && c.name ? safe(c.name) : '<span class="fl-z">—</span>') + '</td>'; } },
     coll: { h: 'Взыскатель', ui: coll },
     loans: { h: 'Анкет', c: true, ui: it => '<td class="c">' + (it.g.loans || []).length + '</td>' },
     over: money('Просрочка', it => nplFlOvSum(it.g)), pf: money('Портфель', it => it.g.portfolioSum || it.g.totalDebtSum),
@@ -13012,7 +13448,7 @@ function nplFlCols(sub) {
   const L = {
     over: J ? ['name', 'id', 'over', 'days', 'term', 'isk', 'ord', 'mib', 'loans', 'coll'] : ['name', 'id', 'over', 'days', 'term', 'isk', 'ord', 'mib', 'phone', 'coll'],
     all: J ? ['name', 'id', 'pf', 'over', 'days', 'term', 'loans', 'coll'] : ['name', 'id', 'pf', 'over', 'days', 'term', 'phone', 'coll'],
-    npl: ['name', 'id', 'npl', 'days', 'res', 'isk', 'ord', 'mib', 'coll'],
+    npl: J ? ['name', 'id', 'npl', 'days', 'res', 'isk', 'ord', 'mib', 'coll'] : ['name', 'pin', 'addr', 'npl', 'days', 'res', 'legst', 'isk', 'ord', 'mib', 'xph', 'cstat', 'coll'],
     fpd: J ? ['name', 'id', 'loan', 'open', 'age', 'days', 'gap', 'lpf', 'cat', 'epd', 'coll'] : ['name', 'id', 'loan', 'open', 'age', 'days', 'lpf', 'epd', 'coll'],
     leg: ['name', 'id', 'basis', 'sum', 'days', 'isk', 'ord', 'mib', 'mibCase', 'coll']
   };
@@ -13045,6 +13481,7 @@ function nplFlFiltered(sub) {
   if (nplFlF.term.length) rows = rows.filter(it => nplFlF.term.indexOf(nplFlTermOf(it.days)) !== -1);
   if (nplFlF.coll) rows = rows.filter(it => nplFlF.coll === '__none' ? !nplFlCollId(it.g) : nplFlCollId(it.g) === nplFlF.coll);
   if (sub === 'leg' && nplFlF.basis) rows = rows.filter(it => nplFlF.basis === '60' ? it.g.maxDays >= 60 : it.g.maxDays < 60);
+  if (sub === 'npl' && !nplFlIsJ() && nplFlF.xph) rows = rows.filter(it => nplFlF.xph === 'yes' ? nplFlXph(it.g).length > 0 : nplFlXph(it.g).length === 0);
   if (sub === 'fpd' && nplFlF.epd) rows = rows.filter(it => it.fl.epd);
   if (sub === 'fpd' && nplFlF.cat) rows = rows.filter(it => it.fl.cat === nplFlF.cat);
   if (sub !== 'fpd' && nplFlF.leg) {
@@ -13099,6 +13536,7 @@ function nplFlDefs(sub) {
   if (sub === 'fpd' && nplFlIsJ()) d.push({ id: 'cat', label: 'Категория', type: 'single', opts: [['', 'Все'], ['fpd', 'FPD · 1 платёж'], ['spd', 'SPD · 2 платёж'], ['tpd', 'TPD · 3 платёж']] });
   if (sub === 'fpd') d.push({ id: 'epd', label: 'EPD', type: 'single', opts: [['', 'Все'], ['epd', 'EPD до 6 мес.']] });
   if (sub !== 'fpd') d.push({ id: 'leg', label: sub === 'leg' ? 'Не загружен' : 'Юр. статус', type: 'single', opts: [['', 'Все'], ['nocourt', 'Нет файла иска (60+)'], ['noorder', 'Нет файла приказа (75+)'], ['nomib', 'Нет файла МИБ (90+)'], ['mib', 'Файл МИБ есть']] });
+  if (sub === 'npl' && !nplFlIsJ()) d.push({ id: 'xph', label: 'Доп. номера', type: 'single', opts: [['', 'Все'], ['yes', 'Есть'], ['no', 'Нет']] });
   const ids = {}; base.forEach(it => { const e = nplFlCollId(it.g); if (e) ids[e] = (ids[e] || 0) + 1; });
   const co = [['', 'Все'], ['__none', 'Без взыскателя']].concat(Object.keys(ids).sort((a, b) => ids[b] - ids[a]).map(e => [e, nplCollectorLabel(e)]));
   d.push({ id: 'coll', label: 'Взыскатель', type: 'single', opts: co });
@@ -13130,7 +13568,7 @@ function nplFlPick(id, v) {
   nplIndivPage = 1; nplFlRender();
 }
 function nplFlResetF(id) { nplFlF[id] = Array.isArray(nplFlF[id]) ? [] : ''; nplIndivPage = 1; nplFlRender(); }
-function nplFlResetAll() { nplFlF.term = []; nplFlF.leg = ''; nplFlF.basis = ''; nplFlF.coll = ''; nplFlF.epd = ''; nplFlF.cat = ''; }
+function nplFlResetAll() { nplFlF.term = []; nplFlF.leg = ''; nplFlF.basis = ''; nplFlF.coll = ''; nplFlF.epd = ''; nplFlF.cat = ''; nplFlF.xph = ''; }
 function nplFlSetSub(sub) { nplFlSub = sub; nplFlOpen = ''; nplIndivPage = 1; nplFlHidePop(); nplFlResetAll(); nplFlRender(); }
 // Переключение ФЛ ↔ ЮЛ: сбрасываем подвкладку, фильтры и поиск
 function nplFlEnsureSubj(subj) {
@@ -13331,7 +13769,8 @@ async function nplFlExcelRun(per) {
       { h: 'Дней', w: 8, al: 'center' }, { h: 'Срок', w: 14, al: 'center' }, { h: 'Категория', w: 16, al: 'center' }, { h: 'Анкет', w: 7, al: 'center' },
       { h: 'Иск', w: 15, al: 'center' }, { h: 'Приказ', w: 15, al: 'center' }, { h: 'МИБ', w: 15, al: 'center' },
       { h: 'Статус суда', w: 17 }, { h: '№ приказа', w: 13 }, { h: 'Дата приказа', w: 12, al: 'center' },
-      { h: 'Дело МИБ', w: 13 }, { h: 'Инспектор МИБ', w: 18 }, { h: 'Статьи МИБ (дата)', w: 46, wrap: true }, { h: 'Телефон', w: 17 }, { h: 'Взыскатель', w: 26 }
+      { h: 'Дело МИБ', w: 13 }, { h: 'Инспектор МИБ', w: 18 }, { h: 'Статьи МИБ (дата)', w: 46, wrap: true }, { h: 'Телефон', w: 17 }, { h: 'Взыскатель', w: 26 },
+      { h: 'Адрес', w: 32, wrap: true }, { h: 'Доп. номера, шт.', w: 11, al: 'center' }, { h: 'Доп. номера (кто)', w: 38, wrap: true }, { h: 'Статус клиента', w: 22 }
     ];
     const nc = cols.length;
     const body = groups.map(function(g, i) {
@@ -13352,7 +13791,8 @@ async function nplFlExcelRun(per) {
         court.caseStatus ? { v: court.caseStatus, t: court.caseStatus === 'Решение вынесено' ? XL.gT : XL.aT, b: true } : '',
         String(g.courtOrderNumberJoined || ''), String(g.courtOrderDateJoined || ''),
         nplFlMibCase(g), String(mib.inspectorName || ''), arts,
-        xlPhone(String(g.phoneJoined || '').split(';')[0]), emp ? nplCollectorLabel(emp) : 'Не назначен'
+        xlPhone(String(g.phoneJoined || '').split(';')[0]), emp ? nplCollectorLabel(emp) : 'Не назначен',
+        String((allNplExtra[g.key] || {}).address || ''), nplFlXph(g).length, nplFlXphWho(g), String((((allNplExtra[g.key] || {}).clientStatus) || {}).name || '')
       ];
     });
     const HR = 4, first = HR + 1, last = HR + groups.length;
