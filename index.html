@@ -748,6 +748,15 @@ body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
 .vzh-hr b{font-size:13.5px;word-break:break-word;}
 .vzh-hi{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none;}
 .vzh-hs{font-size:12px;color:#3F3F46;}
+
+.vzf-fbar{display:flex;gap:8px;}
+.vzf-fb{flex:1;min-width:0;border:none;background:#fff;color:#141414;border-radius:14px;padding:8px 10px;box-shadow:0 2px 8px rgba(20,20,30,.07);text-align:left;font-family:inherit;cursor:pointer;}
+.vzf-fb.on{background:#141414;color:#fff;}
+.vzf-fl{display:block;font-size:10.5px;opacity:.75;font-weight:600;}
+.vzf-fv{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:13px;font-weight:800;white-space:nowrap;}
+.vzf-fv span{overflow:hidden;text-overflow:ellipsis;}
+.vzf-cnt{color:#3F3F46;font-size:13px;font-weight:600;}
+textarea.vzc-in{resize:none;}
 .vzf-back{border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;}
 .vzf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
 .vzf-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:#F5F6F8;color:#141414;font-size:12.5px;font-weight:700;border:none;font-family:inherit;text-decoration:none;cursor:pointer;}
@@ -7600,7 +7609,8 @@ function vzClientRowFl(g) {
   const ph = phones[0] || ((ex.phones || [])[0] || {}).phone || '';
   const chips = (c ? `<span class="vzd-bd ${c.cls}">${safe(c.short)}</span>` : '') + vzLegalChipHtml(g)
     + (extra ? `<span class="vzd-bd" style="background:#EEF1FB;color:#2A4BA0;">+${extra} доп. ${extra === 1 ? 'номер' : 'номера'}</span>` : '')
-    + (cs && cs.name ? `<span class="vzd-bd" style="background:#FBE4E1;color:#A81E16;">${safe(cs.name)}</span>` : '');
+    + (cs && cs.name ? `<span class="vzd-bd" style="background:#FBE4E1;color:#A81E16;">${safe(cs.name)}</span>` : '')
+    + (!vzVisMonth[g.key] ? '<span class="vzd-bd" style="background:#FFF1CF;color:#8A5A00;">0 визитов</span>' : '');
   return `<div class="vzd-item" style="align-items:flex-start;" onclick="openVzClient('${encodeURIComponent(g.key)}')">
     <div class="vzd-stripe" style="background:${c ? c.color : '#CFCBCB'};align-self:stretch;"></div>
     <div style="flex:1;min-width:0;"><div style="display:flex;justify-content:space-between;gap:8px;"><div style="font-weight:800;font-size:13.5px;word-break:break-word;">${safe(g.clientName)}</div><div style="font-weight:800;font-size:13px;white-space:nowrap;">${vzFmt(vzGroupPf(g) || g.nplSum)}</div></div>
@@ -7640,7 +7650,156 @@ function vzLoanRowHtml(g, l, e) {
 
 function vzOpenClients(filter) {
   vzFilter = filter || 'all'; vzQuery = ''; vzLimit = 30;
+  if (!nplMobileMonitor()) {
+    vzFTerm = vzFLegal = vzFVis = 'all';
+    if (filter === 'npl') vzFTerm = '90-179'; else if (filter === 'mib') vzFLegal = 'mib'; else if (filter === 'zero') vzFVis = 'zero_m';
+    vzFilter = 'all';
+  }
   vzyskatelGoTo('clients');
+}
+
+// ======================= Клиенты взыскателя: фильтры-списки и Excel =======================
+let vzFTerm = 'all', vzFLegal = 'all', vzFVis = 'all';
+let vzVisMonth = {}, vzCallMonth = {};
+const VZ_TERMS = [['all', 'Все', 'Все'], ['1-29', '1–29 дней', '1–29 дн'], ['30-59', '30–59 дней', '30–59 дн'], ['60-89', '60–89 дней · ожидаемый NPL', '60–89 дн'], ['90-179', '90–179 дней', '90–179 дн'], ['180-359', '180–359 дней', '180–359 дн'], ['360+', '360+ дней', '360+ дн']];
+const VZ_LEGALS = [['all', 'Все', 'Все'], ['mib', 'Передано в МИБ', 'В МИБ'], ['dec', 'Решение вынесено', 'Решение'], ['rev', 'На рассмотрении', 'Рассмотр.'], ['none', 'Статус не указан', 'Не указан'], ['noisk', 'Нет иска · 60+ дней', 'Нет иска'], ['noord', 'Нет приказа · 75+ дней', 'Нет приказа'], ['nomib', 'Нет МИБ · 90+ дней', 'Нет МИБ']];
+const VZ_VISITS = [['all', 'Все', 'Все'], ['zero_m', '0 визитов за месяц', '0 за месяц'], ['zero_all', 'Не было ни одного визита', 'Без визитов'], ['has', 'Были визиты', 'Были'], ['nocall', 'Не звонили за месяц', 'Не звонили']];
+
+function vzRefreshMonthSets() {
+  const mk = stDayKey(new Date()).slice(0, 7);
+  vzVisMonth = {}; vzCallMonth = {};
+  Object.keys(allNplVisits || {}).forEach(k => (allNplVisits[k] || []).forEach(v => { const d = stParseDt(v.addedAt); if (d && stDayKey(d).slice(0, 7) === mk) vzVisMonth[k] = (vzVisMonth[k] || 0) + 1; }));
+  vzMyCalls().forEach(x => { const d = stParseDt(x.addedAt); if (d && stDayKey(d).slice(0, 7) === mk) vzCallMonth[x.key] = (vzCallMonth[x.key] || 0) + 1; });
+}
+function vzTermOk(g, v) {
+  const d = Number(g.maxDays) || 0;
+  switch (v) { case '1-29': return d >= 1 && d < 30; case '30-59': return d >= 30 && d < 60; case '60-89': return d >= 60 && d < 90; case '90-179': return d >= 90 && d < 180; case '180-359': return d >= 180 && d < 360; case '360+': return d >= 360; default: return true; }
+}
+function vzLegalOk(g, v) {
+  if (v === 'all') return true;
+  const st = ((allNplCourt.data || {})[g.key] || {}).caseStatus || '', f = nplFlSt(g), d = Number(g.maxDays) || 0;
+  switch (v) { case 'mib': return st === 'Передано в МИБ'; case 'dec': return st === 'Решение вынесено'; case 'rev': return st === 'На рассмотрении'; case 'none': return !st; case 'noisk': return d >= 60 && !f.courtAny; case 'noord': return d >= 75 && !f.order; case 'nomib': return d >= 90 && !f.mib; }
+  return true;
+}
+function vzVisOk(g, v) {
+  switch (v) { case 'zero_m': return !vzVisMonth[g.key]; case 'zero_all': return !((allNplVisits || {})[g.key] || []).length; case 'has': return ((allNplVisits || {})[g.key] || []).length > 0; case 'nocall': return !vzCallMonth[g.key]; default: return true; }
+}
+function vzFOpts(kind) { return kind === 'term' ? VZ_TERMS : kind === 'legal' ? VZ_LEGALS : VZ_VISITS; }
+function vzFCur(kind) { return kind === 'term' ? vzFTerm : kind === 'legal' ? vzFLegal : vzFVis; }
+function vzFCount(kind, v) {
+  const fn = kind === 'term' ? vzTermOk : kind === 'legal' ? vzLegalOk : vzVisOk;
+  return getMyNplGroups().filter(g => fn(g, v)).length;
+}
+function vzFSheet(kind) {
+  const title = kind === 'term' ? 'Срок просрочки' : kind === 'legal' ? 'Юридический статус' : 'Визиты';
+  vzRefreshMonthSets();
+  const cur = vzFCur(kind);
+  vzSheetOpen('<div class="vzs-h">' + title + '</div>' + vzFOpts(kind).map(o => `<div class="vzs-row${o[0] === cur ? ' on' : ''}" onclick="vzFSet('${kind}','${o[0]}')"><span>${safe(o[1])}</span><span style="display:flex;gap:10px;align-items:center;"><span class="vzf-cnt">${vzFCount(kind, o[0])}</span>${o[0] === cur ? '<b>✓</b>' : ''}</span></div>`).join(''));
+}
+function vzFSet(kind, v) {
+  if (kind === 'term') vzFTerm = v; else if (kind === 'legal') vzFLegal = v; else vzFVis = v;
+  vzLimit = 30; vzSheetClose(); renderVzClients();
+}
+function vzFReset() { vzFTerm = vzFLegal = vzFVis = 'all'; vzQuery = ''; vzLimit = 30; renderVzClients(); }
+function vzFActive() { return vzFTerm !== 'all' || vzFLegal !== 'all' || vzFVis !== 'all'; }
+function vzFBtn(kind, label) {
+  const cur = vzFCur(kind), o = vzFOpts(kind).find(x => x[0] === cur), on = cur !== 'all';
+  return `<button type="button" class="vzf-fb${on ? ' on' : ''}" onclick="vzFSheet('${kind}')"><span class="vzf-fl">${label}</span><span class="vzf-fv"><span>${safe(o ? o[2] : 'Все')}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></span></button>`;
+}
+function vzFilterBarHtml() { return `<div class="vzf-fbar">${vzFBtn('term', 'Срок')}${vzFBtn('legal', 'Юр. статус')}${vzFBtn('vis', 'Визиты')}</div>`; }
+
+// ---------- Excel «Клиенты» ----------
+async function exportVzClientsExcel(btn) {
+  try {
+    if (btn) { btn.disabled = true; btn.innerText = 'Формирую…'; }
+    vzRefreshMonthSets();
+    const groups = vzClientsData().rows.map(r => r.g);
+    if (!groups.length) { alert('Нет клиентов для выгрузки'); return; }
+    const ExcelJS = await nplLoadExcelJs();
+    const today = new Date(), dateRu = nplPad2(today.getDate()) + '.' + nplPad2(today.getMonth() + 1) + '.' + today.getFullYear();
+    const who = (currentUser && (currentUser.fullName || currentUser.login)) || '';
+    const wb = new ExcelJS.Workbook(); wb.creator = 'MSB CRM'; wb.created = today;
+    const myC = vzMyCalls();
+    const lastCall = {}; myC.forEach(x => { const d = stParseDt(x.addedAt); if (d && (!lastCall[x.key] || d > lastCall[x.key])) lastCall[x.key] = d; });
+    const cell = (g, k) => {
+      const d = Number(g.maxDays) || 0, th = k === 'isk' ? 60 : k === 'ord' ? 75 : 90, n = nplFlFiles(g.key, k).length;
+      if (d < th && !n) return { v: '–', t: XL.grey, al: 'center' };
+      return n ? { v: '✓ Есть', f: XL.gF, t: XL.gT, b: true, al: 'center' } : { v: '✕ Нет', f: XL.rF, t: XL.rT, b: true, al: 'center' };
+    };
+    const fmtD = d => d ? d : '';
+    const cols = [
+      { h: '№', w: 6, al: 'center' }, { h: 'Клиент', w: 36 }, { h: 'ПИНФЛ', w: 17 }, { h: 'Адрес', w: 36, wrap: true }, { h: 'Телефон', w: 17 },
+      { h: 'Доп. номера, шт.', w: 11, al: 'center' }, { h: 'Доп. номера (кто)', w: 38, wrap: true },
+      { h: 'Дней просрочки', w: 10, al: 'center' }, { h: 'Срок', w: 14, al: 'center' }, { h: 'Категория', w: 16, al: 'center' },
+      { h: 'Портфель, млн', w: 13, fmt: '#,##0.0' }, { h: 'Просрочка, млн', w: 13, fmt: '#,##0.0' }, { h: 'NPL, млн', w: 11, fmt: '#,##0.0' },
+      { h: 'Иск', w: 11, al: 'center' }, { h: 'Приказ', w: 11, al: 'center' }, { h: 'МИБ', w: 11, al: 'center' },
+      { h: 'Юр. статус', w: 19 }, { h: 'Дело МИБ', w: 14 }, { h: 'Статус клиента', w: 22 },
+      { h: 'Визитов за месяц', w: 10, al: 'center' }, { h: 'Визитов всего', w: 10, al: 'center' }, { h: 'Последний визит', w: 17, al: 'center' },
+      { h: 'Звонков за месяц', w: 10, al: 'center' }, { h: 'Последний звонок', w: 17, al: 'center' }
+    ];
+    const body = groups.map((g, i) => {
+      const d = Number(g.maxDays) || 0, t = nplFlTermOf(d), ex = allNplExtra[g.key] || {}, court = (allNplCourt.data || {})[g.key] || {};
+      const vs = (allNplVisits || {})[g.key] || [], lastV = vs.length ? vs[0].addedAt : '';
+      const hot = t >= '4', warm = t === '2' || t === '3';
+      const cat = nplFlCategory(g);
+      const catS = cat === 'NPL 90+' ? { v: cat, f: XL.rF, t: XL.rT, b: true, al: 'center' } : (cat === 'Ожидаемый NPL' || /^FPD|^SPD|^TPD/.test(cat)) ? { v: cat, f: XL.aF, t: XL.aT, b: true, al: 'center' } : { v: cat, al: 'center' };
+      const lc = lastCall[g.key];
+      const vm = vzVisMonth[g.key] || 0, cm = vzCallMonth[g.key] || 0;
+      return [
+        { v: i + 1, t: XL.grey, al: 'center' }, g.clientName, String(g.pin || ''), String(ex.address || ''), xlPhone(String(g.phoneJoined || '').split(';')[0]),
+        nplFlXph(g).length, nplFlXphWho(g),
+        { v: d, f: d >= 90 ? XL.rF : d >= 60 ? XL.aF : null, t: d >= 90 ? XL.rT : d >= 60 ? XL.aT : undefined, b: true, al: 'center' },
+        { v: NPL_FL_TERM_SHORT[t] + (t === '0' ? '' : ' дн.'), f: hot ? XL.rF : warm ? XL.aF : t === '0' ? XL.gF : null, t: hot ? XL.rT : warm ? XL.aT : t === '0' ? XL.gT : undefined, b: true, al: 'center' },
+        catS,
+        nplFlMln(g.portfolioSum || g.totalDebtSum), d >= 1 ? nplFlMln(nplFlOvSum(g)) : 0, nplFlMln(g.nplSum),
+        cell(g, 'isk'), cell(g, 'ord'), cell(g, 'mib'),
+        court.caseStatus ? { v: court.caseStatus, t: court.caseStatus === 'Решение вынесено' ? XL.gT : XL.aT, b: true } : { v: 'Не указан', t: XL.grey },
+        nplFlMibCase(g), String((ex.clientStatus || {}).name || ''),
+        vm ? vm : { v: 0, f: XL.aF, t: XL.aT, b: true, al: 'center' }, vs.length, fmtD(lastV),
+        cm ? cm : { v: 0, t: XL.grey, al: 'center' }, lc ? nplPad2(lc.getDate()) + '.' + nplPad2(lc.getMonth() + 1) + '.' + lc.getFullYear() + ' ' + nplPad2(lc.getHours()) + ':' + nplPad2(lc.getMinutes()) : ''
+      ];
+    });
+    // колонки с числами по центру: заменим на объекты, чтобы не прижимались вправо
+    body.forEach(r => [5, 19, 20, 22].forEach(ci => { if (typeof r[ci] === 'number') r[ci] = { v: r[ci], al: 'center' }; }));
+    const nc = cols.length, HR = 4, first = HR + 1, last = HR + groups.length;
+    const flt = [];
+    if (vzFTerm !== 'all') flt.push('срок: ' + VZ_TERMS.find(x => x[0] === vzFTerm)[1]);
+    if (vzFLegal !== 'all') flt.push('юр. статус: ' + VZ_LEGALS.find(x => x[0] === vzFLegal)[1]);
+    if (vzFVis !== 'all') flt.push('визиты: ' + VZ_VISITS.find(x => x[0] === vzFVis)[1]);
+    if (vzQuery.trim()) flt.push('поиск: ' + vzQuery.trim());
+    const ws = xlSheet(wb, 'Клиенты', 'Мои клиенты · NPL / Просрочка', 'Asakabank, Нукусский филиал · ' + (who ? who + ' · ' : '') + 'на ' + dateRu + ' · ' + groups.length.toLocaleString('ru-RU') + ' клиентов' + (flt.length ? ' · фильтры: ' + flt.join('; ') : ''), nc);
+    ws.getRow(3).height = 8;
+    const tot = new Array(nc).fill(null).map(() => ({ v: null }));
+    tot[1] = { v: 'ИТОГО · ' + groups.length.toLocaleString('ru-RU') + ' клиентов', b: true };
+    [10, 11, 12].forEach(ci => { const L = ws.getColumn(ci + 1).letter, sum = body.reduce((s, r) => s + (Number(r[ci]) || 0), 0); tot[ci] = { v: { formula: 'SUBTOTAL(109,' + L + first + ':' + L + last + ')', result: Math.round(sum * 10) / 10 }, fmt: '#,##0.0', b: true, al: 'right' }; });
+    xlTable(ws, HR, cols, body.concat([tot]), { total: true });
+    body.forEach((r, i) => { const n = Math.max(String(r[6] && r[6].v !== undefined ? r[6].v : r[6] || '').split(';').length, String(r[3] || '').length > 40 ? 2 : 1); if (n > 1) ws.getRow(first + i).height = 15 * n + 3; });
+    ws.autoFilter = { from: { row: HR, column: 1 }, to: { row: last, column: nc } };
+    ws.views = [{ state: 'frozen', xSplit: 2, ySplit: HR, showGridLines: false }];
+
+    // ----- Сводка -----
+    const ws2 = xlSheet(wb, 'Сводка', 'Мои клиенты · сводка', 'Asakabank, Нукусский филиал · на ' + dateRu + (who ? ' · ' + who : ''), 4);
+    ws2.views = [{ showGridLines: false }];
+    const cnt = (fn) => groups.filter(fn).length;
+    xlSection(ws2, 4, 'По срокам просрочки', 4);
+    const tb = VZ_TERMS.slice(1).map(o => { const a = groups.filter(g => vzTermOk(g, o[0])); return [o[1], a.length, nplFlMln(a.reduce((s, g) => s + nplFlOvSum(g), 0)), nplFlMln(a.reduce((s, g) => s + (Number(g.nplSum) || 0), 0))]; });
+    xlTable(ws2, 5, [{ h: 'Срок', w: 34 }, { h: 'Клиентов', w: 13, fmt: '#,##0' }, { h: 'Просрочка, млн', w: 17, fmt: '#,##0.0' }, { h: 'NPL, млн', w: 14, fmt: '#,##0.0' }], tb, {});
+    let r0 = 5 + tb.length + 2;
+    xlSection(ws2, r0, 'Юридический статус', 4);
+    const lb = [['Передано в МИБ', 'mib'], ['Решение вынесено', 'dec'], ['На рассмотрении', 'rev'], ['Статус не указан', 'none'], ['Нет иска · 60+ дней', 'noisk'], ['Нет приказа · 75+ дней', 'noord'], ['Нет МИБ · 90+ дней', 'nomib']].map(x => [x[0], cnt(g => vzLegalOk(g, x[1]))]);
+    xlTable(ws2, r0 + 1, [{ h: 'Статус', w: 34 }, { h: 'Клиентов', w: 13, fmt: '#,##0' }], lb, {});
+    r0 = r0 + 1 + lb.length + 2;
+    xlSection(ws2, r0, 'Работа за месяц', 4);
+    const wk = [['Клиентов с 0 визитов за месяц', cnt(g => !vzVisMonth[g.key])], ['Клиентов без единого визита', cnt(g => !((allNplVisits || {})[g.key] || []).length)], ['Клиентов с доп. номерами', cnt(g => nplFlXph(g).length)], ['Клиентов с особым статусом (умер, за границей и т.д.)', cnt(g => ((allNplExtra[g.key] || {}).clientStatus || {}).name)], ['Не звонили за месяц', cnt(g => !vzCallMonth[g.key])]];
+    xlTable(ws2, r0 + 1, [{ h: 'Показатель', w: 34 }, { h: 'Клиентов', w: 13, fmt: '#,##0' }], wk, {});
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'Клиенты_' + nplLocalDateStr() + '.xlsx';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch (e) { console.error(e); alert('Не удалось сформировать Excel: ' + (e && e.message ? e.message : e)); }
+  finally { if (btn) { btn.disabled = false; btn.innerText = '⬇ Excel'; } }
 }
 
 function vzClientsData() {
@@ -7658,12 +7817,13 @@ function vzClientsData() {
     g.loans.forEach(l => { const e = nplLoanEarlyInfo(l); if (e) counts[e.cat]++; });
   });
   let rows = [];
-  if (['fpd', 'spd', 'tpd'].indexOf(vzFilter) !== -1) {
+  if (nplMobileMonitor() && ['fpd', 'spd', 'tpd'].indexOf(vzFilter) !== -1) {
     groups.filter(match).forEach(g => g.loans.forEach(l => { const e = nplLoanEarlyInfo(l); if (e && e.cat === vzFilter) rows.push({ g: g, l: l, e: e }); }));
     rows.sort((a, b) => (b.e.days - a.e.days) || (vzPf(b.l) - vzPf(a.l)));
   } else {
     const order = { fpd: 0, spd: 1, tpd: 2, npl: 3, exp: 4 };
-    rows = groups.filter(match).filter(g => vzFilter === 'all' || (vzFilter === 'mib' ? isMibG(g) : nplRiskCategory(g) === vzFilter))
+    const flt = nplMobileMonitor() ? null : (vzRefreshMonthSets(), g => vzTermOk(g, vzFTerm) && vzLegalOk(g, vzFLegal) && vzVisOk(g, vzFVis));
+    rows = groups.filter(match).filter(g => flt ? flt(g) : (vzFilter === 'all' || (vzFilter === 'mib' ? isMibG(g) : nplRiskCategory(g) === vzFilter)))
       .sort((a, b) => ((order[nplRiskCategory(a)] === undefined ? 9 : order[nplRiskCategory(a)]) - (order[nplRiskCategory(b)] === undefined ? 9 : order[nplRiskCategory(b)])) || (b.maxDays - a.maxDays))
       .map(g => ({ g: g }));
   }
@@ -7687,11 +7847,11 @@ function renderVzClients() {
   box.innerHTML = `
     <div class="vzd-page">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font-size:22px;font-weight:800;">Клиенты</span>
-        <span style="display:flex;gap:8px;">${isMon ? '<button type="button" class="vzd-excel" onclick="openVzExcelSheet()">⬇ Excel</button>' : ''}<button type="button" class="vzd-excel" style="background:#F0F0F2;color:var(--text);" onclick="showPage('nplPage');setNplPageTab('archive')">Архив</button></span></div>
+        <span style="display:flex;gap:8px;">${isMon ? '<button type="button" class="vzd-excel" onclick="openVzExcelSheet()">⬇ Excel</button>' : '<button type="button" class="vzd-excel" onclick="exportVzClientsExcel(this)">⬇ Excel</button>'}<button type="button" class="vzd-excel" style="background:#F0F0F2;color:var(--text);" onclick="showPage('nplPage');setNplPageTab('archive')">Архив</button></span></div>
       ${scope}
-      <input id="vzSearchInput" class="input" placeholder="Название, ИНН, № анкеты" value="${String(vzQuery).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" oninput="vzOnSearch(this.value)" style="border-radius:14px;">
-      <div class="vzd-chips">${chips}</div>
-      <div class="vzd-t">${d.rows.length} ${d.rows[0] && d.rows[0].l ? 'анкет' : 'клиентов'}</div>
+      <input id="vzSearchInput" class="input" placeholder="${isMon ? 'Название, ИНН, № анкеты' : 'Имя, ПИНФЛ, № анкеты'}" value="${String(vzQuery).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')}" oninput="vzOnSearch(this.value)" style="border-radius:14px;">
+      ${isMon ? `<div class="vzd-chips">${chips}</div>` : vzFilterBarHtml()}
+      <div style="display:flex;justify-content:space-between;align-items:center;"><span class="vzd-t">${d.rows.length} ${d.rows[0] && d.rows[0].l ? 'анкет' : 'клиентов'}</span>${!isMon && (vzFActive() || vzQuery.trim()) ? '<a onclick="vzFReset()" style="font-size:12.5px;font-weight:800;color:#C4231A;cursor:pointer;">Сбросить</a>' : ''}</div>
       ${list}${more}
     </div>`;
   if (hasFocus) { const el = document.getElementById('vzSearchInput'); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} } }
