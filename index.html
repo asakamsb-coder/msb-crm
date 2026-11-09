@@ -757,6 +757,42 @@ body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
 .vzf-fv span{overflow:hidden;text-overflow:ellipsis;}
 .vzf-cnt{color:#3F3F46;font-size:13px;font-weight:600;}
 textarea.vzc-in{resize:none;}
+
+.vzv-og{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.vzv-o{position:relative;display:flex;align-items:center;gap:10px;border:1.5px solid #E6E6EA;background:#fff;border-radius:16px;padding:12px;cursor:pointer;font-size:13px;color:#141414;}
+.vzv-o input{position:absolute;opacity:0;pointer-events:none;}
+.vzv-o b{font-weight:700;line-height:1.2;}
+.vzv-rd{width:20px;height:20px;border-radius:50%;border:2px solid #C9C9D0;flex:none;box-sizing:border-box;display:flex;align-items:center;justify-content:center;}
+.vzv-o:has(input:checked){border-color:#C4231A;background:#FDEEEC;}
+.vzv-o:has(input:checked) .vzv-rd{border-color:#C4231A;}
+.vzv-o:has(input:checked) .vzv-rd:after{content:'';width:10px;height:10px;border-radius:50%;background:#C4231A;}
+.vzv-tile{flex-direction:column !important;gap:6px !important;text-align:center;padding:14px 6px !important;}
+.vzv-ti{width:40px;height:40px;border-radius:50%;background:#fff;color:#C4231A;display:flex;align-items:center;justify-content:center;}
+.vzv-bar{position:sticky;bottom:0;margin:0 -14px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -4px 16px rgba(0,0,0,.08);z-index:5;}
+.vzv-ok{width:100%;border:none;border-radius:16px;height:50px;background:linear-gradient(145deg,#D92B21,#A81E16);color:#fff;font-weight:800;font-size:15px;font-family:inherit;box-shadow:0 6px 14px rgba(196,35,26,.3);cursor:pointer;}
+#vzLoanOverlay .vzc-in{height:46px;}
+#vzLoanOverlay textarea.vzc-in{height:auto;}
+
+.vzv-row{display:flex;align-items:center;gap:8px;background:#F3F4F7;border-radius:14px;padding:14px;font-size:14px;cursor:pointer;color:#141414;}
+.vzv-row .vzv-rl{color:#3F3F46;font-weight:600;}
+.vzv-row b{margin-left:auto;text-align:right;}
+.vzv-row.bad{outline:1.5px solid #C4231A;}
+.vzv-note{font-size:12.5px;color:#3F3F46;margin-top:8px;word-break:break-word;}
+.vzv-ph{display:flex;gap:10px;flex-wrap:wrap;}
+.vzv-th{position:relative;width:78px;height:78px;border-radius:14px;flex:none;}
+.vzv-th img{width:100%;height:100%;object-fit:cover;border-radius:14px;}
+.vzv-th button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:#141414;color:#fff;font-size:14px;line-height:1;cursor:pointer;}
+.vzv-add{width:78px;height:78px;border-radius:14px;border:2px dashed #C4231A;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#C4231A;font-size:11px;font-weight:800;cursor:pointer;box-sizing:border-box;}
+.vzv-add.bad{background:#FDEEEC;}
+.vzcal-h{display:flex;justify-content:space-between;align-items:center;margin:4px 0 8px;font-size:14px;}
+.vzcal-h button{border:none;background:#F0F0F2;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;}
+.vzcal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.vzcal-w span{text-align:center;font-size:11px;font-weight:700;color:#3F3F46;padding-bottom:2px;}
+.vzcal-d{border:none;background:none;height:36px;border-radius:50%;font-size:13.5px;font-weight:700;color:#141414;cursor:pointer;font-family:inherit;}
+.vzcal-d:disabled{color:#B0B0B8;cursor:default;}
+.vzcal-d.td{outline:1.5px solid #C4231A;}
+.vzcal-d.on{background:#C4231A;color:#fff;}
+.vzcal-c{border:none;background:#F0F0F2;color:#141414;border-radius:14px;padding:7px 12px;font-size:12.5px;font-weight:700;margin:0 6px 6px 0;cursor:pointer;font-family:inherit;}
 .vzf-back{border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;}
 .vzf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
 .vzf-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:#F5F6F8;color:#141414;font-size:12.5px;font-weight:700;border:none;font-family:inherit;text-decoration:none;cursor:pointer;}
@@ -8028,7 +8064,7 @@ function vzFlKey() { return vzLoanCtx ? vzLoanCtx.key : ''; }
 function vzFlEnc() { return encodeURIComponent(vzFlKey()); }
 
 // ---------- вкладки ----------
-function vzFlSetTab(t) { vzFlTab = t; renderVzLoan(); const o = document.getElementById('vzLoanOverlay'); if (o) o.scrollTop = 0; }
+function vzFlSetTab(t) { vzInVisit = false; vzFlTab = t; renderVzLoan(); const o = document.getElementById('vzLoanOverlay'); if (o) o.scrollTop = 0; }
 
 // ---------- локация ----------
 function vzLocSheet(kEnc) {
@@ -8158,7 +8194,7 @@ async function vzPhoneSave(kEnc) {
   if (!vzPhoneRel) { if (err) err.innerText = 'Выберите, кем приходится'; return; }
   try {
     const r = await vzPostPhone(key, name, phone, vzPhoneRel);
-    if (r.success) { vzSheetClose(); renderVzLoan(); } else if (err) err.innerText = r.message || 'Не удалось добавить';
+    if (r.success) { vzSheetClose(); if (vzInVisit) vzRenderVisit(); else renderVzLoan(); } else if (err) err.innerText = r.message || 'Не удалось добавить';
   } catch (e) { if (err) err.innerText = 'Не удалось связаться с сервером'; console.error(e); }
 }
 
@@ -8173,108 +8209,146 @@ function vzOpenLegal(kEnc) {
 }
 
 // ---------- экран «Визит» ----------
+let vzInVisit = false, vzCal = null, vzVisitSaving = false;
 function vzOpenVisit(kEnc) {
   const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key]; if (!g) return;
-  nplVisitDraft[key] = {}; vzVd = { cs: '', info: '', doc: null }; vzPhoneRel = '';
+  vzVd = { result: '', cs: '', info: '', doc: null, pDate: '', pAmt: '', comment: '', photos: [], err: '' };
+  vzPhoneRel = ''; vzInVisit = true;
   vzRenderVisit();
+  const o = document.getElementById('vzLoanOverlay'); if (o) o.scrollTop = 0;
 }
+function vzVdRow(label, val, on, hl) {
+  return `<div class="vzv-row${hl ? ' bad' : ''}" onclick="${on}"><span class="vzv-rl">${label}</span><b>${val}</b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>`;
+}
+function vzFmtDateRu(iso) { if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return ''; const m = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']; return +iso.slice(8, 10) + ' ' + m[+iso.slice(5, 7) - 1]; }
+function vzEsc(v) { return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function vzFmtNum(v) { const n = Number(String(v).replace(/\D/g, '')); return n ? n.toLocaleString('ru-RU').replace(/ /g, ' ') : ''; }
 function vzRenderVisit() {
   const key = vzFlKey(), kEnc = vzFlEnc(), g = nplGroupsByKey[key]; if (!g) return;
   const box = document.getElementById('vzLoanOverlay');
   const visits = (allNplVisits[key] || []).slice();
   const todayV = visits.find(nplVisitIsToday) || null;
   const hist = visits.map(v => `<div style="padding:8px 0;border-bottom:1px solid #EEE;font-size:13px;"><b>${safe(v.addedAt)}</b>${v.suspicious ? ' <span class="vzd-bd" style="background:#FFF1CF;color:#8A5A00;">сомнительный</span>' : ''}<div class="vzd-t">${safe(v.addedBy)} · ${safe(v.status)}${v.clientStatus ? ' · ' + safe(v.clientStatus) : ''}${v.comment ? ' — ' + safe(v.comment) : ''}</div></div>`).join('') || '<div class="vzd-t">Визитов ещё не было</div>';
-  const top = `<div class="vzd-hero" style="padding-bottom:46px;"><div class="vzd-top"><button type="button" onclick="renderVzLoan()" aria-label="Назад" class="vzf-back">‹</button><div style="min-width:0;"><div class="vzd-name">Визит</div><div class="sub">${safe(g.clientName)}</div></div></div></div>`;
+  const top = `<div class="vzd-hero" style="padding-bottom:46px;"><div class="vzd-top"><button type="button" onclick="vzInVisit=false;renderVzLoan()" aria-label="Назад" class="vzf-back">‹</button><div style="min-width:0;"><div class="vzd-name">Визит</div><div class="sub">${safe(g.clientName)}</div></div></div></div>`;
   if (todayV) {
     box.innerHTML = top + `<div class="vzd-body" style="margin-top:-30px;"><div style="background:#E3F5EA;border-radius:20px;padding:16px;"><div style="display:flex;gap:12px;align-items:center;"><div class="vzd-ico" style="background:#1E9E5A;color:#fff;">${appIcon('check', 18)}</div><div><div style="font-weight:800;font-size:15px;">Сегодня визит внесён</div><div class="vzd-t" style="color:#2d6a45;">${safe(todayV.addedAt)} · ${safe(todayV.addedBy)} · ${safe(todayV.status)}</div></div></div>${todayV.id && nplCanEditVisit(todayV) ? `<button type="button" class="vzd-btn s" style="margin-top:12px;background:#fff;" onclick="nplVisitEditOpen('${kEnc}','${encodeURIComponent(todayV.id)}')">Изменить визит</button>` : ''}</div>
       <div class="vzd-card"><div class="vzd-h" style="margin-bottom:2px;">История визитов (${visits.length})</div>${hist}</div></div>`;
     return;
   }
-  const radios = NPL_VISIT_STATUSES.map((s, i) => `<label class="vzv-r"><input type="radio" name="nplVisitStatus_${kEnc}" value="${safe(s)}" ${i === 0 ? 'checked' : ''}><span class="vzv-dot"></span>${safe(s)}</label>`).join('');
   const rule = VZ_CS_RULES[vzVd.cs] || {};
-  const csExtra = vzVd.cs ? ((rule.doc ? `<label class="vzs-doc"><span class="vzs-ic" style="background:#C4231A;color:#fff;">${appIcon('upload', 18)}</span><span><b>${safe(rule.doc)}</b><div class="vzd-t" id="vzvDocName">${vzVd.doc ? 'Фото выбрано' : 'Фото документа'}</div></span><input type="file" accept="image/*" style="display:none;" onchange="vzVisitPickDoc(this)"></label>` : '') + (rule.info ? `<div class="vzs-fld"><div class="vzd-t">${safe(rule.infoLabel)}</div><input id="vzvInfo" class="vzc-in" ${rule.info === 'date' ? 'type="date"' : 'type="text"'} value="${safe(vzVd.info)}" oninput="vzVd.info=this.value"></div>` : '')) : '';
-  const addedList = ((allNplExtra[key] || {}).phones || []).map(p => `<div class="vzd-tel" style="margin-top:6px;"><div class="vzd-telc">${appIcon('phone', 15)}</div><div><b style="font-size:13.5px;">${safe(p.name || p.phone)}</b><div class="vzd-t">${safe(p.label || 'Другое')} · ${safe(p.phone)}</div></div></div>`).join('');
+  const noRes = vzVd.err === 'res', noPh = vzVd.err === 'photo';
+  const ph = vzVd.photos.map((p, i) => `<div class="vzv-th"><img src="${p.dataUrl}" alt=""><button type="button" onclick="vzVisitDelPhoto(${i})" aria-label="Удалить">×</button></div>`).join('');
+  const addBtn = vzVd.photos.length < 6 ? `<label class="vzv-add${noPh ? ' bad' : ''}">${appIcon('plus', 22)}<span>Добавить</span><input type="file" accept="image/*" capture="environment" style="display:none;" onchange="vzVisitAddPhoto(this)"></label>` : '';
+  const extraRows = vzVdRow('Статус клиента', safe(vzVd.cs || 'Не выбран'), 'vzVisitCs()') + (vzVd.cs && rule.doc ? `<div class="vzv-note">${safe(rule.doc)}: ${vzVd.doc ? 'фото выбрано' : 'не загружено'}</div>` : '') + (vzVd.cs && rule.info ? `<div class="vzv-note">${safe(rule.infoLabel)}: ${safe(vzVd.info || '—')}</div>` : '')
+    + '<div style="height:8px"></div>' + `<div class="vzv-row" onclick="vzInVisit=true;vzPhoneSheet('${kEnc}')"><span class="vzv-rl">+ Доп. номер</span><b></b><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></div>`;
+  const added = ((allNplExtra[key] || {}).phones || []).map(p => `<div class="vzv-note">${safe(p.name || p.phone)} · ${safe(p.label || 'Другое')} · ${safe(p.phone)}</div>`).join('');
   box.innerHTML = top + `<div class="vzd-body" style="margin-top:-30px;">
-    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Результат визита</div>${radios}</div>
-    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Статус клиента</div>
-      <div class="vzs-fld" onclick="vzVisitCs()"><div class="vzd-t">Статус</div><div class="vzs-sel">${safe(vzVd.cs || 'Не выбран')}</div></div>${csExtra}</div>
-    <div class="vzd-card"><div style="display:flex;gap:10px;">
-      <div class="vzv-tile" onclick="captureNplVisitGeo('${kEnc}')">${appIcon('mappin', 20)}<span id="nplVisitGeoStatus_${kEnc}">Место</span></div>
-      <label class="vzv-tile">${appIcon('camera', 20)}<span>Фото</span><input type="file" accept="image/*" capture="environment" style="display:none;" id="nplVisitPhotoInput_${kEnc}" onchange="captureNplVisitPhoto('${kEnc}', this)"></label></div>
-      <div id="nplVisitPhotoPreview_${kEnc}" style="margin-top:8px;"></div></div>
-    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Обещание клиента</div>
-      <div style="display:flex;gap:10px;"><div class="vzs-fld" style="flex:1;"><div class="vzd-t">Дата</div><input type="date" id="nplVisitPromiseDate_${kEnc}" class="vzc-in"></div><div class="vzs-fld" style="flex:1;"><div class="vzd-t">Сумма</div><input type="number" id="nplVisitPromiseAmount_${kEnc}" class="vzc-in"></div></div>
-      <textarea id="nplVisitComment_${kEnc}" class="vzc-in" placeholder="Комментарий" style="min-height:70px;"></textarea></div>
-    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:8px;">Дополнительный номер</div>${addedList}
-      <div class="vzs-fld" style="margin-top:8px;"><div class="vzd-t">Фамилия и имя</div><input id="vzvName" class="vzc-in"></div>
-      <div class="vzs-fld"><div class="vzd-t">Номер</div><input id="vzvNum" class="vzc-in" type="tel" placeholder="+998 __ ___ __ __"></div>
-      <div class="vzs-fld" onclick="vzRelPick('vzvRel')"><div class="vzd-t">Кем приходится</div><div class="vzs-sel" id="vzvRel">${safe(vzPhoneRel || 'Не выбран')}</div></div>
-      <div id="vzvPhoneErr" class="vzd-t" style="color:#A81E16;"></div>
-      <button type="button" class="vzs-go" style="background:#FBE4E1;color:#A81E16;" onclick="vzVisitAddPhone()">+ Добавить номер</button></div>
-    <button type="button" class="vzd-btn p" onclick="vzVisitConfirm('${kEnc}')">Подтвердить визит</button>
-    <div id="nplVisitConfirmStatus_${kEnc}" class="vzd-t" style="text-align:center;"></div>
-    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:2px;">История визитов (${visits.length})</div>${hist}</div></div>`;
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:10px;">Результат визита</div>${vzVdRow('Результат', safe(vzVd.result || 'Выберите'), 'vzVisitResult()', noRes)}</div>
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:10px;">Обещание оплаты</div>${vzVdRow('Дата', safe(vzFmtDateRu(vzVd.pDate) || 'Не указана'), 'vzVisitPromise()')}<div style="height:8px;"></div>${vzVdRow('Сумма', safe(vzFmtNum(vzVd.pAmt) || 'Не указана'), 'vzVisitPromise()')}${vzVd.comment ? `<div class="vzv-note">${safe(vzVd.comment)}</div>` : ''}</div>
+    <div class="vzd-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div class="vzd-h">Фото визита</div><span style="font-size:12px;font-weight:700;color:${vzVd.photos.length ? '#14693A' : '#A81E16'};">${vzVd.photos.length ? vzVd.photos.length + ' фото ✓' : 'обязательно'}</span></div><div class="vzv-ph">${ph}${addBtn}</div></div>
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:10px;">Дополнительно</div>${extraRows}${added}</div>
+    <div class="vzd-card"><div class="vzd-h" style="margin-bottom:2px;">История визитов (${visits.length})</div>${hist}</div>
+    <div class="vzv-bar"><div id="vzVisitMsg" class="vzd-t" style="text-align:center;min-height:0;color:#A81E16;">${vzVd.err === 'res' ? 'Выберите результат визита' : vzVd.err === 'photo' ? 'Добавьте хотя бы одно фото' : vzEsc(vzVd.err || '')}</div><button type="button" class="vzv-ok" onclick="vzVisitConfirm()"${vzVisitSaving ? ' disabled' : ''}>Подтвердить визит</button></div></div>`;
 }
-function vzVisitSnapshot() {
-  const k = vzFlEnc(), g = id => document.getElementById(id);
-  return { status: (document.querySelector('input[name="nplVisitStatus_' + k + '"]:checked') || {}).value || '', pd: (g('nplVisitPromiseDate_' + k) || {}).value || '', pa: (g('nplVisitPromiseAmount_' + k) || {}).value || '', cm: (g('nplVisitComment_' + k) || {}).value || '', n: (g('vzvName') || {}).value || '', p: (g('vzvNum') || {}).value || '' };
-}
-function vzVisitRestore(s) {
-  const k = vzFlEnc(), g = id => document.getElementById(id);
-  const r = Array.from(document.querySelectorAll('input[name="nplVisitStatus_' + k + '"]')).find(x => x.value === s.status); if (r) r.checked = true;
-  if (g('nplVisitPromiseDate_' + k)) g('nplVisitPromiseDate_' + k).value = s.pd;
-  if (g('nplVisitPromiseAmount_' + k)) g('nplVisitPromiseAmount_' + k).value = s.pa;
-  if (g('nplVisitComment_' + k)) g('nplVisitComment_' + k).value = s.cm;
-  if (g('vzvName')) g('vzvName').value = s.n;
-  if (g('vzvNum')) g('vzvNum').value = s.p;
-}
+function vzVisitResult() { vzPick('Результат визита', NPL_VISIT_STATUSES, vzVd.result, function(v) { vzVd.result = v; if (vzVd.err === 'res') vzVd.err = ''; vzRenderVisit(); }); }
 function vzVisitCs() {
-  const snap = vzVisitSnapshot();
   vzPick('Статус клиента', ['Не выбран'].concat(Object.keys(VZ_CS_RULES)), vzVd.cs || 'Не выбран', function(v) {
-    vzVd.cs = v === 'Не выбран' ? '' : v; vzVd.info = ''; vzVd.doc = null;
-    vzRenderVisit(); vzVisitRestore(snap);
+    vzCsDoc = null;
+    if (v === 'Не выбран') { vzVd.cs = ''; vzVd.info = ''; vzVd.doc = null; vzRenderVisit(); return; }
+    const rule = VZ_CS_RULES[v];
+    if (!(rule.doc || rule.info)) { vzVd.cs = v; vzVd.info = ''; vzVd.doc = null; vzRenderVisit(); return; }
+    vzSheetOpen(`<div class="vzs-h">${safe(v)}</div>${vzCsFormHtml(v, false, false)}<div id="vzCsErr" class="vzd-t" style="color:#A81E16;"></div><button type="button" class="vzs-go" onclick="vzVisitCsDone('${safe(v)}')">Готово</button>`);
   });
 }
-function vzVisitPickDoc(inp) {
-  if (!inp.files || !inp.files[0]) return;
-  const nm = document.getElementById('vzvDocName'); if (nm) nm.innerText = 'Загрузка…';
-  vzReadImage(inp.files[0], function(img) { vzVd.doc = img; if (nm) nm.innerText = 'Фото выбрано'; });
+function vzVisitCsDone(name) {
+  const rule = VZ_CS_RULES[name] || {}, info = ((document.getElementById('vzCsInfo') || {}).value || '').trim(), err = document.getElementById('vzCsErr');
+  if (rule.doc && !vzCsDoc) { if (err) err.innerText = 'Загрузите документ'; return; }
+  if (rule.info && !info) { if (err) err.innerText = rule.infoLabel + ': не указано'; return; }
+  vzVd.cs = name; vzVd.info = info; vzVd.doc = vzCsDoc; vzCsDoc = null; vzSheetClose(); vzRenderVisit();
 }
-async function vzVisitAddPhone() {
-  const key = vzFlKey(), err = document.getElementById('vzvPhoneErr');
-  const name = ((document.getElementById('vzvName') || {}).value || '').trim(), phone = ((document.getElementById('vzvNum') || {}).value || '').trim();
-  if (!name) { err.innerText = 'Укажите фамилию и имя'; return; }
-  if (!phone) { err.innerText = 'Введите номер'; return; }
-  if (!vzPhoneRel) { err.innerText = 'Выберите, кем приходится'; return; }
-  const snap = vzVisitSnapshot();
-  try {
-    const r = await vzPostPhone(key, name, phone, vzPhoneRel);
-    if (r.success) { vzPhoneRel = ''; snap.n = ''; snap.p = ''; vzRenderVisit(); vzVisitRestore(snap); }
-    else err.innerText = r.message || 'Не удалось добавить';
-  } catch (e) { err.innerText = 'Не удалось связаться с сервером'; console.error(e); }
+function vzVisitAddPhoto(inp) {
+  const f = inp.files && inp.files[0]; if (!f) return;
+  vzReadImage(f, function(img) { vzVd.photos.push(img); if (vzVd.err === 'photo') vzVd.err = ''; vzRenderVisit(); });
 }
-async function vzVisitConfirm(kEnc) {
-  const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key], st = document.getElementById('nplVisitConfirmStatus_' + kEnc);
-  const s = vzVisitSnapshot(), draft = nplVisitDraft[key] || {};
-  const bad = t => { st.style.color = 'var(--red)'; st.innerText = t; };
-  if (!s.status) { bad('Выберите результат визита'); return; }
+function vzVisitDelPhoto(i) { vzVd.photos.splice(i, 1); vzRenderVisit(); }
+
+// ---- обещание: календарь + сумма ----
+function vzIsoDate(d) { return d.getFullYear() + '-' + nplPad2(d.getMonth() + 1) + '-' + nplPad2(d.getDate()); }
+function vzVisitPromise() {
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(vzVd.pDate) ? new Date(vzVd.pDate + 'T00:00:00') : new Date();
+  vzCal = { y: base.getFullYear(), m: base.getMonth(), d: vzVd.pDate || '', amt: String(vzVd.pAmt || ''), comment: vzVd.comment || '' };
+  vzCalDraw();
+}
+function vzCalDraw() {
+  const c = vzCal, g = nplGroupsByKey[vzFlKey()] || {};
+  const today = vzIsoDate(new Date());
+  const first = new Date(c.y, c.m, 1), lead = (first.getDay() + 6) % 7, nd = new Date(c.y, c.m + 1, 0).getDate();
+  const mn = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][c.m];
+  let cells = '<div></div>'.repeat(lead);
+  for (let d = 1; d <= nd; d++) {
+    const iso = c.y + '-' + nplPad2(c.m + 1) + '-' + nplPad2(d), past = iso < today;
+    cells += `<button type="button" class="vzcal-d${iso === c.d ? ' on' : ''}${iso === today ? ' td' : ''}" ${past ? 'disabled' : `onclick="vzCalPick('${iso}')"`}>${d}</button>`;
+  }
+  const ov = (Number(g.overdueBalanceSum) || 0) + (Number(g.overdueInterestSum) || 0), debt = Number(g.totalDebtSum || g.portfolioSum) || 0;
+  const chip = (t, on) => `<button type="button" class="vzcal-c" onclick="${on}">${t}</button>`;
+  const off = n => { const d = new Date(); d.setDate(d.getDate() + n); return vzIsoDate(d); };
+  vzSheetOpen(`<div class="vzs-h">Обещание оплаты</div>
+    <div class="vzcal-h"><button type="button" onclick="vzCalMove(-1)">‹</button><b>${mn} ${c.y}</b><button type="button" onclick="vzCalMove(1)">›</button></div>
+    <div class="vzcal-g vzcal-w">${['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map(x => '<span>' + x + '</span>').join('')}</div><div class="vzcal-g">${cells}</div>
+    <div style="margin:10px 0 4px;">${chip('Сегодня', `vzCalPick('${off(0)}')`)}${chip('Завтра', `vzCalPick('${off(1)}')`)}${chip('3 дня', `vzCalPick('${off(3)}')`)}${chip('Неделя', `vzCalPick('${off(7)}')`)}</div>
+    <div class="vzd-t" style="margin:8px 0 4px;">Сумма</div><input id="vzCalAmt" class="vzc-in" inputmode="numeric" value="${vzEsc(vzFmtNum(c.amt))}" oninput="vzCal.amt=this.value.replace(/\\D/g,'');this.value=vzFmtNum(vzCal.amt)">
+    <div style="margin:8px 0 4px;">${ov ? chip('Просрочка', `vzCalAmt(${Math.round(ov)})`) : ''}${debt ? chip('Весь долг', `vzCalAmt(${Math.round(debt)})`) : ''}${ov ? chip('Половина', `vzCalAmt(${Math.round(ov / 2)})`) : ''}</div>
+    <textarea id="vzCalCm" class="vzc-in" placeholder="Комментарий" oninput="vzCal.comment=this.value" style="min-height:60px;margin-top:8px;">${vzEsc(c.comment)}</textarea>
+    <button type="button" class="vzs-go" onclick="vzCalDone()">Готово</button>`);
+}
+function vzCalKeep() { const a = document.getElementById('vzCalAmt'), m = document.getElementById('vzCalCm'); if (a) vzCal.amt = a.value.replace(/\D/g, ''); if (m) vzCal.comment = m.value; }
+function vzCalMove(n) { vzCalKeep(); vzCal.m += n; if (vzCal.m < 0) { vzCal.m = 11; vzCal.y--; } if (vzCal.m > 11) { vzCal.m = 0; vzCal.y++; } vzCalDraw(); }
+function vzCalPick(iso) { vzCalKeep(); vzCal.d = iso; vzCal.y = +iso.slice(0, 4); vzCal.m = +iso.slice(5, 7) - 1; vzCalDraw(); }
+function vzCalAmt(n) { vzCalKeep(); vzCal.amt = String(n); vzCalDraw(); }
+function vzCalDone() { vzCalKeep(); vzVd.pDate = vzCal.d; vzVd.pAmt = vzCal.amt; vzVd.comment = vzCal.comment.trim(); vzSheetClose(); vzRenderVisit(); }
+
+// ---- подтверждение: геолокация берётся в момент нажатия ----
+function vzGetPos() {
+  return new Promise(function(resolve, reject) {
+    if (!navigator.geolocation) { reject({ code: 2 }); return; }
+    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  });
+}
+function vzGeoDialog() {
+  vzSheetOpen(`<div style="text-align:center;padding:6px 4px 4px;"><div style="width:56px;height:56px;border-radius:50%;background:#FBE4E1;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;color:#C4231A;">${appIcon('mappin', 28)}</div><b style="font-size:17px;">Включите геолокацию</b><div class="vzd-t" style="margin:8px 0 14px;">Место визита фиксируется в момент подтверждения.</div>
+    <button type="button" class="vzs-go" onclick="vzSheetClose();vzVisitConfirm()">Включить и подтвердить</button>
+    <button type="button" class="vzs-go" style="background:#F0F0F2;color:#141414;" onclick="vzSheetClose()">Отмена</button></div>`);
+}
+async function vzVisitConfirm() {
+  if (vzVisitSaving) return;
+  const key = vzFlKey(), g = nplGroupsByKey[key];
+  const msg = document.getElementById('vzVisitMsg');
+  if (!vzVd.result) { vzVd.err = 'res'; vzRenderVisit(); return; }
+  if (!vzVd.photos.length) { vzVd.err = 'photo'; vzRenderVisit(); return; }
   const rule = VZ_CS_RULES[vzVd.cs] || {};
-  if (vzVd.cs && rule.doc && !vzVd.doc) { bad('Загрузите документ: ' + rule.doc); return; }
-  if (vzVd.cs && rule.info && !String(vzVd.info || '').trim()) { bad(rule.infoLabel + ': не указано'); return; }
-  if (nplVisitSaving) return;
-  nplVisitSaving = true; st.style.color = 'var(--muted)'; st.innerText = 'Сохранение...';
-  const suspicious = draft.distance !== undefined && draft.distance !== '' && draft.distance > NPL_VISIT_GEOFENCE_METERS;
+  if (vzVd.cs && rule.doc && !vzVd.doc) { vzVd.err = 'Загрузите документ: ' + rule.doc; vzRenderVisit(); return; }
+  vzVisitSaving = true; if (msg) { msg.style.color = '#3F3F46'; msg.innerText = 'Определяю местоположение…'; }
+  let pos;
+  try { pos = await vzGetPos(); }
+  catch (e) { vzVisitSaving = false; if (msg) msg.innerText = ''; vzGeoDialog(); return; }
   try {
-    const r = await postWebAction({ webAction: 'addNplVisit', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', status: s.status, lat: draft.lat || '', lng: draft.lng || '', distance: draft.distance !== undefined ? draft.distance : '', suspicious: suspicious, photo: draft.photoBase64 ? { base64: draft.photoBase64, mimeType: draft.photoMime } : null, promiseDate: s.pd, promiseAmount: s.pa, comment: s.cm.trim(), clientStatus: vzVd.cs, statusInfo: vzVd.info || '', statusDoc: vzVd.doc ? { base64: vzVd.doc.base64, mimeType: vzVd.doc.mimeType } : null });
+    const lat = pos.coords.latitude, lng = pos.coords.longitude, ex = allNplExtra[key] || {};
+    const dist = ex.lat && ex.lng ? haversineMeters(lat, lng, Number(ex.lat), Number(ex.lng)) : '';
+    const susp = dist !== '' && dist > NPL_VISIT_GEOFENCE_METERS;
+    if (msg) msg.innerText = 'Сохранение…';
+    const r = await postWebAction({ webAction: 'addNplVisit', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', status: vzVd.result, lat: lat, lng: lng, distance: dist, suspicious: susp,
+      photos: vzVd.photos.map(p => ({ base64: p.base64, mimeType: p.mimeType })), promiseDate: vzVd.pDate, promiseAmount: vzVd.pAmt, comment: vzVd.comment,
+      clientStatus: vzVd.cs, statusInfo: vzVd.info || '', statusDoc: vzVd.doc ? { base64: vzVd.doc.base64, mimeType: vzVd.doc.mimeType } : null });
     if (r.success) {
-      delete nplVisitDraft[key];
       allNplVisits = (await fetchJSON('nplVisits')) || {};
-      try { const ex = await fetchJSON('nplExtra'); if (ex) allNplExtra = ex; } catch (e) {}
-      vzFlTab = 'c'; renderVzLoan();
-    } else if (r.duplicate) { bad(r.message); try { allNplVisits = (await fetchJSON('nplVisits')) || {}; vzRenderVisit(); } catch (e) {} }
-    else bad(r.message || 'Не удалось сохранить визит');
-  } catch (e) { bad('Не удалось связаться с сервером'); console.error(e); }
-  finally { nplVisitSaving = false; }
+      try { const ex2 = await fetchJSON('nplExtra'); if (ex2) allNplExtra = ex2; } catch (e) {}
+      vzInVisit = false; vzFlTab = 'c'; vzVisitSaving = false; renderVzLoan();
+      return;
+    }
+    vzVisitSaving = false;
+    if (r.duplicate) { try { allNplVisits = (await fetchJSON('nplVisits')) || {}; } catch (e) {} vzRenderVisit(); return; }
+    vzVd.err = r.message || 'Не удалось сохранить визит'; vzRenderVisit();
+  } catch (e) { vzVisitSaving = false; vzVd.err = 'Не удалось связаться с сервером'; vzRenderVisit(); console.error(e); }
 }
 
 // ---------- карточка ФЛ: шапка, 6 кнопок и две вкладки ----------
