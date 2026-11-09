@@ -709,9 +709,9 @@ body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
 .vzh-hero{position:relative;overflow:hidden;background:linear-gradient(160deg,#D92B21,#9E1B14) !important;padding:16px 16px 84px !important;border-radius:0 0 28px 28px;}
 .vzh-in{position:relative;z-index:2;}
 .vzh-snow{position:absolute;inset:0;z-index:1;pointer-events:none;}
-.vzh-snow i{position:absolute;top:-10px;background:#fff;border-radius:50%;animation:vzhFall linear infinite;}
-@keyframes vzhFall{0%{transform:translate(0,-10px)}50%{transform:translate(var(--sw),120px)}100%{transform:translate(0,260px)}}
-@media (prefers-reduced-motion:reduce){.vzh-snow i{animation:none;}}
+.vzh-snow b{position:absolute;top:-24px;color:#fff;font-weight:400;line-height:1;text-shadow:0 0 6px rgba(255,255,255,.55);animation:vzhFall linear infinite;}
+@keyframes vzhFall{0%{transform:translate(0,-10px) rotate(0)}50%{transform:translate(var(--sw),120px) rotate(calc(var(--rt) / 2))}100%{transform:translate(calc(var(--sw) * -.4),270px) rotate(var(--rt))}}
+@media (prefers-reduced-motion:reduce){.vzh-snow b{animation:none;}}
 .vzh-pl{margin-top:18px;font-size:13px;opacity:.9;}
 .vzh-pr{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 .vzh-big{font-size:36px;font-weight:800;letter-spacing:-.5px;}
@@ -7380,11 +7380,13 @@ function vzStatCard(key, count, sub, maxCount) {
 // ======================= Главный экран взыскателя (новый) =======================
 let allNplCalls = null, vzCallsLoading = false, vzHistTab = 'all';
 const VZ_SNOW = (function() {
-  let h = '', seed = 7;
+  let h = '', seed = 11;
   const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
-  for (let i = 0; i < 30; i++) {
-    const s = [3, 4, 5, 6, 8][Math.floor(rnd() * 5)], d = 6 + rnd() * 6, dl = -rnd() * 12, sw = [-18, -10, 10, 18][Math.floor(rnd() * 4)];
-    h += '<i style="left:' + Math.floor(rnd() * 100) + '%;width:' + s + 'px;height:' + s + 'px;opacity:' + (0.45 + rnd() * 0.5).toFixed(2) + ';animation-duration:' + d.toFixed(1) + 's;animation-delay:' + dl.toFixed(1) + 's;--sw:' + sw + 'px"></i>';
+  const glyph = ['\u2744', '\u2745', '\u2746', '\u2744'];
+  for (let i = 0; i < 22; i++) {
+    const s = 9 + Math.floor(rnd() * 14), d = 7 + rnd() * 7, dl = -rnd() * 14, sw = (rnd() < .5 ? -1 : 1) * (14 + Math.floor(rnd() * 26)), rot = (rnd() < .5 ? -1 : 1) * (180 + Math.floor(rnd() * 360));
+    const blur = s < 12 ? 0.6 : 0;
+    h += '<b style="left:' + Math.floor(rnd() * 96) + '%;font-size:' + s + 'px;opacity:' + (0.35 + rnd() * 0.55).toFixed(2) + ';animation-duration:' + d.toFixed(1) + 's;animation-delay:' + dl.toFixed(1) + 's;--sw:' + sw + 'px;--rt:' + rot + 'deg;filter:blur(' + blur + 'px)">' + glyph[Math.floor(rnd() * 4)] + '</b>';
   }
   return '<div class="vzh-snow">' + h + '</div>';
 })();
