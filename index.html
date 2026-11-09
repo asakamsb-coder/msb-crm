@@ -793,6 +793,13 @@ details.vzc-w[open] .vzc-chev{transform:rotate(180deg);}
 .fl-mf span.l{background:#fff;color:#111;border:1px solid var(--line)}
 .fl-xl{height:36px;margin-left:auto;border:none;border-radius:8px;background:#111;color:#fff;padding:0 14px;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
 .fl-xl:disabled{opacity:.6;cursor:default}
+.flmp-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding-top:110px}
+.flmp{width:360px;max-width:92vw;background:#fff;border-radius:16px;box-shadow:0 16px 44px rgba(0,0,0,.3);padding:18px}
+.flmp h4{margin:0 0 12px;font-size:16px;font-weight:900}
+.flmp-m{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e3e6ea;border-radius:10px;margin-bottom:6px;font-size:14px;font-weight:800;cursor:pointer;background:#fff}
+.flmp-m small{font-size:12px;font-weight:600;color:#444}
+.flmp-m.on{border-color:#EF3124;background:#FEEEEC}
+.flmp-go{margin-top:10px;width:100%;border:none;border-radius:10px;background:#EF3124;color:#fff;padding:12px;font:inherit;font-size:14px;font-weight:800;cursor:pointer}
 .fl-tw{border:1px solid var(--line);border-radius:14px;background:#fff;padding:0 6px;overflow-x:auto}
 .fl-t{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;background:#fff}
 .fl-t th{background:#fff;color:#374151;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;text-align:left;padding:11px 10px;border-bottom:2px solid #e5e7eb;white-space:nowrap}
@@ -13269,8 +13276,40 @@ function nplFlCategory(g) {
   if (fp) return NPL_RISK_LABELS[fp.cat] || 'FPD';
   return d >= 1 ? 'Просрочка 1–59' : '—';
 }
-async function nplFlExcel() {
+const NPL_MON_NOM = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const NPL_MON_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+let nplFlXlPer = '';
+function nplFlDmy(v) { const m = String(v || '').match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; }
+function nplFlPerRange(per) {
+  const now = new Date(); if (!per || per === 'all') return null;
+  const y = +per.slice(0, 4), m = +per.slice(5, 7) - 1;
+  const cur = y === now.getFullYear() && m === now.getMonth();
+  return { a: new Date(y, m, 1), b: cur ? new Date(y, m, now.getDate(), 23, 59, 59) : new Date(y, m + 1, 0, 23, 59, 59), y: y, m: m, cur: cur, last: cur ? now.getDate() : new Date(y, m + 1, 0).getDate() };
+}
+function nplFlXlPick() {
+  nplFlXlClose();
+  const now = new Date(), items = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1), key = d.getFullYear() + '-' + nplPad2(d.getMonth() + 1);
+    const r = nplFlPerRange(key);
+    items.push([key, NPL_MON_NOM[d.getMonth()] + ' ' + d.getFullYear(), r.cur ? ('1–' + r.last + ' ' + NPL_MON_GEN[d.getMonth()]) : 'весь месяц']);
+  }
+  items.push(['all', 'Всё время', 'без фильтра']);
+  nplFlXlPer = items[0][0];
+  const ov = document.createElement('div'); ov.className = 'flmp-ov'; ov.id = 'flmpOv';
+  ov.onclick = function(e) { if (e.target === ov) nplFlXlClose(); };
+  ov.innerHTML = '<div class="flmp"><h4>Скачать Excel · за какой месяц</h4>' + items.map(function(it) {
+    return '<div class="flmp-m' + (it[0] === nplFlXlPer ? ' on' : '') + '" data-k="' + it[0] + '" onclick="nplFlXlSel(\'' + it[0] + '\')">' + it[1] + '<small>' + it[2] + '</small></div>';
+  }).join('') + '<button type="button" class="flmp-go" onclick="nplFlXlGo()">Скачать</button></div>';
+  document.body.appendChild(ov);
+}
+function nplFlXlSel(k) { nplFlXlPer = k; document.querySelectorAll('#flmpOv .flmp-m').forEach(function(el) { el.classList.toggle('on', el.getAttribute('data-k') === k); }); }
+function nplFlXlClose() { const o = document.getElementById('flmpOv'); if (o) o.remove(); }
+function nplFlXlGo() { const k = nplFlXlPer; nplFlXlClose(); nplFlExcelRun(k); }
+function nplFlExcel() { nplFlXlPick(); }
+async function nplFlExcelRun(per) {
   const btn = document.getElementById('nplFlXlBtn');
+  const PR = nplFlPerRange(per);
   try {
     if (btn) { btn.disabled = true; btn.innerText = 'Формирую…'; }
     const ExcelJS = await nplLoadExcelJs();
@@ -13331,7 +13370,7 @@ async function nplFlExcel() {
     ws.views = [{ state: 'frozen', xSplit: 3, ySplit: HR, showGridLines: false }];
 
     // ----- Сводка -----
-    const ws2 = xlSheet(wb, 'Сводка', 'Клиенты · сводка', 'Asakabank, Нукусский филиал · на ' + dateRu + ' · клиенты с просрочкой от 1 дня', 5, 'FF2F6FED');
+    const ws2 = xlSheet(wb, 'Сводка', 'Клиенты · сводка', 'Asakabank, Нукусский филиал · на ' + dateRu + ' · клиенты с просрочкой от 1 дня' + (PR ? ' · период: ' + nplPad2(PR.a.getDate()) + '.' + nplPad2(PR.m + 1) + '.' + PR.y + ' – ' + nplPad2(PR.b.getDate()) + '.' + nplPad2(PR.m + 1) + '.' + PR.y : ''), 6, 'FF2F6FED');
     ws2.views = [{ showGridLines: false }];
     const ov = groups.filter(g => (Number(g.maxDays) || 0) >= 1);
     xlSection(ws2, 4, 'По срокам просрочки', 5);
@@ -13349,6 +13388,56 @@ async function nplFlExcel() {
     });
     xlTable(ws2, r0 + 1, [{ h: 'Этап', w: 26 }, { h: 'Порог', w: 16, al: 'center' }, { h: 'Файл есть', w: 16, al: 'center' }, { h: 'Не загружен', w: 18, al: 'center' }, { h: 'Дисциплина', w: 14, fmt: '0.0%' }], stg, {});
     xlBars(ws2, 'E' + (r0 + 2) + ':E' + (r0 + 1 + stg.length), 'FF8FD1A8');
+
+    // ----- Юридический статус (все / NPL) + передача в МИБ -----
+    const stOrder = ['Передано в МИБ', 'Решение вынесено', 'На рассмотрении', 'Без статуса'];
+    const stOf = g => { const x = ((allNplCourt.data || {})[g.key] || {}).caseStatus; return stOrder.indexOf(x) > -1 ? x : 'Без статуса'; };
+    const legCols = cap => [{ h: 'Юридический статус', w: 26 }, { h: 'ФЛ, клиентов', w: 16, al: 'center' }, { h: 'ЮЛ, клиентов', w: 16, al: 'center' }, { h: 'Всего', w: 18, al: 'center' }, { h: cap, w: 18, fmt: '#,##0.0' }, { h: 'Доля', w: 14, fmt: '0.0%' }];
+    let rr = r0 + stg.length + 3;
+    const legalBlock = function(title, arr, sumFn, cap) {
+      xlSection(ws2, rr, title, 6);
+      const data = stOrder.map(k => { const a = arr.filter(g => stOf(g) === k); return { k: k, p: a.filter(g => g.subject !== 'J').length, j: a.filter(g => g.subject === 'J').length, s: a.reduce((x, g) => x + sumFn(g), 0) }; });
+      const tot = data.reduce((x, r) => x + r.s, 0), totS = tot || 1;
+      const rows = data.map(r => [r.k, { v: r.p, al: 'center' }, { v: r.j, al: 'center' }, { v: r.p + r.j, al: 'center', b: true }, nplFlMln(r.s), { v: r.s / totS, fmt: '0.0%' }]);
+      rows.push([{ v: 'Всего', b: true }, { v: data.reduce((x, r) => x + r.p, 0), b: true, al: 'center' }, { v: data.reduce((x, r) => x + r.j, 0), b: true, al: 'center' }, { v: arr.length, b: true, al: 'center' }, { v: nplFlMln(tot), b: true, fmt: '#,##0.0' }, { v: 1, fmt: '0.0%', b: true }]);
+      xlTable(ws2, rr + 1, legCols(cap), rows, { total: true });
+      xlBars(ws2, 'E' + (rr + 2) + ':E' + (rr + 1 + data.length), 'FFE8782F');
+      rr += rows.length + 3;
+      // разница: передано / не передано в МИБ
+      xlSection(ws2, rr, 'Передача в МИБ', 6);
+      const m = data[0], nP = data.reduce((x, r) => x + r.p, 0) - m.p, nJ = data.reduce((x, r) => x + r.j, 0) - m.j, nS = tot - m.s, nAll = arr.length || 1;
+      xlTable(ws2, rr + 1, [{ h: 'Показатель', w: 26 }, { h: 'ФЛ, клиентов', w: 16, al: 'center' }, { h: 'ЮЛ, клиентов', w: 16, al: 'center' }, { h: 'Всего', w: 18, al: 'center' }, { h: cap, w: 18, fmt: '#,##0.0' }, { h: 'Доля клиентов', w: 14, fmt: '0.0%' }], [
+        [{ v: 'Передано в МИБ', f: XL.gF, t: XL.gT, b: true }, { v: m.p, al: 'center', f: XL.gF }, { v: m.j, al: 'center', f: XL.gF }, { v: m.p + m.j, al: 'center', b: true, f: XL.gF }, { v: nplFlMln(m.s), f: XL.gF, fmt: '#,##0.0' }, { v: (m.p + m.j) / nAll, f: XL.gF, fmt: '0.0%' }],
+        [{ v: 'Не передано в МИБ (разница)', f: XL.rF, t: XL.rT, b: true }, { v: nP, al: 'center', f: XL.rF }, { v: nJ, al: 'center', f: XL.rF }, { v: nP + nJ, al: 'center', b: true, f: XL.rF, t: XL.rT }, { v: nplFlMln(nS), f: XL.rF, b: true, t: XL.rT, fmt: '#,##0.0' }, { v: (nP + nJ) / nAll, f: XL.rF, b: true, t: XL.rT, fmt: '0.0%' }]
+      ], {});
+      rr += 5;
+    };
+    legalBlock('Юридический статус · все клиенты с просрочкой', ov, g => nplFlOvSum(g), 'Просрочка, млн');
+    legalBlock('Юридический статус · только NPL 90+', ov.filter(g => (Number(g.maxDays) || 0) >= 90), g => Number(g.nplSum) || 0, 'NPL, млн');
+
+    // ----- Передача в МИБ по месяцам (по дате первой статьи МИБ) -----
+    const firstMib = g => { let f = null; actsOf(g).forEach(a => { const d = nplFlDmy(a.date); if (d && (!f || d < f)) f = d; }); return f; };
+    const fm = groups.map(g => ({ g: g, d: firstMib(g) })).filter(x => x.d);
+    const endRef = PR ? PR.b : today;
+    if (PR) {
+      xlSection(ws2, rr, 'Передача в МИБ за период', 6);
+      const inP = fm.filter(x => x.d >= PR.a && x.d <= PR.b), cum = fm.filter(x => x.d <= PR.b);
+      const cnt = (a, j) => a.filter(x => (x.g.subject === 'J') === j).length;
+      const mk = (lbl, a, b) => [{ v: lbl, b: !!b }, { v: cnt(a, false), al: 'center', b: !!b }, { v: cnt(a, true), al: 'center', b: !!b }, { v: a.length, al: 'center', b: true }];
+      xlTable(ws2, rr + 1, [{ h: 'Показатель (первая статья МИБ по дате)', w: 26 }, { h: 'ФЛ', w: 16, al: 'center' }, { h: 'ЮЛ', w: 16, al: 'center' }, { h: 'Всего', w: 18, al: 'center' }], [
+        mk('Передано в МИБ за период', inP),
+        mk('из них NPL 90+', inP.filter(x => (Number(x.g.maxDays) || 0) >= 90)),
+        mk('Нарастающим итогом на ' + nplPad2(PR.b.getDate()) + '.' + nplPad2(PR.m + 1), cum, 1)
+      ], { total: true });
+      rr += 6;
+    }
+    xlSection(ws2, rr, 'По месяцам (для сравнения)', 6);
+    const base = PR ? new Date(PR.y, PR.m, 1) : new Date(today.getFullYear(), today.getMonth(), 1);
+    const mc = [];
+    for (let i = 3; i >= 0; i--) { const d = new Date(base.getFullYear(), base.getMonth() - i, 1); mc.push(d); }
+    xlTable(ws2, rr + 1, [{ h: 'Месяц', w: 26 }].concat(mc.map(d => ({ h: NPL_MON_NOM[d.getMonth()] + ' ' + d.getFullYear(), w: 16, al: 'center' }))), [
+      [{ v: 'Передано в МИБ', b: true }].concat(mc.map(d => ({ v: fm.filter(x => x.d.getFullYear() === d.getFullYear() && x.d.getMonth() === d.getMonth()).length, al: 'center', b: PR && d.getMonth() === PR.m && d.getFullYear() === PR.y })))
+    ], {});
 
     // ----- Статьи: по одной строке на статью / документ -----
     const ws3 = xlSheet(wb, 'Статьи', 'Иск · суд · МИБ — статьи и документы', 'Asakabank, Нукусский филиал · на ' + dateRu + ' · по одной строке на каждую статью / документ', 8, 'FF7C3AED');
@@ -13379,7 +13468,7 @@ async function nplFlExcel() {
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'NPL_Клиенты_' + nplLocalDateStr() + '.xlsx';
+    const a = document.createElement('a'); a.href = url; a.download = 'NPL_Клиенты_' + (PR ? PR.y + '-' + nplPad2(PR.m + 1) + '_' : '') + nplLocalDateStr() + '.xlsx';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function() { URL.revokeObjectURL(url); }, 4000);
   } catch (e) {
