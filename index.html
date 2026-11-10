@@ -922,6 +922,8 @@ textarea.msb-in{height:auto;padding:12px 14px;resize:none;}
 .msb-t th{font-size:11px;color:#3F3F46;text-align:center;padding:6px 4px;font-weight:700;}
 .msb-t td{padding:9px 4px;border-top:1px solid #F0F0F3;text-align:center;}
 .msb-t td:first-child,.msb-t th:first-child{text-align:left;}
+.msb-locked{opacity:.55;}
+.msb-pass{border:none;background:#F0F0F2;color:#141414;border-radius:10px;padding:9px 12px;font-weight:800;font-size:12px;font-family:inherit;cursor:pointer;flex:none;}
 .msb-two2{display:flex;gap:6px;margin-top:6px;}
 .msb-two2 button{flex:1;border:none;border-radius:10px;padding:9px 6px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;}
 .msb-two2 .ok{background:#E3F5EA;color:#14693A;}.msb-two2 .no{background:#FBE4E1;color:#A81E16;}
@@ -6467,14 +6469,28 @@ async function renderMsbDash() {
   const now = new Date(), mk = msbDashMonthKey(now), prev = new Date(now.getFullYear(), now.getMonth() - 1, 1), pk = msbDashMonthKey(prev);
   const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
   // ---- портфель ----
+  if (window.msbPortDays === undefined && !window.__msbPdLoading && currentUser) {
+    window.__msbPdLoading = true;
+    msbPost({ webAction: 'msbGetPortfolioDays' }).then(r => { window.msbPortDays = r && r.success ? r.days || [] : []; window.__msbPdLoading = false; renderMsbDash(); }).catch(() => { window.msbPortDays = []; window.__msbPdLoading = false; });
+  }
+  const days = (window.msbPortDays || []).filter(d => d.date >= '2026-01-01' && d.sum > 0);
   const bal = (allBankBalances || []).filter(b => String(b.period || '').slice(0, 4) >= '2026').slice().sort((a, b) => String(a.period).localeCompare(String(b.period)));
-  const last = bal[bal.length - 1], T = last ? last.totals || {} : {};
-  const tot = Number(T.totalPortfolio) || 0, ind = Number(T.individualPortfolio) || 0, leg = Number(T.legalPortfolio) || 0;
-  const asOf = last ? (last.reportDate || last.period) : '';
-  const points = [{ l: '01.01', v: MSB_BASE_2026.total }].concat(bal.filter(b => Number((b.totals || {}).totalPortfolio)).map(b => ({ l: String(b.reportDate || b.period).slice(0, 5), v: Number(b.totals.totalPortfolio) })));
+  const lastB = bal[bal.length - 1], TB = lastB ? lastB.totals || {} : {};
+  const lastD = days[days.length - 1];
+  const ddmm = iso => iso.slice(8, 10) + '.' + iso.slice(5, 7);
+  const T = lastD ? { activeClientsCount: lastD.clients, activeClientsBalance: lastD.sum } : TB;
+  const tot = lastD ? lastD.sum : (Number(TB.totalPortfolio) || 0), ind = lastD ? lastD.pSum : (Number(TB.individualPortfolio) || 0), leg = lastD ? lastD.jSum : (Number(TB.legalPortfolio) || 0);
+  const asOf = lastD ? ddmm(lastD.date) + '.' + lastD.date.slice(0, 4) + ' (загрузка NPL)' : lastB ? (lastB.reportDate || lastB.period) : '';
+  let points;
+  if (days.length) {
+    const stepD = Math.max(1, Math.ceil(days.length / 60));
+    points = [{ l: '01.01', v: MSB_BASE_2026.total }].concat(days.filter((d, i) => i % stepD === 0 || i === days.length - 1).map(d => ({ l: ddmm(d.date), v: d.sum })));
+  } else points = [{ l: '01.01', v: MSB_BASE_2026.total }].concat(bal.filter(b => Number((b.totals || {}).totalPortfolio)).map(b => ({ l: String(b.reportDate || b.period).slice(0, 5), v: Number(b.totals.totalPortfolio) })));
+  const monthStartD = days.find(d => d.date.slice(0, 7) === msbDashMonthKey(new Date()));
+  const prevD = days.length > 1 ? days[days.length - 2] : null;
   const grow = tot ? tot - MSB_BASE_2026.total : 0;
   const prow = (n, base, cur) => `<tr><td><b>${n}</b></td><td>${formatMoney(base)}</td><td>${cur ? formatMoney(cur) : '—'}</td><td>${cur ? `<span class="t" style="background:${cur >= base ? '#E3F5EA' : '#FBE4E1'};color:${cur >= base ? '#14693A' : '#A81E16'};">${msbDashSigned(cur - base)} · ${msbDashPct(cur, base)}</span>` : '—'}</td></tr>`;
-  const firstAct = bal.find(b => Number((b.totals || {}).activeClientsCount));
+  const firstAct = days.length ? { totals: { activeClientsCount: days[0].clients }, reportDate: ddmm(days[0].date) } : bal.find(b => Number((b.totals || {}).activeClientsCount));
   const act = Number(T.activeClientsCount) || 0, actBase = firstAct ? Number(firstAct.totals.activeClientsCount) : 0;
   // ---- CRM ----
   const S = msbDashStats(mk), P = msbDashStats(pk);
@@ -6515,12 +6531,13 @@ async function renderMsbDash() {
         <div style="background:${grow >= 0 ? '#E3F5EA' : '#FBE4E1'};color:${grow >= 0 ? '#14693A' : '#A81E16'};"><div class="mdx-kl" style="color:inherit;">Рост с 1 января</div><b>${tot ? msbDashSigned(grow) + ' · ' + msbDashPct(tot, MSB_BASE_2026.total) : '—'}</b></div>
         <div style="background:#F3F4F7;"><div class="mdx-kl">На ${MSB_BASE_2026.date}</div><b>${formatMoney(MSB_BASE_2026.total)}</b></div>
       </div>
+      ${lastD ? `<div class="mdx-ks" style="margin-top:8px;">${monthStartD && monthStartD !== lastD ? 'С начала месяца: <b>' + msbDashSigned(lastD.sum - monthStartD.sum) + '</b>' : ''}${prevD ? ' · с прошлой загрузки (' + ddmm(prevD.date) + '): <b>' + msbDashSigned(lastD.sum - prevD.sum) + '</b>' : ''}${lastD.closed ? ' · закрытых клиентов в файле: ' + lastD.closed.toLocaleString('ru-RU') : ''}</div>` : ''}
       <table class="mdx-t"><tr><th></th><th>${MSB_BASE_2026.date}</th><th>Сейчас</th><th>Рост</th></tr>${prow('Физ. лица', MSB_BASE_2026.individual, ind)}${prow('Юр. лица', MSB_BASE_2026.legal, leg)}${prow('Итого', MSB_BASE_2026.total, tot)}</table>
     </div>
     <div class="mdx-chart">${msbDashChart(points)}</div>
   </div>
   <div class="mdx-tiles">
-    ${tile('Активные клиенты', act ? act.toLocaleString('ru-RU') : '—', T.activeClientsBalance ? 'остаток ' + formatMoney(T.activeClientsBalance) : 'из отчёта баланса', actBase && act ? mini('с ' + msbE(String(firstAct.reportDate || firstAct.period)), (act - actBase >= 0 ? '+' : '') + (act - actBase).toLocaleString('ru-RU')) : '')}
+    ${tile('Активные клиенты', act ? act.toLocaleString('ru-RU') : '—', T.activeClientsBalance ? 'остаток ' + formatMoney(T.activeClientsBalance) : 'из загрузки портфеля', actBase && act ? mini('с ' + msbE(String(firstAct.reportDate || firstAct.period)), (act - actBase >= 0 ? '+' : '') + (act - actBase).toLocaleString('ru-RU')) : '')}
     ${tile('Выдано за ' + monthNames[now.getMonth()], formatMoney(issuedSum), S.issued.length + ' сделок', mini(monthNames[prev.getMonth()], formatMoney(prevSum) + ' · ' + P.issued.length), '#14693A', "openDashboardClients('issued')")}
     ${tile('Будут выданы', pipe.length + ' · ' + formatMoney(pipeSum), 'КК, одобрено, мониторинг', mini('одобрено / мониторинг', appr.length + ' · ' + formatMoney(appr.reduce((s, c) => s + (Number(c.amount) || 0), 0))) + mini('кредитный комитет', kk.length), '#2A4BA0', "openDashboardClients('closeToIssue')")}
     ${tile('Визиты', S.meets.length + ' встреч', tripsM + ' выездов на территорию', mini('интересно', interest), '', 'openMsbControl()')}
@@ -7896,7 +7913,7 @@ function msbMyClients() { const me = msbMe().toLowerCase(); return (allClients |
 function msbDateOf(s) { const d = stParseDt ? stParseDt(s) : null; return d && !isNaN(d) ? d : null; }
 function msbQueue() {
   const today = msbTodayIso();
-  return msb.leads.filter(l => !l.inPipeline && l.status !== 'Недоступен' && l.status !== 'Интересно' && l.status !== 'Встреча'
+  return msb.leads.filter(l => !l.lockedBy && !l.inPipeline && l.status !== 'Недоступен' && l.status !== 'Интересно' && l.status !== 'Встреча'
     && !(l.status === 'Отказ' && l.refusedUntil && l.refusedUntil > today)
     && (l.status !== 'Перезвонить' || !l.nextDate || l.nextDate <= today));
 }
@@ -7904,7 +7921,7 @@ function msbPrio(l) {
   const today = msbTodayIso();
   if (l.status === 'Перезвонить' && l.nextDate && l.nextDate <= today) return 0;
   const s = String(l.source || '');
-  return s.indexOf('Выезд') > -1 ? 1 : s.indexOf('Наш заёмщик') > -1 ? 2 : s.indexOf('Махалля') > -1 ? 3 : 4;
+  return s.indexOf('Выезд') > -1 ? 1 : s.indexOf('Наш заёмщик') > -1 ? 2 + (Number(l.prio) || 3) / 10 : s.indexOf('Махалля') > -1 ? 3 : 4;
 }
 function msbLeadsView() {
   const q = msb.q.trim().toLowerCase(), today = msbTodayIso();
@@ -7915,6 +7932,8 @@ function msbLeadsView() {
   else if (msb.lst === 'refuse') a = msb.leads.filter(l => l.status === 'Отказ' || l.status === 'Недоступен');
   else a = msb.leads.slice();
   if (msb.src !== 'all') a = a.filter(l => String(l.source || '').indexOf(msb.src) > -1);
+  if (msb.src === 'Наш заёмщик' && msb.pf) a = a.filter(l => { const e = l.extra || {}; return msb.pf === 'closed' ? e.closed : msb.pf === 'J' ? e.subject === 'Юр. лицо' : e.subject === 'Физ. лицо'; });
+  if (msb.mine) a = a.filter(l => !l.lockedBy && l.manager === msbMe());
   if (q) a = a.filter(l => (l.name + ' ' + l.inn + ' ' + l.director + ' ' + l.phone).toLowerCase().indexOf(q) > -1);
   return a.sort((x, y) => msbPrio(x) - msbPrio(y) || String(x.nextDate || '').localeCompare(String(y.nextDate || '')));
 }
@@ -7926,7 +7945,7 @@ function msbStageIdx(st) { for (let i = 0; i < MSB_STAGES.length; i++) if (MSB_S
 // ---------- оболочка ----------
 function msbRender() {
   const box = document.getElementById('msbApp'); if (!box || !msb.open) return;
-  const tabs = msb.boss ? [['ctl', 'Контроль', 'shield'], ['imp', 'Загрузка базы', 'upload']] : [['home', 'Мой день', 'home'], ['leads', 'Лиды', 'users'], ['trip', 'Выезд', 'mappin'], ['deals', 'Сделки', 'briefcase']];
+  const tabs = msb.boss ? [['ctl', 'Контроль', 'shield'], ['base', 'База', 'users'], ['imp', 'Загрузка', 'upload']] : [['home', 'Мой день', 'home'], ['leads', 'Лиды', 'users'], ['trip', 'Выезд', 'mappin'], ['deals', 'Сделки', 'briefcase']];
   let body = '';
   try {
     if (msb.tab === 'home') body = msbHomeHtml();
@@ -7935,6 +7954,7 @@ function msbRender() {
     else if (msb.tab === 'deals') body = msbDealsHtml();
     else if (msb.tab === 'ctl') body = msbCtlHtml();
     else if (msb.tab === 'imp') body = msbImpHtml();
+    else if (msb.tab === 'base') body = msbBaseHtml();
   } catch (e) { console.error(e); body = '<div class="msb-pad"><div class="msb-card">Ошибка отображения: ' + msbE(e.message) + '</div></div>'; }
   const nav = tabs.map(t => `<button type="button" class="${msb.tab === t[0] ? 'on' : ''}" onclick="msbGo('${t[0]}')">${t[2] === 'shield' ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6Z"/></svg>' : msbIcon(t[2], 22)}<span>${t[1]}</span></button>`).join('')
     + (msb.boss ? `<button type="button" onclick="msbClose()">${msbIcon('x', 22)}<span>Закрыть</span></button>` : `<button type="button" onclick="msbLogout()">${msbIcon('logout', 22)}<span>Выйти</span></button>`);
@@ -7977,10 +7997,11 @@ function msbHomeHtml() {
     </div>`;
 }
 function msbQb(ic, t, sub, on) { return `<button type="button" onclick="${on}"><span class="msb-qi">${msbIcon(ic, 22)}</span>${t}<small>${sub || ''}</small></button>`; }
-function msbCallBtn(l) { return l.phone ? `<button type="button" class="msb-call" aria-label="Позвонить" onclick="event.stopPropagation();msbCall('${msbE(l.inn)}')">${msbDialIcon()}</button>` : ''; }
+function msbCallBtn(l) { if (l.lockedBy) return ''; return l.phone ? `<button type="button" class="msb-call" aria-label="Позвонить" onclick="event.stopPropagation();msbCall('${msbE(l.inn)}')">${msbDialIcon()}</button>` : ''; }
 function msbLeadRow(l) {
   const st = l.status === 'Перезвонить' && l.nextDate ? msbTag('перезвонить ' + vzFmtDateRu(l.nextDate.slice(0, 10)), ['#EEF1FB', '#2A4BA0']) : l.status === 'Отказ' ? msbTag('отказ: ' + (l.reason || ''), ['#FBE4E1', '#A81E16']) : l.status !== 'База' ? msbTag(l.status) : '';
-  return `<div class="msb-lr" onclick="msbLeadOpen('${msbE(l.inn)}')"><div style="flex:1;min-width:0;"><div class="msb-lrh"><b>${msbE(l.name || l.inn)}</b>${msbSrcTags(l.source)}</div><div class="msb-sub">${msbE([l.sphere || l.okved, l.director].filter(Boolean).join(' · '))}</div>${l.why ? `<div class="msb-why"><b>Почему:</b> ${msbE(l.why)}</div>` : ''}<div style="margin-top:4px;">${st}${l.attempts ? ' ' + msbTag('попытка ' + l.attempts + ' из 3') : ''}${l.inPipeline ? ' ' + msbTag('в воронке: ' + l.inPipeline.status, ['#E3F5EA', '#14693A']) : ''}</div></div>${msbCallBtn(l)}</div>`;
+  const ex = l.extra || {};
+  return `<div class="msb-lr${l.lockedBy ? ' msb-locked' : ''}" onclick="msbLeadOpen('${msbE(l.inn)}')"><div style="flex:1;min-width:0;"><div class="msb-lrh"><b>${msbE(l.name || l.inn)}</b>${msbSrcTags(l.source)}${ex.subject ? msbTag(ex.subject) : ''}${ex.closed ? msbTag('закрыт', ['#F3E8FF', '#6B21A8']) : ''}</div>${l.lockedBy ? `<div class="msb-sub"><b>Закреплён за ${msbE(l.lockedBy)}</b></div>` : ''}<div class="msb-sub">${msbE([l.sphere || l.okved, l.director].filter(Boolean).join(' · '))}</div>${l.why ? `<div class="msb-why"><b>Почему:</b> ${msbE(l.why)}</div>` : ''}<div style="margin-top:4px;">${st}${l.attempts ? ' ' + msbTag('попытка ' + l.attempts + ' из 3') : ''}${l.inPipeline ? ' ' + msbTag('в воронке: ' + l.inPipeline.status, ['#E3F5EA', '#14693A']) : ''}</div></div>${msbCallBtn(l)}</div>`;
 }
 
 // ---------- 2. Лиды ----------
@@ -7990,7 +8011,8 @@ function msbLeadsHtml() {
   const lsts = [['queue', 'Очередь'], ['recall', 'Перезвонить'], ['meet', 'Встречи / интерес'], ['refuse', 'Отказ'], ['all', 'Вся база']];
   return msbHero('Лиды', 'База ' + n + ' · в очереди ' + msbQueue().length, `<div class="msb-chips">${lsts.map(x => `<button type="button" class="${msb.lst === x[0] ? 'on' : ''}" onclick="msb.lst='${x[0]}';msbRender()">${x[1]}</button>`).join('')}</div>`)
     + `<div class="msb-pad msb-up"><input class="msb-in" placeholder="Название, ИНН, директор" value="${msbE(msb.q)}" oninput="msb.q=this.value;clearTimeout(window.__msbQ);window.__msbQ=setTimeout(function(){msbRender();var i=document.querySelector('#msbApp .msb-in');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},300)">
-      <div class="msb-chips msb-chips2">${srcs.map(x => `<button type="button" class="${msb.src === x[0] ? 'on' : ''}" onclick="msb.src='${x[0]}';msbRender()">${x[1]}</button>`).join('')}</div>
+      <div class="msb-chips msb-chips2">${srcs.map(x => `<button type="button" class="${msb.src === x[0] ? 'on' : ''}" onclick="msb.src='${x[0]}';msb.pf='';msbRender()">${x[1]}</button>`).join('')}<button type="button" class="${msb.mine ? 'on' : ''}" onclick="msb.mine=!msb.mine;msbRender()">Мои</button></div>
+      ${msb.src === 'Наш заёмщик' ? `<div class="msb-chips msb-chips2">${[['', 'Весь портфель'], ['J', 'Юр. лица'], ['P', 'Физ. лица'], ['closed', 'Закрытые']].map(x => `<button type="button" class="${(msb.pf || '') === x[0] ? 'on' : ''}" onclick="msb.pf='${x[0]}';msbRender()">${x[1]}</button>`).join('')}</div>` : ''}
       <div class="msb-card">${v.length ? v.slice(0, 80).map(msbLeadRow).join('') + (v.length > 80 ? `<div class="msb-empty">Показаны первые 80 из ${v.length}</div>` : '') : `<div class="msb-empty">${msb.loaded ? 'Нет клиентов' : 'Загрузка…'}</div>`}</div></div>`;
 }
 function msbLeadOpen(inn) { msb.lead = inn; msb.tab = 'leads'; msbRender(); const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0; }
@@ -8004,8 +8026,9 @@ function msbLeadHtml() {
   const back = pend && pend.inn === l.inn && pend.backAt ? `<div class="msb-callbar"><span></span><div><b>Вы вернулись из звонка</b><div>Вне приложения: ${msbDur(Math.round((pend.backAt - pend.tapAt) / 1000))}</div></div></div>` : '';
   return `<div class="msb-hero"><button type="button" class="msb-back" onclick="msb.lead=null;msbRender()" aria-label="Назад">‹</button><div class="msb-hs">${msbSrcTags(l.source)}</div><div class="msb-ht">${msbE(l.name || l.inn)}</div><div class="msb-hs">${msbE(l.director || '')}${l.phone ? ' · +' + msbE(l.phone) : ''}</div>${back}</div>
     <div class="msb-pad msb-up">
-      ${pend && pend.inn === l.inn ? `<div class="msb-lock">Укажите итог звонка. Следующий звонок откроется после этого.</div>${msbResultHtml(l)}` : `<button type="button" class="msb-go msb-green" ${l.phone ? `onclick="msbCall('${msbE(l.inn)}')"` : 'disabled'}>${msbDialIcon()} ${l.phone ? '+' + msbE(l.phone) : 'Нет телефона'}</button>`}
-      <div class="msb-card"><div class="msb-h"><b>Карточка</b></div>${kv('ИНН', l.inn)}${kv('ОКЭД / сфера', [l.okved, l.sphere].filter(Boolean).join(' · '))}${kv('Обслуживающий банк', l.bank)}${kv('Адрес', l.address)}${kv('Махалля', ex.mahalla)}${kv('Банкир махалли', ex.banker)}${kv('Кредит у нас', ex.loan)}${l.why ? `<div class="msb-why" style="margin-top:8px;"><b>Что предложить:</b> ${msbE(l.why)}</div>` : ''}${l.inPipeline ? `<div class="msb-why" style="margin-top:6px;color:#14693A;">Уже в воронке: ${msbE(l.inPipeline.status)} · ${msbE(l.inPipeline.manager)}</div>` : ''}</div>
+      ${l.lockedBy && !(pend && pend.inn === l.inn) ? `<div class="msb-lock">Клиент закреплён за ${msbE(l.lockedBy)}. Звонить может только он.</div>` : ''}
+      ${l.lockedBy && !(pend && pend.inn === l.inn) ? '' : pend && pend.inn === l.inn ? `<div class="msb-lock">Укажите итог звонка. Следующий звонок откроется после этого.</div>${msbResultHtml(l)}` : `<button type="button" class="msb-go msb-green" ${l.phone ? `onclick="msbCall('${msbE(l.inn)}')"` : 'disabled'}>${msbDialIcon()} ${l.phone ? '+' + msbE(l.phone) : 'Нет телефона'}</button>`}
+      <div class="msb-card"><div class="msb-h"><b>Карточка</b></div>${kv('ИНН', l.inn)}${kv('ОКЭД / сфера', [l.okved, l.sphere].filter(Boolean).join(' · '))}${kv('Обслуживающий банк', l.bank)}${kv('Адрес', l.address)}${kv('Махалля', ex.mahalla)}${kv('Банкир махалли', ex.banker)}${kv('Кредит у нас', ex.loan)}${kv('Субъект', ex.subject)}${kv('Продукт', ex.product)}${kv('Дата выдачи', ex.openDate ? (nplFmtDateRu ? nplFmtDateRu(ex.openDate) : ex.openDate) : '')}${ex.balance !== undefined ? kv('Остаток', ex.closed ? 'кредит закрыт' : formatMoney(ex.balance)) : ''}${ex.balance !== undefined ? kv('Сумма выдачи', ex.issued ? formatMoney(ex.issued) + (ex.balance && !ex.closed ? ' · погашено ' + Math.max(0, Math.round((1 - ex.balance / ex.issued) * 100)) + '%' : '') : '— (появится в файле)') : ''}${ex.loans > 1 ? kv('Кредитов', String(ex.loans)) : ''}${kv('Кредитный офицер', ex.officer)}${l.lockedBy ? kv('Закреплён за', l.lockedBy) : ''}${l.why ? `<div class="msb-why" style="margin-top:8px;"><b>Что предложить:</b> ${msbE(l.why)}</div>` : ''}${l.inPipeline ? `<div class="msb-why" style="margin-top:6px;color:#14693A;">Уже в воронке: ${msbE(l.inPipeline.status)} · ${msbE(l.inPipeline.manager)}</div>` : ''}</div>
       <div class="msb-card"><div class="msb-h"><b>Звонки</b><span class="msb-sub">${calls.length}</span></div>${calls.length ? calls.map(c => `<div class="msb-hist"><b>${vzFmtDateRu(msbDayOf(c.tapAt))} ${msbHm(c.tapAt)}</b> · ${msbE(c.result)}${c.reason ? ' · ' + msbE(c.reason) : ''} · ${msbDur(c.away)}${c.flags ? ' ' + msbTag(c.flags, ['#FBE4E1', '#A81E16']) : ''}<div class="msb-sub">${msbE(c.manager)}${c.comment ? ' — ' + msbE(c.comment) : ''}</div></div>`).join('') : '<div class="msb-empty">Ещё не звонили</div>'}</div>
       ${l.status === 'Интересно' || l.status === 'Встреча' ? `<button type="button" class="msb-go" onclick="msbAppOpen('${msbE(l.inn)}')">Создать заявку</button>` : ''}
     </div>`;
@@ -8019,6 +8042,7 @@ function msbCall(inn) {
   const pend = msbPending();
   if (pend && pend.inn !== inn) { msbLeadOpen(pend.inn); return; }
   const l = msbFindLead(inn); if (!l || !l.phone) return;
+  if (l.lockedBy) { alert('Клиент закреплён за ' + l.lockedBy); return; }
   msbSetPending({ inn: inn, name: l.name, phone: l.phone, source: l.source, tapAt: Date.now(), backAt: 0 });
   msb.res = { result: '', reason: '', date: '', time: '', comment: '' };
   msb.lead = inn; msb.tab = 'leads';
@@ -8054,10 +8078,10 @@ async function msbResultSave() {
   try {
     const res = await msbPost({ webAction: 'msbCallResult', inn: p.inn, name: p.name, phone: p.phone, source: p.source, tapAt: p.tapAt, backAt: p.backAt || Date.now(), result: r.result, reason: r.reason, nextDate: r.result === 'Назначить встречу' ? r.date + ' ' + r.time : r.date, comment: (r.comment || '').trim(), seed: { name: l.name, okved: l.okved, director: l.director, phone: l.phone, bank: l.bank, source: l.source, why: l.why, address: l.address, extra: l.extra } });
     r.saving = false;
-    if (!res.success) return bad(res.message || 'Не удалось сохранить');
+    if (!res.success) { if (res.locked) { msbSetPending(null); const lx = msbFindLead(p.inn); if (lx) lx.lockedBy = String(res.message || '').replace('Клиент закреплён за ', ''); msb.res = null; msbRender(); alert(res.message); return; } return bad(res.message || 'Не удалось сохранить'); }
     msbSetPending(null);
     msb.calls.unshift({ id: res.id, inn: p.inn, name: p.name, manager: msbMe(), tapAt: p.tapAt, backAt: p.backAt, away: Math.round(((p.backAt || Date.now()) - p.tapAt) / 1000), result: r.result, reason: r.reason, comment: r.comment, flags: res.suspicious || '', check: '' });
-    if (res.lead) { const i = msb.leads.findIndex(x => x.inn === p.inn); const nl = Object.assign({}, l, res.lead); if (i > -1) msb.leads[i] = nl; else msb.leads.push(nl); }
+    if (res.lead) { const i = msb.leads.findIndex(x => x.inn === p.inn); const nl = Object.assign({}, l, res.lead, { extra: Object.assign({}, l.extra || {}, res.lead.extra || {}), why: res.lead.why || l.why, source: l.source || res.lead.source }); if (i > -1) msb.leads[i] = nl; else msb.leads.push(nl); }
     msb.res = null;
     if (r.result === 'Интересно') { msbAppOpen(p.inn); return; }
     msb.lead = null; msbRender();
@@ -8228,6 +8252,33 @@ async function msbCheck(id, ok) {
   msbRender();
 }
 
+
+// ---------- руководитель: база и передача клиентов ----------
+function msbBaseHtml() {
+  const q = (msb.bq || '').trim().toLowerCase(), f = msb.bf || 'all';
+  let a = msb.leads;
+  if (f === 'pinned') a = a.filter(l => l.manager);
+  else if (f === 'free') a = a.filter(l => !l.manager);
+  else if (f !== 'all') a = a.filter(l => String(l.source || '').indexOf(f) > -1);
+  if (q) a = a.filter(l => (l.name + ' ' + l.inn + ' ' + (l.manager || '')).toLowerCase().indexOf(q) > -1);
+  const by = {}; msb.leads.forEach(l => { if (l.manager) by[l.manager] = (by[l.manager] || 0) + 1; });
+  const chips = [['all', 'Все ' + msb.leads.length], ['pinned', 'Закреплённые'], ['free', 'Свободные'], ['Наш заёмщик', 'Наш заёмщик'], ['Другой банк', 'Другой банк'], ['Махалля', 'Махалля']];
+  return msbHero('База клиентов', 'Закреплено ' + msb.leads.filter(l => l.manager).length + ' из ' + msb.leads.length, `<div class="msb-chips">${chips.map(x => `<button type="button" class="${f === x[0] ? 'on' : ''}" onclick="msb.bf='${x[0]}';msbRender()">${x[1]}</button>`).join('')}</div>`)
+    + `<div class="msb-pad msb-up"><input class="msb-in" placeholder="Название, ИНН, менеджер" value="${msbE(msb.bq || '')}" oninput="msb.bq=this.value;clearTimeout(window.__msbB);window.__msbB=setTimeout(function(){msbRender();var i=document.querySelector('#msbApp .msb-in');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},300)">
+      ${Object.keys(by).length ? `<div class="msb-card"><div class="msb-h"><b>Закреплено по менеджерам</b></div>${Object.keys(by).sort((x, y) => by[y] - by[x]).map(n => `<div class="msb-kv"><span>${msbE(n)}</span><b>${by[n]}</b></div>`).join('')}</div>` : ''}
+      <div class="msb-card">${a.slice(0, 100).map(l => `<div class="msb-lr"><div style="flex:1;min-width:0;"><div class="msb-lrh"><b>${msbE(l.name || l.inn)}</b>${msbSrcTags(l.source)}</div><div class="msb-sub">ИНН ${msbE(l.inn)} · ${msbE(l.status || 'База')}${l.manager ? ' · <b>' + msbE(l.manager) + '</b>' : ' · свободный'}</div></div><button type="button" class="msb-pass" onclick="msbAssign('${msbE(l.inn)}')">Передать</button></div>`).join('') || '<div class="msb-empty">Ничего не найдено</div>'}${a.length > 100 ? `<div class="msb-empty">Показаны первые 100 из ${a.length}</div>` : ''}</div></div>`;
+}
+function msbAssign(inn) {
+  const l = msbFindLead(inn); if (!l) return;
+  const names = Array.from(new Set((allManagers || []).map(m => m.manager).concat(msb.calls.map(c => c.manager)).filter(Boolean))).sort();
+  vzPick('Передать: ' + (l.name || inn), ['Снять закрепление'].concat(names), l.manager || '', async function(v) {
+    const m = v === 'Снять закрепление' ? '' : v;
+    const r = await msbPost({ webAction: 'msbAssignLead', inn: inn, manager: m, seed: { name: l.name, okved: l.okved, director: l.director, phone: l.phone, bank: l.bank, source: l.source, why: l.why, address: l.address, extra: l.extra } });
+    if (!r.success) { alert(r.message || 'Ошибка'); return; }
+    l.manager = m; l.lockedBy = m; msbRender();
+  });
+}
+
 // ---------- руководитель: загрузка базы из Excel ----------
 const MSB_COLS = {
   inn: ['инн', 'stir', 'inn'], name: ['наименование', 'название предприятия', 'название', 'клиент', 'заемщик', 'заёмщик', 'предприятие'], okved: ['окэд', 'oked', 'окэд код'],
@@ -8249,7 +8300,8 @@ function msbImpHtml() {
       <div class="msb-err">${msbE(im.err || '')}</div><button type="button" class="msb-go" onclick="msbImpSend()" ${im.busy ? 'disabled' : ''}>${im.busy ? msbE(im.busy) : 'Загрузить ' + im.rows.length}</button></div>`;
   }
   return msbHero('Загрузка базы', 'Для обзвона менеджерами')
-    + `<div class="msb-pad msb-up">${prev}${card('Другой банк', 'Внешняя база', 'Другие банки, налоговая. Колонки: Название предприятия, ИНН, ОКЭД, Директор, Телефон, Обслуживающий банк.')}${card('Наш заёмщик', 'Кредитный портфель банка', 'CRM отберёт хороших заёмщиков: без просрочки, погашено больше половины или кредит закрыт.')}
+    + `<div class="msb-pad msb-up">${prev}${card('Другой банк', 'Внешняя база', 'Другие банки, налоговая. Колонки: Название предприятия, ИНН, ОКЭД, Директор, Телефон, Обслуживающий банк.')}
+      <div class="msb-card"><div class="msb-h"><b>Кредитный портфель банка</b></div><div class="msb-sub">Берётся сам из ежедневной загрузки в «NPL / Просрочка»: клиенты без просрочки и закрытые кредиты.</div></div>
       <div class="msb-card"><div class="msb-h"><b>Махалля</b></div><div class="msb-sub">Предприниматели с ИНН из микропроектов и опроса юр. лиц (без самозанятых) попадают в базу сами.</div></div></div>`;
 }
 async function msbImpFile(inp, src) {
@@ -9988,7 +10040,10 @@ function getNplParserWorker() {
         let nameColIdx = -1, idColIdx = -1, pinColIdx = -1, openDateColIdx = -1, portfolioColIdx = -1;
         const portfolioKeys = {};
         const extraPortfolio = {};
-        const portfolio = { clients: 0, loans: 0, totalDebt: 0, sum: 0, jClients: 0, jSum: 0, pClients: 0, pSum: 0, skipN: 0, skipSum: 0, textN: 0 };
+        const portfolio = { clients: 0, loans: 0, totalDebt: 0, sum: 0, jClients: 0, jSum: 0, pClients: 0, pSum: 0, skipN: 0, skipSum: 0, textN: 0, closedClients: 0 };
+        // Клиенты портфеля для обзвона менеджерами МСБ (без просрочки и закрытые)
+        const goodMap = {}, badKeys = {}, closedKeys = {};
+        let issuedColIdx = -1;
         // число из ячейки: и 123, и "29 932 000", и "29932000,5"
         const numV = function(v) { if (typeof v === 'number') return v; const t = String(v == null ? '' : v).replace(/[\\s\\u00a0]/g, '').replace(',', '.'); const n = Number(t); return isFinite(n) ? n : 0; };
         const normOpenDate = function(v) {
@@ -10024,6 +10079,7 @@ function getNplParserWorker() {
           const headerRow = rows[headerRowIdx] || [];
           for (let c = 0; c < headerRow.length; c++) {
             const h = String(headerRow[c] || '').trim().toLowerCase().replace(/ё/g, 'е').replace(/\\s+/g, ' ');
+            if (h.indexOf('сумма выдач') !== -1) { issuedColIdx = c; continue; }
             if (h === 'наименование клиента') nameColIdx = c;
             else if (h === 'id' || h === 'id клиента') idColIdx = c;
             else if (h.indexOf('пинфл') !== -1 || h === 'инн' || h.indexOf('пинфл/инн') !== -1) pinColIdx = c;
@@ -10149,6 +10205,24 @@ function getNplParserWorker() {
           // просрочки нет.
           const hasOverdue = (Number(row[overdueBalanceColIdx]) || 0) + (Number(row[overdueInterestColIdx]) || 0) > 0
             || cleanDays(row[daysOverdueColIdx]) > 0 || cleanDays(row[daysOverdueInterestColIdx]) > 0;
+          const hasNplRow = (Number(row[totalNplColIdx]) || 0) > 0;
+          const pfRow = portfolioColIdx !== -1 ? numV(row[portfolioColIdx]) : numV(row[totalDebtColIdx]);
+          const curRow = currentBalanceColIdx !== -1 ? numV(row[currentBalanceColIdx]) : 0;
+          {
+            const gk = clientKey, g = goodMap[gk] || (goodMap[gk] = { key: gk, pin: pin, name: clientName, phone: String((phoneColIdx !== -1 ? row[phoneColIdx] : '') || '').trim(), subject: subject,
+              product: productTypeColIdx !== -1 ? String(row[productTypeColIdx] || '').trim() : '', openDate: '', balance: 0, issued: 0, loans: 0, open: 0,
+              officer: officerColIdx !== -1 ? String(row[officerColIdx] || '').trim() : '', address: addressColIdx !== -1 ? splitAddressPhone(row[addressColIdx]) : '' });
+            const od = openDateColIdx !== -1 ? normOpenDate(row[openDateColIdx]) : '';
+            if (od && (!g.openDate || od < g.openDate)) g.openDate = od;
+            g.loans++; g.balance += Math.max(pfRow, curRow); g.issued += issuedColIdx !== -1 ? numV(row[issuedColIdx]) : 0;
+            if (pfRow > 0 || curRow > 0 || numV(row[totalDebtColIdx]) > 0) g.open++;
+            if (hasOverdue || hasNplRow) badKeys[gk] = 1;
+          }
+          // Нулевой остаток — закрытый кредит: в портфель и в NPL не входит
+          if (pfRow <= 0 && curRow <= 0 && numV(row[totalDebtColIdx]) <= 0 && !hasOverdue && !hasNplRow) {
+            if (!closedKeys[clientKey]) { closedKeys[clientKey] = 1; }
+            continue;
+          }
           portfolio.loans++;
           portfolio.totalDebt += numV(row[totalDebtColIdx]);
           if (portfolioColIdx !== -1 && typeof row[portfolioColIdx] === 'string' && row[portfolioColIdx].trim() && isNaN(Number(row[portfolioColIdx]))) portfolio.textN++;
@@ -10231,7 +10305,15 @@ function getNplParserWorker() {
           }
         }
 
-        self.postMessage({ loans: loans, collectors: collectors, portfolio: portfolio });
+        const good = [];
+        Object.keys(goodMap).forEach(function(k) {
+          const g = goodMap[k];
+          if (badKeys[k]) return;
+          g.closed = g.open === 0;
+          if (g.closed && !portfolioKeys[k]) portfolio.closedClients++;
+          delete g.open; good.push(g);
+        });
+        self.postMessage({ loans: loans, collectors: collectors, portfolio: portfolio, good: good });
       } catch (err) {
         self.postMessage({ error: err.message || 'Ошибка обработки файла' });
       }
@@ -10265,7 +10347,7 @@ function parseNplFile(file, onProgress) {
           if (msg.data.error) {
             reject(new Error(msg.data.error));
           } else {
-            resolve({ loans: msg.data.loans, collectors: msg.data.collectors || [], portfolio: msg.data.portfolio || null });
+            resolve({ loans: msg.data.loans, collectors: msg.data.collectors || [], portfolio: msg.data.portfolio || null, good: msg.data.good || [] });
           }
         };
         const handleError = (err) => {
@@ -10357,6 +10439,16 @@ async function uploadNplFile() {
     if (result.success) {
       statusBox.innerText = result.message;
       input.value = '';
+      try {
+        const good = parsed.good || [];
+        for (let i = 0, part = 2500; i < good.length || i === 0; i += part) {
+          statusBox.innerText = result.message + ' · клиенты портфеля для МСБ: ' + Math.min(i + part, good.length) + ' из ' + good.length;
+          const r2 = await postWebAction({ webAction: 'msbSavePortfolioClients', sessionId: localStorage.getItem('msbSessionId'), reset: i === 0, rows: good.slice(i, i + part) });
+          if (!r2.success) { console.error(r2.message); break; }
+          if (!good.length) break;
+        }
+        statusBox.innerText = result.message + (good.length ? ' · клиентов портфеля для МСБ: ' + good.length : '');
+      } catch (e) { console.error(e); }
       await loadNplData();
     } else {
       statusBox.innerText = result.message || 'Ошибка загрузки';
