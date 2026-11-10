@@ -926,6 +926,45 @@ textarea.msb-in{height:auto;padding:12px 14px;resize:none;}
 .msb-two2 button{flex:1;border:none;border-radius:10px;padding:9px 6px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;}
 .msb-two2 .ok{background:#E3F5EA;color:#14693A;}.msb-two2 .no{background:#FBE4E1;color:#A81E16;}
 @media (min-width:820px){#msbApp{left:50%;width:480px;margin-left:-240px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45);}}
+.mdx{display:flex;flex-direction:column;gap:14px;margin-bottom:22px;}
+.mdx-card{background:#fff;border-radius:20px;padding:18px 20px;box-shadow:0 4px 14px rgba(20,20,30,.05);}
+.mdx-kl{font-size:12.5px;color:#3F3F46;font-weight:700;}
+.mdx-kv{font-size:24px;font-weight:800;margin:4px 0 2px;}
+.mdx-ks{font-size:12px;color:#3F3F46;}
+.mdx-port{display:flex;gap:24px;align-items:center;flex-wrap:wrap;}
+.mdx-pl{flex:1 1 380px;min-width:0;}
+.mdx-chart{flex:1 1 420px;min-width:0;}
+.mdx-big{font-size:38px;font-weight:800;letter-spacing:-.5px;}
+.mdx-row2{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.mdx-row2>div{border-radius:14px;padding:10px 14px;}
+.mdx-row2 b{font-size:18px;}
+.mdx-t{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+.mdx-t th{text-align:left;color:#3F3F46;font-size:11.5px;padding:7px 6px;border-bottom:2px solid #EEE;}
+.mdx-t td{padding:8px 6px;border-bottom:1px solid #F0F0F3;}
+.mdx-rt td b{white-space:nowrap;}
+.mdx .t{display:inline-block;border-radius:9px;padding:2px 8px;font-size:11.5px;font-weight:800;}
+.mdx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;}
+.mdx-click{cursor:pointer;}
+.mdx-click:hover{box-shadow:0 6px 18px rgba(20,20,30,.1);}
+.mdx-mini{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-top:6px;padding-top:6px;border-top:1px solid #F0F0F3;}
+.mdx-mini span{color:#3F3F46;}
+.mdx-bottom{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;}
+@media (max-width:1100px){.mdx-bottom{grid-template-columns:1fr;}}
+.mdx-side{display:flex;flex-direction:column;gap:14px;}
+.mdx-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.mdx-h b{font-size:16px;}
+.mdx-h span{font-size:12px;color:#3F3F46;font-weight:600;}
+.mdx-place{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;font-weight:800;}
+.mdx-who{display:flex;gap:10px;align-items:center;}
+.mdx-who img,.mdx-ava{width:42px;height:42px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px #E2E2E8;}
+.mdx-ava{display:flex;align-items:center;justify-content:center;background:#F0F0F2;color:#3F3F46;font-weight:800;font-size:14px;}
+.mdx-sc{display:flex;align-items:center;gap:8px;}
+.mdx-bar{flex:1;min-width:60px;height:9px;background:#F0F0F3;border-radius:5px;}
+.mdx-bar i{display:block;height:9px;border-radius:5px;background:#C4231A;}
+.mdx-wk{display:grid;grid-template-columns:70px 1fr 90px;gap:10px;align-items:center;font-size:13px;padding:6px 0;}
+.mdx-wk b{text-align:right;}
+.mdx-near{font-size:13px;padding:7px 0;border-bottom:1px solid #F0F0F3;}
+.mdx-link{display:inline-block;margin-top:8px;color:#C4231A;font-weight:800;font-size:13px;cursor:pointer;}
 .vzf-back{border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;}
 .vzf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
 .vzf-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:#F5F6F8;color:#141414;font-size:12.5px;font-weight:700;border:none;font-family:inherit;text-decoration:none;cursor:pointer;}
@@ -2205,6 +2244,8 @@ body.role-mahalla-banker .footer{display:none;}
       <button class="btn" onclick="exportMsbSalesExcel()">⬇️ <span data-i18n="btnExportExcel">Скачать всё в Excel</span></button>
     </div>
   </div>
+
+  <div id="msbDash" class="mdx"></div>
 
   <div class="period-controls">
     <span class="period-label" data-i18n="lblPeriodAnalysis">Период анализа</span>
@@ -6234,6 +6275,7 @@ function applyPeriod() {
   renderStats(stats);
   renderTrendBadges(stats);
   renderPlanFactBox();
+  try { renderMsbDash(); } catch (e) { console.error(e); }
   renderClients(periodClients);
   renderFunnel(funnel, 'funnelBox');
   renderFunnel(funnel, 'salesFunnelBox');
@@ -6370,6 +6412,129 @@ function renderTrendBadges(stats) {
 // баланса банка (раздел "Бухгалтерия").
 const MSB_PLAN_YEAR_2026 = 539100000000;
 const MSB_PLAN_Q3_2026 = 481400000000;
+
+// ======================= Главный дашборд «МСБ продажи» =======================
+// Портфель: точка отсчёта 01.01.2026 (реальный портфель), сегодня — последний отчёт «Баланс банка».
+const MSB_BASE_2026 = { date: '01.01.2026', individual: 611.9e9, legal: 524.5e9, total: 1136.4e9 };
+const MSB_ISSUE_STAGES = ['Кредитный комитет', 'Одобрено', 'На проверке в мониторинге', 'Мониторинг пройден'];
+const MSB_RATING_W = { issued: 50, calls: 20, meets: 20, apps: 10 };
+
+function msbDashMonthKey(d) { return d.getFullYear() + '-' + nplPad2(d.getMonth() + 1); }
+function msbDashDate(s) { const d = stParseDt(s); return d && !isNaN(d) ? d : null; }
+function msbDashPct(a, b) { if (!b) return ''; const p = (a - b) / b * 100; return (p >= 0 ? '+' : '') + p.toFixed(1).replace('.', ',') + '%'; }
+function msbDashSigned(v) { return (v >= 0 ? '+' : '−') + formatMoney(Math.abs(v)); }
+
+function msbDashStats(mk) {
+  const cl = allClients || [];
+  const issuedM = c => c.status === 'Выдано' && (d => d && msbDashMonthKey(d) === mk)(msbDashDate(c.statusChangedAt || c.updatedAt));
+  const createdM = c => (d => d && msbDashMonthKey(d) === mk)(msbDashDate(c.createdAt || c.date));
+  const calls = (msb.calls || []).filter(c => c.tapAt && msbDashMonthKey(new Date(c.tapAt)) === mk);
+  const meets = []; (msb.trips || []).forEach(t => (t.meets || []).forEach(m => { if (m.at && msbDashMonthKey(new Date(m.at)) === mk) meets.push(Object.assign({ manager: t.manager }, m)); }));
+  const names = new Set((allManagers || []).map(m => m.manager).filter(Boolean));
+  cl.forEach(c => { if (c.manager && (issuedM(c) || createdM(c))) names.add(String(c.manager).trim()); });
+  calls.forEach(c => names.add(c.manager)); meets.forEach(m => names.add(m.manager));
+  const rows = Array.from(names).map(n => {
+    const mine = cl.filter(c => String(c.manager || '').trim() === n), iss = mine.filter(issuedM);
+    return { name: n, issued: iss.reduce((s, c) => s + (Number(c.amount) || 0), 0), deals: iss.length, calls: calls.filter(c => c.manager === n).length,
+      meets: meets.filter(m => m.manager === n).length, apps: mine.filter(createdM).length,
+      lastCall: Math.max(0, ...(msb.calls || []).filter(c => c.manager === n).map(c => c.tapAt)) };
+  });
+  const mx = k => Math.max(1, ...rows.map(r => r[k]));
+  rows.forEach(r => { r.score = Math.round(MSB_RATING_W.issued * r.issued / mx('issued') + MSB_RATING_W.calls * r.calls / mx('calls') + MSB_RATING_W.meets * r.meets / mx('meets') + MSB_RATING_W.apps * r.apps / mx('apps')); });
+  rows.sort((a, b) => b.score - a.score || b.issued - a.issued);
+  rows.forEach((r, i) => r.place = i + 1);
+  return { rows: rows, issued: cl.filter(issuedM), calls: calls, meets: meets, apps: cl.filter(createdM) };
+}
+
+function msbDashChart(points) {
+  if (points.length < 2) return '<div class="ks" style="padding:40px 0;text-align:center;">График появится после загрузки отчётов баланса</div>';
+  const W = 620, H = 170, vals = points.map(p => p.v), mn = Math.min(...vals), mx = Math.max(...vals), span = (mx - mn) || mx * 0.02 || 1;
+  const xy = points.map((p, i) => [30 + i * (W - 60) / (points.length - 1), H - 26 - (p.v - mn) / span * (H - 50)]);
+  const poly = xy.map(p => p[0].toFixed(0) + ',' + p[1].toFixed(0)).join(' ');
+  const step = Math.max(1, Math.ceil(points.length / 6));
+  const labels = points.map((p, i) => (i % step === 0 || i === points.length - 1) ? `<text x="${xy[i][0].toFixed(0)}" y="${H - 6}" font-size="11" fill="#3F3F46" text-anchor="middle">${msbE(p.l)}</text>` : '').join('');
+  const dots = xy.map((p, i) => `<circle cx="${p[0].toFixed(0)}" cy="${p[1].toFixed(0)}" r="${i === xy.length - 1 ? 6 : 3.5}" fill="${i === xy.length - 1 ? '#C4231A' : '#fff'}" stroke="#C4231A" stroke-width="2"><title>${msbE(points[i].l)}: ${formatMoney(points[i].v)}</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Остаток портфеля по месяцам"><polygon points="30,${H - 26} ${poly} ${xy[xy.length - 1][0].toFixed(0)},${H - 26}" fill="rgba(196,35,26,.08)"/><polyline points="${poly}" fill="none" stroke="#C4231A" stroke-width="3"/>${dots}${labels}</svg>`;
+}
+
+async function renderMsbDash() {
+  const box = document.getElementById('msbDash'); if (!box) return;
+  ['planFactBox'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
+  const oldKpi = document.querySelector('#dashboard .bi-kpi-grid'); if (oldKpi) oldKpi.style.display = 'none';
+  const oldRating = document.getElementById('managersBox'); if (oldRating && oldRating.closest('.card')) oldRating.closest('.card').style.display = 'none';
+  if (!bankBalanceDataLoaded) { try { await loadBankBalanceData(); } catch (e) { console.error(e); } }
+  if (!msb.loaded && !msb.loading && currentUser) { msbLoad().then(() => renderMsbDash()); }
+  const now = new Date(), mk = msbDashMonthKey(now), prev = new Date(now.getFullYear(), now.getMonth() - 1, 1), pk = msbDashMonthKey(prev);
+  const monthNames = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+  // ---- портфель ----
+  const bal = (allBankBalances || []).filter(b => String(b.period || '').slice(0, 4) >= '2026').slice().sort((a, b) => String(a.period).localeCompare(String(b.period)));
+  const last = bal[bal.length - 1], T = last ? last.totals || {} : {};
+  const tot = Number(T.totalPortfolio) || 0, ind = Number(T.individualPortfolio) || 0, leg = Number(T.legalPortfolio) || 0;
+  const asOf = last ? (last.reportDate || last.period) : '';
+  const points = [{ l: '01.01', v: MSB_BASE_2026.total }].concat(bal.filter(b => Number((b.totals || {}).totalPortfolio)).map(b => ({ l: String(b.reportDate || b.period).slice(0, 5), v: Number(b.totals.totalPortfolio) })));
+  const grow = tot ? tot - MSB_BASE_2026.total : 0;
+  const prow = (n, base, cur) => `<tr><td><b>${n}</b></td><td>${formatMoney(base)}</td><td>${cur ? formatMoney(cur) : '—'}</td><td>${cur ? `<span class="t" style="background:${cur >= base ? '#E3F5EA' : '#FBE4E1'};color:${cur >= base ? '#14693A' : '#A81E16'};">${msbDashSigned(cur - base)} · ${msbDashPct(cur, base)}</span>` : '—'}</td></tr>`;
+  const firstAct = bal.find(b => Number((b.totals || {}).activeClientsCount));
+  const act = Number(T.activeClientsCount) || 0, actBase = firstAct ? Number(firstAct.totals.activeClientsCount) : 0;
+  // ---- CRM ----
+  const S = msbDashStats(mk), P = msbDashStats(pk);
+  const prevPlace = {}; P.rows.filter(r => r.score > 0).forEach(r => prevPlace[r.name] = r.place);
+  const issuedSum = S.issued.reduce((s, c) => s + (Number(c.amount) || 0), 0), prevSum = P.issued.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const pipe = (allClients || []).filter(c => MSB_ISSUE_STAGES.indexOf(c.status) > -1);
+  const pipeSum = pipe.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const appr = pipe.filter(c => c.status !== 'Кредитный комитет'), kk = pipe.filter(c => c.status === 'Кредитный комитет');
+  const reached = S.calls.filter(c => c.result !== 'Не дозвонился').length, meetSet = S.calls.filter(c => c.result === 'Назначить встречу').length;
+  const tripsM = (msb.trips || []).filter(t => t.startAt && msbDashMonthKey(new Date(t.startAt)) === mk).length;
+  const interest = S.meets.filter(m => m.result === 'Интересно').length;
+  const mini = (a, b) => `<div class="mdx-mini"><span>${a}</span><b>${b}</b></div>`;
+  const tile = (l, v, s, ex, col, on) => `<div class="mdx-card mdx-tile${on ? ' mdx-click' : ''}" ${on ? `onclick="${on}"` : ''}><div class="mdx-kl">${l}</div><div class="mdx-kv" style="color:${col || '#141414'};">${v}</div><div class="mdx-ks">${s}</div>${ex || ''}</div>`;
+  // ---- рейтинг ----
+  const photoOf = n => ((allManagers || []).find(m => m.manager === n) || {}).photoUrl || '';
+  const med = p => p === 1 ? '#E8A317' : p === 2 ? '#9CA3AF' : p === 3 ? '#B45309' : '#ECECF0';
+  const rrow = r => {
+    const pp = prevPlace[r.name], tr = !pp ? '' : pp > r.place ? '▲ ' + (pp - r.place) + ' к прошлому месяцу' : pp < r.place ? '▼ ' + (r.place - pp) + ' к прошлому месяцу' : 'без изменений';
+    const idle = r.lastCall ? Math.floor((Date.now() - r.lastCall) / 86400000) : null;
+    const warn = idle !== null && idle >= 2 ? ` · <b style="color:#A81E16;">нет звонков ${idle} дн.</b>` : (!r.lastCall && msb.loaded ? ' · <b style="color:#A81E16;">звонков нет</b>' : '');
+    const ph = photoOf(r.name), ini = String(r.name).split(' ').map(x => x[0] || '').slice(0, 2).join('');
+    return `<tr><td><span class="mdx-place" style="background:${med(r.place)};color:${r.place <= 3 ? '#fff' : '#3F3F46'};">${r.place}</span></td>
+      <td><div class="mdx-who">${ph ? `<img src="${msbE(ph)}" alt="" loading="lazy">` : `<span class="mdx-ava">${msbE(ini)}</span>`}<div><b>${msbE(r.name)}</b><div class="mdx-ks">${tr}${tr && warn ? '' : ''}${tr ? warn : warn.replace(' · ', '')}</div></div></div></td>
+      <td><b>${r.issued ? formatMoney(r.issued) : '—'}</b><div class="mdx-ks">${r.deals} сделок</div></td><td>${r.calls}</td><td>${r.meets}</td><td>${r.apps}</td>
+      <td><div class="mdx-sc"><div class="mdx-bar"><i style="width:${r.score}%;"></i></div><b>${r.score}</b></div></td></tr>`;
+  };
+  // ---- выдача по неделям ----
+  const nd = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const weeks = [[1, 7], [8, 14], [15, 21], [22, nd]].map(w => ({ l: w[0] + '–' + w[1], v: S.issued.filter(c => { const d = msbDashDate(c.statusChangedAt || c.updatedAt); return d && d.getDate() >= w[0] && d.getDate() <= w[1]; }).reduce((s, c) => s + (Number(c.amount) || 0), 0) }));
+  const wmx = Math.max(1, ...weeks.map(w => w.v));
+  const near = pipe.slice().sort((a, b) => MSB_ISSUE_STAGES.indexOf(b.status) - MSB_ISSUE_STAGES.indexOf(a.status) || (Number(b.amount) || 0) - (Number(a.amount) || 0)).slice(0, 5);
+  box.innerHTML = `
+  <div class="mdx-card mdx-port">
+    <div class="mdx-pl">
+      <div class="mdx-kl">Остаток портфеля МСБ${asOf ? ' · на ' + msbE(asOf) : ''}</div>
+      <div class="mdx-big">${tot ? formatMoney(tot) : 'нет отчёта баланса'}</div>
+      <div class="mdx-row2">
+        <div style="background:${grow >= 0 ? '#E3F5EA' : '#FBE4E1'};color:${grow >= 0 ? '#14693A' : '#A81E16'};"><div class="mdx-kl" style="color:inherit;">Рост с 1 января</div><b>${tot ? msbDashSigned(grow) + ' · ' + msbDashPct(tot, MSB_BASE_2026.total) : '—'}</b></div>
+        <div style="background:#F3F4F7;"><div class="mdx-kl">На ${MSB_BASE_2026.date}</div><b>${formatMoney(MSB_BASE_2026.total)}</b></div>
+      </div>
+      <table class="mdx-t"><tr><th></th><th>${MSB_BASE_2026.date}</th><th>Сейчас</th><th>Рост</th></tr>${prow('Физ. лица', MSB_BASE_2026.individual, ind)}${prow('Юр. лица', MSB_BASE_2026.legal, leg)}${prow('Итого', MSB_BASE_2026.total, tot)}</table>
+    </div>
+    <div class="mdx-chart">${msbDashChart(points)}</div>
+  </div>
+  <div class="mdx-tiles">
+    ${tile('Активные клиенты', act ? act.toLocaleString('ru-RU') : '—', T.activeClientsBalance ? 'остаток ' + formatMoney(T.activeClientsBalance) : 'из отчёта баланса', actBase && act ? mini('с ' + msbE(String(firstAct.reportDate || firstAct.period)), (act - actBase >= 0 ? '+' : '') + (act - actBase).toLocaleString('ru-RU')) : '')}
+    ${tile('Выдано за ' + monthNames[now.getMonth()], formatMoney(issuedSum), S.issued.length + ' сделок', mini(monthNames[prev.getMonth()], formatMoney(prevSum) + ' · ' + P.issued.length), '#14693A', "openDashboardClients('issued')")}
+    ${tile('Будут выданы', pipe.length + ' · ' + formatMoney(pipeSum), 'КК, одобрено, мониторинг', mini('одобрено / мониторинг', appr.length + ' · ' + formatMoney(appr.reduce((s, c) => s + (Number(c.amount) || 0), 0))) + mini('кредитный комитет', kk.length), '#2A4BA0', "openDashboardClients('closeToIssue')")}
+    ${tile('Визиты', S.meets.length + ' встреч', tripsM + ' выездов на территорию', mini('интересно', interest), '', 'openMsbControl()')}
+    ${tile('Обзвон', S.calls.length + ' звонков', 'дозвон ' + (S.calls.length ? Math.round(reached / S.calls.length * 100) : 0) + '%', mini('назначено встреч', meetSet), '', 'openMsbControl()')}
+  </div>
+  <div class="mdx-bottom">
+    <div class="mdx-card"><div class="mdx-h"><b>Рейтинг менеджеров</b><span>${monthNames[now.getMonth()]} · баллы: выдача ${MSB_RATING_W.issued}%, звонки ${MSB_RATING_W.calls}%, встречи ${MSB_RATING_W.meets}%, заявки ${MSB_RATING_W.apps}%</span></div>
+      <div style="overflow-x:auto;"><table class="mdx-t mdx-rt"><tr><th></th><th>Менеджер</th><th>Выдано</th><th>Звонки</th><th>Встречи</th><th>Заявки</th><th>Баллы</th></tr>${S.rows.map(rrow).join('') || '<tr><td colspan="7" class="mdx-ks">Нет данных</td></tr>'}</table></div></div>
+    <div class="mdx-side">
+      <div class="mdx-card"><div class="mdx-h"><b>Выдача по неделям</b><span>${monthNames[now.getMonth()]}</span></div>${weeks.map(w => `<div class="mdx-wk"><span>${w.l}</span><div class="mdx-bar"><i style="width:${Math.round(w.v / wmx * 100)}%;background:#1E9E5A;"></i></div><b>${w.v ? formatMoney(w.v) : '—'}</b></div>`).join('')}</div>
+      <div class="mdx-card"><div class="mdx-h"><b>Ближайшие выдачи</b><span>${pipe.length}</span></div>${near.map(c => `<div class="mdx-near"><b>${msbE(c.name)}</b> · ${formatMoney(c.amount)} · ${msbE(c.status)}<div class="mdx-ks">${msbE(c.manager || '')}</div></div>`).join('') || '<div class="mdx-ks">Нет сделок на финальных этапах</div>'}${pipe.length > 5 ? `<a class="mdx-link" onclick="openDashboardClients('closeToIssue')">Все ${pipe.length} →</a>` : ''}</div>
+    </div>
+  </div>`;
+}
 
 async function renderPlanFactBox() {
   const box = document.getElementById('planFactBox');
@@ -7723,6 +7888,7 @@ async function msbLoad(force) {
   } catch (e) { msb.err = 'Не удалось загрузить данные'; console.error(e); }
   msb.loading = false;
   if (msb.open) msbRender();
+  try { if (document.getElementById('msbDash')) renderMsbDash(); } catch (e) {}
 }
 
 // ---------- расчёты ----------
