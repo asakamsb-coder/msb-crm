@@ -877,6 +877,53 @@ textarea.msb-in{height:auto;padding:12px 14px;resize:none;}
 .msb-green{background:linear-gradient(145deg,#22A862,#14693A);}
 .msb-light{background:#fff;color:#141414;box-shadow:0 2px 8px rgba(20,20,30,.08);}
 .msb-err{color:#A81E16;font-size:12.5px;font-weight:700;margin-top:6px;}
+.cy-st{position:relative;padding-left:2px;}
+.cy-si{display:flex;gap:12px;align-items:flex-start;position:relative;padding:6px 0;}
+.cy-si:not(:last-child):before{content:'';position:absolute;left:13px;top:30px;bottom:-6px;width:2px;background:#E4E5EA;}
+.cy-si.d:not(:last-child):before{background:#1E9E5A;}
+.cy-dot{flex:none;width:28px;height:28px;border-radius:50%;background:#D9DAE0;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;}
+.cy-si.d .cy-dot{background:#1E9E5A;}
+.cy-si.c .cy-dot{background:#C4231A;}
+.cy-si.p .cy-dot{background:#E8A317;}
+.cy-sn{font-size:14px;font-weight:700;color:#3F3F46;padding-top:5px;}
+.cy-si.d .cy-sn{color:#14693A;}
+.cy-si.c .cy-sn,.cy-si.p .cy-sn{color:#141414;font-weight:800;}
+.cy-ss{font-size:11.5px;font-weight:700;color:#8A5A00;margin-top:1px;}
+.cy-si.c .cy-ss{color:#A81E16;}
+.cy-media{display:flex;gap:8px;flex-wrap:wrap;}
+.cy-th{width:64px;height:64px;border-radius:14px;background:#D9DAE0 center/cover no-repeat;position:relative;flex:none;border:none;padding:0;cursor:pointer;overflow:hidden;}
+.cy-th.v{background:#2A2B31;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.cy-th small{position:absolute;left:4px;bottom:4px;background:rgba(0,0,0,.55);color:#fff;border-radius:6px;padding:1px 5px;font-size:11px;font-weight:800;}
+.cy-th i{position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-style:normal;font-size:13px;line-height:20px;text-align:center;}
+.cy-cap{width:64px;height:64px;border-radius:14px;border:2px dashed #C4231A;background:#fff;color:#C4231A;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10.5px;font-weight:800;cursor:pointer;font-family:inherit;flex:none;}
+.cy-ok{font-size:12px;font-weight:800;color:#14693A;margin-top:8px;}
+.cy-req{font-size:11.5px;font-weight:800;border-radius:10px;padding:3px 8px;background:#FBE4E1;color:#A81E16;}
+.cy-done{font-size:11.5px;font-weight:800;border-radius:10px;padding:3px 8px;background:#E3F5EA;color:#14693A;}
+.cy-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cy-two .msb-fl{margin-bottom:0;}
+.cy-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cy-ghost{border:none;border-radius:16px;min-height:50px;background:transparent;color:#141414;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer;}
+.cy-ref{border:none;border-radius:16px;min-height:50px;background:#FBE4E1;color:#A81E16;font-weight:800;font-size:15px;font-family:inherit;cursor:pointer;}
+.cy-dec{display:block;width:100%;text-align:left;border:none;border-radius:14px;padding:11px 14px;margin-top:8px;font-family:inherit;cursor:pointer;}
+.cy-dec b{display:block;font-size:15px;}
+.cy-dec span{font-size:12px;font-weight:600;}
+.cy-srcs{display:flex;flex-wrap:wrap;gap:6px;}
+.cy-srcs button{border:none;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:800;background:#F0F0F2;color:#141414;font-family:inherit;cursor:pointer;}
+.cy-srcs button.on{background:#141414;color:#fff;}
+.cy-hint{font-size:12px;font-weight:800;color:#14693A;margin-top:4px;min-height:14px;}
+.cy-rl{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid #EEEFF2;font-size:15px;cursor:pointer;}
+.cy-rl.on{color:#C4231A;font-weight:800;}
+.cy-rl.on:after{content:'✓';font-weight:900;}
+#cyCam{position:fixed;inset:0;z-index:400;background:#000;display:flex;flex-direction:column;}
+#cyCam video{flex:1;width:100%;object-fit:cover;min-height:0;}
+.cy-cbar{display:flex;align-items:center;justify-content:space-between;padding:18px 26px calc(18px + env(safe-area-inset-bottom));background:#000;color:#fff;}
+.cy-cbar button.x{border:none;background:none;color:#fff;font-size:15px;font-weight:700;font-family:inherit;width:70px;text-align:left;cursor:pointer;}
+.cy-shot{width:72px;height:72px;border-radius:50%;border:5px solid #fff;background:#fff;cursor:pointer;}
+.cy-shot.rec{background:#E0281E;}
+.cy-shot.on{border-radius:18px;transform:scale(.8);}
+.cy-ctop{position:absolute;top:calc(14px + env(safe-area-inset-top));left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:14px;text-shadow:0 1px 4px rgba(0,0,0,.6);}
+.cy-ctop b{background:#E0281E;border-radius:8px;padding:2px 8px;margin-left:6px;}
+.cy-cmsg{width:70px;font-size:12px;text-align:right;}
 .msb-kv{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #F0F0F3;font-size:13px;}
 .msb-kv span{color:#3F3F46;}
 .msb-kv b{text-align:right;word-break:break-word;}
@@ -2217,7 +2264,7 @@ body.role-mahalla-banker .footer{display:none;}
   </div>
 
   <nav class="nav">
-    <a class="active" data-msb-only="true" data-hide-for-lawyer="true" onclick="showMsbSales(this)"><span class="icon"></span><span data-i18n="navSales">МСБ ПРОДАЖИ</span></a>
+    <a class="active" data-msb-only="true" data-hide-for-lawyer="true" data-hide-msb-cycle="true" onclick="showMsbSales(this)"><span class="icon"></span><span data-i18n="navSales">МСБ ПРОДАЖИ</span></a>
     <a data-msb-only="true" data-hide-for-collateral="true" onclick="showPage('nplPage', this)"><span class="icon"></span><span data-i18n="navNpl">NPL / ПРОСРОЧКА</span></a>
     <a data-admin="true" data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('slaPage', this)"><span class="icon"></span><span data-i18n="navSla">SLA КОНТРОЛЬ</span></a>
     <a data-msb-only="true" data-hide-for-monitor="true" onclick="showPage('statsPage', this)"><span class="icon"></span><span data-i18n="navAccounting">БУХГАЛТЕРИЯ</span></a>
@@ -4272,7 +4319,9 @@ body.role-mahalla-banker .footer{display:none;}
       <div class="comment-box" id="drawerComment">-</div>
     </div>
 
-    <div class="panel" style="margin-top:18px;" id="monitoringPanel">
+    <div class="panel" style="margin-top:18px;" id="cyclePanel"></div>
+
+    <div class="panel" style="margin-top:18px;display:none;" id="monitoringPanel">
       <h2 style="font-size:18px;margin-bottom:10px;">🔍 Проверка "4 глаз"</h2>
 
       <div id="deviceOverlapWarning" data-admin="true" style="display:none;background:#FDEAEC;border:1px solid #F3B4BC;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#B4232F;font-weight:700;"></div>
@@ -5189,7 +5238,7 @@ function tryAutoLogin() {
 // умолчанию, и кажется, что данные (например, в блоке NPL) "исчезли".
 function restoreLastPage() {
   if (typeof isMbShell === 'function' && isMbShell()) return;
-  if (currentUser && currentUser.role === 'LAWYER') {
+  if (currentUser && (currentUser.role === 'LAWYER' || currentUser.role === 'CREDIT_MONITOR')) {
     const nl = document.querySelector(".nav a[onclick*=\"showPage('nplPage'\"]");
     if (nl) { showPage('nplPage', nl); return; }
   }
@@ -5331,7 +5380,10 @@ function applyRoleView() {
   document.querySelectorAll('[data-hide-for-lawyer="true"]').forEach(el => {
     el.classList.toggle('hidden-by-role', isLawyer);
   });
-  if (isLawyer) {
+  // Юрмониторинг и залоговик больше не участвуют в МСБ продажах — весь цикл ведёт менеджер
+  const noMsbCycle = currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'COLLATERAL_OFFICER';
+  document.querySelectorAll('[data-hide-msb-cycle="true"]').forEach(el => { if (noMsbCycle) el.classList.add('hidden-by-role'); });
+  if (isLawyer || currentUser.role === 'CREDIT_MONITOR') {
     const nplLink = document.querySelector(".nav a[onclick*=\"showPage('nplPage'\"]");
     if (nplLink) { document.querySelectorAll('.nav a').forEach(x => x.classList.remove('active')); nplLink.classList.add('active'); }
   }
@@ -5882,6 +5934,7 @@ const APP_DICT = {
   statusNegotiation: { ru: 'Переговоры', uz: "Muzokaralar" },
   statusDocsCollecting: { ru: 'Документы собираются', uz: "Hujjatlar yig'ilmoqda" },
   statusFinAnalysis: { ru: 'Финанализ', uz: "Moliyaviy tahlil" },
+  statusStudy: { ru: 'Изучение бизнеса и залога', uz: "Biznes va garovni o'rganish" },
   statusCollateral: { ru: 'Залоговик', uz: "Garov mutaxassisi" },
   statusCreditCommittee: { ru: 'Кредитный комитет', uz: "Kredit qo'mitasi" },
   statusApproved: { ru: 'Одобрено', uz: "Tasdiqlangan" },
@@ -6448,7 +6501,7 @@ const MSB_PLAN_Q3_2026 = 481400000000;
 // ======================= Главный дашборд «МСБ продажи» =======================
 // Портфель: точка отсчёта 01.01.2026 (реальный портфель), сегодня — последний отчёт «Баланс банка».
 const MSB_BASE_2026 = { date: '01.01.2026', individual: 611.9e9, legal: 524.5e9, total: 1136.4e9 };
-const MSB_ISSUE_STAGES = ['Кредитный комитет', 'Одобрено', 'На проверке в мониторинге', 'Мониторинг пройден'];
+const MSB_ISSUE_STAGES = ['Кредитный комитет', 'Одобрено'];
 const MSB_RATING_W = { issued: 50, calls: 20, meets: 20, apps: 10 };
 
 function msbDashMonthKey(d) { return d.getFullYear() + '-' + nplPad2(d.getMonth() + 1); }
@@ -6468,7 +6521,7 @@ function msbDashStats(mk) {
   calls.forEach(c => names.add(c.manager)); meets.forEach(m => names.add(m.manager));
   const rows = Array.from(names).map(n => {
     const mine = cl.filter(c => String(c.manager || '').trim() === n), iss = mine.filter(issuedM);
-    return { name: n, issued: iss.reduce((s, c) => s + (Number(c.amount) || 0), 0), deals: iss.length, calls: calls.filter(c => c.manager === n).length,
+    return { name: n, issued: iss.reduce((s, c) => s + (Number(c.issuedSum) || Number(c.amount) || 0), 0), deals: iss.length, calls: calls.filter(c => c.manager === n).length,
       meets: meets.filter(m => m.manager === n).length, apps: mine.filter(createdM).length,
       lastCall: Math.max(0, ...(msb.calls || []).filter(c => c.manager === n).map(c => c.tapAt)) };
   });
@@ -6526,7 +6579,8 @@ async function renderMsbDash() {
   // ---- CRM ----
   const S = msbDashStats(mk), P = msbDashStats(pk);
   const prevPlace = {}; P.rows.filter(r => r.score > 0).forEach(r => prevPlace[r.name] = r.place);
-  const issuedSum = S.issued.reduce((s, c) => s + (Number(c.amount) || 0), 0), prevSum = P.issued.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const issuedSum = S.issued.reduce((s, c) => s + (Number(c.issuedSum) || Number(c.amount) || 0), 0), prevSum = P.issued.reduce((s, c) => s + (Number(c.issuedSum) || Number(c.amount) || 0), 0);
+  const issuedOk = S.issued.filter(c => String(c.reconcile || '').indexOf('Подтверждено') === 0).length;
   const pipe = (allClients || []).filter(c => MSB_ISSUE_STAGES.indexOf(c.status) > -1 && clIsActive(c));
   const pipeSum = pipe.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const appr = pipe.filter(c => c.status !== 'Кредитный комитет'), kk = pipe.filter(c => c.status === 'Кредитный комитет');
@@ -6569,8 +6623,8 @@ async function renderMsbDash() {
   </div>
   <div class="mdx-tiles">
     ${tile('Активные клиенты', act ? act.toLocaleString('ru-RU') : '—', T.activeClientsBalance ? 'остаток ' + formatMoney(T.activeClientsBalance) : 'из загрузки портфеля', actBase && act ? mini('с ' + msbE(msbDashDateRu(firstAct.reportDate || firstAct.period)), (act - actBase >= 0 ? '+' : '') + (act - actBase).toLocaleString('ru-RU')) : '')}
-    ${tile('Выдано за ' + monthNames[now.getMonth()], formatMoney(issuedSum), S.issued.length + ' сделок', mini(monthNames[prev.getMonth()], formatMoney(prevSum) + ' · ' + P.issued.length), '#14693A', "openDashboardClients('issued')")}
-    ${tile('Будут выданы', pipe.length + ' · ' + formatMoney(pipeSum), 'КК, одобрено, мониторинг · только активные', mini('одобрено / мониторинг', appr.length + ' · ' + formatMoney(appr.reduce((s, c) => s + (Number(c.amount) || 0), 0))) + mini('кредитный комитет', kk.length), '#2A4BA0', "openDashboardClients('closeToIssue')")}
+    ${tile('Выдано за ' + monthNames[now.getMonth()], formatMoney(issuedSum), S.issued.length + ' сделок · сверено с портфелем ' + issuedOk, mini(monthNames[prev.getMonth()], formatMoney(prevSum) + ' · ' + P.issued.length), '#14693A', "openDashboardClients('issued')")}
+    ${tile('Будут выданы', pipe.length + ' · ' + formatMoney(pipeSum), 'КК и одобрено · только активные', mini('одобрено', appr.length + ' · ' + formatMoney(appr.reduce((s, c) => s + (Number(c.amount) || 0), 0))) + mini('кредитный комитет', kk.length), '#2A4BA0', "openDashboardClients('closeToIssue')")}
     ${tile('Визиты', S.meets.length + ' встреч', tripsM + ' выездов на территорию', mini('интересно', interest), '', 'openMsbControl()')}
     ${tile('Обзвон', S.calls.length + ' звонков', 'дозвон ' + (S.calls.length ? Math.round(reached / S.calls.length * 100) : 0) + '%', mini('назначено встреч', meetSet), '', 'openMsbControl()')}
   </div>
@@ -6861,7 +6915,7 @@ function calcStatsFromClients(clients) {
 }
 
 function calcFunnelFromClients(clients) {
-  const statuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано','Отказ','Отложено','На рассмотрении'];
+  const statuses = ['Новый клиент','Документы собираются','Изучение бизнеса и залога','Кредитный комитет','Одобрено','Выдано','Отказ','Отложено'];
   const funnel = {};
   statuses.forEach(s => funnel[s] = {count:0, amount:0});
   clients.forEach(c => {
@@ -7111,16 +7165,11 @@ function renderSalesManagerConversion(managers) {
 
 function getSlaLimit(status) {
   const limits = {
-    'Новый клиент': 3,
-    'Переговоры': 5,
+    'Новый клиент': 2,
     'Документы собираются': 7,
-    'Финанализ': 5,
-    'На рассмотрении': 5,
+    'Изучение бизнеса и залога': 5,
     'Кредитный комитет': 3,
-    'Одобрено': 2,
-    'На проверке в мониторинге': 3,
-    'Залоговик': 3,
-    'Мониторинг пройден': 2
+    'Одобрено': 3
   };
 
   return limits[status] || 7;
@@ -7129,15 +7178,10 @@ function getSlaLimit(status) {
 function getActiveStatuses() {
   return [
     'Новый клиент',
-    'Переговоры',
     'Документы собираются',
-    'Финанализ',
-    'На рассмотрении',
+    'Изучение бизнеса и залога',
     'Кредитный комитет',
-    'Одобрено',
-    'На проверке в мониторинге',
-    'Залоговик',
-    'Мониторинг пройден'
+    'Одобрено'
   ];
 }
 
@@ -7427,7 +7471,7 @@ function calcRegionsFromClients(clients) {
       map[region].issuedCount++;
     }
 
-    if (['Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','На рассмотрении'].includes(c.status)) {
+    if (getActiveStatuses().includes(c.status)) {
       map[region].potentialAmount += amount;
     }
   });
@@ -7893,8 +7937,8 @@ function vzHomeHtml(c) {
 const MSB_NORM = { calls: 30, meets: 5, apps: 2 };
 const MSB_SRC = { 'Наш заёмщик': ['#E3F5EA', '#14693A'], 'Другой банк': ['#EEF1FB', '#2A4BA0'], 'Махалля': ['#FFF1CF', '#8A5A00'], 'Выезд': ['#F3E8FF', '#6B21A8'] };
 const MSB_REFUSE = ['Не нужен кредит', 'Работает с другим банком', 'Дорого / высокая ставка', 'Нет залога', 'Неверный номер', 'Другое'];
-const MSB_STAGES = [['Заявка', ['Новый клиент', 'Переговоры']], ['Документы', ['Документы собираются']], ['Анализ', ['Финанализ', 'Залоговик', 'Кредитный комитет']], ['К выдаче', ['Одобрено', 'На проверке в мониторинге', 'Мониторинг пройден', 'На рассмотрении']], ['Выдано', ['Выдано']]];
-const MSB_STAGE_DAYS = { 'Новый клиент': 3, 'Переговоры': 5, 'Документы собираются': 10, 'Финанализ': 5, 'Залоговик': 7, 'Кредитный комитет': 5, 'Одобрено': 5, 'На проверке в мониторинге': 3, 'Мониторинг пройден': 3 };
+const MSB_STAGES = [['Заявка', ['Новый клиент']], ['Документы', ['Документы собираются']], ['Изучение', ['Изучение бизнеса и залога']], ['КК', ['Кредитный комитет']], ['Одобрено', ['Одобрено']], ['Выдано', ['Выдано']]];
+const MSB_STAGE_DAYS = { 'Новый клиент': 2, 'Документы собираются': 7, 'Изучение бизнеса и залога': 5, 'Кредитный комитет': 3, 'Одобрено': 3 };
 let msb = { open: false, boss: false, tab: 'home', leads: [], calls: [], trips: [], loaded: false, loading: false, src: 'all', lst: 'queue', q: '', lead: null, res: null, meet: null, ctl: 'day', imp: null, err: '' };
 
 function msbMe() { return String((currentUser && (currentUser.fullName || currentUser.login)) || '').trim(); }
@@ -7982,7 +8026,7 @@ function msbRender() {
     if (msb.tab === 'home') body = msbHomeHtml();
     else if (msb.tab === 'leads') body = msb.lead ? msbLeadHtml() : msbLeadsHtml();
     else if (msb.tab === 'trip') body = msbTripHtml();
-    else if (msb.tab === 'deals') body = msbDealsHtml();
+    else if (msb.tab === 'deals') body = msb.deal ? msbDealHtml() : msbDealsHtml();
     else if (msb.tab === 'ctl') body = msbCtlHtml();
     else if (msb.tab === 'imp') body = msbImpHtml();
     else if (msb.tab === 'base') body = msbBaseHtml();
@@ -7991,7 +8035,7 @@ function msbRender() {
     + (msb.boss ? `<button type="button" onclick="msbClose()">${msbIcon('x', 22)}<span>Закрыть</span></button>` : `<button type="button" onclick="msbLogout()">${msbIcon('logout', 22)}<span>Выйти</span></button>`);
   box.innerHTML = `<div class="msb-scroll" id="msbScroll">${body}</div><nav class="msb-nav">${nav}</nav>`;
 }
-function msbGo(t) { msb.tab = t; msb.lead = null; msbRender(); const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0; }
+function msbGo(t) { msb.tab = t; msb.lead = null; msb.deal = null; msbRender(); const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0; }
 function msbLogout() { if (typeof logout === 'function') logout(); else location.reload(); }
 function msbHero(title, sub, extra) { return `<div class="msb-hero"><div class="msb-hs">${sub}</div><div class="msb-ht">${title}</div>${extra || ''}</div>`; }
 
@@ -8000,7 +8044,7 @@ function msbHomeHtml() {
   const me = msbMe(), today = msbTodayIso(), mk = today.slice(0, 7);
   const cl = msbMyClients();
   const issued = cl.filter(c => c.status === 'Выдано' && String((msbDateOf(c.statusChangedAt) ? msbIso(msbDateOf(c.statusChangedAt)) : '')).slice(0, 7) === mk);
-  const issuedSum = issued.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const issuedSum = issued.reduce((s, c) => s + (Number(c.issuedSum) || Number(c.amount) || 0), 0);
   const callsT = msbCallsOn(today, me), reached = callsT.filter(c => c.result !== 'Не дозвонился').length;
   const meetsT = msbMeetsOn(today, me).length;
   const appsT = cl.filter(c => { const d = msbDateOf(c.createdAt || c.date); return d && msbIso(d) === today; }).length;
@@ -8010,7 +8054,7 @@ function msbHomeHtml() {
   const srcBox = (s, why) => { const c = MSB_SRC[s]; return `<button type="button" class="msb-src" style="background:${c[0]};color:${c[1]};" onclick="msb.src='${s}';msb.lst='queue';msbGo('leads')"><span>${s}</span><b>${cnt(s)}</b><small>${why}</small></button>`; };
   const top = q.sort((x, y) => msbPrio(x) - msbPrio(y)).slice(0, 4);
   const meetLeads = msb.leads.filter(l => l.status === 'Встреча' && l.nextDate && l.nextDate.slice(0, 10) === today);
-  const deals = cl.filter(c => { const i = msbStageIdx(c.status); return i >= 1 && i <= 3; }).sort((a, b) => msbStageIdx(b.status) - msbStageIdx(a.status)).slice(0, 6);
+  const deals = cl.filter(c => { const i = msbStageIdx(c.status); return i >= 2 && i <= 4; }).sort((a, b) => msbStageIdx(b.status) - msbStageIdx(a.status)).slice(0, 6);
   const monthCalls = msb.calls.filter(c => c.manager === me && msbDayOf(c.tapAt).slice(0, 7) === mk);
   const checked = monthCalls.filter(c => c.check), ok = checked.filter(c => c.check === 'Подтвердил').length, flagged = monthCalls.filter(c => c.flags).length;
   const pend = msbPending();
@@ -8022,7 +8066,7 @@ function msbHomeHtml() {
       <div class="msb-card"><div class="msb-h"><b>Рекомендации на обзвон</b><a onclick="msb.src='all';msb.lst='queue';msbGo('leads')">Все ${q.length}</a></div><div class="msb-srcs">${srcBox('Наш заёмщик', 'повторный кредит')}${srcBox('Другой банк', 'РКО и кредит')}${srcBox('Махалля', 'нужен кредит')}</div></div>
       <div class="msb-card"><div class="msb-h"><b>Позвонить сейчас</b></div>${top.length ? top.map(msbLeadRow).join('') : '<div class="msb-empty">Очередь пуста</div>'}</div>
       ${meetLeads.length ? `<div class="msb-card"><div class="msb-h"><b>Встречи сегодня</b></div>${meetLeads.map(l => `<div class="msb-meet"><b class="msb-time">${msbE((l.nextDate || '').slice(11, 16) || '—')}</b><div style="flex:1;min-width:0;"><b>${msbE(l.name)}</b><div class="msb-sub">${msbE(l.director || '')}${l.address ? ' · ' + msbE(l.address) : ''}</div></div>${msbCallBtn(l)}</div>`).join('')}</div>` : ''}
-      ${deals.length ? `<div class="msb-card"><div class="msb-h"><b>На стадии выдачи</b><a onclick="msbGo('deals')">Все</a></div><div class="msb-hs-row">${deals.map(c => `<div class="msb-deal-s"><b>${msbE(c.name)}</b><div class="msb-num">${vzFmt(c.amount)}</div>${msbTag(c.status, msbStageIdx(c.status) === 3 ? ['#E3F5EA', '#14693A'] : ['#FFF1CF', '#8A5A00'])}</div>`).join('')}</div></div>` : ''}
+      ${deals.length ? `<div class="msb-card"><div class="msb-h"><b>На стадии выдачи</b><a onclick="msbGo('deals')">Все</a></div><div class="msb-hs-row">${deals.map(c => `<div class="msb-deal-s" style="cursor:pointer;" onclick="msbDealOpen('${msbE(c.inn)}')"><b>${msbE(c.name)}</b><div class="msb-num">${vzFmt(c.amount)}</div>${msbTag(c.status, msbStageIdx(c.status) === 4 ? ['#E3F5EA', '#14693A'] : ['#FFF1CF', '#8A5A00'])}</div>`).join('')}</div></div>` : ''}
       <div class="msb-card"><div class="msb-h"><b>Качество обзвона</b><span class="msb-sub">месяц</span></div><div class="msb-two"><div style="background:#E3F5EA;color:#14693A;"><small>Подтверждено прозвоном</small><b>${ok} из ${checked.length}</b></div><div style="background:${flagged ? '#FBE4E1' : '#F3F4F7'};color:${flagged ? '#A81E16' : '#141414'};"><small>Подозрительных отметок</small><b>${flagged}</b></div></div></div>
       ${msb.err ? `<div class="msb-card" style="color:#A81E16;">${msbE(msb.err)}</div>` : ''}${!msb.loaded ? '<div class="msb-empty">Загрузка…</div>' : ''}
     </div>`;
@@ -8122,33 +8166,313 @@ async function msbResultSave() {
 // ---------- быстрая заявка ----------
 function msbAppOpen(inn) {
   const l = inn ? msbFindLead(inn) : null;
-  msb.app = { name: l ? l.name : '', inn: l ? l.inn : '', phone: l ? String(l.phone || '') : '', business: l ? (l.sphere || '') : '', product: 'Кредит', amount: '', comment: l && l.why ? l.why : '', err: '' };
+  const srcMap = { 'Наш заёмщик': 'Наш портфель', 'Другой банк': 'Внешняя база', 'Махалля': 'Махалля', 'Выезд': 'Выезд' };
+  const ls = l ? Object.keys(srcMap).find(k => String(l.source || '').indexOf(k) > -1) : '';
+  msb.app = { name: l ? l.name : '', inn: l ? l.inn : '', phone: l ? String(l.phone || '') : '', business: l ? (l.sphere || '') : '', product: 'Оборотный кредит', term: '12 мес.', amount: '', purpose: '', source: ls ? srcMap[ls] : (msbActiveTrip() ? 'Выезд' : 'Пришёл сам'), comment: l && l.why ? l.why : '', err: '' };
+  msbAppSheet();
+}
+function msbAppInnHint(v) {
+  const inn = cyInn(v); if (inn.length < 9) return '';
+  const c = (allClients || []).find(x => cyInn(x.inn) === inn && ['Отказ', 'Выдано'].indexOf(x.status) < 0);
+  if (c) return '<span style="color:#A81E16;">уже в работе · ' + msbE(c.status) + ' · ' + msbE(c.manager || '') + '</span>';
+  const l = msbFindLead(inn);
+  return l ? '✓ найден в базе · ' + msbE(String(l.source || '').split(',')[0]) : '';
+}
+function msbAppInn(v) {
+  const a = msb.app; a.inn = v;
+  const h = document.getElementById('cyInnHint'); if (h) h.innerHTML = msbAppInnHint(v);
+}
+function msbAppInnDone() {
+  const a = msb.app, l = msbFindLead(cyInn(a.inn)); if (!l) return;
+  if (!a.name) a.name = l.name || ''; if (!a.phone) a.phone = String(l.phone || ''); if (!a.business) a.business = l.sphere || '';
+  const s = String(l.source || '');
+  if (s.indexOf('Наш заёмщик') > -1) a.source = 'Наш портфель'; else if (s.indexOf('Другой банк') > -1) a.source = 'Внешняя база'; else if (s.indexOf('Махалля') > -1) a.source = 'Махалля';
   msbAppSheet();
 }
 function msbAppSheet() {
   const a = msb.app, f = (k, l, t) => `<div class="msb-fl"><span>${l}</span><input class="msb-in" ${t || ''} value="${msbE(a[k])}" oninput="msb.app.${k}=this.value"></div>`;
-  const prods = ['Кредит', 'Оборотный кредит', 'Инвестиционный кредит', 'Лизинг', 'Овердрафт', 'РКО', 'Эквайринг'];
-  vzSheetOpen(`<div class="vzs-h">Новая заявка</div>${f('name', 'Клиент / предприятие')}${f('inn', 'ИНН', 'inputmode="numeric"')}${f('phone', 'Телефон (998XXXXXXXXX)', 'inputmode="tel"')}${f('business', 'Бизнес / сфера')}
-    <div class="msb-fl"><span>Продукт</span><div class="msb-sel" onclick="vzPick('Продукт', ${msbE(JSON.stringify(prods))}, msb.app.product, function(v){msb.app.product=v;msbAppSheet();})"><b>${msbE(a.product)}</b></div></div>
-    ${f('amount', 'Сумма, сум', 'inputmode="numeric"')}<div class="msb-fl"><span>Комментарий</span><textarea class="msb-in" style="min-height:60px;" oninput="msb.app.comment=this.value">${msbE(a.comment)}</textarea></div>
+  const prods = ['Оборотный кредит', 'Инвестиционный кредит', 'Кредит', 'Лизинг', 'Овердрафт', 'Микрозайм'];
+  vzSheetOpen(`<div class="vzs-h">Новая заявка</div>${f('name', 'Клиент / предприятие')}
+    <div class="msb-fl"><span>ИНН</span><input class="msb-in" inputmode="numeric" value="${msbE(a.inn)}" oninput="msbAppInn(this.value)" onchange="msbAppInnDone()"><div class="cy-hint" id="cyInnHint">${msbAppInnHint(a.inn)}</div></div>
+    ${f('phone', 'Телефон (998XXXXXXXXX)', 'inputmode="tel"')}
+    <div class="cy-two"><div class="msb-fl"><span>Продукт</span><div class="msb-sel" onclick="vzPick('Продукт', ${msbE(JSON.stringify(prods))}, msb.app.product, function(v){msb.app.product=v;msbAppSheet();})"><b>${msbE(a.product)}</b></div></div>
+    <div class="msb-fl"><span>Срок</span><div class="msb-sel" onclick="vzPick('Срок', ${msbE(JSON.stringify(CY_TERMS))}, msb.app.term, function(v){msb.app.term=v;msbAppSheet();})"><b>${msbE(a.term)}</b></div></div></div>
+    <div style="height:10px"></div>${f('amount', 'Сумма, сум', 'inputmode="numeric"')}${f('purpose', 'Цель')}${f('business', 'Бизнес / сфера')}
+    <div class="msb-fl"><span>Источник</span><div class="cy-srcs">${CY_SOURCES.map((s, i) => `<button type="button" class="${a.source === s ? 'on' : ''}" onclick="msb.app.source=CY_SOURCES[${i}];msbAppSheet()">${msbE(s)}</button>`).join('')}</div></div>
     <div class="msb-err">${msbE(a.err)}</div><button type="button" class="vzs-go" onclick="msbAppSave()">Создать заявку</button>`);
 }
 async function msbAppSave() {
   const a = msb.app; if (!a || a.saving) return;
   const phone = String(a.phone || '').replace(/\D/g, '').replace(/^(\d{9})$/, '998$1');
+  const amount = String(a.amount || '').replace(/\D/g, '');
   if (!a.name.trim()) { a.err = 'Укажите клиента'; return msbAppSheet(); }
-  if (!String(a.inn).replace(/\D/g, '')) { a.err = 'Укажите ИНН'; return msbAppSheet(); }
+  if (!cyInn(a.inn)) { a.err = 'Укажите ИНН'; return msbAppSheet(); }
   if (!/^998\d{9}$/.test(phone)) { a.err = 'Телефон в формате 998XXXXXXXXX'; return msbAppSheet(); }
+  if (!(Number(amount) > 0)) { a.err = 'Укажите сумму'; return msbAppSheet(); }
+  if (!String(a.purpose || '').trim()) { a.err = 'Укажите цель'; return msbAppSheet(); }
   a.saving = true;
   try {
-    const r = await msbPost({ webAction: 'createClient', name: a.name.trim(), inn: String(a.inn).replace(/\s/g, ''), phone: phone, business: a.business, industry: a.business, product: a.product, amount: String(a.amount || '').replace(/\D/g, ''), comment: a.comment, status: 'Новый клиент' });
+    const purpose = String(a.purpose).trim() + ' · ' + a.term;
+    const r = await msbPost({ webAction: 'createClient', name: a.name.trim(), inn: cyInn(a.inn), phone: phone, business: a.business, industry: a.business, product: a.product, amount: amount, purpose: purpose, comment: a.comment, source: a.source, status: 'Новый клиент', deviceInfo: typeof getDeviceFingerprint === 'function' ? getDeviceFingerprint() : '' });
     a.saving = false;
     if (!r.success) { a.err = r.message || 'Не удалось создать'; return msbAppSheet(); }
     vzSheetClose();
     try { allClients = (await fetchJSON('clients')) || allClients; } catch (e) {}
-    const l = msbFindLead(String(a.inn).replace(/\D/g, '')); if (l) l.inPipeline = { status: 'Новый клиент', manager: msbMe() };
-    msb.lead = null; msb.tab = 'deals'; msbRender();
+    const l = msbFindLead(cyInn(a.inn)); if (l) l.inPipeline = { status: 'Новый клиент', manager: msbMe() };
+    msb.lead = null; msbDealOpen(cyInn(a.inn));
   } catch (e) { a.saving = false; a.err = 'Не удалось связаться с сервером'; msbAppSheet(); }
+}
+
+// ---------- Жизненный цикл заявки (ведёт менеджер) ----------
+const CY_STEPS = ['Новый клиент', 'Документы собираются', 'Изучение бизнеса и залога', 'Кредитный комитет', 'Одобрено', 'Выдано'];
+const CY_NAMES = ['Новая заявка', 'Сбор документов', 'Изучение бизнеса и залога', 'Кредитный комитет', 'Одобрено', 'Выдано'];
+const CY_SOURCES = ['Наш портфель', 'Внешняя база', 'Выезд', 'Махалля', 'Пришёл сам'];
+const CY_SRC_COL = { 'Наш портфель': ['#E3F5EA', '#14693A'], 'Внешняя база': ['#EEF1FB', '#2A4BA0'], 'Выезд': ['#F3E8FF', '#6B21A8'], 'Махалля': ['#FFF1CF', '#8A5A00'], 'Пришёл сам': ['#F0F0F2', '#3F3F46'] };
+const CY_REFUSE = ['Клиент отказался', 'Не прошёл кредитный комитет', 'Нет залога / недостаточно', 'Плохая кредитная история', 'Другое'];
+const CY_PLEDGE = ['Недвижимость', 'Автотранспорт', 'Оборудование', 'Товары в обороте', 'Поручительство', 'Другое'];
+const CY_TERMS = ['6 мес.', '12 мес.', '18 мес.', '24 мес.', '36 мес.', '48 мес.', '60 мес.'];
+function cyIdx(st) { return CY_STEPS.indexOf(st); }
+function cyInn(v) { return String(v == null ? '' : v).replace(/\D/g, ''); }
+function cyFind(inn) { return (allClients || []).find(c => cyInn(c.inn) === inn) || null; }
+function cyMedia(c, k) { const a = c[k]; return Array.isArray(a) ? a : []; }
+function cyNowApi() { const d = new Date(), p = n => ('0' + n).slice(-2); return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+function cyMissing(c) {
+  const b = cyMedia(c, 'bizMedia'), p = cyMedia(c, 'pledgeMedia'), m = [];
+  if (!b.some(x => x.t === 'photo')) m.push('фото бизнеса');
+  if (!p.some(x => x.t === 'photo')) m.push('фото залога');
+  if (!b.concat(p).some(x => x.t === 'video')) m.push('видео');
+  if (!c.managerGeolocation) m.push('геолокация бизнеса');
+  if (!c.collateralGeolocation) m.push('геолокация залога');
+  if (!c.pledgeType) m.push('тип залога');
+  if (!(Number(c.pledgeValue) > 0)) m.push('стоимость залога');
+  if (!(Number(c.revenue) > 0)) m.push('выручка');
+  return m;
+}
+function cySrcTag(c) { const s = c.source || ''; return s ? msbTag(s, CY_SRC_COL[s] || null) : ''; }
+function cyRecTag(c) {
+  const r = String(c.reconcile || '');
+  if (!r) return '';
+  if (r.indexOf('Подтверждено') === 0) return msbTag('Сверено с портфелем', ['#E3F5EA', '#14693A']);
+  if (r.indexOf('Ожидает') === 0) return msbTag('Ожидает сверки с портфелем', ['#FFF1CF', '#8A5A00']);
+  return msbTag(r.split(' · ')[0], ['#FBE4E1', '#A81E16']);
+}
+function msbDealOpen(inn) { msb.deal = cyInn(inn); msb.cyErr = ''; msb.tab = 'deals'; msbRender(); const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0; }
+function cyStepper(c) {
+  const ci = cyIdx(c.status), days = Number(c.statusDays) || 0;
+  return `<div class="cy-st">${CY_STEPS.map((s, i) => {
+    const norm = MSB_STAGE_DAYS[s];
+    const cls = ci === 5 || i < ci ? 'd' : i === ci ? (norm && days > norm ? 'p' : 'c') : '';
+    const sub = i === ci && ci < 5 && norm ? `<div class="cy-ss">${days} дн. из ${norm}</div>` : '';
+    return `<div class="cy-si ${cls}"><div class="cy-dot">${cls === 'd' ? '✓' : i + 1}</div><div><div class="cy-sn">${CY_NAMES[i]}</div>${sub}</div></div>`;
+  }).join('')}</div>`;
+}
+function cyThumbs(c, k, kind, canDel) {
+  return cyMedia(c, k).map(m => m.t === 'video'
+    ? `<button type="button" class="cy-th v" onclick="window.open('${msbE(m.url)}','_blank')">▶<small>0:${('0' + (m.dur || 0)).slice(-2)}</small>${canDel ? `<i onclick="event.stopPropagation();cyMediaDel('${kind}','${msbE(m.id)}')">×</i>` : ''}</button>`
+    : `<button type="button" class="cy-th" style="background-image:url('${msbE(m.url)}')" onclick="window.open('${msbE(m.url)}','_blank')">${canDel ? `<i onclick="event.stopPropagation();cyMediaDel('${kind}','${msbE(m.id)}')">×</i>` : ''}</button>`).join('');
+}
+function cyCapBtns(kind) {
+  return `<button type="button" class="cy-cap" onclick="cyCamOpen('${kind}','photo')">${msbIcon('camera', 20)}</button><button type="button" class="cy-cap" onclick="cyCamOpen('${kind}','video')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="m22 8-6 4 6 4Z"/></svg>20 сек</button>`;
+}
+function cyMediaCard(c, kind, title, editable) {
+  const k = kind === 'biz' ? 'bizMedia' : 'pledgeMedia', list = cyMedia(c, k);
+  const geo = kind === 'biz' ? c.managerGeolocation : c.collateralGeolocation;
+  const ok = list.some(x => x.t === 'photo');
+  const last = list[list.length - 1];
+  return `<div class="msb-card"><div class="msb-h"><b>${title} · фото и видео</b>${ok ? '<span class="cy-done">✓ готово</span>' : editable ? '<span class="cy-req">обязательно</span>' : ''}</div>
+    <div class="cy-media">${cyThumbs(c, k, kind, editable)}${editable ? cyCapBtns(kind) : ''}</div>
+    ${geo ? `<div class="cy-ok"><a href="https://www.google.com/maps?q=${encodeURIComponent(geo)}" target="_blank" style="color:#14693A;text-decoration:none;">✓ ${msbE(geo)}${last && last.at ? ' · ' + msbE(String(last.at).slice(0, 16)) : ''}</a></div>` : editable ? '<div class="msb-sub" style="margin-top:8px;">Геолокация отметится при съёмке</div>' : ''}</div>`;
+}
+function cyStudyCard(c, editable) {
+  const inp = (k, l) => `<div class="msb-fl"><span>${l}</span><input class="msb-in" inputmode="numeric" ${editable ? '' : 'disabled'} value="${Number(c[k]) ? msbE(Number(c[k]).toLocaleString('ru-RU')) : ''}" onchange="cyStudySet('${k}', this.value)"></div>`;
+  return `<div class="cy-two"><div class="msb-fl"><span>Тип залога</span><div class="msb-sel" onclick="${editable ? `vzPick('Тип залога', ${msbE(JSON.stringify(CY_PLEDGE))}, cyFind(msb.deal).pledgeType, function(v){cyStudySet('pledgeType', v);})` : ''}"><b>${msbE(c.pledgeType || '—')}</b></div></div>${inp('pledgeValue', 'Стоимость')}</div>
+    <div class="cy-two" style="margin-top:10px;">${inp('revenue', 'Выручка / мес.')}${inp('profit', 'Прибыль / мес.')}</div>`;
+}
+function msbDealHtml() {
+  const c = cyFind(msb.deal);
+  if (!c) { msb.deal = null; return msbDealsHtml(); }
+  const ci = cyIdx(c.status), st = c.status, back = `<button type="button" class="msb-back" onclick="msb.deal=null;msbRender()" aria-label="Назад">‹</button>`;
+  const norm = MSB_STAGE_DAYS[st];
+  const sub = ci >= 0 ? 'шаг ' + (ci + 1) + ' из 6' + (norm ? ' · норма ' + norm + ' дн.' : '') : st === 'Отказ' ? 'заявка закрыта' : 'заявка отложена';
+  const head = `<div class="msb-card"><div class="msb-h" style="margin-bottom:2px;"><b style="font-size:16px;">${msbE(c.name)}</b>${cySrcTag(c)}</div><div class="msb-sub">${msbE([c.product, c.amount ? vzFmt(c.amount) : '', c.purpose].filter(Boolean).join(' · '))}</div>${c.phone ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span class="msb-sub">ИНН ${msbE(c.inn)}</span><a class="msb-call" href="tel:+${msbE(String(c.phone).replace(/\D/g, ''))}" aria-label="Позвонить">${msbDialIcon()}</a></div>` : ''}</div>`;
+  const steps = `<div class="msb-card"><div class="msb-h"><b>Этапы</b></div>${cyStepper(c)}</div>`;
+  const err = msb.cyErr ? `<div class="msb-err">${msbE(msb.cyErr)}</div>` : '';
+  const pr = `<div class="cy-btns"><button type="button" class="cy-ghost" onclick="cyStep('Отложено')">Отложить</button><button type="button" class="cy-ref" onclick="cyRefuseOpen()">Отказ</button></div>`;
+  const cc = c.ccComment ? `<div class="msb-card"><div class="msb-h"><b>Комментарии КК</b></div><div class="msb-sub" style="white-space:pre-line;">${msbE(c.ccComment)}</div></div>` : '';
+  let body = '';
+  if (ci === 0 || ci === 1) {
+    body = head + steps + cc + err + `<button type="button" class="msb-go" onclick="cyStep('${CY_STEPS[ci + 1]}')">Далее: ${ci === 0 ? 'сбор документов' : 'изучение бизнеса и залога'}</button>` + pr;
+  } else if (ci === 2) {
+    const miss = cyMissing(c);
+    body = head + cyMediaCard(c, 'biz', 'Бизнес', true) + cyMediaCard(c, 'pledge', 'Залог', true)
+      + `<div class="msb-card">${cyStudyCard(c, true)}${miss.length ? `<div class="msb-err" style="margin:10px 0 0;">Нужно: ${msbE(miss.join(', '))}</div>` : ''}${err}<button type="button" class="msb-go" style="margin-top:10px;" ${miss.length ? 'disabled' : ''} onclick="cyStep('Кредитный комитет')">Далее: кредитный комитет</button></div>`
+      + steps + cc + pr;
+  } else if (ci === 3) {
+    body = head + steps + `<div class="msb-card"><div class="msb-h" style="margin-bottom:0;"><b>Решение кредитного комитета</b></div>
+      <button type="button" class="cy-dec" style="background:#E3F5EA;color:#14693A;" onclick="cyStep('Одобрено')"><b>Одобрено</b><span>перевести на шаг 5</span></button>
+      <button type="button" class="cy-dec" style="background:#EEF1FB;color:#2A4BA0;" onclick="cyBackOpen()"><b>На доработку</b><span>вернуть на шаг 2 или 3 с комментарием</span></button>
+      <button type="button" class="cy-dec" style="background:#FBE4E1;color:#A81E16;" onclick="cyRefuseOpen('Не прошёл кредитный комитет')"><b>Отказ</b><span>выбрать причину</span></button>${err}</div>` + cc + cyStudyView(c);
+  } else if (ci === 4) {
+    const is = msb.cyIss || (msb.cyIss = { inn: msb.deal, sum: String(Number(c.amount) || ''), date: msbTodayIso() });
+    if (is.inn !== msb.deal) { msb.cyIss = null; return msbDealHtml(); }
+    body = head + steps + `<div class="msb-card"><div class="msb-h"><b>Выдача</b></div><div class="cy-two"><div class="msb-fl"><span>Сумма выдачи</span><input class="msb-in" inputmode="numeric" value="${msbE(is.sum ? Number(String(is.sum).replace(/\D/g, '')).toLocaleString('ru-RU') : '')}" onchange="msb.cyIss.sum=this.value.replace(/\\D/g,'');msbRender()"></div><div class="msb-fl"><span>Дата</span><input class="msb-in" type="date" max="${msbTodayIso()}" value="${msbE(is.date)}" onchange="msb.cyIss.date=this.value"></div></div>
+      <div class="msb-sub" style="margin-top:8px;">Сумма не больше заявленной · ${vzFmt(c.amount)}</div>${err}<button type="button" class="msb-go msb-green" style="margin-top:10px;" onclick="cyIssue()">Выдано</button></div>` + cc + cyStudyView(c) + `<button type="button" class="cy-ref" onclick="cyRefuseOpen()">Отказ</button>`;
+  } else if (ci === 5) {
+    body = head + `<div class="msb-card"><div class="msb-h"><b>Выдано</b>${cyRecTag(c)}</div><div class="cy-two"><div><div class="msb-sub">Сумма выдачи</div><b style="font-size:17px;">${vzFmt(c.issuedSum || c.amount)}</b></div><div><div class="msb-sub">Дата</div><b style="font-size:17px;">${msbE(c.issuedDate ? (String(c.issuedDate).indexOf('-') > 0 ? vzFmtDateRu(c.issuedDate) : c.issuedDate) : '—')}</b></div></div>${c.reconcile && String(c.reconcile).indexOf('Ожидает') !== 0 ? `<div class="msb-sub" style="margin-top:8px;">${msbE(c.reconcile)}</div>` : ''}</div>` + steps + cyStudyView(c);
+  } else if (st === 'Отказ') {
+    body = head + `<div class="msb-card"><div class="msb-h"><b>Причина отказа</b></div><div style="font-weight:700;">${msbE(c.refuseReason || '—')}</div></div>` + steps + cc;
+  } else {
+    body = head + steps + cc + err + `<div class="msb-card"><div class="msb-h"><b>Вернуть в работу</b></div>${CY_STEPS.slice(0, 3).map(s => `<button type="button" class="cy-dec" style="background:#F3F4F7;color:#141414;" onclick="cyStep('${s}')"><b>${CY_NAMES[cyIdx(s)]}</b></button>`).join('')}</div><button type="button" class="cy-ref" onclick="cyRefuseOpen()">Отказ</button>`;
+  }
+  const title = ci >= 0 ? CY_NAMES[ci] : st;
+  return msbHero(title, sub, '').replace('<div class="msb-hero">', '<div class="msb-hero">' + back) + `<div class="msb-pad msb-up">${body}</div>`;
+}
+function cyStudyView(c) {
+  const b = cyMedia(c, 'bizMedia'), p = cyMedia(c, 'pledgeMedia');
+  if (!b.length && !p.length && !c.pledgeType) return '';
+  return cyMediaCard(c, 'biz', 'Бизнес', false) + cyMediaCard(c, 'pledge', 'Залог', false) + `<div class="msb-card">${cyStudyCard(c, false)}</div>`;
+}
+async function cyStep(to, extra) {
+  const c = cyFind(msb.deal); if (!c || msb.cyBusy) return;
+  msb.cyBusy = true; msb.cyErr = '';
+  try {
+    const r = await msbPost(Object.assign({ webAction: 'msbCycleStep', inn: c.inn, chatId: c.chatId, to: to }, extra || {}));
+    msb.cyBusy = false;
+    if (!r || !r.success) { msb.cyErr = (r && r.message) || 'Не удалось сохранить'; vzSheetClose(); return msbRender(); }
+    c.status = to; c.statusDays = 0; c.statusChangedAt = cyNowApi(); c.updatedAt = cyNowApi();
+    if (extra && extra.reason) c.refuseReason = extra.reason + (extra.comment ? ': ' + extra.comment : '');
+    if (extra && extra.issuedSum) { c.issuedSum = Number(extra.issuedSum); c.issuedDate = extra.issuedDate; c.reconcile = r.reconcile || 'Ожидает сверки'; }
+    if (extra && extra.comment && (extra.back || to === 'Одобрено')) c.ccComment = (c.ccComment ? c.ccComment + '\n' : '') + vzFmtDateRu(msbTodayIso()) + ' · ' + (extra.back ? 'На доработку → ' + to + ': ' : '') + extra.comment;
+    vzSheetClose(); msb.cyIss = null; msbRender();
+    const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0;
+  } catch (e) { msb.cyBusy = false; msb.cyErr = 'Не удалось связаться с сервером'; msbRender(); }
+}
+function cyIssue() {
+  const c = cyFind(msb.deal), is = msb.cyIss; if (!c || !is) return;
+  const sum = Number(String(is.sum || '').replace(/\D/g, '')) || 0;
+  if (!(sum > 0)) { msb.cyErr = 'Укажите сумму выдачи'; return msbRender(); }
+  if (Number(c.amount) > 0 && sum > Number(c.amount)) { msb.cyErr = 'Сумма выдачи больше заявленной'; return msbRender(); }
+  if (!is.date || is.date > msbTodayIso()) { msb.cyErr = 'Проверьте дату выдачи'; return msbRender(); }
+  cyStep('Выдано', { issuedSum: sum, issuedDate: is.date });
+}
+function cyRefuseOpen(pre) { msb.cyRef = { reason: pre || '', comment: '' }; cyRefuseSheet(); }
+function cyRefuseSheet() {
+  const r = msb.cyRef;
+  vzSheetOpen(`<div class="vzs-h">Причина отказа</div>${CY_REFUSE.map((x, i) => `<div class="cy-rl ${r.reason === x ? 'on' : ''}" onclick="msb.cyRef.reason=CY_REFUSE[${i}];cyRefuseSheet()">${msbE(x)}</div>`).join('')}
+    <div class="msb-fl" style="margin-top:12px;"><span>Комментарий</span><textarea class="msb-in" style="min-height:60px;padding-top:12px;" oninput="msb.cyRef.comment=this.value">${msbE(r.comment)}</textarea></div>
+    <div class="msb-err">${msbE(r.err || '')}</div><button type="button" class="vzs-go" onclick="cyRefuseGo()">Отказ</button>`);
+}
+function cyRefuseGo() {
+  const r = msb.cyRef; if (!r.reason) { r.err = 'Выберите причину'; return cyRefuseSheet(); }
+  if (r.reason === 'Другое' && !String(r.comment).trim()) { r.err = 'Напишите комментарий'; return cyRefuseSheet(); }
+  cyStep('Отказ', { reason: r.reason, comment: String(r.comment || '').trim() });
+}
+function cyBackOpen() { msb.cyBack = { to: 'Изучение бизнеса и залога', comment: '' }; cyBackSheet(); }
+function cyBackSheet() {
+  const b = msb.cyBack;
+  vzSheetOpen(`<div class="vzs-h">На доработку</div><div class="cy-srcs">${['Документы собираются', 'Изучение бизнеса и залога'].map(s => `<button type="button" class="${b.to === s ? 'on' : ''}" onclick="msb.cyBack.to='${s}';cyBackSheet()">${cyIdx(s) + 1}. ${CY_NAMES[cyIdx(s)]}</button>`).join('')}</div>
+    <div class="msb-fl" style="margin-top:12px;"><span>Что доработать</span><textarea class="msb-in" style="min-height:70px;padding-top:12px;" oninput="msb.cyBack.comment=this.value">${msbE(b.comment)}</textarea></div>
+    <div class="msb-err">${msbE(b.err || '')}</div><button type="button" class="vzs-go" onclick="cyBackGo()">Вернуть на доработку</button>`);
+}
+function cyBackGo() {
+  const b = msb.cyBack; if (!String(b.comment).trim()) { b.err = 'Напишите, что доработать'; return cyBackSheet(); }
+  cyStep(b.to, { back: true, comment: String(b.comment).trim() });
+}
+let cyStudyT = null;
+function cyStudySet(k, v) {
+  const c = cyFind(msb.deal); if (!c) return;
+  c[k] = k === 'pledgeType' ? v : (Number(String(v).replace(/\D/g, '')) || 0);
+  msbRender();
+  clearTimeout(cyStudyT);
+  cyStudyT = setTimeout(async () => {
+    try {
+      const r = await msbPost({ webAction: 'msbCycleStudy', inn: c.inn, chatId: c.chatId, pledgeType: c.pledgeType || '', pledgeValue: c.pledgeValue || 0, revenue: c.revenue || 0, profit: c.profit || 0 });
+      if (!r || !r.success) { msb.cyErr = (r && r.message) || 'Не удалось сохранить'; msbRender(); }
+    } catch (e) { msb.cyErr = 'Не удалось связаться с сервером'; msbRender(); }
+  }, 400);
+}
+async function cyMediaDel(kind, id) {
+  const c = cyFind(msb.deal); if (!c || !confirm('Удалить?')) return;
+  try {
+    const r = await msbPost({ webAction: 'msbCycleMediaDelete', inn: c.inn, chatId: c.chatId, kind: kind, id: id });
+    if (r && r.success) { c[kind === 'biz' ? 'bizMedia' : 'pledgeMedia'] = r.media; msbRender(); }
+    else { msb.cyErr = (r && r.message) || 'Не удалось удалить'; msbRender(); }
+  } catch (e) {}
+}
+
+// Съёмка только камерой (без выбора файла из галереи); видео до 20 сек.
+let cyCam = null;
+function cyCamMsg(t) { const m = document.getElementById('cyCamMsg'); if (m) m.innerHTML = t; }
+async function cyCamOpen(kind, type) {
+  msb.cyErr = '';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { msb.cyErr = 'Камера недоступна на этом устройстве'; return msbRender(); }
+  if (type === 'video' && typeof MediaRecorder === 'undefined') { msb.cyErr = 'Запись видео не поддерживается этим браузером'; return msbRender(); }
+  cyCamClose();
+  const box = document.createElement('div'); box.id = 'cyCam';
+  box.innerHTML = `<video id="cyCamV" playsinline muted autoplay></video><div class="cy-ctop" id="cyCamTop">${kind === 'biz' ? 'Бизнес' : 'Залог'} · ${type === 'video' ? 'видео до 20 сек' : 'фото'}</div>
+    <div class="cy-cbar"><button type="button" class="x" onclick="cyCamClose()">Отмена</button><button type="button" class="cy-shot ${type === 'video' ? 'rec' : ''}" id="cyShot" onclick="cyCamShot()"></button><div class="cy-cmsg" id="cyCamMsg">гео…</div></div>`;
+  document.body.appendChild(box);
+  cyCam = { kind: kind, type: type, geo: null };
+  const cam = cyCam;
+  cam.geoP = msbGeo().then(p => { cam.geo = p.latitude.toFixed(6) + ',' + p.longitude.toFixed(6); cyCamMsg('гео ✓'); return cam.geo; }).catch(() => { cyCamMsg('нет гео'); return null; });
+  try {
+    cam.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    if (cyCam !== cam) { cam.stream.getTracks().forEach(t => t.stop()); return; }
+    const v = document.getElementById('cyCamV'); v.srcObject = cam.stream; try { await v.play(); } catch (e) {}
+  } catch (e) { cyCamClose(); msb.cyErr = 'Нет доступа к камере. Разрешите камеру в настройках браузера.'; msbRender(); }
+}
+function cyCamClose() {
+  if (cyCam) { clearInterval(cyCam.timer); try { if (cyCam.rec && cyCam.rec.state === 'recording') { cyCam.cancel = true; cyCam.rec.stop(); } } catch (e) {} if (cyCam.stream) cyCam.stream.getTracks().forEach(t => t.stop()); }
+  cyCam = null; const b = document.getElementById('cyCam'); if (b) b.remove();
+}
+function cyCamShot() {
+  const cam = cyCam; if (!cam || !cam.stream || cam.busy) return;
+  const v = document.getElementById('cyCamV');
+  if (cam.type === 'photo') {
+    if (!v.videoWidth) return;
+    const k = Math.min(1, 1280 / Math.max(v.videoWidth, v.videoHeight)), cv = document.createElement('canvas');
+    cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k);
+    cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+    cam.busy = true;
+    return cyCamUpload(cam, cv.toDataURL('image/jpeg', 0.72).split(',')[1], 'image/jpeg', new Date(), 0);
+  }
+  if (cam.rec && cam.rec.state === 'recording') { cam.rec.stop(); return; }
+  const mime = ['video/mp4;codecs=avc1', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'].find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (e) { return false; } }) || '';
+  let rec; try { rec = new MediaRecorder(cam.stream, mime ? { mimeType: mime, videoBitsPerSecond: 900000 } : { videoBitsPerSecond: 900000 }); } catch (e) { rec = new MediaRecorder(cam.stream); }
+  const chunks = []; cam.rec = rec; cam.t0 = new Date();
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    clearInterval(cam.timer); if (cam.cancel) return;
+    const dur = Math.min(20, (Date.now() - cam.t0.getTime()) / 1000);
+    const blob = new Blob(chunks, { type: (rec.mimeType || mime || 'video/webm') });
+    cam.busy = true;
+    const fr = new FileReader(); fr.onload = () => cyCamUpload(cam, String(fr.result).split(',')[1], blob.type, cam.t0, dur); fr.readAsDataURL(blob);
+  };
+  rec.start(500);
+  const shot = document.getElementById('cyShot'); if (shot) shot.classList.add('on');
+  const top = document.getElementById('cyCamTop');
+  cam.timer = setInterval(() => {
+    const s = Math.floor((Date.now() - cam.t0.getTime()) / 1000);
+    if (top) top.innerHTML = 'Запись<b>0:' + ('0' + Math.min(20, s)).slice(-2) + ' / 0:20</b>';
+    if (s >= 20 && rec.state === 'recording') rec.stop();
+  }, 250);
+}
+async function cyCamUpload(cam, b64, mime, taken, dur) {
+  cyCamMsg('сохранение…');
+  const top = document.getElementById('cyCamTop'); if (top) top.innerHTML = 'Сохранение…';
+  let geo = cam.geo || await cam.geoP;
+  if (!geo) { try { const p = await msbGeo(); geo = p.latitude.toFixed(6) + ',' + p.longitude.toFixed(6); } catch (e) {} }
+  const c = cyFind(msb.deal);
+  if (!geo) { cyCamClose(); msb.cyErr = 'Включите геолокацию и снимите заново'; return msbRender(); }
+  if (!c) { cyCamClose(); return; }
+  try {
+    const r = await msbPost({ webAction: 'msbCycleMedia', inn: c.inn, chatId: c.chatId, kind: cam.kind, type: cam.type, base64: b64, mime: mime, geo: geo, takenAt: taken.toISOString(), duration: dur, src: 'camera', deviceInfo: typeof getDeviceFingerprint === 'function' ? getDeviceFingerprint() : '' });
+    cyCamClose();
+    if (!r || !r.success) { msb.cyErr = (r && r.message) || 'Не удалось сохранить'; return msbRender(); }
+    c[cam.kind === 'biz' ? 'bizMedia' : 'pledgeMedia'] = r.media;
+    if (cam.kind === 'biz') c.managerGeolocation = geo; else c.collateralGeolocation = geo;
+    msbRender();
+  } catch (e) { cyCamClose(); msb.cyErr = 'Не удалось связаться с сервером'; msbRender(); }
 }
 
 // ---------- 3. Выезд на территорию ----------
@@ -8240,17 +8564,18 @@ async function msbMeetSave(app) {
 // ---------- 4. Сделки ----------
 function msbDealsHtml() {
   const cl = msbMyClients(), mk = msbTodayIso().slice(0, 7);
-  const act = cl.filter(c => { const i = msbStageIdx(c.status); return i >= 0 && i <= 3 && clState(c).s !== 'archive'; });
+  const act = cl.filter(c => { const i = msbStageIdx(c.status); return i >= 0 && i <= 4 && clState(c).s !== 'archive'; });
+  const wait = cl.filter(c => c.status === 'Отложено' && clState(c).s !== 'archive');
   const late = c => (Number(c.statusDays) || 0) > (MSB_STAGE_DAYS[c.status] || 7);
   const issued = cl.filter(c => c.status === 'Выдано' && msbDateOf(c.statusChangedAt) && msbIso(msbDateOf(c.statusChangedAt)).slice(0, 7) === mk);
   const f = msb.dealF || 'all';
-  let list = f === 'late' ? act.filter(late) : f === 'near' ? act.filter(c => msbStageIdx(c.status) === 3) : f === 'done' ? issued : act;
+  let list = f === 'late' ? act.filter(late) : f === 'near' ? act.filter(c => msbStageIdx(c.status) >= 3) : f === 'done' ? issued : f === 'wait' ? wait : act;
   list = list.slice().sort((a, b) => msbStageIdx(b.status) - msbStageIdx(a.status) || (Number(b.amount) || 0) - (Number(a.amount) || 0));
-  const chips = [['all', 'В работе ' + act.length], ['late', 'Проблемы ' + act.filter(late).length], ['near', 'К выдаче ' + act.filter(c => msbStageIdx(c.status) === 3).length], ['done', 'Выдано ' + issued.length]];
-  const track = c => { const ci = msbStageIdx(c.status), lt = late(c); return '<div class="msb-track">' + MSB_STAGES.map((s, i) => { const cls = i < ci || ci === 4 ? 'd' : i === ci ? (lt ? 'p' : 'c') : ''; return `<div class="${cls}"><i></i><span>${s[0]}</span></div>`; }).join('') + '</div>'; };
+  const chips = [['all', 'В работе ' + act.length], ['late', 'Проблемы ' + act.filter(late).length], ['near', 'КК и одобрено ' + act.filter(c => msbStageIdx(c.status) >= 3).length], ['done', 'Выдано ' + issued.length], ['wait', 'Отложено ' + wait.length]];
+  const track = c => { const ci = msbStageIdx(c.status), lt = late(c); return '<div class="msb-track">' + MSB_STAGES.map((s, i) => { const cls = i < ci || ci === MSB_STAGES.length - 1 ? 'd' : i === ci ? (lt ? 'p' : 'c') : ''; return `<div class="${cls}"><i></i><span>${s[0]}</span></div>`; }).join('') + '</div>'; };
   const sum = act.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   return msbHero('Клиенты для выдачи', act.length + ' сделок · ' + vzFmt(sum) + ' в работе', `<div class="msb-chips">${chips.map(x => `<button type="button" class="${f === x[0] ? 'on' : ''}" onclick="msb.dealF='${x[0]}';msbRender()">${x[1]}</button>`).join('')}</div>`)
-    + `<div class="msb-pad msb-up">${list.length ? list.map(c => `<div class="msb-card"><div class="msb-lrh" style="justify-content:space-between;"><b>${msbE(c.name)}</b><b>${vzFmt(c.amount)}</b></div><div class="msb-sub">${msbE([c.product, c.business || c.industry].filter(Boolean).join(' · '))}</div>${track(c)}<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span>${msbTag(c.status + ' · ' + (Number(c.statusDays) || 0) + ' дн.', late(c) ? ['#FBE4E1', '#A81E16'] : ['#EEF1FB', '#2A4BA0'])}</span>${c.phone ? `<a class="msb-call" href="tel:+${msbE(String(c.phone).replace(/\D/g, ''))}" aria-label="Позвонить">${msbDialIcon()}</a>` : ''}</div>${c.monitorVerdict === 'Проблема' ? `<div class="msb-why" style="color:#A81E16;">Мониторинг: проблема${c.monitorComment ? ' — ' + msbE(c.monitorComment) : ''}</div>` : ''}</div>`).join('') : `<div class="msb-card"><div class="msb-empty">Нет сделок</div></div>`}</div>`;
+    + `<div class="msb-pad msb-up">${list.length ? list.map(c => `<div class="msb-card" style="cursor:pointer;" onclick="msbDealOpen('${msbE(c.inn)}')"><div class="msb-lrh" style="justify-content:space-between;"><b>${msbE(c.name)}</b><b>${vzFmt(c.status === 'Выдано' && c.issuedSum ? c.issuedSum : c.amount)}</b></div><div class="msb-sub">${msbE([c.product, c.business || c.industry].filter(Boolean).join(' · '))}</div>${track(c)}<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;"><span>${msbTag(c.status + ' · ' + (Number(c.statusDays) || 0) + ' дн.', late(c) ? ['#FBE4E1', '#A81E16'] : ['#EEF1FB', '#2A4BA0'])}</span>${c.phone ? `<a class="msb-call" href="tel:+${msbE(String(c.phone).replace(/\D/g, ''))}" aria-label="Позвонить" onclick="event.stopPropagation()">${msbDialIcon()}</a>` : ''}</div>${c.status === 'Выдано' ? `<div style="margin-top:6px;">${cyRecTag(c)}</div>` : ''}</div>`).join('') : `<div class="msb-card"><div class="msb-empty">Нет сделок</div></div>`}</div>`;
 }
 
 // ---------- руководитель: контроль обзвона ----------
@@ -10074,6 +10399,8 @@ function getNplParserWorker() {
         const portfolio = { clients: 0, loans: 0, totalDebt: 0, sum: 0, jClients: 0, jSum: 0, pClients: 0, pSum: 0, skipN: 0, skipSum: 0, textN: 0, closedClients: 0 };
         // Клиенты портфеля для обзвона менеджерами МСБ (без просрочки и закрытые)
         const goodMap = {}, badKeys = {}, closedKeys = {};
+        // Свежие выдачи (за ~13 мес.) — для сверки статуса «Выдано» в МСБ по ИНН
+        const recentLoans = [], recentCut = new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10);
         let issuedColIdx = -1;
         // число из ячейки: и 123, и "29 932 000", и "29932000,5"
         const numV = function(v) { if (typeof v === 'number') return v; const t = String(v == null ? '' : v).replace(/[\\s\\u00a0]/g, '').replace(',', '.'); const n = Number(t); return isFinite(n) ? n : 0; };
@@ -10245,6 +10572,7 @@ function getNplParserWorker() {
               officer: officerColIdx !== -1 ? String(row[officerColIdx] || '').trim() : '', address: addressColIdx !== -1 ? splitAddressPhone(row[addressColIdx]) : '' });
             const od = openDateColIdx !== -1 ? normOpenDate(row[openDateColIdx]) : '';
             if (od && (!g.openDate || od < g.openDate)) g.openDate = od;
+            if (od && od >= recentCut && pin) recentLoans.push({ pin: pin, name: clientName, openDate: od, issued: issuedColIdx !== -1 ? numV(row[issuedColIdx]) : 0, balance: Math.max(pfRow, curRow) });
             g.loans++; g.balance += Math.max(pfRow, curRow); g.issued += issuedColIdx !== -1 ? numV(row[issuedColIdx]) : 0;
             if (pfRow > 0 || curRow > 0 || numV(row[totalDebtColIdx]) > 0) g.open++;
             if (hasOverdue || hasNplRow) badKeys[gk] = 1;
@@ -10344,7 +10672,7 @@ function getNplParserWorker() {
           if (g.closed && !portfolioKeys[k]) portfolio.closedClients++;
           delete g.open; good.push(g);
         });
-        self.postMessage({ loans: loans, collectors: collectors, portfolio: portfolio, good: good });
+        self.postMessage({ loans: loans, collectors: collectors, portfolio: portfolio, good: good, recentLoans: recentLoans });
       } catch (err) {
         self.postMessage({ error: err.message || 'Ошибка обработки файла' });
       }
@@ -10378,7 +10706,7 @@ function parseNplFile(file, onProgress) {
           if (msg.data.error) {
             reject(new Error(msg.data.error));
           } else {
-            resolve({ loans: msg.data.loans, collectors: msg.data.collectors || [], portfolio: msg.data.portfolio || null, good: msg.data.good || [] });
+            resolve({ loans: msg.data.loans, collectors: msg.data.collectors || [], portfolio: msg.data.portfolio || null, good: msg.data.good || [], recentLoans: msg.data.recentLoans || [] });
           }
         };
         const handleError = (err) => {
@@ -10479,6 +10807,16 @@ async function uploadNplFile() {
           if (!good.length) break;
         }
         statusBox.innerText = result.message + (good.length ? ' · клиентов портфеля для МСБ: ' + good.length : '');
+      } catch (e) { console.error(e); }
+      try {
+        const rl = parsed.recentLoans || [];
+        for (let i = 0, part = 3000; i < rl.length || i === 0; i += part) {
+          const last = i + part >= rl.length;
+          const r3 = await postWebAction({ webAction: 'msbSavePortfolioLoans', sessionId: localStorage.getItem('msbSessionId'), reset: i === 0, final: last, rows: rl.slice(i, i + part) });
+          if (!r3.success) { console.error(r3.message); break; }
+          if (last && r3.reconcile && r3.reconcile.checked) statusBox.innerText += ' · сверка выдач МСБ: подтверждено ' + r3.reconcile.confirmed + ' из ' + r3.reconcile.checked;
+          if (!rl.length) break;
+        }
       } catch (e) { console.error(e); }
       await loadNplData();
     } else {
@@ -17282,7 +17620,7 @@ function renderFunnel(funnel, boxId) {
   // Основная последовательная воронка (проходит клиент по этим этапам).
   // "Отказ" и "Отложено" — не шаги воронки, а выходы из неё, поэтому
   // считаем % конверсии только по основной цепочке.
-  const pipelineStatuses = ['Новый клиент','Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден','Выдано'];
+  const pipelineStatuses = ['Новый клиент','Документы собираются','Изучение бизнеса и залога','Кредитный комитет','Одобрено','Выдано'];
   const sideStatuses = ['Отказ','Отложено'];
   const statuses = pipelineStatuses.concat(sideStatuses);
 
@@ -17691,7 +18029,26 @@ function openClientCard(c) {
   document.getElementById('clientDrawer').classList.add('active');
 }
 
+function cyDeskHtml(c) {
+  const card = (l, v) => `<div class="info-card"><div class="info-label">${l}</div><div class="info-value">${v || '-'}</div></div>`;
+  const geo = g => g ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(g)}" target="_blank" style="color:var(--brand);font-weight:800;">${safe(g)}</a>` : '-';
+  const legacy = u => String(u || '').split(',').map(x => x.trim()).filter(Boolean).map(url => `<a href="${safe(url)}" target="_blank"><img src="${safe(url)}" class="mp-photo-thumb"></a>`).join('');
+  const media = (k, legacyUrls) => { const h = cyThumbs(c, k, '', false); return h || legacy(legacyUrls) || '<span style="color:var(--muted);font-size:13px;">нет</span>'; };
+  const money = v => Number(v) > 0 ? formatMoney(Number(v)) : '-';
+  return `<h2 style="font-size:18px;margin-bottom:10px;">Цикл заявки</h2>
+    ${cyIdx(c.status) >= 0 ? `<div style="margin-bottom:14px;">${cyStepper(c)}</div>` : `<div style="font-weight:800;margin-bottom:12px;">${safe(c.status)}${c.refuseReason ? ' · ' + safe(c.refuseReason) : ''}</div>`}
+    <div class="info-grid" style="margin-bottom:12px;">${card('Источник', safe(c.source || ''))}${card('Тип залога', safe(c.pledgeType || ''))}${card('Стоимость залога', money(c.pledgeValue))}${card('Выручка / мес.', money(c.revenue))}${card('Прибыль / мес.', money(c.profit))}${c.status === 'Выдано' ? card('Сумма выдачи', money(c.issuedSum)) + card('Дата выдачи', safe(c.issuedDate || '')) + card('Сверка с портфелем', cyRecTag(c) + (c.reconcile ? '<div style="font-size:12px;margin-top:4px;">' + safe(c.reconcile) + '</div>' : '')) : ''}</div>
+    <div class="mp-section-title" style="margin-top:0;">Бизнес</div>
+    <div class="info-grid" style="margin-bottom:8px;">${card('Геолокация бизнеса', geo(c.managerGeolocation))}</div>
+    <div class="cy-media" style="margin-bottom:14px;">${media('bizMedia', c.managerPhotoUrls)}</div>
+    <div class="mp-section-title">Залог</div>
+    <div class="info-grid" style="margin-bottom:8px;">${card('Геолокация залога', geo(c.collateralGeolocation))}</div>
+    <div class="cy-media" style="margin-bottom:14px;">${media('pledgeMedia', c.collateralPhotoUrls)}</div>
+    ${c.ccComment ? `<div class="info-label" style="margin-bottom:6px;">Комментарии КК</div><div class="comment-box" style="white-space:pre-line;">${safe(c.ccComment)}</div>` : ''}`;
+}
+
 function renderMonitoringPanel(c) {
+  try { const cp = document.getElementById('cyclePanel'); if (cp) cp.innerHTML = cyDeskHtml(c); } catch (e) { console.error(e); }
   const overlapBox = document.getElementById('deviceOverlapWarning');
   if (overlapBox) {
     if (c.deviceOverlapPairs && c.deviceOverlapPairs.length) {
@@ -17758,7 +18115,7 @@ function renderMonitoringPanel(c) {
   }
 
   // Форма сотрудника по залогу
-  const canSubmitCollateral = currentUser && (currentUser.role === 'COLLATERAL_OFFICER' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const canSubmitCollateral = false; // залоговик убран из МСБ: залог изучает менеджер
   document.getElementById('collateralSubmitFormWrap').style.display = canSubmitCollateral ? 'block' : 'none';
   if (canSubmitCollateral) {
     colSelectedPhotoFiles = [];
@@ -17776,7 +18133,7 @@ function renderMonitoringPanel(c) {
 
   // Форма юридического мониторинга — только заключение, без своих фото,
   // но геолокацию в момент вердикта фиксирует обязательно.
-  const canMonitor = currentUser && (currentUser.role === 'CREDIT_MONITOR' || currentUser.role === 'ADMIN' || currentUser.role === 'DIRECTOR');
+  const canMonitor = false; // юрмониторинг убран из МСБ продаж
   document.getElementById('monitorSubmitFormWrap').style.display = canMonitor ? 'block' : 'none';
   if (canMonitor) {
     document.getElementById('monGeolocation').value = '';
@@ -18400,6 +18757,19 @@ async function submitClientForm() {
         phone: payloadBase.phone,
         geolocation: payloadBase.geolocation
       };
+      const prevC = (allClients || []).find(x => String(x.inn || '').replace(/\D/g, '') === inn.replace(/\D/g, ''));
+      if (prevC && prevC.status !== fields.status) {
+        if (fields.status === 'Выдано') {
+          const v = prompt('Сумма выдачи (не больше ' + formatMoney(Number(prevC.amount) || 0) + ')', String(prevC.amount || ''));
+          if (v === null) { if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Сохранить'; } return; }
+          fields.issuedSum = String(v).replace(/\D/g, '');
+        }
+        if (fields.status === 'Отказ') {
+          const v = prompt('Причина отказа: Клиент отказался / Не прошёл кредитный комитет / Нет залога / Плохая кредитная история / Другое', '');
+          if (v === null) { if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Сохранить'; } return; }
+          fields.refuseReason = String(v).trim();
+        }
+      }
 
       const body = { webAction: 'updateClient', sessionId: sessionId, inn: inn, fields: fields, deviceInfo: getDeviceFingerprint() };
       if (photos.length) body.photos = photos;
@@ -24327,16 +24697,12 @@ function buildClientInsight(c) {
 
   if (status === 'Выдано') {
     text += 'Клиент уже доведен до выдачи. Следующий шаг — кросс-продажи и удержание клиента.';
-  } else if (status === 'Мониторинг пройден') {
-    text += 'Юридический мониторинг подтвердил проект. Можно ставить статус "Выдано".';
-  } else if (status === 'На проверке в мониторинге') {
-    text += 'Клиент передан на независимую проверку юридического мониторинга. Выдача заблокирована, пока не будет положительное заключение.';
-  } else if (status === 'Залоговик') {
-    text += 'Клиент передан сотруднику по залогу — ждём геолокацию, фото и данные по обеспечению.';
   } else if (status === 'Одобрено') {
     text += 'Клиент находится на сильном этапе. Нужно быстро довести сделку до выдачи.';
-  } else if (status === 'Финанализ' || status === 'Кредитный комитет') {
-    text += 'Клиент относится к горячим сделкам. Требуется контроль документов, обеспечения и сроков рассмотрения.';
+  } else if (status === 'Кредитный комитет') {
+    text += 'Клиент на кредитном комитете. Ждём решение: одобрено, на доработку или отказ.';
+  } else if (status === 'Изучение бизнеса и залога') {
+    text += 'Нужно выехать к клиенту: фото, видео и геолокация бизнеса и залога, оценка залога, выручка и прибыль.';
   } else if (status === 'Документы собираются') {
     text += 'Главный риск — задержка пакета документов. Менеджеру нужно ускорить сбор документов.';
   } else if (status === 'Отказ') {
@@ -24369,7 +24735,7 @@ function renderMyCabinet() {
   const issuedClients = clients.filter(c => c.status === 'Выдано');
   const issuedAmount = issuedClients.reduce((s,c) => s + (Number(c.amount)||0), 0);
   const potential = clients
-    .filter(c => ['Переговоры','Документы собираются','Финанализ','Залоговик','Кредитный комитет','Одобрено','На проверке в мониторинге','Мониторинг пройден'].includes(c.status))
+    .filter(c => getActiveStatuses().includes(c.status))
     .reduce((s,c) => s + (Number(c.amount)||0), 0);
 
   document.getElementById('myClientsCount').innerText = total;
@@ -24904,9 +25270,8 @@ function formatMoney(value) {
 
 function statusClass(status) {
   if (status === 'Выдано' || status === 'Одобрено') return 'status-green';
-  if (status === 'Финанализ' || status === 'Документы собираются' || status === 'На проверке в мониторинге' || status === 'Залоговик') return 'status-orange';
-  if (status === 'Мониторинг пройден') return 'status-green';
-  if (status === 'Переговоры' || status === 'Новый клиент') return 'status-blue';
+  if (status === 'Изучение бизнеса и залога' || status === 'Документы собираются' || status === 'Кредитный комитет') return 'status-orange';
+  if (status === 'Новый клиент') return 'status-blue';
   if (status === 'Отказ') return 'status-red';
   return 'status-blue';
 }
