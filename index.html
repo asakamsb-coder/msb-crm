@@ -967,6 +967,18 @@ textarea.msb-in{height:auto;padding:12px 14px;resize:none;}
 .mdx-wk b{text-align:right;}
 .mdx-near{font-size:13px;padding:7px 0;border-bottom:1px solid #F0F0F3;}
 .mdx-link{display:inline-block;margin-top:8px;color:#C4231A;font-weight:800;font-size:13px;cursor:pointer;}
+.cl-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 16px;}
+.cl-tabs button{border:none;background:#fff;color:#141414;border-radius:12px;padding:10px 14px;font-weight:800;font-size:13.5px;font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(20,20,30,.05);}
+.cl-tabs button b{display:inline-block;margin-left:4px;background:#F0F0F2;border-radius:8px;padding:1px 7px;font-size:12px;}
+.cl-tabs button.on{background:#141414;color:#fff;}
+.cl-tabs button.on b{background:rgba(255,255,255,.2);}
+.cl-hint{font-size:12.5px;color:#3F3F46;margin-left:6px;}
+.cl-b{display:inline-block;margin-top:4px;border-radius:8px;padding:2px 8px;font-size:11.5px;font-weight:800;}
+.cl-ok{background:#E3F5EA;color:#14693A;}.cl-amb{background:#FFF1CF;color:#8A5A00;}.cl-red{background:#FBE4E1;color:#A81E16;}
+.cl-sleep{background:#EEF1FB;color:#2A4BA0;}.cl-arch{background:#F0F0F2;color:#3F3F46;}
+.cl-back{display:block;margin-top:4px;border:none;background:#141414;color:#fff;border-radius:8px;padding:4px 9px;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer;}
+.cl-per{border:none;background:#fff;border-radius:12px;padding:9px 14px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(20,20,30,.05);}
+.cl-per.on{background:#141414;color:#fff;}
 .vzf-back{border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;}
 .vzf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
 .vzf-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:#F5F6F8;color:#141414;font-size:12.5px;font-weight:700;border:none;font-family:inherit;text-decoration:none;cursor:pointer;}
@@ -2241,6 +2253,7 @@ body.role-mahalla-banker .footer{display:none;}
     <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 <span data-i18n="tabDashboard">Dashboard</span></button>
     <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 <span data-i18n="tabClients">Клиенты</span></button>
     <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 <span data-i18n="tabSales">Продажи</span></button>
+    <button class="msb-sales-tab msb-boss-btn" data-msb-tab="coveragePage" onclick="showMsbSalesTab('coveragePage')" style="display:none;">Охват базы</button>
     <div class="msb-sales-export">
       <button class="btn msb-boss-btn" onclick="openMsbControl()" style="display:none;">Контроль обзвона</button>
       <button class="btn" onclick="exportMsbSalesExcel()">⬇️ <span data-i18n="btnExportExcel">Скачать всё в Excel</span></button>
@@ -2371,6 +2384,7 @@ body.role-mahalla-banker .footer{display:none;}
     <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 <span data-i18n="tabDashboard">Dashboard</span></button>
     <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 <span data-i18n="tabClients">Клиенты</span></button>
     <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 <span data-i18n="tabSales">Продажи</span></button>
+    <button class="msb-sales-tab msb-boss-btn" data-msb-tab="coveragePage" onclick="showMsbSalesTab('coveragePage')" style="display:none;">Охват базы</button>
     <div class="msb-sales-export">
       <button class="btn msb-boss-btn" onclick="openMsbControl()" style="display:none;">Контроль обзвона</button>
       <button class="btn" onclick="exportMsbSalesExcel()">⬇️ <span data-i18n="btnExportExcel">Скачать всё в Excel</span></button>
@@ -2384,6 +2398,8 @@ body.role-mahalla-banker .footer{display:none;}
     </div>
     <button class="client-selection-reset" onclick="resetDashboardClientSelection()">Показать всех</button>
   </div>
+
+  <div class="cl-tabs" id="clientStateTabs"></div>
 
   <div class="summary-row">
     <div class="summary-card"><div class="small">Клиентов в выборке</div><div class="big" id="filteredClientsCount">0</div></div>
@@ -2427,6 +2443,18 @@ body.role-mahalla-banker .footer{display:none;}
   </div>
 </section>
 
+<section id="coveragePage" class="page">
+  <div class="header"><div><h1>ОХВАТ БАЗЫ</h1><p>Портфель, внешняя база, выезды и махалля: где работают менеджеры и где нет охвата</p></div></div>
+  <div class="msb-sales-tabs">
+    <button class="msb-sales-tab" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 <span data-i18n="tabDashboard">Dashboard</span></button>
+    <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 <span data-i18n="tabClients">Клиенты</span></button>
+    <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 <span data-i18n="tabSales">Продажи</span></button>
+    <button class="msb-sales-tab msb-boss-btn active" data-msb-tab="coveragePage" onclick="showMsbSalesTab('coveragePage')" style="display:none;">Охват базы</button>
+    <div class="msb-sales-export"><button class="btn msb-boss-btn" onclick="openMsbControl()" style="display:none;">Контроль обзвона</button></div>
+  </div>
+  <div id="coverageBox"></div>
+</section>
+
 <section id="salesPage" class="page">
   <div class="header"><div><h1 data-i18n="hSalesFunnel">ПРОДАЖИ</h1><p data-i18n="pSalesFunnel">Воронка продаж и потенциальный портфель</p></div></div>
 
@@ -2434,6 +2462,7 @@ body.role-mahalla-banker .footer{display:none;}
     <button class="msb-sales-tab active" data-msb-tab="dashboard" onclick="showMsbSalesTab('dashboard')">📊 <span data-i18n="tabDashboard">Dashboard</span></button>
     <button class="msb-sales-tab" data-msb-tab="clientsPage" onclick="showMsbSalesTab('clientsPage')">👥 <span data-i18n="tabClients">Клиенты</span></button>
     <button class="msb-sales-tab" data-msb-tab="salesPage" onclick="showMsbSalesTab('salesPage')">💰 <span data-i18n="tabSales">Продажи</span></button>
+    <button class="msb-sales-tab msb-boss-btn" data-msb-tab="coveragePage" onclick="showMsbSalesTab('coveragePage')" style="display:none;">Охват базы</button>
     <div class="msb-sales-export">
       <button class="btn msb-boss-btn" onclick="openMsbControl()" style="display:none;">Контроль обзвона</button>
       <button class="btn" onclick="exportMsbSalesExcel()">⬇️ <span data-i18n="btnExportExcel">Скачать всё в Excel</span></button>
@@ -6037,6 +6066,7 @@ function showMsbSalesTab(pageId) {
     btn.classList.toggle('active', btn.dataset.msbTab === pageId);
   });
 
+  if (pageId === 'coveragePage') { try { renderCoverage(); } catch (e) { console.error(e); } }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -6497,7 +6527,7 @@ async function renderMsbDash() {
   const S = msbDashStats(mk), P = msbDashStats(pk);
   const prevPlace = {}; P.rows.filter(r => r.score > 0).forEach(r => prevPlace[r.name] = r.place);
   const issuedSum = S.issued.reduce((s, c) => s + (Number(c.amount) || 0), 0), prevSum = P.issued.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const pipe = (allClients || []).filter(c => MSB_ISSUE_STAGES.indexOf(c.status) > -1);
+  const pipe = (allClients || []).filter(c => MSB_ISSUE_STAGES.indexOf(c.status) > -1 && clIsActive(c));
   const pipeSum = pipe.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const appr = pipe.filter(c => c.status !== 'Кредитный комитет'), kk = pipe.filter(c => c.status === 'Кредитный комитет');
   const reached = S.calls.filter(c => c.result !== 'Не дозвонился').length, meetSet = S.calls.filter(c => c.result === 'Назначить встречу').length;
@@ -6540,7 +6570,7 @@ async function renderMsbDash() {
   <div class="mdx-tiles">
     ${tile('Активные клиенты', act ? act.toLocaleString('ru-RU') : '—', T.activeClientsBalance ? 'остаток ' + formatMoney(T.activeClientsBalance) : 'из загрузки портфеля', actBase && act ? mini('с ' + msbE(msbDashDateRu(firstAct.reportDate || firstAct.period)), (act - actBase >= 0 ? '+' : '') + (act - actBase).toLocaleString('ru-RU')) : '')}
     ${tile('Выдано за ' + monthNames[now.getMonth()], formatMoney(issuedSum), S.issued.length + ' сделок', mini(monthNames[prev.getMonth()], formatMoney(prevSum) + ' · ' + P.issued.length), '#14693A', "openDashboardClients('issued')")}
-    ${tile('Будут выданы', pipe.length + ' · ' + formatMoney(pipeSum), 'КК, одобрено, мониторинг', mini('одобрено / мониторинг', appr.length + ' · ' + formatMoney(appr.reduce((s, c) => s + (Number(c.amount) || 0), 0))) + mini('кредитный комитет', kk.length), '#2A4BA0', "openDashboardClients('closeToIssue')")}
+    ${tile('Будут выданы', pipe.length + ' · ' + formatMoney(pipeSum), 'КК, одобрено, мониторинг · только активные', mini('одобрено / мониторинг', appr.length + ' · ' + formatMoney(appr.reduce((s, c) => s + (Number(c.amount) || 0), 0))) + mini('кредитный комитет', kk.length), '#2A4BA0', "openDashboardClients('closeToIssue')")}
     ${tile('Визиты', S.meets.length + ' встреч', tripsM + ' выездов на территорию', mini('интересно', interest), '', 'openMsbControl()')}
     ${tile('Обзвон', S.calls.length + ' звонков', 'дозвон ' + (S.calls.length ? Math.round(reached / S.calls.length * 100) : 0) + '%', mini('назначено встреч', meetSet), '', 'openMsbControl()')}
   </div>
@@ -7898,7 +7928,7 @@ async function msbLoad(force) {
   if (msb.loading || (msb.loaded && !force)) return;
   msb.loading = true;
   try {
-    const [l, c, t] = await Promise.all([msbPost({ webAction: 'msbGetLeads' }), msbPost({ webAction: 'msbGetCalls', days: 45 }), msbPost({ webAction: 'msbGetTrips', days: 45 })]);
+    const [l, c, t] = await Promise.all([msbPost({ webAction: 'msbGetLeads' }), msbPost({ webAction: 'msbGetCalls', days: msbIsBossRole() ? 120 : 45 }), msbPost({ webAction: 'msbGetTrips', days: msbIsBossRole() ? 120 : 45 })]);
     if (l.success) msb.leads = l.leads || [];
     if (c.success) msb.calls = c.calls || [];
     if (t.success) msb.trips = t.trips || [];
@@ -8210,7 +8240,7 @@ async function msbMeetSave(app) {
 // ---------- 4. Сделки ----------
 function msbDealsHtml() {
   const cl = msbMyClients(), mk = msbTodayIso().slice(0, 7);
-  const act = cl.filter(c => { const i = msbStageIdx(c.status); return i >= 0 && i <= 3; });
+  const act = cl.filter(c => { const i = msbStageIdx(c.status); return i >= 0 && i <= 3 && clState(c).s !== 'archive'; });
   const late = c => (Number(c.statusDays) || 0) > (MSB_STAGE_DAYS[c.status] || 7);
   const issued = cl.filter(c => c.status === 'Выдано' && msbDateOf(c.statusChangedAt) && msbIso(msbDateOf(c.statusChangedAt)).slice(0, 7) === mk);
   const f = msb.dealF || 'all';
@@ -16877,6 +16907,118 @@ function renderClientWorkDays(c) {
     safe(info.title) + '">' + safe(info.label) + '</span>';
 }
 
+// ======================= Заявки: Активные / Спящие / Выданные / Отказ / Архив =======================
+// 30 дней без активности → «Спящие»; ещё 30 дней → «Архив». «Отложено» сразу спящая.
+const CL_SLEEP_DAYS = 30, CL_ARCHIVE_DAYS = 60;
+let clientStateTab = 'active';
+function clLastActivity(c) {
+  let t = 0;
+  [c.updatedAt, c.statusChangedAt, c.createdAt, c.date, c.monitorDate].forEach(s => { const d = stParseDt(s); if (d && !isNaN(d) && d.getTime() > t) t = d.getTime(); });
+  const inn = String(c.inn || '').replace(/\D/g, '');
+  if (inn && typeof msb !== 'undefined' && msb.calls) msb.calls.forEach(x => { if (x.inn === inn && x.tapAt > t) t = x.tapAt; });
+  return t;
+}
+function clState(c) {
+  if (c.status === 'Выдано') return { s: 'issued' };
+  if (c.status === 'Отказ') return { s: 'refused' };
+  const last = clLastActivity(c), idle = last ? Math.floor((Date.now() - last) / 86400000) : 0;
+  if (c.status === 'Отложено') return idle >= CL_SLEEP_DAYS ? { s: 'archive', idle: idle } : { s: 'sleep', idle: idle, left: CL_SLEEP_DAYS - idle };
+  if (idle >= CL_ARCHIVE_DAYS) return { s: 'archive', idle: idle };
+  if (idle >= CL_SLEEP_DAYS) return { s: 'sleep', idle: idle, left: CL_ARCHIVE_DAYS - idle };
+  return { s: 'active', idle: idle, left: CL_SLEEP_DAYS - idle };
+}
+function clIsActive(c) { return clState(c).s === 'active'; }
+const CL_TABS = [['active', 'Активные'], ['sleep', 'Спящие'], ['issued', 'Выданные'], ['refused', 'Отказ'], ['archive', 'Архив'], ['all', 'Все']];
+function clRenderTabs(list) {
+  const box = document.getElementById('clientStateTabs'); if (!box) return;
+  const cnt = {}; list.forEach(c => { const s = clState(c).s; cnt[s] = (cnt[s] || 0) + 1; }); cnt.all = list.length;
+  box.innerHTML = CL_TABS.map(t => `<button type="button" class="${clientStateTab === t[0] ? 'on' : ''}" onclick="clientStateTab='${t[0]}';applyClientFilters()">${t[1]} <b>${cnt[t[0]] || 0}</b></button>`).join('')
+    + `<span class="cl-hint">${clientStateTab === 'sleep' ? 'Без активности 30+ дней · через 30 дней уйдут в архив' : clientStateTab === 'archive' ? 'Спящие без активности ещё 30 дней' : clientStateTab === 'active' ? 'Активность за последние 30 дней' : ''}</span>`;
+}
+function clBadge(c) {
+  const st = clState(c);
+  if (st.s === 'issued' || st.s === 'refused') return '';
+  if (st.s === 'archive') return `<div class="cl-b cl-arch">архив · ${st.idle} дн. без активности</div><button type="button" class="cl-back" onclick="event.stopPropagation();clTouch(this)" data-chat="${safe(c.chatId)}" data-inn="${safe(c.inn)}" data-name="${encodeURIComponent(c.name || '')}">Вернуть в работу</button>`;
+  if (st.s === 'sleep' && c.status === 'Отложено') return `<div class="cl-b cl-sleep">отложено · в архив через ${Math.max(0, st.left)} дн.</div>`;
+  if (st.s === 'sleep') return `<div class="cl-b cl-sleep">спит · в архив через ${Math.max(0, st.left)} дн.</div><button type="button" class="cl-back" onclick="event.stopPropagation();clTouch(this)" data-chat="${safe(c.chatId)}" data-inn="${safe(c.inn)}" data-name="${encodeURIComponent(c.name || '')}">Вернуть в работу</button>`;
+  const col = st.left <= 3 ? 'cl-red' : st.left <= 7 ? 'cl-amb' : 'cl-ok';
+  return `<div class="cl-b ${col}">до сна ${Math.max(0, st.left)} дн.</div>`;
+}
+async function clTouch(btn) {
+  const chat = btn.dataset.chat === '-' ? '' : btn.dataset.chat, inn = btn.dataset.inn === '-' ? '' : btn.dataset.inn, name = decodeURIComponent(btn.dataset.name || '');
+  btn.disabled = true; btn.innerText = '…';
+  try {
+    const r = await postWebAction({ webAction: 'msbTouchClient', sessionId: localStorage.getItem('msbSessionId'), chatId: chat, inn: inn, name: name });
+    if (!r.success) { alert(r.message || 'Не удалось'); btn.disabled = false; btn.innerText = 'Вернуть в работу'; return; }
+    (allClients || []).forEach(c => { if (String(c.chatId || '') === chat && (!inn || String(c.inn || '') === inn) && (inn || String(c.name || '') === name)) c.updatedAt = r.updatedAt; });
+    applyClientFilters();
+  } catch (e) { alert('Не удалось связаться с сервером'); btn.disabled = false; }
+}
+
+// ======================= Охват базы (руководитель) =======================
+let covState = { per: 'month' };
+function covInn(v) { return String(v || '').replace(/\D/g, ''); }
+async function renderCoverage() {
+  const box = document.getElementById('coverageBox'); if (!box) return;
+  if (!msb.loaded) { box.innerHTML = '<div class="loading">Загрузка базы и звонков…</div>'; await msbLoad(); }
+  const now = Date.now(), mk = msbDashMonthKey(new Date());
+  const from = covState.per === 'month' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() : covState.per === 'week' ? now - 7 * 86400000 : 0;
+  const inP = t => t && t >= from;
+  const callsBy = {}, meetsBy = {};
+  (msb.calls || []).forEach(c => { (callsBy[c.inn] = callsBy[c.inn] || []).push(c); });
+  (msb.trips || []).forEach(t => (t.meets || []).forEach(m => { const k = covInn(m.inn); if (k) (meetsBy[k] = meetsBy[k] || []).push(Object.assign({ manager: t.manager }, m)); }));
+  const cliBy = {}; (allClients || []).forEach(c => { const k = covInn(c.inn); if (k) (cliBy[k] = cliBy[k] || []).push(c); });
+  const base = l => { const s = String(l.source || ''); return s.indexOf('Наш заёмщик') > -1 ? 'port' : s.indexOf('Другой банк') > -1 ? 'ext' : s.indexOf('Выезд') > -1 ? 'trip' : s.indexOf('Махалля') > -1 ? 'mah' : 'ext'; };
+  const B = { port: ['Наш портфель', 'из загрузки NPL', ['#E3F5EA', '#14693A']], ext: ['Внешняя база', 'Excel руководителя', ['#EEF1FB', '#2A4BA0']], trip: ['Выезды', 'менеджеры на территории', ['#F3E8FF', '#6B21A8']], mah: ['Махалля', 'банкиры махалли', ['#FFF1CF', '#8A5A00']] };
+  const agg = {}; Object.keys(B).forEach(k => agg[k] = { tot: 0, called: 0, reach: 0, meetSet: 0, met: 0, app: 0, iss: 0, nocov: 0, ref: 0 });
+  const info = l => {
+    const cs = (callsBy[l.inn] || []).filter(c => inP(c.tapAt)), all = callsBy[l.inn] || [], ms = (meetsBy[l.inn] || []).filter(m => inP(m.at)), cl = cliBy[l.inn] || [];
+    return { cs: cs, all: all, ms: ms, allMs: meetsBy[l.inn] || [], cl: cl,
+      called: cs.length > 0, reach: cs.some(c => c.result !== 'Не дозвонился'), meetSet: cs.some(c => c.result === 'Назначить встречу') || l.status === 'Встреча', met: ms.length > 0,
+      app: cl.length > 0, iss: cl.some(c => c.status === 'Выдано'), touched: all.length > 0 || (meetsBy[l.inn] || []).length > 0 };
+  };
+  msb.leads.forEach(l => {
+    const k = base(l), a = agg[k], x = info(l);
+    a.tot++; if (x.called) a.called++; if (x.reach) a.reach++; if (x.meetSet) a.meetSet++; if (x.met) a.met++; if (x.app) a.app++; if (x.iss) a.iss++;
+    if (!x.touched) a.nocov++; if (l.status === 'Отказ') a.ref++;
+  });
+  const T = { tot: 0, called: 0, reach: 0, meetSet: 0, met: 0, app: 0, iss: 0, nocov: 0, ref: 0 };
+  Object.values(agg).forEach(a => Object.keys(T).forEach(k => T[k] += a[k]));
+  const pc = (v, t) => t ? Math.round(v * 100 / t) : 0;
+  const cell = (v, t, col) => `<td><b>${v.toLocaleString('ru-RU')}</b><div class="mdx-bar" style="margin-top:4px;max-width:80px;"><i style="width:${pc(v, t)}%;background:${col};"></i></div><div class="mdx-ks">${pc(v, t)}%</div></td>`;
+  const brow = k => { const a = agg[k]; return `<tr><td><b>${B[k][0]}</b><div><span class="t" style="background:${B[k][2][0]};color:${B[k][2][1]};">${B[k][1]}</span></div></td><td><b>${a.tot.toLocaleString('ru-RU')}</b></td>${cell(a.called, a.tot, '#2A4BA0')}${cell(a.reach, a.tot, '#2A4BA0')}${cell(a.meetSet, a.tot, '#E8A317')}${cell(a.met, a.tot, '#E8A317')}${cell(a.app, a.tot, '#1E9E5A')}${cell(a.iss, a.tot, '#14693A')}<td><span class="t" style="background:#FBE4E1;color:#A81E16;font-size:13px;">${a.nocov.toLocaleString('ru-RU')}</span><div class="mdx-ks">${pc(a.nocov, a.tot)}%</div></td><td>${a.ref}</td></tr>`; };
+  // менеджеры
+  const mgr = {};
+  msb.leads.forEach(l => { if (!l.manager) return; const m = mgr[l.manager] || (mgr[l.manager] = { pin: 0, cov: 0, stale: 0 }); m.pin++; const x = info(l); if (x.called || x.met) m.cov++; const lastT = Math.max(0, ...x.all.map(c => c.tapAt), ...x.allMs.map(z => z.at)); if (!lastT || now - lastT > 14 * 86400000) m.stale++; });
+  const mRows = Object.keys(mgr).sort((a, b) => mgr[b].pin - mgr[a].pin).map(n => { const m = mgr[n], mine = (allClients || []).filter(c => String(c.manager || '').trim() === n); const apps = mine.filter(c => { const d = msbDashDate(c.createdAt || c.date); return d && inP(d.getTime()); }).length; const iss = mine.filter(c => c.status === 'Выдано' && (d => d && inP(d.getTime()))(msbDashDate(c.statusChangedAt || c.updatedAt))).length;
+    return `<tr><td><b>${msbE(n)}</b></td><td>${m.pin}</td><td>${m.cov}</td><td><span class="t" style="background:#FBE4E1;color:#A81E16;">${m.stale}</span></td><td>${apps}</td><td>${iss}</td></tr>`; }).join('');
+  // махалля
+  const mah = msb.leads.filter(l => base(l) === 'mah').map(l => {
+    const x = info(l), ex = l.extra || {};
+    const added = ex.added ? new Date(ex.added + 'T00:00:00').getTime() : 0;
+    const firstTouch = Math.min(...x.all.map(c => c.tapAt).concat(x.allMs.map(m => m.at)).concat([Infinity]));
+    const waited = !x.touched && added ? Math.floor((now - added) / 86400000) : null;
+    const lastCall = x.all.slice().sort((a, b) => b.tapAt - a.tapAt)[0];
+    const did = [lastCall ? 'звонок ' + vzFmtDateRu(msbDayOf(lastCall.tapAt)) + ' · ' + lastCall.result + ' · ' + lastCall.manager : '', x.allMs.length ? 'встреча ' + vzFmtDateRu(msbDayOf(x.allMs[0].at)) + ' ✓' : ''].filter(Boolean).join('<br>') || '—';
+    return { l: l, x: x, ex: ex, waited: waited, did: did, sort: waited === null ? -1 : waited, firstTouch: firstTouch };
+  }).sort((a, b) => b.sort - a.sort);
+  const noAtt = mah.filter(m => m.waited !== null && m.waited >= 3);
+  const mahRows = mah.slice(0, 60).map(m => `<tr><td><b>${msbE(m.l.name || m.l.inn)}</b><div class="mdx-ks">банкир: ${msbE(m.ex.banker || '—')}${m.ex.mahalla ? ' · ' + msbE(m.ex.mahalla) : ''}${m.ex.added ? ' · добавлено ' + vzFmtDateRu(m.ex.added) : ''}</div></td><td class="mdx-ks" style="color:#141414;">${m.did}</td><td>${m.x.cl.length ? msbE(m.x.cl[0].status) : '<span class="t" style="background:#F0F0F2;color:#3F3F46;">нет</span>'}</td><td>${m.waited === null ? '<span class="t" style="background:#E3F5EA;color:#14693A;">ок</span>' : `<span class="t" style="background:${m.waited >= 3 ? '#FBE4E1' : '#FFF1CF'};color:${m.waited >= 3 ? '#A81E16' : '#8A5A00'};">${m.waited} дн.</span>`}</td></tr>`).join('');
+  const bk = {}; mah.forEach(m => { const b = m.ex.banker || '—'; const o = bk[b] || (bk[b] = { add: 0, work: 0, late: 0, app: 0 }); o.add++; if (m.x.touched) o.work++; if (m.waited !== null && m.waited >= 3) o.late++; if (m.x.app) o.app++; });
+  const bkRows = Object.keys(bk).sort((a, b) => bk[b].add - bk[a].add).map(b => `<tr><td><b>${msbE(b)}</b></td><td>${bk[b].add}</td><td>${bk[b].work}</td><td><span class="t" style="background:#FBE4E1;color:#A81E16;">${bk[b].late}</span></td><td>${bk[b].app}</td></tr>`).join('');
+  const kp = (l, v, s, col) => `<div class="mdx-card"><div class="mdx-kl">${l}</div><div class="mdx-kv" style="color:${col || '#141414'};">${v}</div><div class="mdx-ks">${s}</div></div>`;
+  const covered = T.tot - T.nocov;
+  box.innerHTML = `<div class="mdx">
+    <div style="display:flex;gap:6px;">${[['week', '7 дней'], ['month', 'Месяц'], ['all', 'Всё время']].map(x => `<button type="button" class="cl-per${covState.per === x[0] ? ' on' : ''}" onclick="covState.per='${x[0]}';renderCoverage()">${x[1]}</button>`).join('')}<button type="button" class="cl-per" onclick="msb.loaded=false;renderCoverage()">Обновить</button></div>
+    <div class="mdx-tiles">${kp('В базах', T.tot.toLocaleString('ru-RU'), '4 источника')}${kp('Охвачено', covered.toLocaleString('ru-RU'), pc(covered, T.tot) + '% · был звонок или визит')}${kp('Нет охвата', T.nocov.toLocaleString('ru-RU'), pc(T.nocov, T.tot) + '% · никто не трогал', '#A81E16')}${kp('Заявок из баз', T.app, 'выдано ' + T.iss)}${kp('Махалля без внимания', noAtt.length, '3+ дня без звонка', noAtt.length ? '#A81E16' : '')}</div>
+    <div class="mdx-card"><div class="mdx-h"><b>Охват по базам</b><span>звонки, встречи и заявки за выбранный период · «нет охвата» — ни одного звонка или визита за всё время</span></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>База</th><th>Всего</th><th>Звонили</th><th>Дозвон</th><th>Встреча назн.</th><th>Встреча была</th><th>Заявка</th><th>Выдано</th><th>Нет охвата</th><th>Отказ</th></tr>${['port', 'ext', 'trip', 'mah'].map(brow).join('')}<tr style="background:#F7F7F9;"><td><b>Итого</b></td><td><b>${T.tot.toLocaleString('ru-RU')}</b></td><td><b>${T.called}</b></td><td><b>${T.reach}</b></td><td><b>${T.meetSet}</b></td><td><b>${T.met}</b></td><td><b>${T.app}</b></td><td><b>${T.iss}</b></td><td><b style="color:#A81E16;">${T.nocov.toLocaleString('ru-RU')}</b></td><td><b>${T.ref}</b></td></tr></table></div></div>
+    <div class="mdx-bottom" style="grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);">
+      <div class="mdx-card"><div class="mdx-h"><b>Менеджеры</b></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Менеджер</th><th>Закреплено</th><th>Охвачено</th><th>Не тронуто 14+ дн.</th><th>Заявки</th><th>Выдано</th></tr>${mRows || '<tr><td colspan="6" class="mdx-ks">Пока никто не закреплён</td></tr>'}</table></div></div>
+      <div class="mdx-card"><div class="mdx-h"><b>Махалля: активность по предприятиям</b><span>норма реакции 3 дня · ${mah.length} предприятий</span></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Предприятие</th><th>Что сделал менеджер</th><th>Заявка</th><th>Без внимания</th></tr>${mahRows || '<tr><td colspan="4" class="mdx-ks">Нет предприятий с ИНН</td></tr>'}</table></div>${mah.length > 60 ? '<div class="mdx-ks">Показаны 60 из ' + mah.length + ', сначала самые давние без внимания</div>' : ''}
+        <div class="mdx-h" style="margin-top:16px;"><b>По банкирам махалли</b></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Банкир</th><th>Добавил</th><th>С ними работали</th><th>Без внимания 3+ дн.</th><th>Заявки</th></tr>${bkRows || '<tr><td colspan="5" class="mdx-ks">—</td></tr>'}</table></div></div>
+    </div></div>`;
+}
+
 function renderClients(clients) {
   const tbody = document.getElementById('clientsTable');
   tbody.innerHTML = '';
@@ -16893,7 +17035,7 @@ function renderClients(clients) {
       <tr class="clickable-row${flagged ? ' row-flagged' : ''}" onclick="openClientCardRef('clientsTable', ${i})" ${flagged ? 'title="Отклонено юридическим мониторингом"' : ''}>
         <td class="nowrap">${i + 1}</td>
         <td class="nowrap">${safe(c.date)}</td>
-        <td class="nowrap">${renderClientWorkDays(c)}</td>
+        <td class="nowrap">${renderClientWorkDays(c)}${clBadge(c)}</td>
         <td>${safe(c.name)}${flagged ? ' <span class="status status-red" style="font-size:10.5px;">⚠ Мониторинг: проблема</span>' : ''}</td>
         <td class="nowrap">${safe(c.phone)}</td>
         <td class="nowrap">${safe(c.inn)}</td>
@@ -17028,6 +17170,7 @@ function getDashboardClientSelectionMeta(type, clients) {
 }
 
 function openDashboardClients(type) {
+  clientStateTab = 'all';
   dashboardClientSelection = type || 'all';
 
   showMsbSalesTab('clientsPage');
@@ -17067,6 +17210,7 @@ function renderDashboardClientSelection() {
 }
 
 function resetDashboardClientSelection() {
+  clientStateTab = 'active';
   dashboardClientSelection = 'all';
 
   const banner = document.getElementById('clientSelectionBanner');
@@ -17113,6 +17257,7 @@ function applyClientFilters() {
     if (subtitle) subtitle.innerText = meta.subtitle;
   }
 
+  try { clRenderTabs(filtered); if (clientStateTab !== 'all') filtered = filtered.filter(c => clState(c).s === clientStateTab); } catch (e) { console.error(e); }
   renderClients(filtered);
   renderClientSummary(filtered);
 }
