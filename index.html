@@ -6424,6 +6424,7 @@ const MSB_RATING_W = { issued: 50, calls: 20, meets: 20, apps: 10 };
 function msbDashMonthKey(d) { return d.getFullYear() + '-' + nplPad2(d.getMonth() + 1); }
 function msbDashDate(s) { const d = stParseDt(s); return d && !isNaN(d) ? d : null; }
 function msbDashPct(a, b) { if (!b) return ''; const p = (a - b) / b * 100; return (p >= 0 ? '+' : '') + p.toFixed(1).replace('.', ',') + '%'; }
+function msbDashDateRu(v) { const s = String(v || ''); const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) { const d = new Date(s); if (!isNaN(d) && s.length > 10) return nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1) + '.' + d.getFullYear(); return m[3] + '.' + m[2] + '.' + m[1]; } return s; }
 function msbDashSigned(v) { return (v >= 0 ? '+' : '−') + formatMoney(Math.abs(v)); }
 
 function msbDashStats(mk) {
@@ -6480,12 +6481,12 @@ async function renderMsbDash() {
   const ddmm = iso => iso.slice(8, 10) + '.' + iso.slice(5, 7);
   const T = lastD ? { activeClientsCount: lastD.clients, activeClientsBalance: lastD.sum } : TB;
   const tot = lastD ? lastD.sum : (Number(TB.totalPortfolio) || 0), ind = lastD ? lastD.pSum : (Number(TB.individualPortfolio) || 0), leg = lastD ? lastD.jSum : (Number(TB.legalPortfolio) || 0);
-  const asOf = lastD ? ddmm(lastD.date) + '.' + lastD.date.slice(0, 4) + ' (загрузка NPL)' : lastB ? (lastB.reportDate || lastB.period) : '';
+  const asOf = lastD ? ddmm(lastD.date) + '.' + lastD.date.slice(0, 4) + ' · загрузка портфеля' : lastB ? msbDashDateRu(lastB.reportDate || lastB.period) + ' · отчёт баланса' : '';
   let points;
   if (days.length) {
     const stepD = Math.max(1, Math.ceil(days.length / 60));
     points = [{ l: '01.01', v: MSB_BASE_2026.total }].concat(days.filter((d, i) => i % stepD === 0 || i === days.length - 1).map(d => ({ l: ddmm(d.date), v: d.sum })));
-  } else points = [{ l: '01.01', v: MSB_BASE_2026.total }].concat(bal.filter(b => Number((b.totals || {}).totalPortfolio)).map(b => ({ l: String(b.reportDate || b.period).slice(0, 5), v: Number(b.totals.totalPortfolio) })));
+  } else points = [{ l: '01.01', v: MSB_BASE_2026.total }].concat(bal.filter(b => Number((b.totals || {}).totalPortfolio)).map(b => ({ l: msbDashDateRu(b.reportDate || b.period).slice(0, 5), v: Number(b.totals.totalPortfolio) })));
   const monthStartD = days.find(d => d.date.slice(0, 7) === msbDashMonthKey(new Date()));
   const prevD = days.length > 1 ? days[days.length - 2] : null;
   const grow = tot ? tot - MSB_BASE_2026.total : 0;
@@ -6537,7 +6538,7 @@ async function renderMsbDash() {
     <div class="mdx-chart">${msbDashChart(points)}</div>
   </div>
   <div class="mdx-tiles">
-    ${tile('Активные клиенты', act ? act.toLocaleString('ru-RU') : '—', T.activeClientsBalance ? 'остаток ' + formatMoney(T.activeClientsBalance) : 'из загрузки портфеля', actBase && act ? mini('с ' + msbE(String(firstAct.reportDate || firstAct.period)), (act - actBase >= 0 ? '+' : '') + (act - actBase).toLocaleString('ru-RU')) : '')}
+    ${tile('Активные клиенты', act ? act.toLocaleString('ru-RU') : '—', T.activeClientsBalance ? 'остаток ' + formatMoney(T.activeClientsBalance) : 'из загрузки портфеля', actBase && act ? mini('с ' + msbE(msbDashDateRu(firstAct.reportDate || firstAct.period)), (act - actBase >= 0 ? '+' : '') + (act - actBase).toLocaleString('ru-RU')) : '')}
     ${tile('Выдано за ' + monthNames[now.getMonth()], formatMoney(issuedSum), S.issued.length + ' сделок', mini(monthNames[prev.getMonth()], formatMoney(prevSum) + ' · ' + P.issued.length), '#14693A', "openDashboardClients('issued')")}
     ${tile('Будут выданы', pipe.length + ' · ' + formatMoney(pipeSum), 'КК, одобрено, мониторинг', mini('одобрено / мониторинг', appr.length + ' · ' + formatMoney(appr.reduce((s, c) => s + (Number(c.amount) || 0), 0))) + mini('кредитный комитет', kk.length), '#2A4BA0', "openDashboardClients('closeToIssue')")}
     ${tile('Визиты', S.meets.length + ' встреч', tripsM + ' выездов на территорию', mini('интересно', interest), '', 'openMsbControl()')}
