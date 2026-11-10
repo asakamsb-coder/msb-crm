@@ -712,6 +712,8 @@ body.role-vzyskatel .main,#vzLoanOverlay{background:#F0F1F4;}
 .vzh-snow b{position:absolute;top:-24px;color:#fff;font-weight:400;line-height:1;text-shadow:0 0 6px rgba(255,255,255,.55);animation:vzhFall linear infinite;}
 @keyframes vzhFall{0%{transform:translate(0,-10px) rotate(0)}50%{transform:translate(var(--sw),120px) rotate(calc(var(--rt) / 2))}100%{transform:translate(calc(var(--sw) * -.4),270px) rotate(var(--rt))}}
 @media (prefers-reduced-motion:reduce){.vzh-snow b{animation:none;}}
+.vzd-hero.has-snow,.msb-hero.has-snow,.m-hero.has-snow{position:relative;overflow:hidden;background:linear-gradient(160deg,#D92B21,#9E1B14);border-radius:0 0 26px 26px;}
+.has-snow > :where(:not(.vzh-snow)){position:relative;z-index:2;}
 .vzh-pl{margin-top:18px;font-size:13px;opacity:.9;}
 .vzh-pr{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
 .vzh-big{font-size:36px;font-weight:800;letter-spacing:-.5px;}
@@ -7830,6 +7832,19 @@ const VZ_SNOW = (function() {
     h += '<b style="left:' + Math.floor(rnd() * 96) + '%;font-size:' + s + 'px;opacity:' + (0.35 + rnd() * 0.55).toFixed(2) + ';animation-duration:' + d.toFixed(1) + 's;animation-delay:' + dl.toFixed(1) + 's;--sw:' + sw + 'px;--rt:' + rot + 'deg;filter:blur(' + blur + 'px)">' + glyph[Math.floor(rnd() * 4)] + '</b>';
   }
   return '<div class="vzh-snow">' + h + '</div>';
+})();
+// Новогодний снег во всех мобильных шапках (взыскатель, менеджер МСБ, банкир махалли)
+(function() {
+  let q = false;
+  const add = () => {
+    q = false;
+    document.querySelectorAll('.vzd-hero:not(.has-snow),.msb-hero:not(.has-snow),.m-hero:not(.has-snow)').forEach(el => {
+      el.classList.add('has-snow');
+      if (!el.querySelector(':scope > .vzh-snow')) el.insertAdjacentHTML('afterbegin', VZ_SNOW);
+    });
+  };
+  const start = () => { add(); new MutationObserver(() => { if (!q) { q = true; requestAnimationFrame(add); } }).observe(document.body, { childList: true, subtree: true }); };
+  if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
 
 function vzMyCalls() {
