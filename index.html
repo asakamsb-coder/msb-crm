@@ -804,7 +804,7 @@ textarea.vzc-in{resize:none;}
 .vzv-stop{margin-left:auto;border:none;border-radius:12px;background:#141414;color:#fff;font-weight:800;padding:9px 18px;font-family:inherit;cursor:pointer;}
 .vzv-x{border:none;background:#141414;color:#fff;width:28px;height:28px;border-radius:50%;font-size:15px;cursor:pointer;flex:none;}
 .vzv-play{border:none;background:#EEF1FB;color:#2A4BA0;border-radius:10px;padding:2px 9px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;margin-left:4px;}
-#msbApp{position:fixed;inset:0;z-index:150;background:#F2F3F6;color:#141414;font-family:inherit;display:none;}
+#msbApp,#lwApp{position:fixed;inset:0;z-index:150;background:#F2F3F6;color:#141414;font-family:inherit;display:none;}
 body.msb-on{overflow:hidden;}
 .msb-scroll{position:absolute;inset:0 0 64px 0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .msb-nav{position:absolute;left:0;right:0;bottom:0;height:64px;background:#fff;display:flex;border-top:1px solid #ECECF0;padding-bottom:env(safe-area-inset-bottom);}
@@ -866,6 +866,8 @@ body.msb-on{overflow:hidden;}
 .msb-chips2{margin:8px 0;flex-wrap:wrap;}
 .msb-chips2 button{background:#F0F0F2;color:#141414;}
 .msb-chips2 button.on{background:#141414;color:#fff;}
+.lw-f button{background:#fff;box-shadow:0 2px 8px rgba(20,20,30,.06);}
+.lw-f button.on{background:#141414;color:#fff;}
 .msb-in{width:100%;box-sizing:border-box;border:none;background:#fff;border-radius:14px;height:46px;padding:0 14px;font-size:14px;font-family:inherit;color:#141414;}
 .msb-card .msb-in,.vzs .msb-in{background:#F3F4F7;}
 textarea.msb-in{height:auto;padding:12px 14px;resize:none;}
@@ -5415,6 +5417,7 @@ function applyRoleView() {
   document.body.classList.toggle('role-vzyskatel', isVzShell());
   document.querySelectorAll('.msb-boss-btn').forEach(b => { b.style.display = msbIsBossRole() ? '' : 'none'; });
   if (msbMobile()) msbOpen(false);
+  if (lwMobile()) lwOpen();
   document.body.classList.toggle('role-mahalla-banker', isMbShell());
   if (isMbShell()) renderMbNavbar();
   if (isVzShell()) {
@@ -8489,6 +8492,350 @@ async function cyCamUpload(cam, b64, mime, taken, dur) {
     msbRender();
   } catch (e) { cyCamClose(); msb.cyErr = 'Не удалось связаться с сервером'; msbRender(); }
 }
+
+// ===================== МОБИЛЬНАЯ ВЕРСИЯ ЮРИСТА (LAWYER) =====================
+// Вся просрочка банка (физ + юр), обзвон с результатом, загрузка документов
+// иска / приказа / МИБ с камеры или файлом. Данные — те же, что в блоке NPL.
+const lw = { open: false, tab: 'home', key: null, seg: 'all', q: '', term: 'Все', legal: 'Все', coll: 'Все', lim: 40, ctab: 'queue', pend: null, res: null, up: '' };
+const LW_TERMS = ['Все', '1–29 дн.', '30–89 дн.', '90–179 дн.', '180–359 дн.', '360+ дн.'];
+const LW_LEGALS = ['Все', '90+ без иска', 'Без иска', 'Иск подан', 'Приказ получен', 'В МИБ'];
+const LW_RES = ['Обещал оплатить', 'Отказ платить', 'Не дозвонился', 'Номер неверный'];
+const LW_ST = { need: ['90+ дн. без иска', '#C4231A', ['#FBE4E1', '#A81E16']], isk: ['Иск подан', '#E8A317', ['#FFF1CF', '#8A5A00']], ord: ['Приказ получен', '#2A4BA0', ['#EEF1FB', '#2A4BA0']], mib: ['В МИБ', '#1E9E5A', ['#E3F5EA', '#14693A']], pre: ['До 90 дн.', '#8A8D96', ['#F0F0F2', '#3F3F46']] };
+function lwMobile() { return !!(currentUser && String(currentUser.role || '').toUpperCase() === 'LAWYER' && window.innerWidth < 820); }
+function lwMe() { return String((currentUser && (currentUser.fullName || currentUser.login)) || '').trim(); }
+function lwOpen() {
+  lw.open = true;
+  let box = document.getElementById('lwApp');
+  if (!box) { box = document.createElement('div'); box.id = 'lwApp'; document.body.appendChild(box); }
+  box.style.display = 'block';
+  document.body.classList.add('msb-on');
+  lwRender();
+  try { Promise.resolve(vzLoadCalls()).then(lwOnData); } catch (e) {}
+}
+let lwDataT = null;
+function lwOnData() {
+  if (!lw.open) return;
+  clearTimeout(lwDataT);
+  lwDataT = setTimeout(function() { const a = document.activeElement; if (a && a.id === 'lwSearch') return; lwRender(); }, 250);
+}
+function lwGroups() {
+  const gs = getNplGroupsCached().filter(g => (Number(g.maxDays) || 0) >= 1);
+  gs.forEach(g => { nplGroupsByKey[g.key] = g; });
+  return gs;
+}
+function lwOv(g) { return (Number(g.overdueBalanceSum) || 0) + (Number(g.overdueInterestSum) || 0) || Number(g.nplSum) || 0; }
+function lwSt(g) { return { isk: nplFlFiles(g.key, 'isk').length > 0, ord: nplFlFiles(g.key, 'ord').length > 0, mib: nplFlFiles(g.key, 'mib').length > 0 }; }
+function lwStage(g) { const s = lwSt(g); return s.mib ? 'mib' : s.ord ? 'ord' : s.isk ? 'isk' : (Number(g.maxDays) || 0) >= 90 ? 'need' : 'pre'; }
+function lwColl(g) { try { return nplCollectorNameRaw(allNplAssignments[g.key]) || ''; } catch (e) { return ''; } }
+function lwSubj(g) { return g.subject === 'J' ? 'Юр' : 'Физ'; }
+function lwPhones(g) { return String(g.phoneJoined || '').split(/[,;\/]/).map(x => x.replace(/\D/g, '')).filter(x => x.length >= 9).map(x => x.length === 9 ? '998' + x : x).filter((x, i, a) => a.indexOf(x) === i); }
+function lwDaysCol(d) { return d >= 90 ? '#A81E16' : d >= 30 ? '#8A5A00' : '#3F3F46'; }
+function lwChip(ok, l) { return `<span class="msb-tag" style="background:${ok ? '#E3F5EA' : '#F0F0F2'};color:${ok ? '#14693A' : '#3F3F46'};">${ok ? '✓' : '—'} ${l}</span>`; }
+function lwCallsOf(key) { return (allNplCalls || []).filter(c => c.key === key); }
+function lwMyCalls() { const me = lwMe().toLowerCase(), lg = String((currentUser && currentUser.login) || '').toLowerCase(); return (allNplCalls || []).filter(c => String(c.addedBy || '').toLowerCase() === me || (lg && String(c.login || '').toLowerCase() === lg)); }
+function lwIsToday(s) { const d = stParseDt(s); return !!d && stDayKey(d) === stDayKey(new Date()); }
+function lwMyDocsToday() {
+  const me = lwMe().toLowerCase(); let n = 0;
+  [allNplCourt.files || {}, allNplMib.files || {}].forEach(m => Object.keys(m).forEach(k => (m[k] || []).forEach(f => { if (String(f.uploadedBy || '').toLowerCase() === me && lwIsToday(String(f.uploadedAt || '').replace(',', ''))) n++; })));
+  return n;
+}
+function lwRow(g) {
+  const s = lwSt(g), d = Number(g.maxDays) || 0, c = lwColl(g);
+  return `<div class="msb-lr" onclick="lwOpenClient('${encodeURIComponent(g.key)}')"><div style="flex:1;min-width:0;">
+    <div style="display:flex;justify-content:space-between;gap:8px;"><b style="font-size:13.5px;word-break:break-word;">${msbE(g.clientName)}</b><b style="font-size:13.5px;color:#A81E16;white-space:nowrap;">${vzFmt(lwOv(g))}</b></div>
+    <div class="msb-sub" style="margin:2px 0 5px;">${lwSubj(g)}${c ? ' · ' + msbE(c) : ''} · <b style="color:${lwDaysCol(d)};">${d} дн.</b></div>
+    <div class="msb-lrh">${lwChip(s.isk, 'Иск')}${lwChip(s.ord, 'Приказ')}${lwChip(s.mib, 'МИБ')}</div></div>
+    ${lwPhones(g).length ? `<button type="button" class="msb-call" aria-label="Позвонить" onclick="event.stopPropagation();lwCall('${encodeURIComponent(g.key)}')">${msbDialIcon()}</button>` : ''}</div>`;
+}
+function lwRender() {
+  const box = document.getElementById('lwApp'); if (!box || !lw.open) return;
+  const sc = document.getElementById('lwScroll'), top = sc ? sc.scrollTop : 0, same = box.dataset.v === lw.tab + '|' + (lw.key || '');
+  let body = '';
+  try {
+    if (!nplDataLoaded && !getNplGroupsCached().length) body = msbHero('Юридическая работа', 'Загрузка…') + '<div class="msb-pad msb-up"><div class="msb-card">Загружаю данные просрочки…</div></div>';
+    else if (lw.tab === 'home') body = lwHomeHtml();
+    else if (lw.tab === 'clients') body = lw.key ? lwClientHtml() : lwClientsHtml();
+    else if (lw.tab === 'calls') body = lwCallsHtml();
+    else body = lwProfileHtml();
+  } catch (e) { console.error(e); body = '<div class="msb-pad"><div class="msb-card">Ошибка отображения: ' + msbE(e.message) + '</div></div>'; }
+  const tabs = [['home', 'Главная', 'home'], ['clients', 'Клиенты', 'users'], ['calls', 'Обзвон', 'phone'], ['prof', 'Профиль', 'user']];
+  const nav = tabs.map(t => `<button type="button" class="${lw.tab === t[0] ? 'on' : ''}" onclick="lwGo('${t[0]}')">${msbIcon(t[2], 22)}<span>${t[1]}</span></button>`).join('');
+  const hasFocus = document.activeElement && document.activeElement.id === 'lwSearch';
+  box.innerHTML = `<div class="msb-scroll" id="lwScroll">${body}</div><nav class="msb-nav">${nav}</nav>`;
+  box.dataset.v = lw.tab + '|' + (lw.key || '');
+  const ns = document.getElementById('lwScroll'); if (ns && same) ns.scrollTop = top;
+  if (hasFocus) { const el = document.getElementById('lwSearch'); if (el) { el.focus(); const n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} } }
+}
+function lwGo(t) { lw.tab = t; lw.key = null; lw.lim = 40; lwRender(); const s = document.getElementById('lwScroll'); if (s) s.scrollTop = 0; }
+
+// ---------- Главная ----------
+function lwHomeHtml() {
+  const gs = lwGroups(), now = new Date();
+  const ov = gs.reduce((t, g) => t + lwOv(g), 0), loans = gs.reduce((t, g) => t + g.loans.length, 0);
+  const npl = gs.filter(g => g.maxDays >= 90).reduce((t, g) => t + (Number(g.nplSum) || 0), 0);
+  const by = { need: [], isk: [], ord: [], mib: [] };
+  gs.forEach(g => { const s = lwStage(g); if (by[s]) by[s].push(g); });
+  const plate = k => { const a = by[k], st = LW_ST[k]; return `<div class="msb-w" style="cursor:pointer;" onclick="lwFilterGo('${st[0] === '90+ дн. без иска' ? '90+ без иска' : st[0]}')"><div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${st[2][1]};"><span style="width:8px;height:8px;border-radius:50%;background:${st[1]};"></span>${st[0]}</div><div style="font-size:22px;font-weight:800;margin-top:4px;">${a.length}</div><div class="msb-sub" style="font-weight:600;">${vzFmt(a.reduce((t, g) => t + lwOv(g), 0))}</div></div>`; };
+  const my = lwMyCalls().filter(c => lwIsToday(c.addedAt));
+  const reached = my.filter(c => c.result === 'Обещал оплатить' || c.result === 'Отказ платить').length;
+  const queue = lwQueue().length;
+  const dateRu = now.getDate() + ' ' + (['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'][now.getMonth()]);
+  const need = by.need.slice().sort((a, b) => lwOv(b) - lwOv(a));
+  const q = (ic, l, on, s) => `<button type="button" onclick="${on}"><div class="msb-qi">${msbIcon(ic, 24)}</div>${l}<small>${s || ''}</small></button>`;
+  const kv = (l, v) => `<div style="flex:1;background:#F3F4F7;border-radius:14px;padding:10px;"><div class="msb-sub" style="font-weight:700;">${l}</div><b style="font-size:18px;">${v}</b></div>`;
+  return msbHero('Юридическая работа', 'Юрист · ' + msbE(lwMe()) + ' · ' + dateRu, `<div style="margin-top:12px;font-size:12px;opacity:.9;">Вся просрочка · ${loans} кредитов · ${gs.length} клиентов</div><div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;"><b style="font-size:28px;">${vzFmt(ov)}</b><span style="font-size:13px;opacity:.9;">NPL ${vzFmt(npl)}</span></div>`)
+    + `<div class="msb-pad msb-up"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">${plate('need')}${plate('isk')}${plate('ord')}${plate('mib')}</div>
+      <div class="msb-q" style="margin:14px 0 4px;">${q('phone', 'Обзвон', "lwGo('calls')", queue + ' к звонку')}${q('users', 'Клиенты', "lwGo('clients')")}${q('gavel', 'Суд', "lwFilterGo('Иск подан')")}${q('upload', 'МИБ', "lwFilterGo('В МИБ')")}</div>
+      <div class="msb-card"><div class="msb-h"><b>Сегодня</b></div><div style="display:flex;gap:8px;">${kv('Звонки', my.length)}${kv('Дозвон', reached)}${kv('Документы', lwMyDocsToday())}</div></div>
+      <div class="msb-card"><div class="msb-h"><b>Требует иска</b><a style="color:#C4231A;font-weight:800;font-size:12.5px;cursor:pointer;" onclick="lwFilterGo('90+ без иска')">Все ${need.length}</a></div>${need.slice(0, 5).map(lwRow).join('') || '<div class="msb-sub">Нет клиентов</div>'}</div></div>`;
+}
+function lwFilterGo(legal) { lw.legal = legal; lw.term = 'Все'; lw.coll = 'Все'; lw.seg = 'all'; lw.q = ''; lwGo('clients'); }
+
+// ---------- Клиенты ----------
+function lwTermOk(d) {
+  switch (lw.term) { case '1–29 дн.': return d < 30; case '30–89 дн.': return d >= 30 && d < 90; case '90–179 дн.': return d >= 90 && d < 180; case '180–359 дн.': return d >= 180 && d < 360; case '360+ дн.': return d >= 360; default: return true; }
+}
+function lwLegalOk(g) {
+  const st = lwStage(g), s = lwSt(g);
+  switch (lw.legal) { case '90+ без иска': return st === 'need'; case 'Без иска': return !s.isk && !s.ord && !s.mib; case 'Иск подан': return st === 'isk'; case 'Приказ получен': return st === 'ord'; case 'В МИБ': return st === 'mib'; default: return true; }
+}
+function lwList() {
+  const q = lw.q.trim().toLowerCase(), qd = q.replace(/\D/g, '');
+  return lwGroups().filter(g => {
+    if (lw.seg === 'J' && g.subject !== 'J') return false;
+    if (lw.seg === 'F' && g.subject === 'J') return false;
+    if (!lwTermOk(Number(g.maxDays) || 0) || !lwLegalOk(g)) return false;
+    if (lw.coll !== 'Все' && (lwColl(g) || 'Не закреплён') !== lw.coll) return false;
+    if (q) {
+      const hay = (g.clientName + ' ' + (g.pin || '') + ' ' + (g.contractIdsJoined || '')).toLowerCase();
+      if (hay.indexOf(q) < 0 && !(qd.length >= 4 && hay.replace(/\D/g, ' ').indexOf(qd) > -1)) return false;
+    }
+    return true;
+  }).sort((a, b) => lwOv(b) - lwOv(a));
+}
+function lwPickF(kind) {
+  if (kind === 'term') return vzPick('Срок просрочки', LW_TERMS, lw.term, v => { lw.term = v; lw.lim = 40; lwRender(); });
+  if (kind === 'legal') return vzPick('Юридический статус', LW_LEGALS, lw.legal, v => { lw.legal = v; lw.lim = 40; lwRender(); });
+  const names = ['Все'].concat(Array.from(new Set(lwGroups().map(g => lwColl(g) || 'Не закреплён'))).sort());
+  vzPick('Взыскатель', names, lw.coll, v => { lw.coll = v; lw.lim = 40; lwRender(); });
+}
+function lwClientsHtml() {
+  const all = lwGroups(), list = lwList();
+  const cnt = s => all.filter(g => s === 'all' || (s === 'J' ? g.subject === 'J' : g.subject !== 'J')).length;
+  const seg = [['all', 'Все'], ['J', 'Юр'], ['F', 'Физ']].map(s => `<button type="button" class="${lw.seg === s[0] ? 'on' : ''}" onclick="lw.seg='${s[0]}';lw.lim=40;lwRender()">${s[1]} ${cnt(s[0])}</button>`).join('');
+  const pill = (k, l, v) => `<button type="button" class="${v !== 'Все' ? 'on' : ''}" onclick="lwPickF('${k}')">${v === 'Все' ? l : msbE(v)} ▾</button>`;
+  const reset = lw.term !== 'Все' || lw.legal !== 'Все' || lw.coll !== 'Все' || lw.q ? `<a style="color:#C4231A;font-weight:800;cursor:pointer;" onclick="lw.term='Все';lw.legal='Все';lw.coll='Все';lw.q='';lwRender()">Сбросить</a>` : '';
+  return msbHero('Клиенты', 'Вся просрочка банка', `<div class="msb-chips">${seg}</div>`)
+    + `<div class="msb-pad msb-up"><input id="lwSearch" class="msb-in" placeholder="Имя, ИНН / ПИНФЛ, № договора" value="${msbE(lw.q)}" oninput="lw.q=this.value;lw.lim=40;clearTimeout(window.__lwQ);window.__lwQ=setTimeout(lwRender,250)">
+      <div class="msb-chips msb-chips2 lw-f">${pill('term', 'Срок', lw.term)}${pill('legal', 'Юр. статус', lw.legal)}${pill('coll', 'Взыскатель', lw.coll)}<button type="button" onclick="lwExcel(this)">⬇ Excel</button></div>
+      <div class="msb-card"><div class="msb-h"><span class="msb-sub" style="font-weight:700;">${list.length} клиентов · ${vzFmt(list.reduce((t, g) => t + lwOv(g), 0))}</span>${reset}</div>
+      ${list.slice(0, lw.lim).map(lwRow).join('') || '<div class="msb-sub">Ничего не найдено</div>'}
+      ${list.length > lw.lim ? `<button type="button" class="cy-ghost" style="width:100%;" onclick="lw.lim+=40;lwRender()">Показать ещё (${list.length - lw.lim})</button>` : ''}</div></div>`;
+}
+async function lwExcel(btn) {
+  const list = lwList(); if (!list.length) return;
+  try {
+    if (btn) { btn.disabled = true; btn.innerText = 'Формирую…'; }
+    const ExcelJS = await nplLoadExcelJs();
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Просрочка');
+    ws.columns = [{ header: 'Клиент', width: 36 }, { header: 'Тип', width: 7 }, { header: 'ИНН / ПИНФЛ', width: 18 }, { header: 'Телефон', width: 16 }, { header: 'Взыскатель', width: 24 }, { header: 'Дней', width: 8 }, { header: 'Просрочка', width: 16 }, { header: 'Портфель', width: 16 }, { header: 'Иск', width: 7 }, { header: 'Приказ', width: 8 }, { header: 'МИБ', width: 7 }, { header: 'Этап', width: 18 }, { header: 'Последний звонок', width: 34 }];
+    const last = {}; (allNplCalls || []).forEach(c => { if (!last[c.key]) last[c.key] = c; });
+    list.forEach(g => { const s = lwSt(g), c = last[g.key]; ws.addRow([g.clientName, lwSubj(g), String(g.pin || ''), lwPhones(g).join(', '), lwColl(g), Number(g.maxDays) || 0, lwOv(g), vzGroupPf(g), s.isk ? 'да' : '', s.ord ? 'да' : '', s.mib ? 'да' : '', LW_ST[lwStage(g)][0], c ? c.addedAt + ' · ' + c.addedBy + (c.result ? ' · ' + c.result : '') : '']); });
+    const h = ws.getRow(1); h.font = { bold: true, color: { argb: 'FFFFFFFF' } }; h.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC4231A' } }; h.height = 22;
+    ws.views = [{ state: 'frozen', ySplit: 1 }]; ws.autoFilter = { from: 'A1', to: 'M1' };
+    [7, 8].forEach(i => { ws.getColumn(i).numFmt = '#,##0'; });
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const d = new Date(); a.download = 'prosrochka_' + d.getFullYear() + nplPad2(d.getMonth() + 1) + nplPad2(d.getDate()) + '.xlsx'; a.click();
+  } catch (e) { console.error(e); alert('Не удалось сформировать Excel'); }
+  if (btn) { btn.disabled = false; btn.innerText = '⬇ Excel'; }
+}
+
+// ---------- Карточка клиента ----------
+function lwOpenClient(kEnc) { lw.key = decodeURIComponent(kEnc); lw.up = ''; if (lw.tab !== 'clients' && lw.tab !== 'calls') lw.tab = 'clients'; lw.tab = 'clients'; lwRender(); const s = document.getElementById('lwScroll'); if (s) s.scrollTop = 0; }
+function lwClientHtml() {
+  const g = nplGroupsByKey[lw.key];
+  if (!g) { lw.key = null; return lwClientsHtml(); }
+  const kEnc = encodeURIComponent(g.key), d = Number(g.maxDays) || 0, c = lwColl(g), s = lwSt(g);
+  const court = (allNplCourt.data || {})[g.key] || {};
+  const back = `<button type="button" class="msb-back" onclick="lw.key=null;lwRender()" aria-label="Назад">‹</button>`;
+  const hasPh = lwPhones(g).length > 0;
+  const extra = `<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:12px;"><div><div style="font-size:12px;opacity:.9;">Просрочка</div><b style="font-size:26px;">${vzFmt(lwOv(g))}</b><div style="font-size:12.5px;opacity:.92;">${d} дн. · остаток ${vzFmt(vzGroupPf(g))}</div></div>${hasPh ? `<button type="button" onclick="lwCall('${kEnc}')" aria-label="Позвонить" style="width:52px;height:52px;border-radius:50%;border:none;background:#fff;color:#C4231A;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;">${msbDialIcon()}</button>` : ''}</div>`;
+  const hero = msbHero(msbE(g.clientName), lwSubj(g) + (g.pin ? ' · ' + (g.subject === 'J' ? 'ИНН ' : 'ПИНФЛ ') + msbE(g.pin) : '') + (c ? ' · взыск. ' + msbE(c) : ''), extra).replace('<div class="msb-hero">', '<div class="msb-hero">' + back);
+  const files = kind => nplFlFiles(g.key, kind).map(f => `<a href="${msbE(f.url)}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;background:#F3F4F7;border-radius:12px;padding:8px 10px;margin-top:6px;color:#141414;text-decoration:none;"><span style="color:#C4231A;">📄</span><span style="flex:1;min-width:0;font-size:12.5px;font-weight:700;word-break:break-word;">${msbE(nplFlFileLabel(f.name))}</span><span class="msb-sub" style="font-size:11px;">${msbE(String(f.uploadedAt || '').slice(0, 5))}</span></a>`).join('');
+  const ub = (kind, mode) => `<button type="button" class="cy-cap" style="flex:1;width:auto;height:40px;flex-direction:row;gap:6px;font-size:12.5px;" onclick="lwUpload('${kind}','${mode}')">${mode === 'cam' ? msbIcon('camera', 16) + 'Камера' : msbIcon('upload', 16) + 'Файл / PDF'}</button>`;
+  const busy = k => lw.up === k ? '<div class="msb-sub" style="margin-top:6px;font-weight:800;color:#8A5A00;">Загрузка…</div>' : '';
+  const step = (kind, title, ok, sub, mark) => `<div style="padding:11px 0;border-top:1px solid #F0F0F3;"><div style="display:flex;align-items:center;gap:10px;"><div class="cy-dot" style="background:${ok ? '#1E9E5A' : '#D9DAE0'};">${ok ? '✓' : ''}</div><div style="flex:1;"><b style="font-size:14px;">${title}</b><div class="msb-sub">${sub}</div></div></div>${files(kind)}${busy(kind)}<div style="display:flex;gap:6px;margin-top:8px;">${ub(kind, 'cam')}${ub(kind, 'file')}${mark || ''}</div></div>`;
+  const markBtn = (st, l) => `<button type="button" onclick="lwMark('${st}')" style="flex:1;border:none;border-radius:12px;height:40px;background:#C4231A;color:#fff;font-weight:800;font-size:12px;font-family:inherit;cursor:pointer;">${l}</button>`;
+  const iskSub = court.caseStatus ? msbE(court.caseStatus) : s.isk ? 'Иск загружен' : d >= 90 ? 'Иск не подан · ' + d + ' дн.' : 'Не подан';
+  const ordSub = g.courtOrderNumberJoined ? '№ ' + msbE(g.courtOrderNumberJoined) + (g.courtOrderDateJoined ? ' от ' + msbE(g.courtOrderDateJoined) : '') : s.ord ? 'Приказ загружен' : 'Нет';
+  const mc = nplFlMibCase(g);
+  const legal = `<div class="msb-card"><div class="msb-h" style="margin-bottom:0;"><b>Юридический статус</b></div>
+    ${step('isk', 'Иск · суд', s.isk, iskSub, !court.caseStatus ? markBtn('На рассмотрении', 'Передано в суд') : '')}
+    ${step('ord', 'Судебный приказ', s.ord, ordSub, court.caseStatus !== 'Решение вынесено' && court.caseStatus !== 'Передано в МИБ' ? markBtn('Решение вынесено', 'Приказ получен') : '')}
+    ${step('mib', 'МИБ · исполнение', s.mib, mc ? 'Дело ' + msbE(mc) : 'Не передано', '')}</div>`;
+  const calls = lwCallsOf(g.key);
+  const callsH = `<div class="msb-card"><div class="msb-h"><b>Звонки</b><span class="msb-sub">${calls.length}</span></div>${calls.slice(0, 12).map(x => `<div style="padding:7px 0;border-top:1px solid #F0F0F3;font-size:12.5px;line-height:1.5;"><b>${msbE(String(x.addedAt).slice(0, 16))} · ${msbE(x.addedBy)}</b>${x.result ? ' · ' + lwResTag(x) : ''}<div class="msb-sub">${msbE([x.phone ? '+' + x.phone : '', x.label, x.comment].filter(Boolean).join(' · '))}</div>${!x.result && x.callId && lwMine(x) ? `<a style="color:#C4231A;font-weight:800;cursor:pointer;" onclick="lwResOpen('${msbE(x.callId)}')">Указать результат</a>` : ''}</div>`).join('') || '<div class="msb-sub">Звонков ещё не было</div>'}</div>`;
+  const vis = ((allNplVisits || {})[g.key] || []).slice(0, 5);
+  const visH = `<div class="msb-card"><div class="msb-h"><b>Визиты взыскателя</b><span class="msb-sub">${((allNplVisits || {})[g.key] || []).length}</span></div>${vis.map(v => `<div style="padding:7px 0;border-top:1px solid #F0F0F3;font-size:12.5px;"><b>${msbE(String(v.addedAt || '').slice(0, 16))}</b> · ${msbE(v.addedBy || '')}<div class="msb-sub">${msbE([v.status, v.clientStatus, v.comment].filter(Boolean).join(' · '))}</div></div>`).join('') || '<div class="msb-sub">Визитов не было</div>'}</div>`;
+  const loans = `<div class="msb-card"><div class="msb-h"><b>Кредиты</b><span class="msb-sub">${g.loans.length}</span></div>${g.loans.map(l => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid #F0F0F3;font-size:12.5px;"><span>№ ${msbE(l.contractId)}<div class="msb-sub">${nplLoanDays(l)} дн.${l.openDate ? ' · выдан ' + msbE(nplFmtDateRu(l.openDate)) : ''}</div></span><b>${vzFmt((Number(l.overdueBalance) || 0) + (Number(l.overdueInterest) || 0) || Number(l.totalNpl) || 0)}</b></div>`).join('')}</div>`;
+  return hero + `<div class="msb-pad msb-up">${legal}${callsH}${visH}${loans}</div>`;
+}
+function lwMine(x) { const lg = String((currentUser && currentUser.login) || '').toLowerCase(); return (lg && String(x.login || '').toLowerCase() === lg) || String(x.addedBy || '').toLowerCase() === lwMe().toLowerCase(); }
+function lwResTag(x) {
+  const c = x.result === 'Обещал оплатить' ? ['#E3F5EA', '#14693A'] : x.result === 'Отказ платить' ? ['#FBE4E1', '#A81E16'] : ['#F0F0F2', '#3F3F46'];
+  return msbTag(x.result + (x.promiseSum ? ' · ' + vzFmt(x.promiseSum) + (x.promiseDate ? ' до ' + (String(x.promiseDate).indexOf('-') > 0 ? vzFmtDateRu(x.promiseDate) : x.promiseDate) : '') : ''), c);
+}
+
+// Загрузка документа: камера (фото) или файл (PDF / фото)
+function lwUpload(kind, mode) {
+  if (lw.up) return;
+  const inp = document.createElement('input'); inp.type = 'file';
+  inp.accept = mode === 'cam' ? 'image/*' : 'application/pdf,image/*';
+  if (mode === 'cam') inp.setAttribute('capture', 'environment');
+  inp.style.display = 'none'; document.body.appendChild(inp);
+  inp.onchange = function() { const f = inp.files && inp.files[0]; inp.remove(); if (f) lwDoUpload(kind, f); };
+  inp.click();
+}
+function lwImgB64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => { const img = new Image(); img.onload = () => { const k = Math.min(1, 1800 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.82).split(',')[1]); }; img.onerror = () => rej(new Error('Не удалось открыть фото')); img.src = r.result; };
+    r.onerror = () => rej(new Error('Не удалось прочитать файл')); r.readAsDataURL(file);
+  });
+}
+async function lwDoUpload(kind, file) {
+  const g = nplGroupsByKey[lw.key]; if (!g) return;
+  const isImg = /^image\//.test(file.type || ''), isPdf = /pdf$/i.test(file.type || '') || /\.pdf$/i.test(file.name || '');
+  if (!isImg && !isPdf) return alert('Можно загрузить только PDF или фото');
+  if (file.size > 20 * 1024 * 1024) return alert('Файл больше 20 МБ');
+  lw.up = kind; lwRender();
+  const d = new Date(), stamp = d.getFullYear() + nplPad2(d.getMonth() + 1) + nplPad2(d.getDate()) + '_' + nplPad2(d.getHours()) + nplPad2(d.getMinutes());
+  const name = isImg ? (kind === 'mib' ? 'МИБ' : kind === 'ord' ? 'Приказ' : 'Иск') + '_' + stamp + '.jpg' : file.name;
+  const me = lwMe(), when = d.toLocaleString('ru-RU');
+  try {
+    const base64 = isImg ? await lwImgB64(file) : await fileToBase64(file);
+    const mime = isImg ? 'image/jpeg' : 'application/pdf';
+    if (kind === 'mib') {
+      let text = '', actions = [];
+      if (isPdf) { try { const ex = await nplExtractMibPdf(file); text = ex.text; actions = ex.actions; } catch (e) {} }
+      const r = await postWebAction({ webAction: 'uploadNplMibDocument', sessionId: localStorage.getItem('msbSessionId'), key: g.key, clientName: g.clientName, base64: base64, fileName: name, mimeType: mime, text: text, actions: actions });
+      if (!r.success) throw new Error(r.message || 'Ошибка загрузки');
+      allNplMib.data = allNplMib.data || {}; allNplMib.files = allNplMib.files || {};
+      if (r.recognized && r.parsed) { const fr = {}; Object.keys(r.parsed).forEach(f => { if (r.parsed[f]) fr[f] = r.parsed[f]; }); allNplMib.data[g.key] = Object.assign({}, allNplMib.data[g.key], fr, { actions: r.actions || [] }); }
+      (allNplMib.files[g.key] = allNplMib.files[g.key] || []).unshift({ url: r.fileUrl, name: name, uploadedAt: when, uploadedBy: me, recognized: !!r.recognized });
+    } else {
+      const fn = (kind === 'ord' ? '[приказ] ' : '[иск] ') + name;
+      const r = await postWebAction({ webAction: 'uploadNplCourtDocument', sessionId: localStorage.getItem('msbSessionId'), key: g.key, clientName: g.clientName, base64: base64, fileName: fn, mimeType: mime });
+      if (!r.success) throw new Error(r.message || 'Ошибка загрузки');
+      allNplCourt.files = allNplCourt.files || {};
+      (allNplCourt.files[g.key] = allNplCourt.files[g.key] || []).unshift({ url: r.fileUrl, name: fn, uploadedAt: when, uploadedBy: me });
+    }
+    lw.up = ''; lwRender();
+    try { nplFlAfterChange(); } catch (e) {}
+  } catch (e) { lw.up = ''; lwRender(); alert(e.message || 'Не удалось связаться с сервером'); }
+}
+async function lwMark(status) {
+  const g = nplGroupsByKey[lw.key]; if (!g) return;
+  if (!confirm('Отметить: ' + (status === 'Решение вынесено' ? 'приказ получен' : 'передано в суд') + '?')) return;
+  try {
+    const r = await postWebAction({ webAction: 'updateNplCourtStatus', sessionId: localStorage.getItem('msbSessionId'), key: g.key, clientName: g.clientName, caseStatus: status });
+    if (!r.success) return alert(r.message || 'Не удалось сохранить');
+    allNplCourt.data = allNplCourt.data || {};
+    allNplCourt.data[g.key] = Object.assign({}, allNplCourt.data[g.key], { caseStatus: status });
+    lwRender();
+  } catch (e) { alert('Не удалось связаться с сервером'); }
+}
+
+// ---------- Звонок и результат ----------
+function lwCall(kEnc) {
+  const key = decodeURIComponent(kEnc), g = nplGroupsByKey[key]; if (!g) return;
+  const ph = lwPhones(g); if (!ph.length) return;
+  if (ph.length === 1) return lwDial(key, ph[0]);
+  vzPick('Какой номер набрать', ph.map(p => '+' + p), '', v => lwDial(key, v.replace(/\D/g, '')));
+}
+function lwDial(key, phone) {
+  const g = nplGroupsByKey[key];
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const d = new Date(), stamp = nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + nplPad2(d.getHours()) + ':' + nplPad2(d.getMinutes());
+  if (allNplCalls === null) allNplCalls = [];
+  allNplCalls.unshift({ addedAt: stamp, key: key, clientName: g ? g.clientName : '', phone: phone, label: 'Юрист', addedBy: lwMe(), login: (currentUser && currentUser.login) || '', callId: id, result: '' });
+  postWebAction({ webAction: 'addNplCall', sessionId: localStorage.getItem('msbSessionId'), key: key, clientName: g ? g.clientName : '', phone: phone, label: 'Юрист', callId: id }).catch(e => console.error(e));
+  lw.pend = { id: id, t: Date.now(), hid: false };
+  setTimeout(() => { if (lw.pend && lw.pend.id === id && !lw.pend.hid) { lw.pend = null; lwResOpen(id); } }, 3500);
+  window.location.href = 'tel:+' + phone;
+}
+document.addEventListener('visibilitychange', function() {
+  if (!lw.pend) return;
+  if (document.visibilityState === 'hidden') lw.pend.hid = true;
+  else if (lw.pend.hid) { const id = lw.pend.id, sec = Math.round((Date.now() - lw.pend.t) / 1000); lw.pend = null; lwResOpen(id, sec); }
+});
+function lwResOpen(id, sec) {
+  const x = (allNplCalls || []).find(c => c.callId === id); if (!x) return;
+  lw.res = { id: id, sec: sec || 0, result: '', sum: '', date: '', comment: '', err: '' };
+  lwResSheet();
+}
+function lwResSheet() {
+  const r = lw.res, x = (allNplCalls || []).find(c => c.callId === r.id) || {};
+  const prom = r.result === 'Обещал оплатить';
+  vzSheetOpen(`<div class="vzs-h">Результат звонка${r.sec ? ' · ' + Math.floor(r.sec / 60) + ':' + ('0' + r.sec % 60).slice(-2) : ''}</div><div class="msb-sub" style="margin:-6px 0 6px;">${msbE(x.clientName || '')}${x.phone ? ' · +' + msbE(x.phone) : ''}</div>
+    ${LW_RES.map((o, i) => `<div class="cy-rl ${r.result === o ? 'on' : ''}" onclick="lw.res.result=LW_RES[${i}];lw.res.err='';lwResSheet()">${o}</div>`).join('')}
+    ${prom ? `<div class="cy-two" style="margin-top:12px;"><div class="msb-fl"><span>Сумма</span><input class="msb-in" style="background:#F3F4F7;" inputmode="numeric" value="${msbE(r.sum)}" oninput="lw.res.sum=this.value"></div><div class="msb-fl"><span>Дата</span><input class="msb-in" style="background:#F3F4F7;" type="date" min="${msbTodayIso()}" value="${msbE(r.date)}" onchange="lw.res.date=this.value"></div></div>` : ''}
+    <div class="msb-fl" style="margin-top:12px;"><span>Комментарий</span><textarea class="msb-in" style="background:#F3F4F7;min-height:60px;padding-top:12px;" oninput="lw.res.comment=this.value">${msbE(r.comment)}</textarea></div>
+    <div class="msb-err">${msbE(r.err)}</div><button type="button" class="vzs-go" onclick="lwResSave()">Сохранить</button>`);
+}
+async function lwResSave() {
+  const r = lw.res; if (!r || r.saving) return;
+  if (!r.result) { r.err = 'Выберите результат'; return lwResSheet(); }
+  const sum = String(r.sum || '').replace(/\D/g, '');
+  if (r.result === 'Обещал оплатить' && (!Number(sum) || !r.date)) { r.err = 'Укажите сумму и дату'; return lwResSheet(); }
+  r.saving = true;
+  try {
+    const res = await postWebAction({ webAction: 'nplCallResult', sessionId: localStorage.getItem('msbSessionId'), callId: r.id, result: r.result, promiseSum: sum, promiseDate: r.date, comment: r.comment });
+    r.saving = false;
+    if (!res.success) { r.err = res.message || 'Не удалось сохранить'; return lwResSheet(); }
+    const x = (allNplCalls || []).find(c => c.callId === r.id);
+    if (x) Object.assign(x, { result: r.result, promiseSum: Number(sum) || 0, promiseDate: r.date, comment: r.comment });
+    vzSheetClose(); lw.res = null; lwRender();
+  } catch (e) { r.saving = false; r.err = 'Не удалось связаться с сервером'; lwResSheet(); }
+}
+
+// ---------- Обзвон ----------
+function lwQueue() {
+  const recent = {}, lim = Date.now() - 7 * 86400000;
+  (allNplCalls || []).forEach(c => { const d = stParseDt(c.addedAt); if (d && d.getTime() >= lim) recent[c.key] = 1; });
+  return lwGroups().filter(g => (Number(g.maxDays) || 0) >= 30 && !recent[g.key] && lwPhones(g).length).sort((a, b) => lwOv(b) - lwOv(a));
+}
+function lwCallsHtml() {
+  const q = lwQueue(), lim = Date.now() - 7 * 86400000;
+  const my = lwMyCalls().filter(c => { const d = stParseDt(c.addedAt); return d && d.getTime() >= lim; });
+  const today = my.filter(c => lwIsToday(c.addedAt));
+  const prom = lwMyCalls().filter(c => c.result === 'Обещал оплатить' && c.promiseDate && c.promiseDate >= msbTodayIso()).sort((a, b) => String(a.promiseDate).localeCompare(String(b.promiseDate)));
+  const seg = [['queue', 'К звонку ' + q.length], ['mine', 'Мои звонки ' + my.length], ['prom', 'Обещания ' + prom.length]].map(s => `<button type="button" class="${lw.ctab === s[0] ? 'on' : ''}" onclick="lw.ctab='${s[0]}';lw.lim=40;lwRender()">${s[1]}</button>`).join('');
+  let body;
+  if (lw.ctab === 'queue') body = `<div class="msb-card"><div class="msb-h"><span class="msb-sub" style="font-weight:700;">30+ дн., не звонили 7 дней · по сумме</span></div>${q.slice(0, lw.lim).map(lwRow).join('') || '<div class="msb-sub">Всех обзвонили</div>'}${q.length > lw.lim ? `<button type="button" class="cy-ghost" style="width:100%;" onclick="lw.lim+=40;lwRender()">Показать ещё (${q.length - lw.lim})</button>` : ''}</div>`;
+  else {
+    const arr = lw.ctab === 'mine' ? my : prom;
+    body = `<div class="msb-card">${arr.map(x => `<div class="msb-lr" onclick="lwOpenClient('${encodeURIComponent(x.key)}')"><div style="flex:1;min-width:0;"><div style="display:flex;justify-content:space-between;gap:8px;"><b style="font-size:13.5px;">${msbE(x.clientName)}</b><span class="msb-sub">${msbE(String(x.addedAt).slice(0, 16))}</span></div><div style="margin-top:4px;">${x.result ? lwResTag(x) : (x.callId ? `<a style="color:#C4231A;font-weight:800;" onclick="event.stopPropagation();lwResOpen('${msbE(x.callId)}')">Указать результат</a>` : msbTag('без результата'))}</div>${x.comment ? `<div class="msb-sub" style="margin-top:4px;">${msbE(x.comment)}</div>` : ''}</div></div>`).join('') || '<div class="msb-sub">Пока пусто</div>'}</div>`;
+  }
+  return msbHero('Обзвон', 'Сегодня звонков: ' + today.length + ' · дозвон ' + today.filter(c => c.result === 'Обещал оплатить' || c.result === 'Отказ платить').length, `<div class="msb-chips">${seg}</div>`) + `<div class="msb-pad msb-up">${body}</div>`;
+}
+
+// ---------- Профиль ----------
+function lwProfileHtml() {
+  const mk = stDayKey(new Date()).slice(0, 7);
+  const mc = lwMyCalls().filter(c => { const d = stParseDt(c.addedAt); return d && stDayKey(d).slice(0, 7) === mk; });
+  const me = lwMe().toLowerCase(); let docs = 0;
+  [allNplCourt.files || {}, allNplMib.files || {}].forEach(m => Object.keys(m).forEach(k => (m[k] || []).forEach(f => { const d = stParseDt(String(f.uploadedAt || '').replace(',', '')); if (String(f.uploadedBy || '').toLowerCase() === me && d && stDayKey(d).slice(0, 7) === mk) docs++; })));
+  const kv = (l, v) => `<div style="flex:1;background:#F3F4F7;border-radius:14px;padding:10px;"><div class="msb-sub" style="font-weight:700;">${l}</div><b style="font-size:18px;">${v}</b></div>`;
+  return msbHero(msbE(lwMe()), 'Юрист')
+    + `<div class="msb-pad msb-up"><div class="msb-card"><div class="msb-h"><b>За этот месяц</b></div><div style="display:flex;gap:8px;">${kv('Звонки', mc.length)}${kv('Обещания', mc.filter(c => c.result === 'Обещал оплатить').length)}${kv('Документы', docs)}</div></div>
+      <button type="button" class="cy-ref" style="width:100%;" onclick="msbLogout()">Выйти</button></div>`;
+}
+(function() {
+  try { const o = renderNplPage; renderNplPage = function() { const r = o.apply(this, arguments); try { lwOnData(); } catch (e) {} return r; }; } catch (e) {}
+  try { const o2 = nplAfterRestPart; nplAfterRestPart = function() { const r = o2.apply(this, arguments); try { lwOnData(); } catch (e) {} return r; }; } catch (e) {}
+})();
 
 // ---------- 3. Выезд на территорию ----------
 function msbGeo() { return new Promise((ok, no) => { if (!navigator.geolocation) return no(new Error('нет геолокации')); navigator.geolocation.getCurrentPosition(p => ok(p.coords), no, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }); }); }
