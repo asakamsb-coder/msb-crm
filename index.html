@@ -1055,6 +1055,16 @@ textarea.msb-in{height:auto;padding:12px 14px;resize:none;}
 .cl-back{display:block;margin-top:4px;border:none;background:#141414;color:#fff;border-radius:8px;padding:4px 9px;font-size:11.5px;font-weight:800;font-family:inherit;cursor:pointer;}
 .cl-per{border:none;background:#fff;border-radius:12px;padding:9px 14px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(20,20,30,.05);}
 .cl-per.on{background:#141414;color:#fff;}
+.cov-seg{display:inline-flex;background:#fff;border-radius:14px;padding:4px;gap:2px;box-shadow:0 2px 8px rgba(20,20,30,.05);flex-wrap:wrap;}
+.cov-seg button{border:none;background:none;border-radius:10px;padding:8px 14px;font-family:inherit;font-weight:800;font-size:13px;color:#141414;cursor:pointer;}
+.cov-seg button.on{background:#141414;color:#fff;}
+.cov-btn{border:none;background:#fff;color:#141414;border-radius:12px;padding:10px 16px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(20,20,30,.05);}
+.cov-btn:disabled{opacity:.5;cursor:default;}
+.cov-dark{background:#141414;color:#fff;}
+.cov-red{background:#C4231A;color:#fff;}
+.cov-in{border:1px solid #E4E5EA;background:#fff;border-radius:12px;padding:9px 12px;font-family:inherit;font-size:13px;color:#141414;}
+.cov-drop{display:block;border:2px dashed #E3B3AE;border-radius:16px;padding:20px;text-align:center;color:#A81E16;font-weight:800;font-size:14px;cursor:pointer;margin-top:10px;}
+.cov-drop:hover{background:#FFF7F6;}
 .vzf-back{border:none;background:#fff;color:#C4231A;width:38px;height:38px;border-radius:50%;font-size:22px;cursor:pointer;flex:none;}
 .vzf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
 .vzf-act{display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 4px;border-radius:16px;background:#F5F6F8;color:#141414;font-size:12.5px;font-weight:700;border:none;font-family:inherit;text-decoration:none;cursor:pointer;}
@@ -2451,7 +2461,7 @@ body.role-mahalla-banker .footer{display:none;}
       <p>Поиск, фильтрация и экспорт клиентской базы</p>
     </div>
     <div class="top-actions">
-      <button class="btn" onclick="openClientForm('create')">+ Добавить клиента</button>
+      <button class="btn msb-noboss-btn" onclick="openClientForm('create')">+ Добавить клиента</button>
       <div class="user-box" id="clientsCountBox">Клиентов: ...</div>
     </div>
   </div>
@@ -5441,6 +5451,7 @@ function applyRoleView() {
   // узком экране — на компьютере у него остаётся полная CRM).
   document.body.classList.toggle('role-vzyskatel', isVzShell());
   document.querySelectorAll('.msb-boss-btn').forEach(b => { b.style.display = msbIsBossRole() ? '' : 'none'; });
+  document.querySelectorAll('.msb-noboss-btn').forEach(b => { b.style.display = msbIsBossRole() ? 'none' : ''; });
   if (msbMobile()) msbOpen(false);
   if (lwMobile()) lwOpen();
   document.body.classList.toggle('role-mahalla-banker', isMbShell());
@@ -8012,7 +8023,16 @@ function msbOpen(boss) {
 function msbClose() { msb.open = false; const b = document.getElementById('msbApp'); if (b) b.style.display = 'none'; document.body.classList.remove('msb-on'); }
 function openMsbControl() { msbOpen(true); }
 function msbOnData() { if (msb.open) msbRender(); }
-async function msbLoad(force) {
+function msbLoad(force) {
+  if (msb.loadP) return msb.loadP;
+  if (msb.loaded && !force) return Promise.resolve();
+  msb.loadP = msbLoad_(force).finally(function() {
+    msb.loadP = null;
+    try { const cp = document.getElementById('coveragePage'); if (cp && cp.offsetParent !== null && document.getElementById('coverageBox')) renderCoverage(); } catch (e) {}
+  });
+  return msb.loadP;
+}
+async function msbLoad_(force) {
   if (msb.loading || (msb.loaded && !force)) return;
   msb.loading = true;
   try {
@@ -8072,6 +8092,7 @@ function msbStageIdx(st) { for (let i = 0; i < MSB_STAGES.length; i++) if (MSB_S
 
 // ---------- оболочка ----------
 function msbRender() {
+  try { if (document.getElementById('covImp')) renderCoverage(); } catch (e) {}
   const box = document.getElementById('msbApp'); if (!box || !msb.open) return;
   const tabs = msb.boss ? [['ctl', 'Контроль', 'shield'], ['base', 'База', 'users'], ['imp', 'Загрузка', 'upload']] : [['home', 'Мой день', 'home'], ['leads', 'Лиды', 'users'], ['trip', 'Выезд', 'mappin'], ['deals', 'Сделки', 'briefcase']];
   let body = '';
@@ -9512,6 +9533,8 @@ async function msbImpSend() {
       added += r.added; updated += r.updated; skipped += r.skipped;
     } catch (e) { im.busy = ''; im.err = 'Не удалось связаться с сервером'; return msbRender(); }
   }
+  try { await msbPost({ webAction: 'msbImportLog', source: im.source, file: im.file, total: im.rows.length, added: added, updated: updated, skipped: skipped, manager: im.manager || '' }); } catch (e) {}
+  covExtra.loaded = false;
   msb.imp = null; alert('Загружено: новых ' + added + ', обновлено ' + updated + (skipped ? ', пропущено ' + skipped : ''));
   msbLoad(true); msbRender();
 }
@@ -18034,24 +18057,22 @@ function renderClientWorkDays(c) {
 }
 
 // ======================= Заявки: Активные / Спящие / Выданные / Отказ / Архив =======================
-// 30 дней без активности → «Спящие»; ещё 30 дней → «Архив». «Отложено» сразу спящая.
+// «Спящие»: заявке больше 30 дней ИЛИ 30 дней не менялся этап цикла (комментарии и правки не считаются).
+// Ещё 30 дней без смены этапа → «Архив». «Отложено» сразу спящая. Выданные и отказы в сон не попадают.
 const CL_SLEEP_DAYS = 30, CL_ARCHIVE_DAYS = 60;
 let clientStateTab = 'active';
-function clLastActivity(c) {
-  let t = 0;
-  [c.updatedAt, c.statusChangedAt, c.createdAt, c.date, c.monitorDate].forEach(s => { const d = stParseDt(s); if (d && !isNaN(d) && d.getTime() > t) t = d.getTime(); });
-  const inn = String(c.inn || '').replace(/\D/g, '');
-  if (inn && typeof msb !== 'undefined' && msb.calls) msb.calls.forEach(x => { if (x.inn === inn && x.tapAt > t) t = x.tapAt; });
-  return t;
-}
+function clDays(s) { const d = stParseDt(s); return d && !isNaN(d) ? Math.floor((Date.now() - d.getTime()) / 86400000) : null; }
+function clLastActivity(c) { const d = stParseDt(c.statusChangedAt || c.createdAt || c.date); return d && !isNaN(d) ? d.getTime() : 0; }
 function clState(c) {
   if (c.status === 'Выдано') return { s: 'issued' };
   if (c.status === 'Отказ') return { s: 'refused' };
-  const last = clLastActivity(c), idle = last ? Math.floor((Date.now() - last) / 86400000) : 0;
-  if (c.status === 'Отложено') return idle >= CL_SLEEP_DAYS ? { s: 'archive', idle: idle } : { s: 'sleep', idle: idle, left: CL_SLEEP_DAYS - idle };
-  if (idle >= CL_ARCHIVE_DAYS) return { s: 'archive', idle: idle };
-  if (idle >= CL_SLEEP_DAYS) return { s: 'sleep', idle: idle, left: CL_ARCHIVE_DAYS - idle };
-  return { s: 'active', idle: idle, left: CL_SLEEP_DAYS - idle };
+  const age = clDays(c.createdAt || c.date), stage = clDays(c.statusChangedAt || c.createdAt || c.date);
+  const a = age == null ? 0 : age, st = stage == null ? a : stage;
+  if (c.status === 'Отложено') return st >= CL_SLEEP_DAYS ? { s: 'archive', idle: st, why: 'stage' } : { s: 'sleep', idle: st, left: CL_SLEEP_DAYS - st, why: 'postponed' };
+  if (st >= CL_ARCHIVE_DAYS) return { s: 'archive', idle: st, why: 'stage' };
+  if (st >= CL_SLEEP_DAYS) return { s: 'sleep', idle: st, left: CL_ARCHIVE_DAYS - st, why: 'stage' };
+  if (a >= CL_SLEEP_DAYS) return { s: 'sleep', idle: st, left: CL_ARCHIVE_DAYS - st, why: 'age', age: a };
+  return { s: 'active', idle: st, left: Math.min(CL_SLEEP_DAYS - st, CL_SLEEP_DAYS - a) };
 }
 function clIsActive(c) { return clState(c).s === 'active'; }
 const CL_TABS = [['active', 'Активные'], ['sleep', 'Спящие'], ['issued', 'Выданные'], ['refused', 'Отказ'], ['archive', 'Архив'], ['all', 'Все']];
@@ -18059,14 +18080,14 @@ function clRenderTabs(list) {
   const box = document.getElementById('clientStateTabs'); if (!box) return;
   const cnt = {}; list.forEach(c => { const s = clState(c).s; cnt[s] = (cnt[s] || 0) + 1; }); cnt.all = list.length;
   box.innerHTML = CL_TABS.map(t => `<button type="button" class="${clientStateTab === t[0] ? 'on' : ''}" onclick="clientStateTab='${t[0]}';applyClientFilters()">${t[1]} <b>${cnt[t[0]] || 0}</b></button>`).join('')
-    + `<span class="cl-hint">${clientStateTab === 'sleep' ? 'Без активности 30+ дней · через 30 дней уйдут в архив' : clientStateTab === 'archive' ? 'Спящие без активности ещё 30 дней' : clientStateTab === 'active' ? 'Активность за последние 30 дней' : ''}</span>`;
+    + `<span class="cl-hint">${clientStateTab === 'sleep' ? 'Заявке 30+ дней или 30+ дней без смены этапа' : clientStateTab === 'archive' ? '60+ дней без смены этапа' : clientStateTab === 'active' ? 'Заявке меньше 30 дней и этап менялся за 30 дней' : ''}</span>`;
 }
 function clBadge(c) {
   const st = clState(c);
   if (st.s === 'issued' || st.s === 'refused') return '';
-  if (st.s === 'archive') return `<div class="cl-b cl-arch">архив · ${st.idle} дн. без активности</div><button type="button" class="cl-back" onclick="event.stopPropagation();clTouch(this)" data-chat="${safe(c.chatId)}" data-inn="${safe(c.inn)}" data-name="${encodeURIComponent(c.name || '')}">Вернуть в работу</button>`;
+  if (st.s === 'archive') return `<div class="cl-b cl-arch">архив · ${st.idle} дн. без смены этапа</div>`;
   if (st.s === 'sleep' && c.status === 'Отложено') return `<div class="cl-b cl-sleep">отложено · в архив через ${Math.max(0, st.left)} дн.</div>`;
-  if (st.s === 'sleep') return `<div class="cl-b cl-sleep">спит · в архив через ${Math.max(0, st.left)} дн.</div><button type="button" class="cl-back" onclick="event.stopPropagation();clTouch(this)" data-chat="${safe(c.chatId)}" data-inn="${safe(c.inn)}" data-name="${encodeURIComponent(c.name || '')}">Вернуть в работу</button>`;
+  if (st.s === 'sleep') return `<div class="cl-b cl-sleep">${st.why === 'age' ? 'заявке ' + st.age + ' дн.' : st.idle + ' дн. без смены этапа'} · в архив через ${Math.max(0, st.left)} дн.</div>`;
   const col = st.left <= 3 ? 'cl-red' : st.left <= 7 ? 'cl-amb' : 'cl-ok';
   return `<div class="cl-b ${col}">до сна ${Math.max(0, st.left)} дн.</div>`;
 }
@@ -18082,67 +18103,266 @@ async function clTouch(btn) {
 }
 
 // ======================= Охват базы (руководитель) =======================
-let covState = { per: 'month' };
+// Подвкладки: Наш портфель · Внешняя база (с загрузкой) · Выездные клиенты · История охвата
+let covState = { sub: 'port', per: 'month', from: '', to: '', seg: 'all', q: '', sel: {}, tseg: 'all', jm: '', jb: '', ja: '', jq: '', lim: 50 };
+let covExtra = { loaded: false, notes: [], imports: [] };
+let covMap = null;
 function covInn(v) { return String(v || '').replace(/\D/g, ''); }
+function covN(v) { return Number(v || 0).toLocaleString('ru-RU'); }
+function covRange() {
+  const now = new Date(), d0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (covState.per === 'today') return [d0, Infinity];
+  if (covState.per === 'week') return [Date.now() - 7 * 86400000, Infinity];
+  if (covState.per === 'month') return [new Date(now.getFullYear(), now.getMonth(), 1).getTime(), Infinity];
+  const f = covState.from ? new Date(covState.from + 'T00:00:00').getTime() : 0, t = covState.to ? new Date(covState.to + 'T23:59:59').getTime() : Infinity;
+  return [f, t];
+}
+function covBase(l) { const s = String(l.source || ''); return s.indexOf('Наш заёмщик') > -1 ? 'port' : s.indexOf('Махалля') > -1 ? 'mah' : s.indexOf('Выезд') > -1 ? 'trip' : 'ext'; }
+function covIndex() {
+  const ix = { calls: {}, meets: {}, notes: {}, cli: {}, first: {} };
+  const first = (k, t) => { if (k && t && (!ix.first[k] || t < ix.first[k])) ix.first[k] = t; };
+  (msb.calls || []).forEach(c => { (ix.calls[c.inn] = ix.calls[c.inn] || []).push(c); first(c.inn, c.tapAt); });
+  (msb.trips || []).forEach(t => (t.meets || []).forEach(m => { const k = covInn(m.inn); const o = Object.assign({ manager: t.manager, territory: t.territory, tripId: t.id }, m); if (k) { (ix.meets[k] = ix.meets[k] || []).push(o); first(k, m.at); } }));
+  (covExtra.notes || []).forEach(n => { if (!n.inn) return; (ix.notes[n.inn] = ix.notes[n.inn] || []).push(n); first(n.inn, n.at); });
+  (allClients || []).forEach(c => { const k = covInn(c.inn); if (k) (ix.cli[k] = ix.cli[k] || []).push(c); });
+  return ix;
+}
+function covAgg(leads, ix, rg) {
+  const inR = t => t && t >= rg[0] && t <= rg[1];
+  const a = { tot: leads.length, touched: 0, called: 0, reach: 0, interest: 0, meet: 0, app: 0, iss: 0, appSum: 0, issSum: 0, ref: 0, refBy: {}, ever: 0 };
+  leads.forEach(l => {
+    const cs = (ix.calls[l.inn] || []).filter(c => inR(c.tapAt)), ms = (ix.meets[l.inn] || []).filter(m => inR(m.at)), ns = (ix.notes[l.inn] || []).filter(n => inR(n.at));
+    const cl = (ix.cli[l.inn] || []);
+    if (ix.first[l.inn] || l.manager) a.ever++;
+    if (cs.length || ms.length || ns.length) a.touched++;
+    if (cs.length) a.called++;
+    if (cs.some(c => c.result !== 'Не дозвонился')) a.reach++;
+    if (cs.some(c => /Интерес|встреч/i.test(c.result)) || ms.length) a.interest++;
+    if (ms.length || ns.some(n => n.type === 'meet') || cs.some(c => /встреч/i.test(c.result))) a.meet++;
+    const apps = cl.filter(c => { const d = stParseDt(c.createdAt || c.date); return d && inR(d.getTime()); });
+    if (apps.length) { a.app++; a.appSum += Number(apps[0].amount) || 0; }
+    const iss = cl.filter(c => c.status === 'Выдано' && (d => d && inR(d.getTime()))(stParseDt(c.statusChangedAt || c.updatedAt)));
+    if (iss.length) { a.iss++; a.issSum += Number(iss[0].issuedSum || iss[0].amount) || 0; }
+    if (l.status === 'Отказ' || l.refusedBefore) { a.ref++; const r = l.reason || l.refusedBefore || 'Другое'; a.refBy[r] = (a.refBy[r] || 0) + 1; }
+  });
+  return a;
+}
+function covKp(l, v, s, col) { return `<div class="mdx-card"><div class="mdx-kl">${l}</div><div class="mdx-kv" style="color:${col || '#141414'};">${v}</div><div class="mdx-ks">${s || ''}</div></div>`; }
+function covFunnel(a) {
+  const rows = [['База', a.tot, '#141414'], ['Звонок', a.called, '#2A4BA0'], ['Дозвон', a.reach, '#2A4BA0'], ['Интересно', a.interest, '#E8A317'], ['Встреча', a.meet, '#E8A317'], ['Заявка', a.app, '#1E9E5A'], ['Выдано', a.iss, '#14693A']];
+  const pc = v => a.tot ? (v * 100 / a.tot) : 0;
+  return rows.map(r => `<div style="display:grid;grid-template-columns:110px 1fr 80px 60px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #F0F0F3;font-size:13px;"><b>${r[0]}</b><div class="mdx-bar"><i style="width:${Math.max(r[1] ? 1.5 : 0, Math.min(100, pc(r[1])))}%;background:${r[2]};"></i></div><b style="text-align:right;">${covN(r[1])}</b><span class="mdx-ks" style="text-align:right;">${pc(r[1]).toFixed(pc(r[1]) < 1 && r[1] ? 1 : 0)}%</span></div>`).join('');
+}
+function covMgrTable(leads, ix, rg, withUnreach) {
+  const inR = t => t && t >= rg[0] && t <= rg[1];
+  const set = {}; leads.forEach(l => { set[l.inn] = l; });
+  const M = {};
+  const m = n => M[n] || (M[n] = { t: {}, r: {}, i: {}, meet: {}, app: 0, iss: 0, un: 0 });
+  Object.keys(set).forEach(inn => {
+    (ix.calls[inn] || []).filter(c => inR(c.tapAt)).forEach(c => { const o = m(c.manager); o.t[inn] = 1; if (c.result !== 'Не дозвонился') o.r[inn] = 1; if (/Интерес|встреч/i.test(c.result)) o.i[inn] = 1; if (/встреч/i.test(c.result)) o.meet[inn] = 1; });
+    (ix.meets[inn] || []).filter(x => inR(x.at)).forEach(x => { const o = m(x.manager); o.t[inn] = 1; o.meet[inn] = 1; o.i[inn] = 1; });
+    (ix.notes[inn] || []).filter(x => inR(x.at)).forEach(x => { const o = m(x.manager); o.t[inn] = 1; if (x.type === 'meet') o.meet[inn] = 1; });
+    (ix.cli[inn] || []).forEach(c => { const n = String(c.manager || '').trim(); if (!n) return; const d = stParseDt(c.createdAt || c.date); if (d && inR(d.getTime())) m(n).app++; const di = stParseDt(c.statusChangedAt || c.updatedAt); if (c.status === 'Выдано' && di && inR(di.getTime())) m(n).iss++; });
+    const l = set[inn]; if (withUnreach && l.manager && (l.status === 'Недоступен' || l.attempts >= 3 || l.unreach)) m(l.manager).un++;
+  });
+  const rows = Object.keys(M).filter(Boolean).map(n => { const o = M[n]; return { n: n, t: Object.keys(o.t).length, r: Object.keys(o.r).length, i: Object.keys(o.i).length, meet: Object.keys(o.meet).length, app: o.app, iss: o.iss, un: o.un }; }).sort((a, b) => b.t - a.t);
+  return `<table class="mdx-t"><tr><th>Менеджер</th><th>Тронул</th><th>Дозвон</th><th>Интересно</th>${withUnreach ? '<th>3 недозвона</th>' : ''}<th>Встречи</th><th>Заявки</th><th>Выдано</th></tr>${rows.map(r => `<tr><td><b>${msbE(r.n)}</b></td><td>${r.t}</td><td>${r.r}</td><td>${r.i}</td>${withUnreach ? `<td>${r.un ? `<span class="t" style="background:#FFF1CF;color:#8A5A00;">${r.un}</span>` : 0}</td>` : ''}<td>${r.meet}</td><td>${r.app}</td><td>${r.iss}</td></tr>`).join('') || `<tr><td colspan="8" class="mdx-ks">За период менеджеры с этой базой не работали</td></tr>`}</table>`;
+}
 async function renderCoverage() {
   const box = document.getElementById('coverageBox'); if (!box) return;
-  if (!msb.loaded) { box.innerHTML = '<div class="loading">Загрузка базы и звонков…</div>'; await msbLoad(); }
-  const now = Date.now(), mk = msbDashMonthKey(new Date());
-  const from = covState.per === 'month' ? new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime() : covState.per === 'week' ? now - 7 * 86400000 : 0;
-  const inP = t => t && t >= from;
-  const callsBy = {}, meetsBy = {};
-  (msb.calls || []).forEach(c => { (callsBy[c.inn] = callsBy[c.inn] || []).push(c); });
-  (msb.trips || []).forEach(t => (t.meets || []).forEach(m => { const k = covInn(m.inn); if (k) (meetsBy[k] = meetsBy[k] || []).push(Object.assign({ manager: t.manager }, m)); }));
-  const cliBy = {}; (allClients || []).forEach(c => { const k = covInn(c.inn); if (k) (cliBy[k] = cliBy[k] || []).push(c); });
-  const base = l => { const s = String(l.source || ''); return s.indexOf('Наш заёмщик') > -1 ? 'port' : s.indexOf('Другой банк') > -1 ? 'ext' : s.indexOf('Выезд') > -1 ? 'trip' : s.indexOf('Махалля') > -1 ? 'mah' : 'ext'; };
-  const B = { port: ['Наш портфель', 'из загрузки NPL', ['#E3F5EA', '#14693A']], ext: ['Внешняя база', 'Excel руководителя', ['#EEF1FB', '#2A4BA0']], trip: ['Выезды', 'менеджеры на территории', ['#F3E8FF', '#6B21A8']], mah: ['Махалля', 'банкиры махалли', ['#FFF1CF', '#8A5A00']] };
-  const agg = {}; Object.keys(B).forEach(k => agg[k] = { tot: 0, called: 0, reach: 0, meetSet: 0, met: 0, app: 0, iss: 0, nocov: 0, ref: 0 });
-  const info = l => {
-    const cs = (callsBy[l.inn] || []).filter(c => inP(c.tapAt)), all = callsBy[l.inn] || [], ms = (meetsBy[l.inn] || []).filter(m => inP(m.at)), cl = cliBy[l.inn] || [];
-    return { cs: cs, all: all, ms: ms, allMs: meetsBy[l.inn] || [], cl: cl,
-      called: cs.length > 0, reach: cs.some(c => c.result !== 'Не дозвонился'), meetSet: cs.some(c => c.result === 'Назначить встречу') || l.status === 'Встреча', met: ms.length > 0,
-      app: cl.length > 0, iss: cl.some(c => c.status === 'Выдано'), touched: all.length > 0 || (meetsBy[l.inn] || []).length > 0 };
-  };
-  msb.leads.forEach(l => {
-    const k = base(l), a = agg[k], x = info(l);
-    a.tot++; if (x.called) a.called++; if (x.reach) a.reach++; if (x.meetSet) a.meetSet++; if (x.met) a.met++; if (x.app) a.app++; if (x.iss) a.iss++;
-    if (!x.touched) a.nocov++; if (l.status === 'Отказ') a.ref++;
-  });
-  const T = { tot: 0, called: 0, reach: 0, meetSet: 0, met: 0, app: 0, iss: 0, nocov: 0, ref: 0 };
-  Object.values(agg).forEach(a => Object.keys(T).forEach(k => T[k] += a[k]));
-  const pc = (v, t) => t ? Math.round(v * 100 / t) : 0;
-  const cell = (v, t, col) => `<td><b>${v.toLocaleString('ru-RU')}</b><div class="mdx-bar" style="margin-top:4px;max-width:80px;"><i style="width:${pc(v, t)}%;background:${col};"></i></div><div class="mdx-ks">${pc(v, t)}%</div></td>`;
-  const brow = k => { const a = agg[k]; return `<tr><td><b>${B[k][0]}</b><div><span class="t" style="background:${B[k][2][0]};color:${B[k][2][1]};">${B[k][1]}</span></div></td><td><b>${a.tot.toLocaleString('ru-RU')}</b></td>${cell(a.called, a.tot, '#2A4BA0')}${cell(a.reach, a.tot, '#2A4BA0')}${cell(a.meetSet, a.tot, '#E8A317')}${cell(a.met, a.tot, '#E8A317')}${cell(a.app, a.tot, '#1E9E5A')}${cell(a.iss, a.tot, '#14693A')}<td><span class="t" style="background:#FBE4E1;color:#A81E16;font-size:13px;">${a.nocov.toLocaleString('ru-RU')}</span><div class="mdx-ks">${pc(a.nocov, a.tot)}%</div></td><td>${a.ref}</td></tr>`; };
-  // менеджеры
-  const mgr = {};
-  msb.leads.forEach(l => { if (!l.manager) return; const m = mgr[l.manager] || (mgr[l.manager] = { pin: 0, cov: 0, stale: 0 }); m.pin++; const x = info(l); if (x.called || x.met) m.cov++; const lastT = Math.max(0, ...x.all.map(c => c.tapAt), ...x.allMs.map(z => z.at)); if (!lastT || now - lastT > 14 * 86400000) m.stale++; });
-  const mRows = Object.keys(mgr).sort((a, b) => mgr[b].pin - mgr[a].pin).map(n => { const m = mgr[n], mine = (allClients || []).filter(c => String(c.manager || '').trim() === n); const apps = mine.filter(c => { const d = msbDashDate(c.createdAt || c.date); return d && inP(d.getTime()); }).length; const iss = mine.filter(c => c.status === 'Выдано' && (d => d && inP(d.getTime()))(msbDashDate(c.statusChangedAt || c.updatedAt))).length;
-    return `<tr><td><b>${msbE(n)}</b></td><td>${m.pin}</td><td>${m.cov}</td><td><span class="t" style="background:#FBE4E1;color:#A81E16;">${m.stale}</span></td><td>${apps}</td><td>${iss}</td></tr>`; }).join('');
-  // махалля
-  const mah = msb.leads.filter(l => base(l) === 'mah').map(l => {
-    const x = info(l), ex = l.extra || {};
-    const added = ex.added ? new Date(ex.added + 'T00:00:00').getTime() : 0;
-    const firstTouch = Math.min(...x.all.map(c => c.tapAt).concat(x.allMs.map(m => m.at)).concat([Infinity]));
-    const waited = !x.touched && added ? Math.floor((now - added) / 86400000) : null;
-    const lastCall = x.all.slice().sort((a, b) => b.tapAt - a.tapAt)[0];
-    const did = [lastCall ? 'звонок ' + vzFmtDateRu(msbDayOf(lastCall.tapAt)) + ' · ' + lastCall.result + ' · ' + lastCall.manager : '', x.allMs.length ? 'встреча ' + vzFmtDateRu(msbDayOf(x.allMs[0].at)) + ' ✓' : ''].filter(Boolean).join('<br>') || '—';
-    return { l: l, x: x, ex: ex, waited: waited, did: did, sort: waited === null ? -1 : waited, firstTouch: firstTouch };
-  }).sort((a, b) => b.sort - a.sort);
-  const noAtt = mah.filter(m => m.waited !== null && m.waited >= 3);
-  const mahRows = mah.slice(0, 60).map(m => `<tr><td><b>${msbE(m.l.name || m.l.inn)}</b><div class="mdx-ks">банкир: ${msbE(m.ex.banker || '—')}${m.ex.mahalla ? ' · ' + msbE(m.ex.mahalla) : ''}${m.ex.added ? ' · добавлено ' + vzFmtDateRu(m.ex.added) : ''}</div></td><td class="mdx-ks" style="color:#141414;">${m.did}</td><td>${m.x.cl.length ? msbE(m.x.cl[0].status) : '<span class="t" style="background:#F0F0F2;color:#3F3F46;">нет</span>'}</td><td>${m.waited === null ? '<span class="t" style="background:#E3F5EA;color:#14693A;">ок</span>' : `<span class="t" style="background:${m.waited >= 3 ? '#FBE4E1' : '#FFF1CF'};color:${m.waited >= 3 ? '#A81E16' : '#8A5A00'};">${m.waited} дн.</span>`}</td></tr>`).join('');
-  const bk = {}; mah.forEach(m => { const b = m.ex.banker || '—'; const o = bk[b] || (bk[b] = { add: 0, work: 0, late: 0, app: 0 }); o.add++; if (m.x.touched) o.work++; if (m.waited !== null && m.waited >= 3) o.late++; if (m.x.app) o.app++; });
-  const bkRows = Object.keys(bk).sort((a, b) => bk[b].add - bk[a].add).map(b => `<tr><td><b>${msbE(b)}</b></td><td>${bk[b].add}</td><td>${bk[b].work}</td><td><span class="t" style="background:#FBE4E1;color:#A81E16;">${bk[b].late}</span></td><td>${bk[b].app}</td></tr>`).join('');
-  const kp = (l, v, s, col) => `<div class="mdx-card"><div class="mdx-kl">${l}</div><div class="mdx-kv" style="color:${col || '#141414'};">${v}</div><div class="mdx-ks">${s}</div></div>`;
-  const covered = T.tot - T.nocov;
-  box.innerHTML = `<div class="mdx">
-    <div style="display:flex;gap:6px;">${[['week', '7 дней'], ['month', 'Месяц'], ['all', 'Всё время']].map(x => `<button type="button" class="cl-per${covState.per === x[0] ? ' on' : ''}" onclick="covState.per='${x[0]}';renderCoverage()">${x[1]}</button>`).join('')}<button type="button" class="cl-per" onclick="msb.loaded=false;renderCoverage()">Обновить</button></div>
-    <div class="mdx-tiles">${kp('В базах', T.tot.toLocaleString('ru-RU'), '4 источника')}${kp('Охвачено', covered.toLocaleString('ru-RU'), pc(covered, T.tot) + '% · был звонок или визит')}${kp('Нет охвата', T.nocov.toLocaleString('ru-RU'), pc(T.nocov, T.tot) + '% · никто не трогал', '#A81E16')}${kp('Заявок из баз', T.app, 'выдано ' + T.iss)}${kp('Махалля без внимания', noAtt.length, '3+ дня без звонка', noAtt.length ? '#A81E16' : '')}</div>
-    <div class="mdx-card"><div class="mdx-h"><b>Охват по базам</b><span>звонки, встречи и заявки за выбранный период · «нет охвата» — ни одного звонка или визита за всё время</span></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>База</th><th>Всего</th><th>Звонили</th><th>Дозвон</th><th>Встреча назн.</th><th>Встреча была</th><th>Заявка</th><th>Выдано</th><th>Нет охвата</th><th>Отказ</th></tr>${['port', 'ext', 'trip', 'mah'].map(brow).join('')}<tr style="background:#F7F7F9;"><td><b>Итого</b></td><td><b>${T.tot.toLocaleString('ru-RU')}</b></td><td><b>${T.called}</b></td><td><b>${T.reach}</b></td><td><b>${T.meetSet}</b></td><td><b>${T.met}</b></td><td><b>${T.app}</b></td><td><b>${T.iss}</b></td><td><b style="color:#A81E16;">${T.nocov.toLocaleString('ru-RU')}</b></td><td><b>${T.ref}</b></td></tr></table></div></div>
-    <div class="mdx-bottom" style="grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);">
-      <div class="mdx-card"><div class="mdx-h"><b>Менеджеры</b></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Менеджер</th><th>Закреплено</th><th>Охвачено</th><th>Не тронуто 14+ дн.</th><th>Заявки</th><th>Выдано</th></tr>${mRows || '<tr><td colspan="6" class="mdx-ks">Пока никто не закреплён</td></tr>'}</table></div></div>
-      <div class="mdx-card"><div class="mdx-h"><b>Махалля: активность по предприятиям</b><span>норма реакции 3 дня · ${mah.length} предприятий</span></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Предприятие</th><th>Что сделал менеджер</th><th>Заявка</th><th>Без внимания</th></tr>${mahRows || '<tr><td colspan="4" class="mdx-ks">Нет предприятий с ИНН</td></tr>'}</table></div>${mah.length > 60 ? '<div class="mdx-ks">Показаны 60 из ' + mah.length + ', сначала самые давние без внимания</div>' : ''}
-        <div class="mdx-h" style="margin-top:16px;"><b>По банкирам махалли</b></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Банкир</th><th>Добавил</th><th>С ними работали</th><th>Без внимания 3+ дн.</th><th>Заявки</th></tr>${bkRows || '<tr><td colspan="5" class="mdx-ks">—</td></tr>'}</table></div></div>
-    </div></div>`;
+  if (!msb.loaded) {
+    if (msb.err && !msb.loading) { box.innerHTML = `<div class="mdx-card" style="color:#A81E16;font-weight:700;">${msbE(msb.err)} <button type="button" class="cl-per" onclick="msb.err='';renderCoverage()">Повторить</button></div>`; return; }
+    box.innerHTML = '<div class="loading">Загрузка базы, звонков и выездов…</div>'; await msbLoad(); if (!msb.loaded) return renderCoverage();
+  }
+  if (!covExtra.loaded && !covExtra.loading) {
+    covExtra.loading = true;
+    msbPost({ webAction: 'msbCoverageExtra', days: 150 }).then(r => { covExtra.loading = false; covExtra.loaded = true; if (r && r.success) { covExtra.notes = r.notes || []; covExtra.imports = r.imports || []; } renderCoverage(); }).catch(() => { covExtra.loading = false; covExtra.loaded = true; });
+  }
+  const ix = covIndex(), rg = covRange();
+  const subs = [['port', 'Наш портфель'], ['ext', 'Внешняя база'], ['trip', 'Выездные клиенты'], ['hist', 'История охвата']];
+  const pers = [['today', 'Сегодня'], ['week', 'Неделя'], ['month', 'Месяц'], ['custom', 'Период']];
+  const head = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;">
+      <div class="cov-seg">${subs.map(s => `<button type="button" class="${covState.sub === s[0] ? 'on' : ''}" onclick="covState.sub='${s[0]}';covState.lim=50;renderCoverage()">${s[1]}</button>`).join('')}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${covState.per === 'custom' ? `<input type="date" class="cov-in" value="${covState.from}" onchange="covState.from=this.value;renderCoverage()"><span>—</span><input type="date" class="cov-in" value="${covState.to}" onchange="covState.to=this.value;renderCoverage()">` : ''}
+      <div class="cov-seg">${pers.map(p => `<button type="button" class="${covState.per === p[0] ? 'on' : ''}" onclick="covState.per='${p[0]}';renderCoverage()">${p[1]}</button>`).join('')}</div>
+      <button type="button" class="cov-btn cov-dark" onclick="covState.sub='ext';renderCoverage();setTimeout(function(){var i=document.getElementById('covFile');if(i)i.click();},50)">⬆ Загрузить внешнюю базу</button>
+      <button type="button" class="cov-btn" onclick="msb.loaded=false;covExtra.loaded=false;msbLoad(true).then(renderCoverage)">Обновить</button></div></div>`;
+  let body = '';
+  try {
+    if (covState.sub === 'port') body = covPortHtml(ix, rg);
+    else if (covState.sub === 'ext') body = covExtHtml(ix, rg);
+    else if (covState.sub === 'trip') body = covTripHtml(ix, rg);
+    else body = covHistHtml(ix, rg);
+  } catch (e) { console.error(e); body = `<div class="mdx-card">Ошибка: ${msbE(e.message)}</div>`; }
+  box.innerHTML = `<div class="mdx">${head}${body}</div>`;
+  if (covState.sub === 'trip') covDrawMap();
+}
+// ---- Наш портфель
+function covPortHtml(ix, rg) {
+  const leads = msb.leads.filter(l => covBase(l) === 'port');
+  const a = covAgg(leads, ix, rg);
+  const J = leads.filter(l => (l.extra || {}).subject === 'Юр. лицо').length, closed = leads.filter(l => (l.extra || {}).closed).length;
+  const untouched = leads.filter(l => !ix.first[l.inn] && !l.manager && !l.lockedBy && !l.inPipeline);
+  let list = untouched.filter(l => { const e = l.extra || {}; return covState.seg === 'all' || (covState.seg === 'closed' ? e.closed : covState.seg === 'J' ? e.subject === 'Юр. лицо' : e.subject === 'Физ. лицо'); });
+  const q = covState.q.trim().toLowerCase(); if (q) list = list.filter(l => (l.name + ' ' + l.inn).toLowerCase().indexOf(q) > -1);
+  list.sort((x, y) => ((y.extra || {}).closed ? 1 : 0) - ((x.extra || {}).closed ? 1 : 0) || (Number((y.extra || {}).balance) || 0) - (Number((x.extra || {}).balance) || 0));
+  const mgrs = Array.from(new Set((typeof MANAGERS_LIST !== 'undefined' ? MANAGERS_LIST : []).concat((allClients || []).map(c => String(c.manager || '').trim())).filter(Boolean))).sort();
+  const nSel = Object.keys(covState.sel).length;
+  return `<div class="mdx-tiles" style="grid-template-columns:repeat(6,minmax(0,1fr));">${covKp('Клиентов портфеля', covN(a.tot), 'юр ' + covN(J) + ' · физ ' + covN(a.tot - J) + ' · закрытых ' + covN(closed))}${covKp('Тронуто за период', covN(a.touched), (a.tot ? Math.round(a.touched * 100 / a.tot) : 0) + '% · всего тронуто ' + covN(a.ever))}${covKp('Дозвон', covN(a.reach), a.called ? Math.round(a.reach * 100 / a.called) + '% от звонков' : '')}${covKp('Встречи', covN(a.meet), 'за период')}${covKp('Повторные заявки', covN(a.app), formatMoney(a.appSum))}${covKp('Выдано', covN(a.iss), formatMoney(a.issSum), '#14693A')}</div>
+    <div class="mdx-bottom" style="grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);"><div class="mdx-card"><div class="mdx-h"><b>Воронка портфеля</b><span>за период</span></div>${covFunnel(a)}</div><div class="mdx-card"><div class="mdx-h"><b>По менеджерам</b><span>кто сколько тронул</span></div><div style="overflow-x:auto;">${covMgrTable(leads, ix, rg)}</div></div></div>
+    <div class="mdx-card"><div class="mdx-h"><b>Не тронуты никем</b><span>${covN(untouched.length)} · сначала закрытые и с большим остатком</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;"><div class="cov-seg">${[['all', 'Все'], ['J', 'Юр'], ['F', 'Физ'], ['closed', 'Закрытые']].map(s => `<button type="button" class="${covState.seg === s[0] ? 'on' : ''}" onclick="covState.seg='${s[0]}';covState.lim=50;renderCoverage()">${s[1]}</button>`).join('')}</div>
+      <input class="cov-in" style="flex:1;min-width:200px;" placeholder="Поиск: имя, ИНН" value="${msbE(covState.q)}" oninput="covState.q=this.value;clearTimeout(window.__covQ);window.__covQ=setTimeout(function(){renderCoverage();var i=document.querySelector('#coverageBox input[placeholder^=Поиск]');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},300)">
+      <select class="cov-in" id="covMgr"><option value="">Менеджер…</option>${mgrs.map(m => `<option>${msbE(m)}</option>`).join('')}</select><button type="button" class="cov-btn cov-red" onclick="covAssign()" ${nSel ? '' : 'disabled'}>Закрепить${nSel ? ' (' + nSel + ')' : ''}</button></div>
+      <div style="overflow-x:auto;"><table class="mdx-t"><tr><th style="width:28px;"><input type="checkbox" onchange="covSelAll(this.checked)"></th><th>Клиент</th><th>Тип</th><th>Кредит</th><th>Почему звонить</th><th>Телефон</th></tr>${list.slice(0, covState.lim).map(l => { const e = l.extra || {}; return `<tr><td><input type="checkbox" ${covState.sel[l.inn] ? 'checked' : ''} onchange="covSel('${msbE(l.inn)}',this.checked)"></td><td><b>${msbE(l.name || l.inn)}</b><div class="mdx-ks">ИНН ${msbE(l.inn)}</div></td><td>${e.subject ? `<span class="t" style="background:${e.subject === 'Юр. лицо' ? '#EEF1FB' : '#F0F0F2'};color:${e.subject === 'Юр. лицо' ? '#2A4BA0' : '#3F3F46'};">${e.subject === 'Юр. лицо' ? 'Юр' : 'Физ'}</span>` : ''}</td><td>${e.closed ? 'закрыт' + (e.closeDate ? ' ' + msbE(e.closeDate) : '') : e.balance !== undefined ? 'остаток ' + formatMoney(e.balance) : msbE(e.loan || '')}</td><td class="mdx-ks" style="color:#141414;">${msbE(l.why || '')}</td><td>${msbE(msbFmtPh(l.phone))}</td></tr>`; }).join('') || '<tr><td colspan="6" class="mdx-ks">Всех клиентов портфеля уже кто-то тронул</td></tr>'}</table></div>
+      ${list.length > covState.lim ? `<button type="button" class="cov-btn" style="margin-top:10px;" onclick="covState.lim+=100;renderCoverage()">Показать ещё (${covN(list.length - covState.lim)})</button>` : ''}</div>`;
+}
+function covSel(inn, on) { if (on) covState.sel[inn] = 1; else delete covState.sel[inn]; renderCoverage(); }
+function covSelAll(on) { if (!on) covState.sel = {}; else document.querySelectorAll('#coverageBox table.mdx-t input[type=checkbox][onchange^="covSel("]').forEach(cb => { const m = cb.getAttribute('onchange').match(/covSel\('([^']+)'/); if (m) covState.sel[m[1]] = 1; }); renderCoverage(); }
+async function covAssign() {
+  const m = (document.getElementById('covMgr') || {}).value; if (!m) return alert('Выберите менеджера');
+  const inns = Object.keys(covState.sel); if (!inns.length) return;
+  if (!confirm('Закрепить ' + inns.length + ' клиентов за ' + m + '?')) return;
+  let ok = 0;
+  for (const inn of inns) {
+    const l = msbFindLead(inn); if (!l) continue;
+    try { const r = await msbPost({ webAction: 'msbAssignLead', inn: inn, manager: m, seed: { name: l.name, okved: l.okved, director: l.director, phone: l.phone, bank: l.bank, source: l.source, why: l.why, address: l.address, extra: l.extra } }); if (r.success) { l.manager = m; ok++; } } catch (e) {}
+  }
+  covState.sel = {}; alert('Закреплено: ' + ok); renderCoverage();
+}
+// ---- Внешняя база
+function covExtHtml(ix, rg) {
+  const leads = msb.leads.filter(l => covBase(l) === 'ext');
+  const a = covAgg(leads, ix, rg), mob = leads.filter(l => msbIsMob(l.phone)).length;
+  const sph = {}; leads.forEach(l => { const k = l.okved || 'Не указано'; const o = sph[k] || (sph[k] = { n: 0, t: 0, r: 0, i: 0, m: 0 }); o.n++; const cs = ix.calls[l.inn] || [], ms = ix.meets[l.inn] || []; if (cs.length || ms.length || l.manager) o.t++; if (cs.some(c => c.result !== 'Не дозвонился')) { o.r++; if (cs.some(c => /Интерес|встреч/i.test(c.result)) || ms.length) o.i++; } if (ms.length || cs.some(c => /встреч/i.test(c.result))) o.m++; });
+  const sphRows = Object.keys(sph).sort((x, y) => sph[y].n - sph[x].n).slice(0, 10).map(k => { const o = sph[k]; return `<tr><td><b>${msbE(k)}</b></td><td>${covN(o.n)}</td><td>${o.n ? (o.t * 100 / o.n).toFixed(1) : 0}%</td><td>${o.r ? Math.round(o.i * 100 / o.r) : 0}%</td><td>${o.m}</td></tr>`; }).join('');
+  const refs = Object.keys(a.refBy).sort((x, y) => a.refBy[y] - a.refBy[x]).slice(0, 2).map(k => k.toLowerCase() + ' ' + a.refBy[k]).join(' · ');
+  const im = msb.imp, mgrs = Array.from(new Set((allClients || []).map(c => String(c.manager || '').trim()).filter(Boolean))).sort();
+  const last = covExtra.imports[0];
+  const up = `<div class="mdx-card" id="covImp"><div class="mdx-h"><b>Загрузка внешней базы</b></div>
+    ${im && im.source === 'Другой банк' ? `<div style="margin-top:10px;"><b>${msbE(im.file)}</b><div class="mdx-ks">строк ${covN(im.total)} · в базу <b style="color:#14693A;">${covN(im.rows.length)}</b> · пропущено ${covN(im.skip)}</div><div class="mdx-ks" style="margin-top:4px;">Колонки: ${Object.keys(im.map || {}).map(k => msbE(im.map[k])).join(', ')}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;"><span class="mdx-ks">Кому отдать:</span><select class="cov-in" onchange="msb.imp.manager=this.value"><option value="">Общая очередь</option>${mgrs.map(m => `<option ${im.manager === m ? 'selected' : ''}>${msbE(m)}</option>`).join('')}</select></div>
+      ${im.err ? `<div style="color:#A81E16;font-weight:700;margin-top:8px;">${msbE(im.err)}</div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="cov-btn cov-red" onclick="msbImpSend()" ${im.busy ? 'disabled' : ''}>${im.busy ? msbE(im.busy) : 'Загрузить ' + covN(im.rows.length)}</button><button type="button" class="cov-btn" onclick="msb.imp=null;renderCoverage()" ${im.busy ? 'disabled' : ''}>Отмена</button></div></div>`
+    : `<label class="cov-drop"><input type="file" id="covFile" accept=".xlsx" style="display:none;" onchange="msbImpFile(this,'Другой банк')">Выбрать файл Excel<div class="mdx-ks" style="font-weight:600;margin-top:4px;">Название · ИНН · ОКЭД · Директор · Телефон · Банк · Адрес · Уставной фонд</div></label>`}
+    ${last ? `<div style="margin-top:12px;font-size:12.5px;line-height:1.7;"><b>Последняя загрузка</b> · ${msbE(nplFmtDateRu(new Date(last.at).toISOString().slice(0, 10)))} · ${msbE(last.who)}<br>${msbE(last.file)} · <b style="color:#14693A;">+${covN(last.added)}</b> новых · ${covN(last.updated)} обновлено · ${covN(last.skipped)} пропущено</div>` : ''}
+    ${covExtra.imports.length ? `<div class="mdx-h" style="margin-top:14px;"><b style="font-size:14px;">История загрузок</b></div><table class="mdx-t"><tr><th>Дата</th><th>Файл</th><th>Итог</th></tr>${covExtra.imports.slice(0, 8).map(x => `<tr><td>${new Date(x.at).toLocaleDateString('ru-RU')}</td><td>${msbE(x.source === 'Другой банк' ? 'внешняя' : x.source)} · ${msbE(x.file)}</td><td>+${covN(x.added)}${x.updated ? ' / ' + covN(x.updated) + ' обн.' : ''}</td></tr>`).join('')}</table>` : ''}</div>`;
+  return `<div class="mdx-bottom" style="grid-template-columns:minmax(300px,1fr) minmax(0,2.3fr);">${up}
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0;"><div class="mdx-tiles" style="grid-template-columns:repeat(5,minmax(0,1fr));">${covKp('В базе', covN(a.tot), covN(mob) + ' с мобильным')}${covKp('Тронуто', covN(a.touched), (a.tot ? (a.touched * 100 / a.tot).toFixed(1) : 0) + '% за период · всего ' + covN(a.ever))}${covKp('Встречи', covN(a.meet), 'за период')}${covKp('Заявки', covN(a.app), formatMoney(a.appSum))}${covKp('Отказы', covN(a.ref), refs)}</div>
+    <div class="mdx-bottom" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:0;"><div class="mdx-card"><div class="mdx-h"><b>Воронка внешней базы</b></div>${covFunnel(a)}</div>
+    <div class="mdx-card"><div class="mdx-h"><b>Где лучше отклик</b><span>по видам деятельности</span></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Вид</th><th>В базе</th><th>Охват</th><th>Дозвон → интерес</th><th>Встречи</th></tr>${sphRows || '<tr><td colspan="5" class="mdx-ks">База не загружена</td></tr>'}</table></div></div></div></div></div>
+    <div class="mdx-card"><div class="mdx-h"><b>По менеджерам</b><span>за период</span></div><div style="overflow-x:auto;">${covMgrTable(leads, ix, rg, true)}</div></div>`;
+}
+// ---- Выездные клиенты: встречи на выездах МСБ + обход махалли
+function covTripItems(ix) {
+  const items = [];
+  (msb.trips || []).forEach(t => (t.meets || []).forEach(m => { const k = covInn(m.inn), cl = k ? (ix.cli[k] || []) : []; items.push({ at: m.at, kind: 'msb', name: m.name || '—', inn: k, who: t.manager, where: t.territory || '', result: m.result || '', next: cl.length ? 'Заявка · ' + cl[0].status : (m.products ? m.products : ''), lat: m.lat, lng: m.lng, app: cl.length > 0, iss: cl.some(c => c.status === 'Выдано'), isNew: !k || !msb.leads.some(l => l.inn === k && covBase(l) !== 'trip') }); }));
+  msb.leads.filter(l => covBase(l) === 'mah').forEach(l => { const e = l.extra || {}; const at = e.added ? new Date(e.added + 'T12:00:00').getTime() : 0; const cl = ix.cli[l.inn] || []; const g = String(e.geo || '').split(',').map(Number); const lc = (ix.calls[l.inn] || [])[0];
+    items.push({ at: at, kind: 'mah', name: l.name || l.inn, inn: l.inn, who: 'банкир ' + (e.banker || '—'), where: e.mahalla ? '«' + e.mahalla + '»' : '', result: l.why || '', next: cl.length ? 'Заявка · ' + cl[0].status : lc ? 'Звонок ' + (lc.manager || '') + ' · ' + lc.result : l.manager ? 'У ' + l.manager : 'Ждёт звонка', lat: g[0], lng: g[1], app: cl.length > 0, iss: cl.some(c => c.status === 'Выдано'), isNew: true }); });
+  return items.sort((a, b) => b.at - a.at);
+}
+function covTripHtml(ix, rg) {
+  const inR = t => t && t >= rg[0] && t <= rg[1];
+  const all = covTripItems(ix), items = all.filter(x => inR(x.at));
+  const trips = (msb.trips || []).filter(t => inR(t.startAt));
+  const msbN = items.filter(x => x.kind === 'msb').length, mahN = items.filter(x => x.kind === 'mah').length;
+  const apps = items.filter(x => x.app), iss = items.filter(x => x.iss);
+  const ter = {}; items.forEach(x => { const k = (x.kind === 'msb' ? x.where || 'Без района' : 'Махалля ' + (x.where || '—')); const o = ter[k] || (ter[k] = { trips: {}, m: 0, n: 0, a: 0, kind: x.kind }); o.m++; if (x.isNew) o.n++; if (x.app) o.a++; });
+  trips.forEach(t => { const k = t.territory || 'Без района'; if (ter[k]) ter[k].trips[t.id] = 1; });
+  const terRows = Object.keys(ter).sort((a, b) => ter[b].m - ter[a].m).slice(0, 12).map(k => `<tr><td><b>${msbE(k)}</b></td><td>${ter[k].kind === 'msb' ? Object.keys(ter[k].trips).length : '—'}</td><td>${ter[k].m}${ter[k].kind === 'mah' ? ' (обход)' : ''}</td><td>${ter[k].n}</td><td>${ter[k].a}</td></tr>`).join('');
+  let list = items.filter(x => covState.tseg === 'all' || x.kind === covState.tseg);
+  const q = covState.q.trim().toLowerCase(); if (q) list = list.filter(x => (x.name + ' ' + x.inn + ' ' + x.where + ' ' + x.who).toLowerCase().indexOf(q) > -1);
+  const tag = (t, c) => `<span class="t" style="background:${c[0]};color:${c[1]};">${msbE(t)}</span>`;
+  return `<div class="mdx-tiles" style="grid-template-columns:repeat(6,minmax(0,1fr));">${covKp('Выездов', covN(trips.length), 'менеджеры МСБ')}${covKp('Встреч на выездах', covN(msbN), trips.length ? (msbN / trips.length).toFixed(1) + ' за выезд' : '')}${covKp('Обход махалли', covN(mahN), 'банкиры махалли')}${covKp('Новые контакты', covN(items.filter(x => x.isNew).length), 'не было в базе')}${covKp('Заявки', covN(apps.length), 'с выездов и махалли')}${covKp('Выдано', covN(iss.length), '', '#14693A')}</div>
+    <div class="mdx-bottom" style="grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);"><div class="mdx-card"><div class="mdx-h"><b>По районам и махаллям</b></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Территория</th><th>Выездов</th><th>Встреч</th><th>Новых</th><th>Заявок</th></tr>${terRows || '<tr><td colspan="5" class="mdx-ks">За период выездов не было</td></tr>'}</table></div></div>
+    <div class="mdx-card"><div class="mdx-h"><b>Карта встреч</b><span><span style="color:#C4231A;">●</span> выезд МСБ · <span style="color:#2A4BA0;">●</span> махалля · <span style="color:#1E9E5A;">●</span> заявка</span></div><div id="covMap" style="height:300px;border-radius:14px;margin-top:10px;background:#EEF1F5;"></div></div></div>
+    <div class="mdx-card"><div class="mdx-h"><b>Все выездные клиенты</b><span>встречи МСБ и обход махалли</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><div class="cov-seg">${[['all', 'Все ' + items.length], ['msb', 'Выезды МСБ ' + msbN], ['mah', 'Махалля ' + mahN]].map(s => `<button type="button" class="${covState.tseg === s[0] ? 'on' : ''}" onclick="covState.tseg='${s[0]}';covState.lim=50;renderCoverage()">${s[1]}</button>`).join('')}</div>
+      <input class="cov-in" style="flex:1;min-width:200px;" placeholder="Поиск: имя, ИНН, район, кто" value="${msbE(covState.q)}" oninput="covState.q=this.value;clearTimeout(window.__covQ);window.__covQ=setTimeout(function(){renderCoverage();var i=document.querySelector('#coverageBox input[placeholder^=Поиск]');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},300)"></div>
+      <div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Когда</th><th>Клиент</th><th>Откуда</th><th>Кто</th><th>Где</th><th>Итог</th><th>Дальше</th></tr>${list.slice(0, covState.lim).map(x => `<tr><td class="nowrap">${x.at ? new Date(x.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</td><td><b>${msbE(x.name)}</b><div class="mdx-ks">${x.inn ? 'ИНН ' + msbE(x.inn) : 'без ИНН'}</div></td><td>${x.kind === 'msb' ? tag('Выезд МСБ', ['#FBE4E1', '#A81E16']) : tag('Махалля', ['#EEF1FB', '#2A4BA0'])}</td><td>${msbE(x.who)}</td><td>${msbE(x.where)}</td><td class="mdx-ks" style="color:#141414;">${msbE(x.result)}</td><td>${x.app ? tag(x.next, ['#E3F5EA', '#14693A']) : msbE(x.next)}</td></tr>`).join('') || '<tr><td colspan="7" class="mdx-ks">Нет выездных клиентов за период</td></tr>'}</table></div>
+      ${list.length > covState.lim ? `<button type="button" class="cov-btn" style="margin-top:10px;" onclick="covState.lim+=100;renderCoverage()">Показать ещё (${covN(list.length - covState.lim)})</button>` : ''}</div>`;
+}
+function covDrawMap() {
+  const el = document.getElementById('covMap'); if (!el || typeof L === 'undefined') return;
+  const rg = covRange(), ix = covIndex();
+  const pts = covTripItems(ix).filter(x => x.at >= rg[0] && x.at <= rg[1] && isFinite(x.lat) && isFinite(x.lng) && x.lat && x.lng);
+  try { if (covMap) { covMap.remove(); covMap = null; } } catch (e) {}
+  covMap = L.map(el, { zoomControl: true, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(covMap);
+  const b = [];
+  pts.forEach(x => { const c = x.app ? '#1E9E5A' : x.kind === 'msb' ? '#C4231A' : '#2A4BA0'; L.circleMarker([x.lat, x.lng], { radius: 7, color: '#fff', weight: 2, fillColor: c, fillOpacity: 1 }).bindPopup('<b>' + msbE(x.name) + '</b><br>' + msbE(x.who) + '<br>' + msbE(x.result)).addTo(covMap); b.push([x.lat, x.lng]); });
+  if (b.length) covMap.fitBounds(b, { padding: [24, 24], maxZoom: 14 }); else covMap.setView([42.46, 59.61], 11);
+}
+// ---- История охвата: динамика по дням + журнал действий
+function covHistEvents(ix) {
+  const ev = [], baseOf = {}; msb.leads.forEach(l => { baseOf[l.inn] = covBase(l); });
+  const name = inn => { const l = msbFindLead(inn); return l ? l.name : inn; };
+  const BL = { port: 'Портфель', ext: 'Внешняя', mah: 'Махалля', trip: 'Выезд' };
+  (msb.calls || []).forEach(c => ev.push({ at: c.tapAt, who: c.manager, inn: c.inn, name: c.name || name(c.inn), base: BL[baseOf[c.inn]] || 'Внешняя', act: 'Звонок', det: [c.result, c.nextDate, c.reason, msbDur(c.away), c.comment].filter(Boolean).join(' · '), flag: c.flags || '' }));
+  (msb.trips || []).forEach(t => (t.meets || []).forEach(m => ev.push({ at: m.at, who: t.manager, inn: covInn(m.inn), name: m.name, base: 'Выезд', act: 'Встреча', det: [t.territory, m.result, m.products, m.photo ? 'фото' : ''].filter(Boolean).join(' · ') })));
+  const NT = { note: 'Заметка', contact: 'Контакт', edit: 'Изменение', meet: 'Встреча назначена' };
+  (covExtra.notes || []).forEach(n => ev.push({ at: n.at, who: n.manager, inn: n.inn, name: name(n.inn), base: BL[baseOf[n.inn]] || 'Внешняя', act: NT[n.type] || 'Заметка', det: (n.voice ? '🎙 ' : '') + n.text }));
+  (allClients || []).forEach(c => { const d = stParseDt(c.createdAt || c.date); const k = covInn(c.inn); if (!d || !k || !baseOf[k]) return; ev.push({ at: d.getTime(), who: c.manager, inn: k, name: c.name, base: BL[baseOf[k]], act: 'Заявка', det: [c.product, c.amount ? formatMoney(c.amount) : '', c.status].filter(Boolean).join(' · ') }); });
+  msb.leads.filter(l => covBase(l) === 'mah' && (l.extra || {}).added).forEach(l => ev.push({ at: new Date(l.extra.added + 'T12:00:00').getTime(), who: 'банкир ' + (l.extra.banker || ''), inn: l.inn, name: l.name, base: 'Махалля', act: 'Обход махалли', det: l.extra.mahalla ? 'махалля «' + l.extra.mahalla + '»' : '' }));
+  return ev.filter(e => e.at).sort((a, b) => b.at - a.at);
+}
+function covHistHtml(ix, rg) {
+  const tot = { port: 0, ext: 0, mah: 0 }; msb.leads.forEach(l => { const b = covBase(l); if (tot[b] !== undefined) tot[b]++; });
+  const firstBy = { port: [], ext: [], mah: [] }; msb.leads.forEach(l => { const b = covBase(l); if (firstBy[b] && ix.first[l.inn]) firstBy[b].push(ix.first[l.inn]); });
+  Object.values(firstBy).forEach(a => a.sort((x, y) => x - y));
+  const days = []; const today = new Date(); today.setHours(23, 59, 59, 0);
+  const span = covState.per === 'today' || covState.per === 'week' ? 14 : covState.per === 'custom' && covState.from ? Math.min(120, Math.ceil((Math.min(rg[1], today.getTime()) - rg[0]) / 86400000) + 1) : 30;
+  for (let i = span - 1; i >= 0; i--) days.push(today.getTime() - i * 86400000);
+  const cnt = (arr, t) => { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] <= t) lo = m + 1; else hi = m; } return lo; };
+  const series = ['port', 'ext', 'mah'].map(b => days.map(t => tot[b] ? cnt(firstBy[b], t) * 100 / tot[b] : 0));
+  const W = 760, H = 220, P = 36, mx = Math.max(1, ...series.flat()) * 1.15;
+  const X = i => P + i * (W - P - 10) / Math.max(1, days.length - 1), Y = v => H - 24 - v / mx * (H - 44);
+  const cols = ['#C4231A', '#2A4BA0', '#E8A317'], names = ['Наш портфель', 'Внешняя база', 'Махалля / выезды'];
+  const grid = [0, 0.25, 0.5, 0.75, 1].map(k => `<line x1="${P}" x2="${W - 10}" y1="${Y(mx * k / 1.15)}" y2="${Y(mx * k / 1.15)}" stroke="#F0F0F3"/><text x="2" y="${Y(mx * k / 1.15) + 4}" font-size="10.5" fill="#3F3F46">${(mx * k / 1.15).toFixed(mx < 5 ? 1 : 0)}%</text>`).join('');
+  const lbl = days.map((t, i) => i % Math.ceil(days.length / 8) === 0 || i === days.length - 1 ? `<text x="${X(i)}" y="${H - 6}" font-size="10.5" fill="#3F3F46" text-anchor="middle">${new Date(t).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</text>` : '').join('');
+  const lines = series.map((s, k) => `<polyline fill="none" stroke="${cols[k]}" stroke-width="2.5" points="${s.map((v, i) => X(i) + ',' + Y(v)).join(' ')}"/>`).join('');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;">${grid}${lbl}${lines}</svg>`;
+  const legend = series.map((s, k) => `<span style="color:${cols[k]};font-weight:800;">● ${names[k]} ${s[s.length - 1].toFixed(s[s.length - 1] < 10 ? 1 : 0)}%</span>`).join(' &nbsp; ');
+  // по неделям
+  const ev = covHistEvents(ix);
+  const wk = []; const mon = new Date(); mon.setHours(0, 0, 0, 0); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+  for (let i = 0; i < 6; i++) { const s = mon.getTime() - i * 7 * 86400000; wk.push([s, s + 7 * 86400000 - 1]); }
+  const firstAll = Object.values(ix.first);
+  const wkRows = wk.map(w => { const inW = t => t >= w[0] && t <= w[1]; const e = ev.filter(x => inW(x.at)); return `<tr><td>${new Date(w[0]).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}–${new Date(w[1]).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })}</td><td>+${firstAll.filter(inW).length}</td><td>${e.filter(x => x.act === 'Звонок').length}</td><td>${e.filter(x => x.act === 'Встреча').length}</td><td>${e.filter(x => x.act === 'Заявка').length}</td><td>${(allClients || []).filter(c => c.status === 'Выдано' && (d => d && inW(d.getTime()))(stParseDt(c.statusChangedAt || c.updatedAt))).length}</td></tr>`; }).join('');
+  // журнал
+  const inR = t => t >= rg[0] && t <= rg[1];
+  let jl = ev.filter(e => inR(e.at));
+  const mgrs = Array.from(new Set(jl.map(e => e.who).filter(Boolean))).sort(), acts = Array.from(new Set(ev.map(e => e.act))).sort();
+  if (covState.jm) jl = jl.filter(e => e.who === covState.jm);
+  if (covState.jb) jl = jl.filter(e => e.base === covState.jb);
+  if (covState.ja) jl = jl.filter(e => e.act === covState.ja);
+  const q = covState.jq.trim().toLowerCase(); if (q) jl = jl.filter(e => (e.name + ' ' + e.inn + ' ' + e.det).toLowerCase().indexOf(q) > -1);
+  covState._jl = jl;
+  const BC = { 'Портфель': ['#E3F5EA', '#14693A'], 'Внешняя': ['#EEF1FB', '#2A4BA0'], 'Махалля': ['#FFF1CF', '#8A5A00'], 'Выезд': ['#FBE4E1', '#A81E16'] };
+  const AC = { 'Звонок': ['#F0F0F2', '#3F3F46'], 'Встреча': ['#FFF1CF', '#8A5A00'], 'Заявка': ['#E3F5EA', '#14693A'], 'Заметка': ['#EEF1FB', '#2A4BA0'] };
+  const tg = (t, c) => `<span class="t" style="background:${(c || ['#F0F0F2'])[0]};color:${(c || ['', '#3F3F46'])[1]};">${msbE(t)}</span>`;
+  const sel = (k, list, ph) => `<select class="cov-in" onchange="covState.${k}=this.value;covState.lim=50;renderCoverage()"><option value="">${ph}</option>${list.map(x => `<option ${covState[k] === x ? 'selected' : ''}>${msbE(x)}</option>`).join('')}</select>`;
+  return `<div class="mdx-bottom" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);"><div class="mdx-card"><div class="mdx-h"><b>Динамика охвата</b><span>доля базы, с которой уже работали · ${days.length} дн.</span></div>${svg}<div style="font-size:12.5px;margin-top:6px;">${legend}</div></div>
+    <div class="mdx-card"><div class="mdx-h"><b>По неделям</b></div><div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Неделя</th><th>Тронуто</th><th>Звонков</th><th>Встреч</th><th>Заявок</th><th>Выдано</th></tr>${wkRows}</table></div></div></div>
+    <div class="mdx-card"><div class="mdx-h"><b>Журнал действий</b><span>кто, когда, с кем, что сделал · ${covN(jl.length)} за период</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">${sel('jm', mgrs, 'Все сотрудники')}${sel('jb', ['Портфель', 'Внешняя', 'Махалля', 'Выезд'], 'Все базы')}${sel('ja', acts, 'Все действия')}<input class="cov-in" style="flex:1;min-width:200px;" placeholder="Поиск: клиент, ИНН, текст" value="${msbE(covState.jq)}" oninput="covState.jq=this.value;clearTimeout(window.__covQ);window.__covQ=setTimeout(function(){renderCoverage();var i=document.querySelector('#coverageBox input[placeholder^=Поиск]');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},300)"><button type="button" class="cov-btn" onclick="covJournalExcel(this)">⬇ Excel</button></div>
+      <div style="overflow-x:auto;"><table class="mdx-t"><tr><th>Когда</th><th>Кто</th><th>Клиент</th><th>База</th><th>Действие</th><th>Подробно</th></tr>${jl.slice(0, covState.lim).map(e => `<tr><td class="nowrap">${new Date(e.at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</td><td>${msbE(e.who || '')}</td><td><b>${msbE(e.name || e.inn || '')}</b></td><td>${tg(e.base, BC[e.base])}</td><td>${tg(e.act, AC[e.act])}${e.flag ? ' ' + tg(e.flag, ['#FBE4E1', '#A81E16']) : ''}</td><td class="mdx-ks" style="color:#141414;">${msbE(e.det || '')}</td></tr>`).join('') || '<tr><td colspan="6" class="mdx-ks">За период действий нет</td></tr>'}</table></div>
+      ${jl.length > covState.lim ? `<button type="button" class="cov-btn" style="margin-top:10px;" onclick="covState.lim+=100;renderCoverage()">Показать ещё (${covN(jl.length - covState.lim)})</button>` : ''}</div>`;
+}
+async function covJournalExcel(btn) {
+  const jl = covState._jl || []; if (!jl.length) return;
+  try {
+    btn.disabled = true; btn.innerText = 'Формирую…';
+    const ExcelJS = await nplLoadExcelJs(), wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Журнал охвата');
+    ws.columns = [{ header: 'Когда', width: 18 }, { header: 'Кто', width: 24 }, { header: 'Клиент', width: 36 }, { header: 'ИНН', width: 14 }, { header: 'База', width: 12 }, { header: 'Действие', width: 18 }, { header: 'Подробно', width: 60 }];
+    jl.forEach(e => ws.addRow([new Date(e.at).toLocaleString('ru-RU'), e.who || '', e.name || '', e.inn || '', e.base, e.act + (e.flag ? ' · ' + e.flag : ''), e.det || '']));
+    const h = ws.getRow(1); h.font = { bold: true, color: { argb: 'FFFFFFFF' } }; h.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC4231A' } };
+    ws.views = [{ state: 'frozen', ySplit: 1 }]; ws.autoFilter = { from: 'A1', to: 'G1' };
+    const buf = await wb.xlsx.writeBuffer(), a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    a.download = 'ohvat_zhurnal_' + new Date().toISOString().slice(0, 10) + '.xlsx'; a.click();
+  } catch (e) { alert('Не удалось сформировать Excel'); }
+  btn.disabled = false; btn.innerText = '⬇ Excel';
 }
 
 function renderClients(clients) {
