@@ -867,6 +867,35 @@ body.msb-on{overflow:hidden;}
 .msb-chips2 button{background:#F0F0F2;color:#141414;}
 .msb-chips2 button.on{background:#141414;color:#fff;}
 .lw-f button{background:#fff;box-shadow:0 2px 8px rgba(20,20,30,.06);}
+@keyframes msbspin{to{transform:rotate(360deg);}}
+@keyframes msbshim{0%{background-position:-200px 0;}100%{background-position:200px 0;}}
+.msb-spin{width:38px;height:38px;border-radius:50%;border:4px solid #F6D2CF;border-top-color:#C4231A;animation:msbspin .8s linear infinite;display:inline-block;flex:none;}
+.msb-spin-s{width:16px;height:16px;border-width:3px;border-color:rgba(255,255,255,.35);border-top-color:#fff;vertical-align:-3px;margin-right:6px;}
+.msb-spin-r{border-color:#F6D2CF;border-top-color:#C4231A;}
+.msb-spin-box{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 0 8px;color:#3F3F46;font-size:13px;}
+.msb-skel{display:flex;gap:10px;align-items:center;padding:12px 0;border-top:1px solid #F0F0F3;}
+.msb-skel i,.msb-skel span{display:block;background:linear-gradient(90deg,#EFEFF2 0px,#F7F7F9 60px,#EFEFF2 120px);background-size:400px 100%;animation:msbshim 1.2s linear infinite;border-radius:8px;}
+.msb-skel i{width:24px;height:24px;border-radius:7px;flex:none;}
+.msb-skel div{flex:1;display:flex;flex-direction:column;gap:7px;}
+.msb-skel span:first-child{height:13px;width:70%;}
+.msb-skel span:last-child{height:10px;width:45%;}
+.msb-selrow{display:flex;align-items:center;gap:10px;}
+.msb-selrow .msb-lr{flex:1;min-width:0;}
+.msb-selrow .lw-box{cursor:pointer;background:#fff;}
+.msb-selrow .lw-box.on{background:#C4231A;border-color:#C4231A;color:#fff;}
+.msb-selbar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:5;background:#141414;color:#fff;border-radius:18px;padding:10px 10px 10px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 10px 24px rgba(0,0,0,.25);}
+.msb-selbar b{font-size:15px;}
+.msb-selbar div div{font-size:11.5px;opacity:.8;}
+.msb-selclr{border:none;background:rgba(255,255,255,.12);color:#fff;border-radius:12px;width:38px;height:42px;font-size:15px;cursor:pointer;}
+.msb-selgo{border:none;background:#C4231A;color:#fff;border-radius:14px;padding:0 14px;height:42px;font-weight:800;font-size:13.5px;font-family:inherit;cursor:pointer;}
+.msb-av{width:34px;height:34px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex:none;}
+.msb-idlewarn{margin-top:10px;background:#FFF1CF;color:#8A5A00;border-radius:12px;padding:8px 10px;font-size:12.5px;font-weight:800;position:relative;z-index:2;}
+.msb-warnbox{background:#FFF1CF;color:#8A5A00;border-radius:18px;padding:12px 14px;margin-bottom:12px;}
+.msb-warnbox>b{font-size:14.5px;}
+.msb-warnbox>div{font-size:12.5px;margin-top:3px;}
+.msb-warnrow{display:flex;justify-content:space-between;gap:8px;padding:8px 0 0;font-size:13px;color:#141414;cursor:pointer;}
+.msb-warnrow b{color:#A81E16;white-space:nowrap;}
+.msb-warnbox button{margin-top:8px;width:100%;border:none;background:#8A5A00;color:#fff;border-radius:12px;padding:9px;font-weight:800;font-family:inherit;cursor:pointer;}
 .lw-tg{position:absolute;right:14px;top:14px;z-index:3;display:flex;background:rgba(255,255,255,.18);border-radius:12px;padding:3px;}
 .lw-tg button{border:none;background:none;color:#fff;font-family:inherit;font-weight:800;font-size:12px;border-radius:9px;padding:5px 10px;cursor:pointer;}
 .lw-tg button.on{background:#fff;color:#C4231A;}
@@ -8098,7 +8127,7 @@ function msbRender() {
   let body = '';
   try {
     if (msb.tab === 'home') body = msbHomeHtml();
-    else if (msb.tab === 'leads') body = msb.lead ? msbLeadHtml() : msbLeadsHtml();
+    else if (msb.tab === 'leads') body = msb.lead ? msbLeadHtml() : msb.dial ? msbDialHtml() : msbLeadsHtml();
     else if (msb.tab === 'trip') body = msbTripHtml();
     else if (msb.tab === 'deals') body = msb.deal ? msbDealHtml() : msbDealsHtml();
     else if (msb.tab === 'ctl') body = msbCtlHtml();
@@ -8134,10 +8163,12 @@ function msbHomeHtml() {
   const pend = msbPending();
   const mineL = msbMineList(), dueN = mineL.filter(l => msbMineF(l, 'today')).length;
   const recN = mineL.filter(l => l.status === 'Перезвонить' && l.nextDate && l.nextDate.slice(0, 10) <= today).length;
+  const warnL = mineL.filter(l => { const x = msbIdle(l); return x && x.warn; });
+  const warnCard = warnL.length ? `<div class="msb-warnbox"><b>⏳ ${warnL.length} ${warnL.length === 1 ? 'клиент скоро вернётся' : 'клиента скоро вернутся'} в общую базу</b><div>3 дня без действий. Позвоните, отправьте сообщение или оставьте заметку — иначе они уйдут другим менеджерам.</div>${warnL.slice(0, 4).map(l => `<div class="msb-warnrow" onclick="msbLeadOpen('${msbE(l.inn)}')"><span>${msbE(l.name)}</span><b>через ${msbIdle(l).left} ч</b></div>`).join('')}${warnL.length > 4 ? `<button type="button" onclick="msbGoLeads('mine','warn')">Показать все ${warnL.length}</button>` : ''}</div>` : '';
   const dayCard = mineL.length ? `<div class="msb-card"><div class="msb-h"><b>Мои клиенты</b><a onclick="msbGoLeads('mine','all')">Все ${mineL.length}</a></div><div style="display:flex;gap:6px;">${[['Перезвонить сегодня', recN, "msbGoLeads('mine','today')"], ['Встречи сегодня', meetLeads.filter(l => !l.lockedBy && l.manager === me).length, "msbGoLeads('mine','meet')"], ['Интересно', mineL.filter(l => l.status === 'Интересно').length, "msbGoLeads('mine','int')"]].map(x => `<div style="flex:1;background:#F3F4F7;border-radius:13px;padding:9px;cursor:pointer;" onclick="${x[2]}"><div class="msb-sub" style="font-weight:700;font-size:11px;">${x[0]}</div><b style="font-size:18px;${x[1] && x[0] === 'Перезвонить сегодня' ? 'color:#C4231A;' : ''}">${x[1]}</b></div>`).join('')}</div></div>` : '';
   return msbHero('Мой день', msbE(me) + ' · ' + vzFmtDateRu(today), `<div class="msb-hrow"><div><div class="msb-hs">Выдано за месяц</div><div class="msb-big">${vzFmt(issuedSum)}</div></div><div class="msb-hr">сделок: ${issued.length}</div></div>`)
     + `<div class="msb-pad msb-up">
-      ${pend ? `<button type="button" class="msb-alert" onclick="msbResultOpen()">Укажите итог звонка: ${msbE(pend.name)}</button>` : ''}${dayCard}
+      ${pend ? `<button type="button" class="msb-alert" onclick="msbResultOpen()">Укажите итог звонка: ${msbE(pend.name)}</button>` : ''}${warnCard}${dayCard}
       <div class="msb-ws3">${w('Звонки', callsT.length, MSB_NORM.calls, '#2A4BA0', 'дозвон ' + reached)}${w('Встречи', meetsT, MSB_NORM.meets, '#E8A317', 'на выездах')}${w('Заявки', appsT, MSB_NORM.apps, '#1E9E5A', 'за день')}</div>
       <div class="msb-q">${msbQb('phone', 'Обзвон', dueN ? dueN + ' сегодня' : q.length + ' в очереди', dueN ? "msbGoLeads('mine','today')" : "msbGoLeads('base')")}${msbQb('plus', 'Заявка', '', 'msbAppOpen()')}${msbQb('mappin', 'Выезд', msbActiveTrip() ? 'идёт' : '', "msbGo('trip')")}${msbQb('briefcase', 'Сделки', deals.length ? deals.length + ' в работе' : '', "msbGo('deals')")}</div>
       <div class="msb-card"><div class="msb-h"><b>Рекомендации на обзвон</b><a onclick="msbGoLeads('base')">Все ${q.length}</a></div><div class="msb-srcs">${srcBox('Наш заёмщик', 'повторный кредит')}${srcBox('Другой банк', 'РКО и кредит')}${srcBox('Махалля', 'нужен кредит')}</div></div>
@@ -8158,6 +8189,7 @@ function msbMineList() { const me = msbMe(); return msb.leads.filter(l => !l.loc
 function msbMineF(l, f) {
   const today = msbTodayIso();
   if (f === 'today') return (l.status === 'Перезвонить' && l.nextDate && l.nextDate.slice(0, 10) <= today) || (l.status === 'Встреча' && String(l.nextDate || '').slice(0, 10) === today);
+  if (f === 'warn') { const x = msbIdle(l); return !!(x && x.warn); }
   if (f === 'recall') return l.status === 'Перезвонить';
   if (f === 'meet') return l.status === 'Встреча';
   if (f === 'int') return l.status === 'Интересно';
@@ -8166,56 +8198,206 @@ function msbMineF(l, f) {
   return true;
 }
 function msbBaseObj(b) { return { row: b[8], inn: b[0], name: b[1], okved: b[2], director: b[3], phone: b[4], address: b[5], bank: b[6], unreach: b[7], source: 'Другой банк', manager: '', status: 'База', attempts: 0, extra: b[9] && typeof b[9] === 'object' ? b[9] : {}, contacts: [], addresses: [] }; }
-function msbBaseKey() { const q = msb.q.trim(); return (q.length >= 3 ? q.toLowerCase() : '') + '|' + (msb.bmob ? 1 : 0) + '|' + (msb.bsph || ''); }
-async function msbBaseSearch(key) {
-  msb.bbusy = key;
+// ---- Внешняя база: фильтры и страницы по 100 с сервера ----
+function msbBF() { return msb.bf || (msb.bf = { districts: [], mahallas: [], spheres: [], banks: [], fund: '', mob: false }); }
+function msbBFActive() { const f = msbBF(); return f.districts.length || f.mahallas.length || f.spheres.length || f.banks.length || f.fund || f.mob || msb.q.trim().length >= 3; }
+function msbBaseKey() { const f = msbBF(); return JSON.stringify([msb.q.trim().length >= 3 ? msb.q.trim().toLowerCase() : '', f.districts, f.mahallas, f.spheres, f.banks, f.fund, f.mob]); }
+function msbBaseAdd(rows) { const have = {}; msb.leads.forEach(x => { have[x.inn] = 1; }); const inns = []; (rows || []).forEach(b => { if (!have[b[0]]) { msb.leads.push(msbBaseObj(b)); have[b[0]] = 1; } inns.push(b[0]); }); return inns; }
+async function msbBasePageLoad(more) {
+  const key = msbBaseKey(), f = msbBF();
+  if (!more || !msb.bp || msb.bp.key !== key) msb.bp = { key: key, inns: [], total: 0, offset: 0, busy: true, err: '' };
+  else msb.bp.busy = true;
+  const bp = msb.bp; msbRender();
   try {
-    const r = await msbPost({ webAction: 'msbSearchBase', q: msb.q.trim(), mob: !!msb.bmob, sphere: msb.bsph || '' });
-    if (msb.bbusy !== key) return;
-    const have = {}; msb.leads.forEach(x => { have[x.inn] = x; });
-    const inns = [];
-    ((r && r.base) || []).forEach(b => { if (!have[b[0]]) { const o = msbBaseObj(b); msb.leads.push(o); have[b[0]] = o; } inns.push(b[0]); });
-    msb.bres = { key: key, inns: inns, more: !!(r && r.more), found: (r && r.found) || inns.length };
-  } catch (e) { msb.bres = { key: key, inns: [], err: 1 }; }
-  msb.bbusy = '';
-  if (msb.tab === 'leads' && !msb.lead && (msb.lseg || 'base') === 'base') { msbRender(); const i = document.getElementById('msbQ'); if (i && msb.q) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+    const r = await msbPost({ webAction: 'msbBasePage', q: msb.q.trim(), districts: f.districts, mahallas: f.mahallas, spheres: f.spheres, banks: f.banks, fund: f.fund, mob: f.mob, offset: bp.inns.length, limit: 100 });
+    if (msb.bp !== bp) return;
+    if (!r || !r.success) { bp.err = (r && r.message) || 'Не удалось загрузить'; }
+    else { bp.inns = bp.inns.concat(msbBaseAdd(r.base)); bp.total = r.total; }
+  } catch (e) { if (msb.bp === bp) bp.err = 'Не удалось связаться с сервером'; }
+  bp.busy = false;
+  if (msb.tab === 'leads' && !msb.lead && (msb.lseg || 'base') === 'base') msbRender();
 }
 function msbBaseList() {
-  const today = msbTodayIso(), q = msb.q.trim().toLowerCase();
-  const key = msbBaseKey(), searching = key !== '|0|' && !msbIsBossRole();
-  if (searching) {
-    if (!msb.bres || msb.bres.key !== key) { if (msb.bbusy !== key) setTimeout(() => msbBaseSearch(key), 0); return null; }
-    const set = {}; msb.bres.inns.forEach(i => { set[i] = 1; });
-    const f = l => Number((l.extra || {}).fund) || 0;
-    return msb.leads.filter(l => set[l.inn] && !l.manager && !l.lockedBy).sort((x, y) => f(y) - f(x));
+  const today = msbTodayIso();
+  if (msbBFActive() && !msbIsBossRole()) {
+    const key = msbBaseKey();
+    if (!msb.bp || msb.bp.key !== key) { setTimeout(() => msbBasePageLoad(false), 0); return null; }
+    if (msb.bp.busy && !msb.bp.inns.length) return null;
+    const by = {}; msb.leads.forEach(l => { by[l.inn] = l; });
+    return msb.bp.inns.map(i => by[i]).filter(l => l && !l.manager && !l.lockedBy);
   }
   let a = msb.leads.filter(l => String(l.source || '').indexOf('Другой банк') > -1 && !l.manager && !l.lockedBy && !l.inPipeline && !(l.status === 'Отказ' && l.refusedUntil && l.refusedUntil > today));
-  if (msb.bmob) a = a.filter(l => msbIsMob(l.phone));
-  if (msb.bsph) a = a.filter(l => (l.okved || 'Не указано') === msb.bsph);
-  if (q) a = a.filter(l => (l.name + ' ' + l.inn + ' ' + (l.director || '') + ' ' + (l.phone || '')).toLowerCase().indexOf(q) > -1);
+  const f = msbBF(), q = msb.q.trim().toLowerCase();
+  if (msbIsBossRole()) {
+    if (f.mob) a = a.filter(l => msbIsMob(l.phone));
+    if (f.spheres.length) a = a.filter(l => f.spheres.indexOf(l.okved || 'Не указано') > -1);
+    if (q) a = a.filter(l => (l.name + ' ' + l.inn + ' ' + (l.director || '') + ' ' + (l.phone || '')).toLowerCase().indexOf(q) > -1);
+  }
   const w = l => (msbIsMob(l.phone) ? 0 : l.phone ? 1 : 2) + (l.unreach ? 3 : 0) + (l.refusedBefore ? 3 : 0);
-  const f = l => Number((l.extra || {}).fund) || 0;
-  return a.sort((x, y) => w(x) - w(y) || f(y) - f(x));
+  const fd = l => Number((l.extra || {}).fund) || 0;
+  return a.sort((x, y) => w(x) - w(y) || fd(y) - fd(x));
+}
+function msbSpin(t) { return `<div class="msb-spin-box"><div class="msb-spin"></div><b>${msbE(t || 'Загружаю…')}</b></div>${[1, 2, 3].map(() => '<div class="msb-skel"><i></i><div><span></span><span></span></div></div>').join('')}`; }
+// Окно фильтров
+function msbFilterOpen() { msb.ft = { tab: 'dist', f: JSON.parse(JSON.stringify(msbBF())), fac: null, busy: true, msh: 30 }; msbFilterSheet(); msbFacetsLoad(); }
+async function msbFacetsLoad() {
+  const ft = msb.ft; if (!ft) return; ft.busy = true; msbFilterSheet();
+  try { const r = await msbPost(Object.assign({ webAction: 'msbBaseFacets', q: msb.q.trim() }, ft.f)); if (msb.ft !== ft) return; ft.fac = r && r.success ? r : null; ft.err = r && r.success ? '' : ((r && r.message) || 'Не удалось загрузить'); }
+  catch (e) { if (msb.ft === ft) ft.err = 'Не удалось связаться с сервером'; }
+  ft.busy = false; if (msb.ft === ft) msbFilterSheet();
+}
+function msbFT(k, v) {
+  const ft = msb.ft, a = ft.f[k], i = a.indexOf(v);
+  if (i > -1) a.splice(i, 1); else a.push(v);
+  if (k === 'districts') ft.f.mahallas = [];
+  clearTimeout(window.__msbFac); window.__msbFac = setTimeout(msbFacetsLoad, 350); msbFilterSheet();
+}
+function msbFilterSheet() {
+  const ft = msb.ft; if (!ft) return;
+  const fac = ft.fac || {}, f = ft.f;
+  const tabs = [['dist', 'Район'], ['fund', 'Уставной фонд'], ['sph', 'Вид'], ['bank', 'Банк']];
+  const row = (on, l, n, click) => `<div class="lw-cb ${on ? 'on' : ''}" onclick="${click}"><span class="lw-box">${on ? '✓' : ''}</span><span style="flex:1;">${msbE(l)}</span><span class="msb-sub" style="font-weight:700;">${n == null ? '' : Number(n).toLocaleString('ru-RU')}</span></div>`;
+  const list = (obj, key, sel, lim) => Object.keys(obj || {}).sort((a, b) => obj[b] - obj[a]).slice(0, lim || 60).map(k => row(sel.indexOf(k) > -1, k, obj[k], `msbFT('${key}',${msbE(JSON.stringify(k))})`)).join('');
+  let body = '';
+  if (ft.busy && !ft.fac) body = `<div class="msb-spin-box" style="padding:30px 0;"><div class="msb-spin"></div><b>Считаю клиентов по базе…</b></div>`;
+  else if (ft.tab === 'dist') {
+    body = list(fac.districts, 'districts', f.districts, 40);
+    if (f.districts.length && fac.mahallas && Object.keys(fac.mahallas).length) body += `<div class="msb-sub" style="font-weight:800;margin:14px 0 4px;color:#141414;">Махалля</div>` + list(fac.mahallas, 'mahallas', f.mahallas, ft.msh) + (Object.keys(fac.mahallas).length > ft.msh ? `<button type="button" class="cy-ghost" style="width:100%;" onclick="msb.ft.msh+=40;msbFilterSheet()">Ещё махалли</button>` : '');
+  } else if (ft.tab === 'fund') {
+    body = ['Любой', 'от 10 млн', 'от 100 млн', '1 млрд+'].map(k => row((f.fund || 'Любой') === k, k, (fac.fund || {})[k], `msb.ft.f.fund=${msbE(JSON.stringify(k === 'Любой' ? '' : k))};clearTimeout(window.__msbFac);window.__msbFac=setTimeout(msbFacetsLoad,200);msbFilterSheet()`)).join('')
+      + `<div class="lw-cb ${f.mob ? 'on' : ''}" style="margin-top:12px;" onclick="msb.ft.f.mob=!msb.ft.f.mob;clearTimeout(window.__msbFac);window.__msbFac=setTimeout(msbFacetsLoad,200);msbFilterSheet()"><span class="lw-box">${f.mob ? '✓' : ''}</span><span style="flex:1;">Только с мобильным номером</span></div>`;
+  } else if (ft.tab === 'sph') body = list(fac.spheres, 'spheres', f.spheres, 40);
+  else body = list(fac.banks, 'banks', f.banks, 40);
+  const tot = fac.total;
+  vzSheetOpen(`<div style="display:flex;justify-content:space-between;align-items:center;"><div class="vzs-h" style="margin:0;">Фильтры</div><a style="color:#C4231A;font-weight:800;font-size:13px;cursor:pointer;" onclick="msb.ft.f={districts:[],mahallas:[],spheres:[],banks:[],fund:'',mob:false};msbFacetsLoad()">Сбросить</a></div>
+    <div class="lw-seg" style="margin:10px 0 4px;">${tabs.map(t => { const n = t[0] === 'dist' ? f.districts.length + f.mahallas.length : t[0] === 'fund' ? (f.fund || f.mob ? 1 : 0) : t[0] === 'sph' ? f.spheres.length : f.banks.length; return `<button type="button" class="${ft.tab === t[0] ? 'on' : ''}" onclick="msb.ft.tab='${t[0]}';msbFilterSheet()">${t[1]}${n ? ' · ' + n : ''}</button>`; }).join('')}</div>
+    <div style="max-height:46vh;overflow-y:auto;">${body}</div>${ft.err ? `<div class="msb-err">${msbE(ft.err)}</div>` : ''}
+    <button type="button" class="vzs-go" style="height:50px;" onclick="msbFilterApply()">${ft.busy ? '<span class="msb-spin msb-spin-s"></span> Считаю…' : 'Показать ' + (tot == null ? '' : Number(tot).toLocaleString('ru-RU') + ' ') + 'клиентов'}</button>`);
+}
+function msbFilterApply() { msb.bf = msb.ft.f; msb.ft = null; vzSheetClose(); msb.bp = null; msb.blim = 100; msbRender(); }
+function msbBFLabel(k) {
+  const f = msbBF();
+  if (k === 'dist') { const a = f.districts.concat(f.mahallas); return a.length ? (a.length > 2 ? a.slice(0, 2).join(', ') + ' +' + (a.length - 2) : a.join(', ')) : 'Район'; }
+  if (k === 'fund') return f.fund ? 'УФ ' + f.fund : 'Уставной фонд';
+  if (k === 'sph') return f.spheres.length ? (f.spheres.length > 1 ? 'Вид: ' + f.spheres.length : f.spheres[0]) : 'Вид';
+  return f.banks.length || f.mob ? 'Ещё · ' + (f.banks.length + (f.mob ? 1 : 0)) : 'Ещё';
+}
+// Выбор галочками
+function msbSelToggle(inn) { msb.selB = msb.selB || {}; if (msb.selB[inn]) delete msb.selB[inn]; else msb.selB[inn] = 1; msbRender(); }
+function msbSelAll(on, inns) { msb.selB = msb.selB || {}; inns.forEach(i => { if (on) msb.selB[i] = 1; else delete msb.selB[i]; }); msbRender(); }
+function msbSelCount() { return Object.keys(msb.selB || {}).length; }
+// ---- Обзвон выбранных ----
+function msbDialStart() {
+  const inns = Object.keys(msb.selB || {}); if (!inns.length) return;
+  msb.dial = { list: inns, i: 0, done: {} }; msb.selB = {}; msb.lead = null; msb.tab = 'leads'; msbRender(); msbNotesLoad(inns[0]);
+  const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0;
+}
+function msbDialNext(skip) {
+  const d = msb.dial; if (!d) return;
+  if (!skip) d.done[d.list[d.i]] = 1;
+  d.i++; if (d.i >= d.list.length) { const n = Object.keys(d.done).length; msb.dial = null; msbRender(); alert('Обзвон завершён: ' + n + ' из ' + d.list.length); return; }
+  msbRender(); msbNotesLoad(d.list[d.i]); const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0;
+}
+function msbDialHtml() {
+  const d = msb.dial, inn = d.list[d.i], l = msbFindLead(inn) || { inn: inn, name: inn };
+  const ex = l.extra || {}, pend = msbPending(), isPend = pend && pend.inn === inn;
+  const kv = (k, v) => v ? `<div class="msb-kv"><span>${k}</span><b>${msbE(v)}</b></div>` : '';
+  const calls = (msb.callsH || {})[inn];
+  const next = d.list.slice(d.i + 1, d.i + 4).map(i => (msbFindLead(i) || {}).name || i);
+  const hero = `<div class="msb-hero"><button type="button" class="msb-back" onclick="if(confirm('Остановить обзвон?')){msb.dial=null;msbRender();}" aria-label="Назад">‹</button><div class="msb-hs">Клиент ${d.i + 1} из ${d.list.length}</div><div class="msb-ht">Обзвон выбранных</div><div style="height:6px;border-radius:3px;background:rgba(255,255,255,.25);margin-top:12px;"><div style="width:${Math.round((d.i) * 100 / d.list.length)}%;height:6px;border-radius:3px;background:#fff;"></div></div></div>`;
+  const info = `<div class="msb-card"><b style="font-size:18px;">${msbE(l.name)}</b><div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 8px;">${ex.fund ? msbTag('УФ ' + vzFmt(ex.fund), ['#E3F5EA', '#14693A']) : ''}${msbSrcTags(l.source)}</div>${kv('Директор', l.director)}${kv('Телефон', msbFmtPh(l.phone))}${kv('Вид', [l.okved, ex.age].filter(Boolean).join(' · '))}${kv('Банк сейчас', l.bank)}${kv('Район', [ex.district, ex.mahalla ? '«' + ex.mahalla + '»' : ''].filter(Boolean).join(' · ') || l.address)}${kv('Учредители', ex.founders)}</div>`;
+  const hist = `<div class="msb-card"><div class="msb-h"><b>Звонили раньше</b><span class="msb-sub">${calls ? calls.length : ''}</span></div>${calls === undefined ? msbSpin('Загружаю историю…').split('<div class="msb-skel">')[0] : calls.length ? calls.slice(0, 3).map(c => `<div class="msb-sub" style="padding:4px 0;"><b style="color:#141414;">${msbDayFmt(c.tapAt)} · ${msbE(c.manager === msbMe() ? 'вы' : c.manager)}</b> · ${msbE(c.result)} · ${msbDur(c.away)}</div>`).join('') : '<div class="msb-sub">Никто не звонил</div>'}</div>`;
+  const btns = isPend ? `<div class="msb-lock">Укажите итог звонка — потом откроется следующий клиент.</div>${msbResultHtml(l)}`
+    : `<div style="display:flex;gap:8px;"><button type="button" class="cy-ghost" style="flex:1;background:#fff;box-shadow:0 4px 14px rgba(20,20,30,.06);height:56px;" onclick="msbDialNext(true)">Пропустить</button><button type="button" class="msb-go msb-green" style="flex:2;height:56px;margin:0;display:flex;align-items:center;justify-content:center;gap:8px;" ${l.phone ? `onclick="msbCall('${msbE(inn)}')"` : 'disabled'}>${msbIcon('phone', 20)}Позвонить</button></div>
+      <div style="display:flex;gap:8px;margin-top:8px;"><button type="button" class="cy-ghost" style="flex:1;background:#fff;height:46px;" onclick="msbMsgOpen('${msbE(inn)}')">✉ Сообщение</button><button type="button" class="cy-ghost" style="flex:1;background:#fff;height:46px;" onclick="msbLeadOpen('${msbE(inn)}')">Карточка</button></div>`;
+  return hero + `<div class="msb-pad msb-up">${info}${hist}${btns}${next.length ? `<div class="msb-sub" style="text-align:center;margin-top:10px;">Дальше: ${next.map(msbE).join(' · ')}${d.list.length - d.i - 1 > 3 ? ' · …' : ''}</div>` : ''}</div>`;
+}
+function msbDayFmt(t) { const d = new Date(t); return nplPad2(d.getDate()) + '.' + nplPad2(d.getMonth() + 1) + (d.getFullYear() !== new Date().getFullYear() ? '.' + d.getFullYear() : ''); }
+// ---- Таймер закрепления: 3 дня без действий → предупреждение, +сутки → в общую базу ----
+function msbIdle(l) {
+  if (l.inPipeline) return null;
+  const fx = v => v ? stParseDt(String(v).replace(/^(\d{4}-\d{2}-\d{2}) /, '$1T')) : null;
+  const d = fx(l.lastAction) || fx(l.updatedAt); if (!d) return null;
+  const h = (Date.now() - d.getTime()) / 3600000;
+  return { h: h, days: Math.floor(h / 24), left: Math.max(0, Math.ceil(96 - h)), warn: h >= 72 };
+}
+function msbIdleTag(l) {
+  if (l.inPipeline) return msbTag('закреплён · заявка', ['#EEF1FB', '#2A4BA0']);
+  const x = msbIdle(l); if (!x) return '';
+  if (x.warn) return msbTag('вернётся через ' + x.left + ' ч', ['#FBE4E1', '#A81E16']);
+  return msbTag(x.days ? x.days + ' дн. без действий' : 'сегодня', x.days >= 2 ? ['#FFF1CF', '#8A5A00'] : ['#E3F5EA', '#14693A']);
+}
+// ---- Сообщение клиенту: шаблоны UZ/RU, правка текста, Telegram / WhatsApp / SMS ----
+const MSB_TPL = {
+  ru: [['Знакомство', 'Здравствуйте, {имя}! Это {менеджер}, Асакабанк, Нукусский филиал. Хотим предложить для {компания} оборотный кредит и открытие расчётного счёта на выгодных условиях. Удобно, если я отправлю условия?{тел}'],
+    ['После звонка', 'Здравствуйте, {имя}! Это {менеджер}, Асакабанк. Как договорились, отправляю условия для {компания}: оборотный кредит, срок до 24 мес., быстрое рассмотрение. Если появятся вопросы — пишите или звоните.{тел}'],
+    ['Предложение', 'Здравствуйте, {имя}! Асакабанк, Нукусский филиал, предлагает для {компания}: оборотный и инвестиционный кредит, РКО, эквайринг. Подберём условия под ваш бизнес. Когда вам удобно встретиться?{тел}'],
+    ['Встреча', 'Здравствуйте, {имя}! Напоминаю о нашей встрече: {встреча}. {менеджер}, Асакабанк.{тел}']],
+  uz: [['Tanishuv', 'Assalomu alaykum, {имя}! Men {менеджер}, Asakabank Nukus filiali. {компания} uchun aylanma mablag‘ krediti va hisob raqam ochish bo‘yicha qulay shartlarimiz bor. Shartlarni yuborsam bo‘ladimi?{тел}'],
+    ['Qo‘ng‘iroqdan keyin', 'Assalomu alaykum, {имя}! Men {менеджер}, Asakabank. Kelishganimizdek, {компания} uchun shartlarni yuboryapman: aylanma mablag‘ krediti, muddati 24 oygacha, tez ko‘rib chiqiladi. Savollar bo‘lsa, yozing yoki qo‘ng‘iroq qiling.{тел}'],
+    ['Taklif', 'Assalomu alaykum, {имя}! Asakabank Nukus filiali {компания} uchun aylanma va investitsiya krediti, hisob raqam, ekvayring taklif qiladi. Biznesingizga mos shartlarni tanlab beramiz. Qachon uchrashsak bo‘ladi?{тел}'],
+    ['Uchrashuv', 'Assalomu alaykum, {имя}! Uchrashuvimizni eslataman: {встреча}. {менеджер}, Asakabank.{тел}']]
+};
+function msbMsgPhones(l) {
+  const out = [], seen = {};
+  const add = (p, who) => { const d = String(p || '').replace(/\D/g, ''); const n = d.length === 9 ? '998' + d : d; if (n.length >= 12 && !seen[n]) { seen[n] = 1; out.push({ p: n, who: who }); } };
+  add(l.phone, (l.director ? 'Директор · ' + l.director : 'Основной'));
+  (l.contacts || []).forEach(c => add(c.phone, (c.role || 'Контакт') + (c.name ? ' · ' + c.name : '')));
+  const ex = l.extra || {}; String(ex.accPh || '').split(',').forEach(p => add(p, 'Бухгалтер' + (ex.acc ? ' · ' + ex.acc : ''))); String(ex.more || '').split(',').forEach(p => add(p, 'Доп. номер'));
+  return out;
+}
+function msbMsgFill(tpl, l) {
+  const first = s => { const w = String(s || '').trim().split(/\s+/); return w.length >= 2 ? w[1].charAt(0) + w[1].slice(1).toLowerCase() : (w[0] || ''); };
+  const nm = first(l.director) || 'уважаемый клиент';
+  const myPh = String((currentUser && (currentUser.phone || currentUser.mobile)) || localStorage.getItem('msbMyPhone') || '').trim();
+  const meet = l.status === 'Встреча' && l.nextDate ? String(l.nextDate).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3.$2.$1') : '—';
+  return tpl.replace(/\{имя\}/g, nm).replace(/\{менеджер\}/g, msbMe()).replace(/\{компания\}/g, l.name || 'вашей компании').replace(/\{встреча\}/g, meet).replace(/\{тел\}/g, myPh ? ' Тел: ' + myPh : '');
+}
+function msbMsgOpen(inn) {
+  msb.msgInn = inn || msb.lead;
+  const l = msbFindLead(msb.msgInn); if (!l) return;
+  const ph = msbMsgPhones(l); if (!ph.length) return alert('У клиента нет номера телефона');
+  msb.msg = { lang: 'uz', t: 0, to: ph[0].p, text: msbMsgFill(MSB_TPL.uz[0][1], l), edited: false, err: '' };
+  msbMsgSheet();
+}
+function msbMsgTpl(lang, t) { const m = msb.msg, l = msbFindLead(msb.msgInn); if (m.edited && !confirm('Заменить ваш текст шаблоном?')) return; m.lang = lang; m.t = t; m.text = msbMsgFill(MSB_TPL[lang][t][1], l); m.edited = false; msbMsgSheet(); }
+function msbMsgSheet() {
+  const m = msb.msg, l = msbFindLead(msb.msgInn); if (!m || !l) return;
+  const ph = msbMsgPhones(l), cur = ph.find(x => x.p === m.to) || ph[0];
+  const btn = (bg, ch, ic, t) => `<button type="button" onclick="msbMsgSend('${ch}')" style="border:none;border-radius:14px;height:54px;background:${bg};color:#fff;font-family:inherit;font-weight:800;font-size:12.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;">${ic}${t}</button>`;
+  const TG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 3-20 8 7 2 2 7 4-5 5 4z"/></svg>';
+  const SM = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></svg>';
+  vzSheetOpen(`<div style="display:flex;justify-content:space-between;align-items:center;"><div class="vzs-h" style="margin:0;">Сообщение</div><div class="lw-seg" style="margin:0;width:110px;">${['uz', 'ru'].map(x => `<button type="button" class="${m.lang === x ? 'on' : ''}" onclick="msbMsgTpl('${x}',msb.msg.t)">${x.toUpperCase()}</button>`).join('')}</div></div>
+    <div class="msb-sub" style="margin:6px 0 10px;cursor:pointer;" onclick="msbMsgTo()">Кому: <b style="color:#141414;">${msbE(cur.who)} · ${msbE(msbFmtPh(cur.p))}</b>${ph.length > 1 ? ' ▾' : ''}</div>
+    <div class="cy-srcs" style="flex-wrap:nowrap;overflow-x:auto;">${MSB_TPL[m.lang].map((x, i) => `<button type="button" class="${m.t === i ? 'on' : ''}" style="flex:none;" onclick="msbMsgTpl(msb.msg.lang,${i})">${msbE(x[0])}</button>`).join('')}</div>
+    <textarea class="msb-in" style="margin-top:10px;min-height:130px;padding-top:12px;line-height:1.45;border:2px solid #C4231A;background:#F3F4F7;" oninput="msb.msg.text=this.value;msb.msg.edited=true">${msbE(m.text)}</textarea>
+    <div class="msb-err">${msbE(m.err)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">${btn('#229ED9', 'tg', TG, 'Telegram')}${btn('#25D366', 'wa', SM, 'WhatsApp')}${btn('#141414', 'sms', SM, 'SMS')}</div>`);
+}
+function msbMsgTo() { const l = msbFindLead(msb.msgInn), ph = msbMsgPhones(l); if (ph.length < 2) return; vzPick('Кому отправить', ph.map(x => x.who + ' · ' + msbFmtPh(x.p)), '', v => { const x = ph.find(y => v.indexOf(msbFmtPh(y.p)) > -1); if (x) msb.msg.to = x.p; msbMsgSheet(); }); }
+async function msbMsgSend(ch) {
+  const m = msb.msg, l = msbFindLead(msb.msgInn); if (!m || !l) return;
+  const text = String(m.text || '').trim(); if (!text) { m.err = 'Напишите текст'; return msbMsgSheet(); }
+  const enc = encodeURIComponent(text), p = m.to;
+  const url = ch === 'wa' ? 'https://wa.me/' + p + '?text=' + enc : ch === 'sms' ? 'sms:+' + p + '?&body=' + enc : 'https://t.me/+' + p;
+  if (ch === 'tg') { try { await navigator.clipboard.writeText(text); } catch (e) {} }
+  msbLeadAct({ type: 'msg', channel: ch === 'tg' ? 'Telegram' : ch === 'wa' ? 'WhatsApp' : 'SMS', phone: p, text: text }, l.inn).then(() => { if (msb.lead === l.inn) msbRender(); }).catch(() => {});
+  vzSheetClose(); msb.msg = null;
+  if (ch === 'tg') setTimeout(() => alert('Текст скопирован. В Telegram вставьте его в чат с клиентом.'), 400);
+  window.location.href = url;
 }
 function msbLeadsHtml() {
   const seg = msb.lseg || (msb.lseg = 'base'), me = msbMe(), q = msb.q.trim().toLowerCase();
   const mine = msbMineList();
   const segs = [['base', 'Внешняя база'], ['mine', 'Мои клиенты ' + mine.length], ['pf', 'Портфель'], ['mh', 'Махалля']];
   let list, sub = '', chips = '';
-  if (seg === 'base') {
-    list = msbBaseList();
-    const sph = msb.bsph || '', searching = msbBaseKey() !== '|0|' && !msbIsBossRole();
-    chips = `<div class="msb-chips msb-chips2 lw-f"><button type="button" class="${msb.bmob ? 'on' : ''}" onclick="msb.bmob=!msb.bmob;msb.blim=40;msbRender()">С мобильным</button><button type="button" class="${sph ? 'on' : ''}" onclick="msbSphPick()">${sph ? msbE(sph) : 'Вид деятельности'} ▾</button></div>`;
-    if (list === null) { sub = 'Ищу по всей базе…'; list = []; }
-    else if (searching) sub = 'Найдено ' + (msb.bres && msb.bres.found ? msb.bres.found : list.length) + (msb.bres && msb.bres.more ? ' · показаны 100 с крупным фондом' : '');
-    else { list = list.slice(0, 100); sub = 'Ваши ' + list.length + ' из ' + (msb.baseTotal || list.length).toLocaleString('ru-RU') + ' · крупный уставной фонд первым · остальные — через поиск'; }
-  } else if (seg === 'mine') {
+  if (seg === 'base') return msbBaseHtml2(mine); else if (seg === 'mine') {
     const f = msb.mf || 'all';
-    const fs = [['all', 'Все'], ['today', 'Сегодня'], ['recall', 'Перезвонить'], ['meet', 'Встречи'], ['int', 'Интересно'], ['nr', 'Не дозвонился'], ['bad', 'Неверный номер']];
+    const fs = [['all', 'Все'], ['warn', '⏳ Вернутся'], ['today', 'Сегодня'], ['recall', 'Перезвонить'], ['meet', 'Встречи'], ['int', 'Интересно'], ['nr', 'Не дозвонился'], ['bad', 'Неверный номер']];
     chips = `<div class="msb-chips msb-chips2 lw-f">${fs.map(x => { const n = mine.filter(l => msbMineF(l, x[0])).length; return x[0] !== 'all' && !n ? '' : `<button type="button" class="${f === x[0] ? 'on' : ''}" onclick="msb.mf='${x[0]}';msbRender()">${x[1]} ${n}</button>`; }).join('')}</div>`;
     list = mine.filter(l => msbMineF(l, f)).sort((a, b) => String(a.nextDate || '9').localeCompare(String(b.nextDate || '9')));
     if (q) list = list.filter(l => (l.name + ' ' + l.inn + ' ' + (l.director || '') + ' ' + (l.phone || '')).toLowerCase().indexOf(q) > -1);
-    sub = 'Клиенты, с которыми вы работали · закрепление 30 дней с последнего действия';
+    sub = 'С кем вы работали · 3 дня без действий — предупреждение, ещё сутки — клиент уйдёт в общую базу';
   } else {
     const key = seg === 'pf' ? 'Наш заёмщик' : 'Махалля';
     list = msb.leads.filter(l => String(l.source || '').indexOf(key) > -1);
@@ -8230,6 +8412,31 @@ function msbLeadsHtml() {
     + `<div class="msb-pad msb-up"><input class="msb-in" id="msbQ" placeholder="Название, ИНН, директор, телефон" value="${msbE(msb.q)}" oninput="msb.q=this.value;msb.blim=40;clearTimeout(window.__msbQ);window.__msbQ=setTimeout(function(){msbRender();var i=document.getElementById('msbQ');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},300)">
       ${chips}<div class="msb-card"><div class="msb-h"><span class="msb-sub" style="font-weight:700;">${msbE(sub)}</span></div>${list.length ? list.slice(0, lim).map(msbLeadRow).join('') + (list.length > lim && seg !== 'base' ? `<button type="button" class="cy-ghost" style="width:100%;" onclick="msb.blim=${lim + 40};msbRender()">Показать ещё (${list.length - lim})</button>` : '') : `<div class="msb-empty">${msb.loaded ? (seg === 'mine' ? 'Позвоните клиенту из внешней базы — он появится здесь' : 'Нет клиентов') : 'Загрузка…'}</div>`}</div></div>`;
 }
+function msbBaseHtml2(mine) {
+  const boss = msbIsBossRole(), act = msbBFActive() && !boss;
+  const list = msbBaseList(), segs = [['base', 'Внешняя база'], ['mine', 'Мои клиенты ' + mine.length], ['pf', 'Портфель'], ['mh', 'Махалля']];
+  const pill = (k, on) => `<button type="button" class="${on ? 'on' : ''}" onclick="msbFilterOpen();msb.ft.tab='${k}';msbFilterSheet()">${msbE(msbBFLabel(k))} ▾</button>`;
+  const f = msbBF();
+  const chips = `<div class="msb-chips msb-chips2 lw-f" style="flex-wrap:nowrap;overflow-x:auto;">${pill('dist', f.districts.length || f.mahallas.length)}${pill('fund', !!f.fund)}${pill('sph', f.spheres.length)}${pill('bank', f.banks.length || f.mob)}${act ? `<button type="button" onclick="msb.bf=null;msb.bp=null;msb.q='';msbRender()">✕ Сбросить</button>` : ''}</div>`;
+  const bp = msb.bp || {};
+  let body, sub;
+  if (list === null) { sub = msb.q.trim().length >= 3 ? 'Ищу по всей базе…' : 'Применяю фильтры…'; body = msbSpin(sub); }
+  else {
+    const shown = act ? list : list.slice(0, 100);
+    sub = act ? (bp.err ? bp.err : 'По фильтру ' + Number(bp.total || 0).toLocaleString('ru-RU') + ' · крупный уставной фонд первым') : 'Ваши ' + shown.length + ' из ' + (msb.baseTotal || shown.length).toLocaleString('ru-RU') + ' · крупный фонд первым · остальные — фильтры и поиск';
+    const sel = msb.selB || {}, allOn = shown.length && shown.every(l => sel[l.inn]);
+    body = shown.length ? `<div class="msb-h" style="margin-bottom:0;"><span class="msb-sub" style="font-weight:700;">${msbE(sub)}</span><a style="color:#C4231A;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap;" onclick='msbSelAll(${allOn ? 'false' : 'true'}, ${JSON.stringify(shown.map(l => l.inn))})'>${allOn ? 'Снять все' : 'Выбрать все'}</a></div>`
+      + shown.map(l => `<div class="msb-selrow"><span class="lw-box${sel[l.inn] ? ' on' : ''}" onclick="msbSelToggle('${msbE(l.inn)}')">${sel[l.inn] ? '✓' : ''}</span>${msbLeadRow(l)}</div>`).join('')
+      + (act && bp.total > bp.inns.length ? `<button type="button" class="cy-ghost" style="width:100%;margin-top:6px;" ${bp.busy ? 'disabled' : ''} onclick="msbBasePageLoad(true)">${bp.busy ? '<span class="msb-spin msb-spin-s msb-spin-r"></span> Загружаю следующие 100…' : 'Следующие 100 (ещё ' + Number(bp.total - bp.inns.length).toLocaleString('ru-RU') + ')'}</button>` : '')
+      : `<div class="msb-empty">${bp.err ? msbE(bp.err) + ` <a style="color:#C4231A;font-weight:800;" onclick="msb.bp=null;msbRender()">Повторить</a>` : act ? 'По фильтру никого нет' : msb.loaded ? 'Нет клиентов' : ''}</div>`;
+    if (!msb.loaded) body = msbSpin('Загружаю базу…');
+  }
+  const n = msbSelCount();
+  const bar = n ? `<div class="msb-selbar"><div style="flex:1;min-width:0;"><b>Выбрано ${n}</b><div>перейдут в «Мои клиенты» после звонка</div></div><button type="button" class="msb-selclr" onclick="msb.selB={};msbRender()">✕</button><button type="button" class="msb-selgo" onclick="msbDialStart()">Обзвонить ›</button></div>` : '';
+  return msbHero('Лиды', 'Внешняя база ' + (msb.baseTotal || 0).toLocaleString('ru-RU') + ' · мои ' + mine.length, `<div class="msb-chips">${segs.map(x => `<button type="button" class="${'base' === x[0] ? 'on' : ''}" onclick="msb.lseg='${x[0]}';msb.blim=40;msbRender()">${x[1]}</button>`).join('')}</div>`)
+    + `<div class="msb-pad msb-up"><input class="msb-in" id="msbQ" placeholder="Название, ИНН, директор, учредитель, телефон" value="${msbE(msb.q)}" oninput="msb.q=this.value;clearTimeout(window.__msbQ);window.__msbQ=setTimeout(function(){msb.bp=null;msbRender();var i=document.getElementById('msbQ');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length);}},500)">
+      ${chips}<div class="msb-card">${body}</div>${n ? '<div style="height:70px;"></div>' : ''}</div>${bar}`;
+}
 function msbSphPick() {
   let c = {};
   if (msb.baseSph && !msbIsBossRole()) c = msb.baseSph; else msb.leads.forEach(l => { if (String(l.source || '').indexOf('Другой банк') > -1 && !l.manager) { const k = l.okved || 'Не указано'; c[k] = (c[k] || 0) + 1; } });
@@ -8239,14 +8446,15 @@ function msbSphPick() {
 function msbLeadRow(l) {
   const st = l.status === 'Перезвонить' && l.nextDate ? msbTag('перезвонить ' + vzFmtDateRu(l.nextDate.slice(0, 10)), ['#EEF1FB', '#2A4BA0']) : l.status === 'Встреча' ? msbTag('встреча ' + msbE(String(l.nextDate || '').replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3.$2')), ['#E3F5EA', '#14693A']) : l.status === 'Отказ' ? msbTag('отказ: ' + (l.reason || ''), ['#FBE4E1', '#A81E16']) : l.status !== 'База' ? msbTag(l.status) : '';
   const ex = l.extra || {};
-  return `<div class="msb-lr${l.lockedBy ? ' msb-locked' : ''}" onclick="msbLeadOpen('${msbE(l.inn)}')"><div style="flex:1;min-width:0;"><div class="msb-lrh"><b>${msbE(l.name || l.inn)}</b>${msbSrcTags(l.source)}${ex.fund ? msbTag('УФ ' + vzFmt(ex.fund), ['#E3F5EA', '#14693A']) : ''}${ex.subject ? msbTag(ex.subject) : ''}${ex.closed ? msbTag('закрыт', ['#F3E8FF', '#6B21A8']) : ''}</div>${l.lockedBy ? `<div class="msb-sub"><b>В работе у ${msbE(l.lockedBy)}</b></div>` : ''}<div class="msb-sub">${msbE([l.okved || l.sphere, l.director, msbFmtPh(l.phone)].filter(Boolean).join(' · '))}</div>${l.why && String(l.source).indexOf('Другой банк') < 0 ? `<div class="msb-why"><b>Почему:</b> ${msbE(l.why)}</div>` : ''}<div style="margin-top:4px;">${st}${l.attempts && l.status !== 'База' ? ' ' + msbTag('попытка ' + l.attempts + ' из 3') : ''}${l.unreach ? ' ' + msbTag('3 недозвона', ['#FFF1CF', '#8A5A00']) : ''}${l.refusedBefore ? ' ' + msbTag('отказ был: ' + l.refusedBefore, ['#FBE4E1', '#A81E16']) : ''}${l.inPipeline ? ' ' + msbTag('в воронке: ' + l.inPipeline.status, ['#E3F5EA', '#14693A']) : ''}</div></div>${msbCallBtn(l)}</div>`;
+  return `<div class="msb-lr${l.lockedBy ? ' msb-locked' : ''}" onclick="msbLeadOpen('${msbE(l.inn)}')"><div style="flex:1;min-width:0;"><div class="msb-lrh"><b>${msbE(l.name || l.inn)}</b>${msbSrcTags(l.source)}${ex.fund ? msbTag('УФ ' + vzFmt(ex.fund), ['#E3F5EA', '#14693A']) : ''}${ex.subject ? msbTag(ex.subject) : ''}${ex.closed ? msbTag('закрыт', ['#F3E8FF', '#6B21A8']) : ''}</div>${l.lockedBy ? `<div class="msb-sub"><b>В работе у ${msbE(l.lockedBy)}</b></div>` : ''}<div class="msb-sub">${msbE([l.okved || l.sphere, l.director, msbFmtPh(l.phone)].filter(Boolean).join(' · '))}</div>${l.why && String(l.source).indexOf('Другой банк') < 0 ? `<div class="msb-why"><b>Почему:</b> ${msbE(l.why)}</div>` : ''}<div style="margin-top:4px;">${st}${l.attempts && l.status !== 'База' ? ' ' + msbTag('попытка ' + l.attempts + ' из 3') : ''}${l.unreach ? ' ' + msbTag('3 недозвона', ['#FFF1CF', '#8A5A00']) : ''}${l.refusedBefore ? ' ' + msbTag('отказ был: ' + l.refusedBefore, ['#FBE4E1', '#A81E16']) : ''}${!l.lockedBy && l.manager && l.manager === msbMe() ? ' ' + msbIdleTag(l) : ''}${l.inPipeline ? ' ' + msbTag('в воронке: ' + l.inPipeline.status, ['#E3F5EA', '#14693A']) : ''}</div></div>${msbCallBtn(l)}</div>`;
 }
 function msbGoLeads(seg, f) { msb.lseg = seg; if (f) msb.mf = f; msb.blim = 40; msb.q = ''; msbGo('leads'); }
 function msbLeadOpen(inn) { msb.lead = inn; msb.tab = 'leads'; msbRender(); const s = document.getElementById('msbScroll'); if (s) s.scrollTop = 0; msbNotesLoad(inn); }
 function msbFindLead(inn) { return msb.leads.find(l => l.inn === inn) || null; }
 async function msbNotesLoad(inn) {
   msb.notes = msb.notes || {};
-  try { const r = await msbPost({ webAction: 'msbLeadNotes', inn: inn }); if (r.success) { msb.notes[inn] = r.notes || []; if (msb.lead === inn) msbRender(); } } catch (e) {}
+  msb.callsH = msb.callsH || {};
+  try { const r = await msbPost({ webAction: 'msbLeadNotes', inn: inn }); if (r.success) { msb.notes[inn] = r.notes || []; msb.callsH[inn] = r.calls || []; if (msb.lead === inn || (msb.dial && msb.dial.list[msb.dial.i] === inn)) msbRender(); } } catch (e) {}
 }
 function msbSeed(l) { return { name: l.orig ? l.orig.name : l.name, okved: l.orig ? l.orig.okved : l.okved, director: l.orig ? l.orig.director : l.director, phone: l.phone, bank: l.bank, source: String(l.source || '').split(',')[0].trim() || 'Другой банк', why: l.why, address: l.orig ? l.orig.address : l.address, extra: l.extra }; }
 function msbLeadHtml() {
@@ -8256,13 +8464,13 @@ function msbLeadHtml() {
   const kv = (k, v) => v ? `<div class="msb-kv"><span>${k}</span><b>${msbE(v)}</b></div>` : '';
   const back = pend && pend.inn === l.inn && pend.backAt ? `<div class="msb-callbar"><span></span><div><b>Вы вернулись из звонка</b><div>Вне приложения: ${msbDur(Math.round((pend.backAt - pend.tapAt) / 1000))}</div></div></div>` : '';
   const stTag = l.status === 'Перезвонить' && l.nextDate ? 'Перезвонить ' + vzFmtDateRu(l.nextDate.slice(0, 10)) : l.status === 'Встреча' ? 'Встреча ' + String(l.nextDate || '') : l.status !== 'База' ? l.status : '';
-  const tags = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">${mine ? '<span class="msb-tag" style="background:#fff;color:#C4231A;">Мой клиент</span>' : ''}${stTag ? `<span class="msb-tag" style="background:rgba(255,255,255,.2);color:#fff;">${msbE(stTag)}</span>` : ''}${locked ? `<span class="msb-tag" style="background:rgba(255,255,255,.2);color:#fff;">В работе у ${msbE(l.lockedBy)}</span>` : ''}</div>`;
+  const tags = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">${mine ? '<span class="msb-tag" style="background:#fff;color:#C4231A;">Мой клиент</span>' : ''}${stTag ? `<span class="msb-tag" style="background:rgba(255,255,255,.2);color:#fff;">${msbE(stTag)}</span>` : ''}${locked ? `<span class="msb-tag" style="background:rgba(255,255,255,.2);color:#fff;">В работе у ${msbE(l.lockedBy)}</span>` : ''}</div>${mine ? (ix => ix && ix.warn ? `<div class="msb-idlewarn">⏳ ${ix.days} дн. без действий · вернётся в общую базу через ${ix.left} ч</div>` : '')(msbIdle(l)) : ''}`;
   const srcL = String(l.source || '').replace('Другой банк', 'Внешняя база');
   const hero = `<div class="msb-hero"><button type="button" class="msb-back" onclick="msb.lead=null;msbRender()" aria-label="Назад">‹</button><div class="msb-hs">${msbE([srcL, 'ИНН ' + l.inn, l.bank].filter(Boolean).join(' · '))}</div><div class="msb-ht">${msbE(l.name || l.inn)}</div>${tags}${back}</div>`;
   const isPend = pend && pend.inn === l.inn;
   const dis = locked ? 'disabled' : '';
   const acts = isPend ? `<div class="msb-lock">Укажите итог звонка. Следующий звонок откроется после этого.</div>${msbResultHtml(l)}`
-    : `<div class="lw-acts" style="grid-template-columns:repeat(4,1fr);"><button type="button" class="on" ${l.phone && !locked ? `onclick="msbCall('${msbE(l.inn)}')"` : 'disabled'}>${msbIcon('phone', 19)}Позвонить</button><button type="button" ${dis} onclick="msbMeetPlanOpen()">${msbIcon('mappin', 19)}Встреча</button><button type="button" ${dis} onclick="msbNoteOpen()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Заметка</button><button type="button" ${dis} onclick="msbAppOpen('${msbE(l.inn)}')">${msbIcon('briefcase', 19)}Заявка</button></div>`;
+    : `<div class="lw-acts" style="grid-template-columns:repeat(5,1fr);gap:6px;"><button type="button" class="on" ${l.phone && !locked ? `onclick="msbCall('${msbE(l.inn)}')"` : 'disabled'}>${msbIcon('phone', 19)}Звонок</button><button type="button" ${dis} onclick="msbMsgOpen()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 3-20 8 7 2 2 7 4-5 5 4z"/></svg>Сообщ.</button><button type="button" ${dis} onclick="msbMeetPlanOpen()">${msbIcon('mappin', 19)}Встреча</button><button type="button" ${dis} onclick="msbNoteOpen()"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Заметка</button><button type="button" ${dis} onclick="msbAppOpen('${msbE(l.inn)}')">${msbIcon('briefcase', 19)}Заявка</button></div>`;
   const lockNote = locked ? `<div class="msb-lock">Клиент в работе у ${msbE(l.lockedBy)}. Звонить и менять данные может только он.</div>` : '';
   const callB = p => locked ? '' : `<button type="button" class="msb-call" aria-label="Позвонить" onclick="msbCall('${msbE(l.inn)}','${msbE(p)}')">${msbDialIcon()}</button>`;
   const crow = (p, role, name, by) => `<div class="msb-lr" style="cursor:default;"><div style="flex:1;min-width:0;"><b style="font-size:13.5px;">${msbE(msbFmtPh(p))}</b><div class="msb-sub"><b style="color:#141414;">${msbE(role)}</b>${name ? ' · ' + msbE(name) : ''}${by ? ' · добавил ' + msbE(by === me ? 'вы' : by) : ''}</div></div>${callB(p)}</div>`;
@@ -8276,7 +8484,8 @@ function msbLeadHtml() {
   const info = `<div class="msb-card"><div class="msb-h"><b>О компании</b>${locked ? '' : `<a style="color:#C4231A;font-weight:800;font-size:12.5px;cursor:pointer;" onclick="msbEditOpen()">Изменить</a>`}</div>${kv('Вид деятельности', [l.okved, l.sphere].filter(Boolean).join(' · '))}${kv('Директор', l.director)}${l.address || l.geo ? `<div class="msb-kv"><span>Адрес бизнеса</span><b>${msbE(l.address || 'точка на карте')}${route ? ` · <a href="${route}" target="_blank" style="color:#C4231A;">Маршрут ›</a>` : ''}</b></div>` : ''}${adr}${kv('Обслуживающий банк', l.bank)}${ex.fund ? kv('Уставной фонд', vzFmt(ex.fund)) : ''}${kv('Учредители', ex.founders)}${kv('Возраст бизнеса', ex.age ? ex.age + (ex.reg ? ' · с ' + ex.reg : '') : ex.reg)}${kv('Сектор', ex.sector4)}${kv('Форма', ex.form)}${kv('Махалля', ex.mahalla)}${kv('Банкир махалли', ex.banker)}${kv('Кредит у нас', ex.loan)}${kv('Субъект', ex.subject)}${kv('Продукт', ex.product)}${kv('Дата выдачи', ex.openDate ? nplFmtDateRu(ex.openDate) : '')}${ex.balance !== undefined ? kv('Остаток', ex.closed ? 'кредит закрыт' : formatMoney(ex.balance)) : ''}${kv('Кредитный офицер', ex.officer)}${l.why && String(l.source).indexOf('Другой банк') < 0 ? `<div class="msb-why" style="margin-top:8px;"><b>Что предложить:</b> ${msbE(l.why)}</div>` : ''}${l.inPipeline ? `<div class="msb-why" style="margin-top:6px;color:#14693A;">В воронке: ${msbE(l.inPipeline.status)} · ${msbE(l.inPipeline.manager)}</div>` : ''}${l.refusedBefore ? `<div class="msb-why" style="margin-top:6px;color:#A81E16;">Ранее был отказ: ${msbE(l.refusedBefore)}</div>` : ''}</div>`;
   // история: звонки + заметки + встречи на выезде
   const items = [];
-  msb.calls.filter(c => c.inn === l.inn).forEach(c => items.push({ t: c.tapAt, k: 'call', c: c }));
+  const callsAll = (msb.callsH || {})[l.inn];
+  if (!callsAll) msb.calls.filter(c => c.inn === l.inn).forEach(c => items.push({ t: c.tapAt, k: 'call', c: c }));
   ((msb.notes || {})[l.inn] || []).forEach(n => { const d = stParseDt(n.at); items.push({ t: d ? d.getTime() : 0, k: 'note', n: n }); });
   msb.trips.forEach(t => (t.meets || []).forEach(m => { if (String(m.inn || '').replace(/\D/g, '') === l.inn) items.push({ t: m.at, k: 'trip', m: m, tr: t }); }));
   items.sort((a, b) => b.t - a.t);
@@ -8288,15 +8497,23 @@ function msbLeadHtml() {
   const hist = items.slice(0, 40).map(it => {
     if (it.k === 'call') { const c = it.c, ok = /встреч|Интерес/.test(c.result) ? ['#E3F5EA', '#14693A'] : c.result === 'Отказ' ? ['#FBE4E1', '#A81E16'] : c.result === 'Перезвонить' ? ['#FFF1CF', '#8A5A00'] : ['#F0F0F2', '#3F3F46']; return hi(msbIcon('phone', 17), ok, 'Звонок · ' + msbE(who(c.manager)), msbE([c.result + (c.nextDate ? ' ' + String(c.nextDate).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3.$2') : ''), c.reason, msbDur(c.away), c.comment].filter(Boolean).join(' · ')), c.tapAt, c.flags ? ' ' + msbTag(c.flags, ['#FBE4E1', '#A81E16']) : ''); }
     if (it.k === 'trip') { const m = it.m; return hi(msbIcon('mappin', 17), ['#E3F5EA', '#14693A'], 'Встреча на выезде · ' + msbE(who(it.tr.manager)), msbE([m.result, m.products, it.tr.territory].filter(Boolean).join(' · ')), m.at); }
-    const n = it.n, t = { note: [n.voiceId ? MIC : PEN, ['#EEF1FB', '#2A4BA0'], n.voiceId && !n.text ? 'Голосовая заметка' : 'Заметка'], contact: [msbIcon('plus', 17), ['#F0F0F2', '#3F3F46'], 'Контакт'], edit: [PEN, ['#F0F0F2', '#3F3F46'], 'Изменение'], meet: [msbIcon('mappin', 17), ['#E3F5EA', '#14693A'], 'Встреча'] }[n.type] || [PEN, ['#F0F0F2', '#3F3F46'], 'Заметка'];
+    const n = it.n, t = { msg: ['<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 3-20 8 7 2 2 7 4-5 5 4z"/></svg>', ['#E6F4FB', '#1A7FB0'], 'Сообщение' + (n.info && n.info.channel ? ' · ' + n.info.channel : '')], note: [n.voiceId ? MIC : PEN, ['#EEF1FB', '#2A4BA0'], n.voiceId && !n.text ? 'Голосовая заметка' : 'Заметка'], contact: [msbIcon('plus', 17), ['#F0F0F2', '#3F3F46'], 'Контакт'], edit: [PEN, ['#F0F0F2', '#3F3F46'], 'Изменение'], meet: [msbIcon('mappin', 17), ['#E3F5EA', '#14693A'], 'Встреча'] }[n.type] || [PEN, ['#F0F0F2', '#3F3F46'], 'Заметка'];
     return hi(t[0], t[1], t[2] + ' · ' + msbE(who(n.manager)), msbE(n.text), it.t, n.voiceId ? ` <button type="button" class="vzv-play" onclick="vzPlayVoice('${msbE(n.voiceId)}',this)">▶ ${n.info && n.info.dur ? Math.floor(n.info.dur / 60) + ':' + nplPad2(n.info.dur % 60) : 'Голос'}</button>` : '');
   }).join('');
-  const histCard = `<div class="msb-card"><div class="msb-h"><b>История и заметки</b>${locked ? '' : `<a style="color:#C4231A;font-weight:800;font-size:12.5px;cursor:pointer;" onclick="msbNoteOpen()">+ Заметка</a>`}</div>${hist || `<div class="msb-empty">${(msb.notes || {})[l.inn] ? 'Пока ничего не было' : 'Загрузка…'}</div>`}</div>`;
+  const cs = (callsAll || []).slice().sort((a, b) => b.tapAt - a.tapAt), cseg = msb.cseg || 'all';
+  const csF = cs.filter(c => cseg === 'all' || (cseg === 'mine' ? c.manager === me : c.manager !== me));
+  const ini = n => String(n || '?').split(/\s+/).map(w => w.charAt(0)).join('').slice(0, 2).toUpperCase();
+  const avc = n => n === me ? '#C4231A' : ['#2A4BA0', '#1E9E5A', '#6B21A8', '#8A5A00'][String(n).length % 4];
+  const rc = r => /встреч|Интерес/.test(r) ? ['#E3F5EA', '#14693A'] : r === 'Отказ' ? ['#FBE4E1', '#A81E16'] : r === 'Перезвонить' ? ['#FFF1CF', '#8A5A00'] : ['#F0F0F2', '#3F3F46'];
+  const callCard = callsAll === undefined ? `<div class="msb-card"><div class="msb-h"><b>История звонков</b></div><div class="msb-spin-box" style="padding:10px 0;"><div class="msb-spin"></div><b>Загружаю…</b></div></div>`
+    : `<div class="msb-card"><div class="msb-h"><b>История звонков</b><span class="msb-sub">${cs.length}</span></div>${cs.length ? `<div class="lw-seg">${[['all', 'Все ' + cs.length], ['mine', 'Мои ' + cs.filter(c => c.manager === me).length], ['other', 'Другие ' + cs.filter(c => c.manager !== me).length]].map(x => `<button type="button" class="${cseg === x[0] ? 'on' : ''}" onclick="msb.cseg='${x[0]}';msbRender()">${x[1]}</button>`).join('')}</div>` : ''}
+      ${csF.map(c => { const d = new Date(c.tapAt); return `<div class="lw-hi" style="cursor:default;"><div class="msb-av" style="background:${avc(c.manager)};">${msbE(ini(c.manager))}</div><div style="flex:1;min-width:0;"><div style="display:flex;justify-content:space-between;gap:8px;"><b style="font-size:13px;">${msbE(c.manager)} <span class="msb-sub" style="font-weight:600;">· ${c.manager === me ? 'вы' : msbE(c.role || 'менеджер')}</span></b><span class="msb-sub" style="font-size:11.5px;white-space:nowrap;">${nplPad2(d.getDate())}.${nplPad2(d.getMonth() + 1)} · ${msbHm(c.tapAt)}</span></div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px;">${msbTag(c.result + (c.nextDate ? ' ' + String(c.nextDate).replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3.$2') : ''), rc(c.result))}<span class="msb-sub" style="font-size:11.5px;">${msbE([msbDur(c.away), c.phone ? msbFmtPh(c.phone) : '', c.reason, c.comment].filter(Boolean).join(' · '))}</span></div></div></div>`; }).join('') || '<div class="msb-sub">Никто ещё не звонил</div>'}</div>`;
+  const histCard = callCard + `<div class="msb-card"><div class="msb-h"><b>Заметки и действия</b>${locked ? '' : `<a style="color:#C4231A;font-weight:800;font-size:12.5px;cursor:pointer;" onclick="msbNoteOpen()">+ Заметка</a>`}</div>${hist || `<div class="msb-empty">${(msb.notes || {})[l.inn] ? 'Пока ничего не было' : 'Загрузка…'}</div>`}</div>`;
   return hero + `<div class="msb-pad msb-up">${lockNote}${acts}<div class="msb-card"><div class="msb-h"><b>Контакты</b>${addB}</div>${contacts || '<div class="msb-empty">Нет номеров · добавьте контакт</div>'}</div>${info}${histCard}</div>`;
 }
 // Общая отправка действия по карточке
-async function msbLeadAct(o) {
-  const l = msbFindLead(msb.lead); if (!l) return { success: false, message: 'Клиент не найден' };
+async function msbLeadAct(o, innOv) {
+  const l = msbFindLead(innOv || msb.lead); if (!l) return { success: false, message: 'Клиент не найден' };
   const r = await msbPost(Object.assign({ webAction: 'msbLeadAction', inn: l.inn, seed: msbSeed(l) }, o));
   if (r && r.success) {
     if (r.lead) Object.assign(l, r.lead, { source: l.source, extra: Object.assign({}, l.extra || {}, r.lead.extra || {}), why: l.why || r.lead.why, inPipeline: l.inPipeline, unreach: 0, refusedBefore: l.refusedBefore });
@@ -8482,8 +8699,11 @@ async function msbResultSave() {
     msb.calls.unshift({ id: res.id, inn: p.inn, name: p.name, manager: msbMe(), tapAt: p.tapAt, backAt: p.backAt, away: Math.round(((p.backAt || Date.now()) - p.tapAt) / 1000), result: r.result, reason: r.reason, comment: r.comment, flags: res.suspicious || '', check: '' });
     if (res.lead) { const i = msb.leads.findIndex(x => x.inn === p.inn); const nl = Object.assign({}, l, res.lead, { extra: Object.assign({}, l.extra || {}, res.lead.extra || {}), why: res.lead.why || l.why, source: l.source || res.lead.source }); if (i > -1) msb.leads[i] = nl; else msb.leads.push(nl); }
     msb.res = null;
-    if (r.result === 'Интересно') { msbAppOpen(p.inn); return; }
-    msb.lead = null; msbRender();
+    msb.callsH = msb.callsH || {}; if (msb.callsH[p.inn]) msb.callsH[p.inn].unshift({ manager: msbMe(), role: '', tapAt: p.tapAt, away: Math.round(((p.backAt || Date.now()) - p.tapAt) / 1000), result: r.result, reason: r.reason, nextDate: r.date, comment: r.comment, phone: p.phone });
+    { const lx = msbFindLead(p.inn); if (lx) { lx.lastAction = new Date().toISOString(); if (r.result !== 'Отказ') lx.manager = msbMe(); } }
+    const inDial = msb.dial && msb.dial.list[msb.dial.i] === p.inn;
+    if (r.result === 'Интересно') { if (inDial) msbDialNext(false); msbAppOpen(p.inn); return; }
+    msb.lead = null; if (inDial) msbDialNext(false); else msbRender();
   } catch (e) { r.saving = false; bad('Не удалось связаться с сервером'); console.error(e); }
 }
 
