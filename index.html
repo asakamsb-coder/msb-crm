@@ -903,6 +903,8 @@ body.msb-on{overflow:hidden;}
 .msb-obl{background:#F7F7F9;border-radius:12px;padding:9px 10px;margin-top:7px}.msb-obl .r{display:flex;justify-content:space-between;font-size:12.5px;gap:8px}.msb-obl .r b{color:#141414}
 .msb-phw{border-radius:10px;padding:6px 9px;font-size:12px;margin-top:5px;line-height:1.35;background:#FFF1CF;color:#7A4E00}.msb-phw.bad{background:#FBE4E1;color:#A81E16}
 .msb-pend{background:#141414;color:#fff;border-radius:18px;padding:12px 14px}.msb-pend .t{color:#C9C9D1;font-size:12.5px;margin-top:2px}.msb-pend .bb{display:flex;gap:8px;margin-top:10px}.msb-pend button{flex:1;border:none;border-radius:12px;padding:10px;font:inherit;font-weight:800;font-size:13px;color:#fff;background:#2C2C33;cursor:pointer}.msb-pend button.go{background:#C4231A}
+.cov-up2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}.cov-up{display:flex !important;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:14px !important;cursor:pointer}.cov-up b{font-size:14px;color:#141414}.cov-upn{width:24px;height:24px;border-radius:8px;background:#C4231A;color:#fff;font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center}.cov-upl{font-size:12px;font-weight:700;color:#14693A;margin-top:4px}
+@media (max-width:1300px){.cov-up2{grid-template-columns:1fr}}
 .msb-selrow{display:flex;align-items:center;gap:10px;}
 .msb-selrow .msb-lr{flex:1;min-width:0;}
 .msb-selrow .lw-box{cursor:pointer;background:#fff;}
@@ -8757,7 +8759,9 @@ function msbLeadPhones(l) {
   add(l.phone); (l.contacts || []).forEach(c => add(c.phone)); const ex = l.extra || {}; add(ex.accPh); add(ex.more);
   return out;
 }
-function msbSeed(l) { return { name: l.orig ? l.orig.name : l.name, okved: l.orig ? l.orig.okved : l.okved, director: l.orig ? l.orig.director : l.director, phone: l.phone, bank: l.bank, source: String(l.source || '').split(',')[0].trim() || 'Другой банк', why: l.why, address: l.orig ? l.orig.address : l.address, extra: l.extra }; }
+function msbSeed(l) { return { name: l.orig ? l.orig.name : l.name, okved: l.orig ? l.orig.okved : l.okved, director: l.orig ? l.orig.director : l.director, phone: l.phone, bank: l.bank, source: String(l.source || '').split(',')[0].trim() || 'Другой банк', why: l.why, address: l.orig ? l.orig.address : l.address, extra: msbSeedExtra(l.extra) }; }
+// В лист лидов не пишем данные портфеля — они обновляются каждой загрузкой NPL
+function msbSeedExtra(e) { const o = Object.assign({}, e || {}); ['subject', 'product', 'openDate', 'balance', 'issued', 'loans', 'closed', 'officer', 'ob', 'fakePh', 'phN'].forEach(k => { delete o[k]; }); return o; }
 function msbLeadHtml() {
   const l = msbFindLead(msb.lead); if (!l) { msb.lead = null; return msbLeadsHtml(); }
   const pend = msbPending(), me = msbMe(), mine = !l.lockedBy && l.manager === me && !msbExpired(l), locked = !!l.lockedBy;
@@ -12190,7 +12194,8 @@ async function uploadNplFile() {
           if (!r2.success) { console.error(r2.message); break; }
           if (!good.length) break;
         }
-        statusBox.innerText = result.message + (good.length ? ' · клиентов портфеля для МСБ: ' + good.length : '');
+        const gJ = good.filter(g => g.subject === 'J'), gIss = gJ.filter(g => Number(g.issued) > 0).length;
+        statusBox.innerText = result.message + (good.length ? ' · юрлиц портфеля для МСБ: ' + gJ.length + ', с суммой выдачи: ' + gIss : '') + (gJ.length && !gIss ? ' · ВНИМАНИЕ: колонка «Суммы выдача» не найдена — обновите страницу (Ctrl+F5) и загрузите файл снова' : '');
       } catch (e) { console.error(e); }
       try {
         const rl = parsed.recentLoans || [];
@@ -18867,6 +18872,7 @@ async function renderCoverage() {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${covState.per === 'custom' ? `<input type="date" class="cov-in" value="${covState.from}" onchange="covState.from=this.value;renderCoverage()"><span>—</span><input type="date" class="cov-in" value="${covState.to}" onchange="covState.to=this.value;renderCoverage()">` : ''}
       <div class="cov-seg">${pers.map(p => `<button type="button" class="${covState.per === p[0] ? 'on' : ''}" onclick="covState.per='${p[0]}';renderCoverage()">${p[1]}</button>`).join('')}</div>
       <button type="button" class="cov-btn cov-dark" onclick="covState.sub='ext';renderCoverage();setTimeout(function(){var i=document.getElementById('covFile');if(i)i.click();},50)">⬆ Загрузить внешнюю базу</button>
+      <button type="button" class="cov-btn cov-dark" onclick="covState.sub='ext';renderCoverage();setTimeout(function(){var i=document.getElementById('covObFileIn');if(i)i.click();},50)">⬆ Кредиты других банков</button>
       <button type="button" class="cov-btn" onclick="msb.loaded=false;covExtra.loaded=false;msbLoad(true).then(renderCoverage)">Обновить</button></div></div>`;
   let body = '';
   try {
@@ -18923,9 +18929,8 @@ function covObCard() {
   if (!covOb.asked) covObLoad();
   const st = covOb.st, row = (k, v, c) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #EFEFF2;font-size:13px;"><span>${k}</span><b${c ? ' style="color:' + c + ';"' : ''}>${v}</b></div>`;
   const banks = st ? Object.keys(st.banks).sort((a, b) => st.banks[b] - st.banks[a]) : [], mx = banks.length ? st.banks[banks[0]] : 1;
-  return `<div class="mdx-card"><div class="mdx-h"><b>Кредиты в других банках</b></div>
-    <label class="cov-drop"><input type="file" accept=".xlsx,.xls" style="display:none;" onchange="covObFile(this)">${covOb.busy ? msbE(covOb.busy) : 'Загрузить портфель других банков (Excel)'}</label>
-    ${covOb.err ? `<div style="color:#A81E16;font-weight:700;margin-top:8px;">${msbE(covOb.err)}</div>` : ''}
+  if (!st || !st.clients) return '';
+  return `<div class="mdx-card"><div class="mdx-h"><b>Кредиты в других банках</b><span>сверка по ИНН</span></div>
     ${st && st.clients ? `<div style="margin-top:10px;">${row('Последняя загрузка', msbE((st.meta.at || '').slice(0, 16) + (st.meta.file ? ' · ' + st.meta.file : '')))}${row('Кредитов в файле', covN(st.loans))}${row('Клиентов (ИНН)', covN(st.clients) + ' · остаток ' + covObMoney(st.bal))}${row('Связано с налоговой базой', covN(st.matched) + ' · ' + covObMoney(st.matchedBal), '#14693A')}${row('Также наши заёмщики', covN(st.ours))}${row('Нет в налоговой базе', covN(st.missing), '#B42318')}</div>
       <button type="button" class="cov-btn" style="margin-top:10px;width:100%;" onclick="covObMissXlsx(this)">Скачать список «Нет в базе»</button>
       <div class="mdx-h" style="margin-top:14px;"><b style="font-size:14px;">Клиенты по банкам</b><span>связано с базой</span></div>
@@ -18996,12 +19001,17 @@ function covExtHtml(ix, rg) {
   const refs = Object.keys(a.refBy).sort((x, y) => a.refBy[y] - a.refBy[x]).slice(0, 2).map(k => k.toLowerCase() + ' ' + a.refBy[k]).join(' · ');
   const im = msb.imp, mgrs = Array.from(new Set((allClients || []).map(c => String(c.manager || '').trim()).filter(Boolean))).sort();
   const last = covExtra.imports[0];
-  const up = `<div class="mdx-card" id="covImp"><div class="mdx-h"><b>Загрузка внешней базы</b></div>
+  const obSt = covOb.st, obLast = obSt && obSt.meta && obSt.meta.at ? String(obSt.meta.at).slice(0, 10).split('-').reverse().join('.') + ' · ' + covN(obSt.loans) + ' кред.' : 'ещё не загружали';
+  const taxLast = last ? nplFmtDateRu(new Date(last.at).toISOString().slice(0, 10)) + ' · ' + covN(last.added + last.updated) + ' комп.' : 'ещё не загружали';
+  const up = `<div class="mdx-card" id="covImp"><div class="mdx-h"><b>Загрузка файлов</b></div>
     ${im && im.source === 'Другой банк' ? `<div style="margin-top:10px;"><b>${msbE(im.file)}</b><div class="mdx-ks">строк ${covN(im.total)} · в базу <b style="color:#14693A;">${covN(im.rows.length)}</b> · пропущено ${covN(im.skip)}</div><div class="mdx-ks" style="margin-top:4px;">Колонки: ${Object.keys(im.map || {}).map(k => msbE(im.map[k])).join(', ')}</div>
       <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;"><span class="mdx-ks">Кому отдать:</span><select class="cov-in" onchange="msb.imp.manager=this.value"><option value="">Общая очередь</option>${mgrs.map(m => `<option ${im.manager === m ? 'selected' : ''}>${msbE(m)}</option>`).join('')}</select></div>
       ${im.err ? `<div style="color:#A81E16;font-weight:700;margin-top:8px;">${msbE(im.err)}</div>` : ''}
       <div style="display:flex;gap:8px;margin-top:10px;"><button type="button" class="cov-btn cov-red" onclick="msbImpSend()" ${im.busy ? 'disabled' : ''}>${im.busy ? msbE(im.busy) : 'Загрузить ' + covN(im.rows.length)}</button><button type="button" class="cov-btn" onclick="msb.imp=null;renderCoverage()" ${im.busy ? 'disabled' : ''}>Отмена</button></div></div>`
-    : `<label class="cov-drop"><input type="file" id="covFile" accept=".xlsx" style="display:none;" onchange="msbImpFile(this,'Другой банк')">Выбрать файл Excel<div class="mdx-ks" style="font-weight:600;margin-top:4px;">Название · ИНН · ОКЭД · Директор · Телефон · Банк · Адрес · Уставной фонд</div></label>`}
+    : `<div class="cov-up2">
+        <label class="cov-drop cov-up"><input type="file" id="covFile" accept=".xlsx" style="display:none;" onchange="msbImpFile(this,'Другой банк')"><span class="cov-upn">1</span><b>Налоговая база</b><span class="mdx-ks">компании, директор, телефон, уставной фонд</span><span class="cov-upl">${msbE(taxLast)}</span></label>
+        <label class="cov-drop cov-up"><input type="file" id="covObFileIn" accept=".xlsx,.xls" style="display:none;" onchange="covObFile(this)" ${covOb.busy ? 'disabled' : ''}><span class="cov-upn">2</span><b>Кредиты других банков</b><span class="mdx-ks">ИНН, банк, сумма, остаток, даты</span><span class="cov-upl">${covOb.busy ? msbE(covOb.busy) : msbE(obLast)}</span></label>
+      </div>${covOb.err ? `<div style="color:#A81E16;font-weight:700;margin-top:8px;">${msbE(covOb.err)}</div>` : ''}`}
     ${last ? `<div style="margin-top:12px;font-size:12.5px;line-height:1.7;"><b>Последняя загрузка</b> · ${msbE(nplFmtDateRu(new Date(last.at).toISOString().slice(0, 10)))} · ${msbE(last.who)}<br>${msbE(last.file)} · <b style="color:#14693A;">+${covN(last.added)}</b> новых · ${covN(last.updated)} обновлено · ${covN(last.skipped)} пропущено</div>` : ''}
     ${covExtra.imports.length ? `<div class="mdx-h" style="margin-top:14px;"><b style="font-size:14px;">История загрузок</b></div><table class="mdx-t"><tr><th>Дата</th><th>Файл</th><th>Итог</th></tr>${covExtra.imports.slice(0, 8).map(x => `<tr><td>${new Date(x.at).toLocaleDateString('ru-RU')}</td><td>${msbE(x.source === 'Другой банк' ? 'внешняя' : x.source)} · ${msbE(x.file)}</td><td>+${covN(x.added)}${x.updated ? ' / ' + covN(x.updated) + ' обн.' : ''}</td></tr>`).join('')}</table>` : ''}</div>`;
   return `<div class="mdx-bottom" style="grid-template-columns:minmax(300px,1fr) minmax(0,2.3fr);"><div style="display:flex;flex-direction:column;gap:14px;min-width:0;">${up}${covObCard()}</div>
