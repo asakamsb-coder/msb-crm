@@ -8686,6 +8686,9 @@ function msbLeadsHtml() {
       chips = `<div class="msb-chips msb-chips2 lw-f">${[['', 'Весь портфель'], ['closed', 'Закрытые']].map(x => `<button type="button" class="${(msb.pf || '') === x[0] ? 'on' : ''}" onclick="msb.pf='${x[0]}';msbRender()">${x[1]}</button>`).join('')}</div>`
         + `<div class="msb-chips msb-chips2 lw-f" style="flex-wrap:nowrap;overflow-x:auto;"><span class="msb-pfl">Погашено</span>${MSB_PAID_T.map(t => `<button type="button" class="${pfp === t ? 'on' : ''}" onclick="msb.pfp=${pfp === t ? 0 : t};msb.blim=40;msbRender()">${t === 100 ? '100%' : t + '%+'} <i>${cntT(t).toLocaleString('ru-RU')}</i></button>`).join('')}</div>`
         + `<div class="msb-card msb-pfd"><div class="msb-h" style="margin-bottom:0;"><b>Можно выдать повторно</b><b style="color:#14693A;font-size:19px;">${cntT(40).toLocaleString('ru-RU')}</b></div><div class="msb-pfbars">${bk.map((n, i) => `<div onclick="msb.pfp=${MSB_PAID_T[i]};msb.blim=40;msbRender()" class="${pfp === MSB_PAID_T[i] ? 'on' : ''}"><i style="height:${Math.max(4, Math.round(n / mx * 46))}px;${i === 5 ? 'background:#14693A;' : ''}"></i><b>${MSB_PAID_T[i]}%</b><span>${n.toLocaleString('ru-RU')}</span></div>`).join('')}</div></div>`;
+      { const op = list.filter(l => !(l.extra || {}).closed), noIss = op.filter(l => !(Number((l.extra || {}).issued) > 0)).length;
+        if (op.length && noIss === op.length) chips += `<div class="msb-card" style="background:#FFF4F2;border:1px solid #F3C4BE;"><b style="color:#A81E16;">% погашения не считается</b><div class="msb-sub" style="margin-top:4px;color:#3F3F46;">В последней загрузке NPL нет «Суммы выдачи» — файл загрузили со старой страницы. ${msbIsBossRole() ? 'На компьютере нажмите Ctrl+F5 и загрузите файл NPL ещё раз.' : 'Сообщите руководителю: нужно заново загрузить файл NPL.'}</div></div>`;
+        else if (noIss) chips += `<div class="msb-sub" style="margin:-4px 2px 8px;">Без суммы выдачи: ${noIss.toLocaleString('ru-RU')} из ${op.length.toLocaleString('ru-RU')} — у них % не считается</div>`; }
       if (pfp) { list = list.filter(l => { const p = msbPaid(l); return p !== null && p >= pfp; }); list.sort((x, y) => (x.lockedBy ? 1 : 0) - (y.lockedBy ? 1 : 0) || msbPaid(y) - msbPaid(x) || (Number((y.extra || {}).issued) || 0) - (Number((x.extra || {}).issued) || 0)); }
     }
     sub = list.length.toLocaleString('ru-RU') + ' клиентов';
@@ -12181,7 +12184,7 @@ async function uploadNplFile() {
     statusBox.innerText = 'Загрузка на сервер (' + loans.length + ' анкет)...';
 
     const result = await postWebAction({
-      webAction: 'uploadNplPortfolio',
+      webAction: 'uploadNplPortfolio', parserVer: 3,
       sessionId: localStorage.getItem('msbSessionId'),
       loans: loans,
       collectors: parsed.collectors,
@@ -12195,7 +12198,7 @@ async function uploadNplFile() {
         const good = parsed.good || [];
         for (let i = 0, part = 2500; i < good.length || i === 0; i += part) {
           statusBox.innerText = result.message + ' · клиенты портфеля для МСБ: ' + Math.min(i + part, good.length) + ' из ' + good.length;
-          const r2 = await postWebAction({ webAction: 'msbSavePortfolioClients', sessionId: localStorage.getItem('msbSessionId'), reset: i === 0, rows: good.slice(i, i + part) });
+          const r2 = await postWebAction({ webAction: 'msbSavePortfolioClients', sessionId: localStorage.getItem('msbSessionId'), parserVer: 3, reset: i === 0, rows: good.slice(i, i + part) });
           if (!r2.success) { console.error(r2.message); break; }
           if (!good.length) break;
         }
