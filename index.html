@@ -218,6 +218,11 @@ td{padding:13px 12px;border-bottom:1px solid var(--line);font-size:14px;vertical
 .ai-box p{color:#4B5563;line-height:1.6;font-size:14px;}
 .footer{margin-top:20px;color:var(--muted);font-size:13px;}
 .loading{color:var(--muted);font-size:14px;}
+.crm-spin{display:flex;align-items:center;justify-content:center;gap:12px;padding:28px 0;color:#52525B;font-weight:600;}
+.crm-spin::before{content:"";flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:3px solid rgba(214,40,40,.18);border-top-color:#D62828;animation:loading-spin .75s linear infinite;}
+.crm-spin.crm-spin-sm{display:inline-flex;padding:0;gap:8px;}
+.crm-spin.crm-spin-sm::before{width:14px;height:14px;border-width:2px;}
+@media (prefers-reduced-motion:reduce){.crm-spin::before{animation-duration:2s;}}
 .page{display:none;}
 .page.active{display:block;}
 
@@ -27559,6 +27564,27 @@ function parseDateV14(value) {
   HTMLAnchorElement.prototype.click = function() { if (isFileLink(this)) { blocked(); return; } return origClick.apply(this, arguments); };
   document.addEventListener('click', function(e) { var a = e.target && e.target.closest ? e.target.closest('a') : null; if (a && isFileLink(a)) { e.preventDefault(); e.stopPropagation(); blocked(); } }, true);
   document.documentElement.classList.add('crm-mobile');
+})();
+</script>
+<script>
+/* Спиннер для всех индикаторов загрузки */
+(function(){
+  var RX=/^\s*(Загрузк|Читаю|Загружа|Поиск|Обработ|Отправ|Сохран|Yuklan|Qidir|Saqlan)/i;
+  function mark(root){
+    if(!root||!root.querySelectorAll) return;
+    var list=root.querySelectorAll('.loading,.msb-empty,.msb-sub,.cov-upl');
+    if(root.matches&&root.matches('.loading,.msb-empty,.msb-sub,.cov-upl')) list=[root].concat([].slice.call(list));
+    for(var i=0;i<list.length;i++){
+      var el=list[i]; var t=(el.textContent||'').trim();
+      var on=t.length<80&&RX.test(t)&&/(…|\.\.\.)\s*$/.test(t);
+      if(on){ el.classList.add('crm-spin'); if(!el.classList.contains('loading')&&!el.classList.contains('msb-empty')) el.classList.add('crm-spin-sm'); }
+      else if(el.classList.contains('crm-spin')){ el.classList.remove('crm-spin','crm-spin-sm'); }
+    }
+  }
+  var q=false;
+  new MutationObserver(function(){ if(q) return; q=true; requestAnimationFrame(function(){ q=false; mark(document.body); }); })
+    .observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+  document.addEventListener('DOMContentLoaded',function(){ mark(document.body); });
 })();
 </script>
 </body>
