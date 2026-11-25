@@ -16456,18 +16456,14 @@ function cdPeople() {
     return r;
   };
   Object.keys(byEmp).forEach(id => { const o = byEmp[id]; add(id, stEmpUser(id), o.J > o.P ? 'J' : 'P', '', o.gs); });
-  Object.keys(allNplCollectors || {}).forEach(function(id) {
-    if (!id || id === '9999' || have[id]) return;
-    add(id, stEmpUser(id), 'X', 'нет клиентов', []);
-  });
   users.forEach(function(u) {
     const role = String(u.role || '').toUpperCase();
-    if (role !== 'LAWYER' && role !== 'VZYSKATEL') return;
+    if (role !== 'LAWYER') return; // без закреплённых заёмщиков показываем только юриста
     if (u.active === false || String(u.active).toLowerCase() === 'false') return;
     const eid = String(u.employeeId || '').trim();
     const ex = (eid && have[eid]) || have['u:' + cdNm(u.login)];
     if (ex) { if (role === 'LAWYER') ex.tag = 'юрист'; if (!ex.user) { ex.user = u; if (cdNm(u.fullName)) ex.names[cdNm(u.fullName)] = 1; if (u.login) ex.logins[cdNm(u.login)] = 1; } return; }
-    add(eid, u, 'X', role === 'LAWYER' ? 'юрист' : 'нет клиентов', []);
+    add(eid, u, 'X', 'юрист', []);
   });
   return rows;
 }
@@ -16532,7 +16528,7 @@ function cdRenderColl() {
   if (allNplCalls === null && !vzCallsLoading) vzLoadCalls().then(cdRenderAll).catch(function(e) { console.error(e); });
   const range = cdRange(), B = cdBuildRows(range), all = B.rows;
   const archOk = nplArchiveLoaded, callsOk = allNplCalls !== null;
-  const M = stMoney, dash = '<span class="cd-z">—</span>', SECS = { P: 'Физические лица', J: 'Юридические лица', X: 'Юрист и сотрудники без закреплённых клиентов' };
+  const M = stMoney, dash = '<span class="cd-z">—</span>', SECS = { P: 'Физические лица', J: 'Юридические лица', X: 'Юрист' };
   const bySec = { P: all.filter(r => r.sec === 'P'), J: all.filter(r => r.sec === 'J'), X: all.filter(r => r.sec === 'X') };
   const show = cdSubj === 'all' ? ['P', 'J', 'X'] : [cdSubj].filter(s => bySec[s]);
   const c = (a, b, vl, cls) => '<div class="' + (vl ? 'vl ' : '') + (cls || '') + '">' + a + (b ? '<span class="s2">' + b + '</span>' : '') + '</div>';
@@ -16553,9 +16549,9 @@ function cdRenderColl() {
   let body = '';
   show.forEach(function(s) {
     const rs = bySec[s]; if (!rs.length) return;
-    const sub = s === 'X' ? 'считаются визиты и звонки' : rs.length + ' сотр. · ' + rs.reduce((t, r) => t + r.cnt, 0) + ' клиентов';
+    const sub = s === 'X' ? 'работает по всему портфелю · считаются визиты и звонки' : rs.length + ' сотр. · ' + rs.reduce((t, r) => t + r.cnt, 0) + ' клиентов';
     body += '<div class="cd-sec" onclick="cdToggleSec(\'' + s + '\')"><span>' + (cdCollapsed[s] ? '▸' : '▾') + ' ' + SECS[s] + '</span><i>' + sub + '</i></div>';
-    body += sumH('Итого · ' + (s === 'P' ? 'физлица' : s === 'J' ? 'юрлица' : 'без клиентов'), cdSum(rs), '', s === 'X');
+    body += sumH('Итого · ' + (s === 'P' ? 'физлица' : s === 'J' ? 'юрлица' : 'юрист'), cdSum(rs), '', s === 'X');
     if (!cdCollapsed[s]) { body += rs.map(rowH).join(''); if (s !== 'X') body += ncH(s); }
   });
   const G = cdSum(all);
@@ -16564,7 +16560,7 @@ function cdRenderColl() {
   const H2 = '<div class="cd-g gh"><div>Сотрудник</div><div class="vl">План<span class="s2">клиент / сумма</span></div><div>Погашено<span class="s2">клиент / сумма</span></div><div>% погаш.<span class="s2">по сумме</span></div>'
     + '<div class="vl">План<span class="s2">клиент / сумма</span></div><div>Погашено<span class="s2">клиент / сумма</span></div><div>% погаш.<span class="s2">по сумме</span></div>'
     + '<div class="vl">За период</div><div>Сегодня</div><div class="vl">За период</div><div>Сегодня</div><div>Дозвон</div><div>Обещали<span class="s2">кол-во / сумма</span></div><div class="vl">Все<span class="s2">ни визита, ни звонка</span></div><div>NPL<span class="s2">клиенты</span></div></div>';
-  const chips = [['all', 'Все', all.length], ['P', 'Физлица', bySec.P.length], ['J', 'Юрлица', bySec.J.length], ['X', 'Юрист и без клиентов', bySec.X.length]];
+  const chips = [['all', 'Все', all.length], ['P', 'Физлица', bySec.P.length], ['J', 'Юрлица', bySec.J.length], ['X', 'Юрист', bySec.X.length]];
   const tabs = '<div class="st-tabs" style="border:0;padding:0 0 12px;">' + chips.map(t => '<button type="button" class="st-tab' + (cdSubj === t[0] ? ' on' : '') + '" onclick="cdSetSubj(\'' + t[0] + '\')">' + t[1] + '<span class="n">' + t[2] + '</span></button>').join('') + '</div>';
   cdLast = { rows: all, range: range, bySec: bySec, G: G, nc: nc };
   box.innerHTML = '<div class="cd-hd" style="margin-top:22px;"><h2>Взыскатели</h2><span style="display:inline-flex;gap:8px;align-items:center;">' + cdPeriodBtn('coll') + '<button type="button" class="btn btn-secondary" style="padding:7px 14px;font-size:13px;" onclick="cdExcel()">⬇ Excel</button></span></div>'
@@ -16646,7 +16642,7 @@ async function cdExcel() {
       { h: 'Визитов за период', w: 10, al: 'center' }, { h: 'Визитов сегодня', w: 10, al: 'center' },
       { h: 'Звонков за период', w: 10, al: 'center' }, { h: 'Звонков сегодня', w: 10, al: 'center' }, { h: 'Дозвон, %', w: 9, fmt: '0' }, { h: 'Обещали оплатить', w: 10, al: 'center' }, { h: 'Обещано, млн', w: 12, fmt: '#,##0.0' },
       { h: 'Без контакта: клиентов', w: 11, al: 'center' }, { h: 'Без контакта: NPL', w: 11, al: 'center' }];
-    const SECN = { P: 'Физлица', J: 'Юрлица', X: 'Без клиентов' };
+    const SECN = { P: 'Физлица', J: 'Юрлица', X: 'Юрист' };
     const line = (n, name, id, sec, o, b) => [n === null ? { v: null } : n, b ? { v: name, b: true } : name, id || { v: null }, sec,
       o.pfCnt, mln(o.pfSum), o.pfRetCnt, mln(o.pfRetSum), cdPct(o.pfRetSum, o.pfSum) || 0, o.nCnt, mln(o.nSum), o.nRetCnt, mln(o.nRetSum), cdPct(o.nRetSum, o.nSum) || 0,
       o.visP, o.visT, o.cP, o.cT, o.cP ? Math.round(o.cOk / o.cP * 100) : 0, o.prN, mln(o.prS), o.zero, o.zeroN];
