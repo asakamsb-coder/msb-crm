@@ -7757,6 +7757,7 @@ let vzStatsMode = 'month';
 let vzNoLegalExpanded = false;
 let nplStatsSelectedEmp = null;
 let allNplCollectors = {};
+let allNplCollLast = []; // ID взыскателей из последнего файла (лист «взыскатель»)
 let nplDataLoaded = false;
 let nplGroupsByKey = {};
 let currentNplClientKey = null;
@@ -11616,6 +11617,7 @@ function nplApplyRest(rest, part) {
   if (has('surveys')) allNplSurveys = rest.surveys || {};
   if (has('assignMeta')) allNplAssignMeta = rest.assignMeta || null;
   if (has('collectors')) allNplCollectors = rest.collectors || {};
+  if (has('collectorsLast')) allNplCollLast = Array.isArray(rest.collectorsLast) ? rest.collectorsLast.map(String) : [];
   if (rest.users) allWebUsers = rest.users;
 }
 
@@ -16423,6 +16425,12 @@ const CD_NO_ANSWER = { 'Не дозвонился': 1, 'Номер неверн�
 let cdCollapsed = { P: false, J: false, X: false };
 function cdToggleSec(s) { cdCollapsed[s] = !cdCollapsed[s]; cdRenderColl(); }
 function cdNm(v) { return String(v || '').trim().toLowerCase(); }
+// Взыскатель = есть в листе «взыскатель» последнего файла (если список ещё не пришёл — весь справочник)
+function cdIsColl(id) {
+  id = String(id || '').trim(); if (!id || id === '9999') return false;
+  const L = (allNplCollLast && allNplCollLast.length) ? allNplCollLast : Object.keys(allNplCollectors || {});
+  return L.length ? L.indexOf(id) > -1 : true;
+}
 // звонки периода + индексы по автору (ФИО / логин)
 function cdCallsIdx(range) {
   const inR = d => d >= range.from && d <= range.to, todayKey = stDayKey(new Date());
@@ -16441,7 +16449,7 @@ function cdCallsOf(ci, names, logins) {
 function cdPeople() {
   const users = allWebUsers || [], all = getNplGroupsCached(), byEmp = {};
   all.forEach(function(g) {
-    const id = cdCollOf(g); if (!id || id === '9999') return;
+    const id = cdCollOf(g); if (!cdIsColl(id)) return;
     const o = byEmp[id] || (byEmp[id] = { gs: [], P: 0, J: 0 });
     o.gs.push(g); o[g.subject === 'J' ? 'J' : 'P']++;
   });
@@ -16515,7 +16523,7 @@ function cdBuildRows(range) {
 const CD_SUMK = ['cnt', 'd1', 'pfCnt', 'pfSum', 'pfRetCnt', 'pfRetSum', 'nCnt', 'nSum', 'nRetCnt', 'nRetSum', 'visP', 'visT', 'cP', 'cT', 'cOk', 'prN', 'prS', 'zero', 'zeroN'];
 function cdSum(rows) { const o = {}; CD_SUMK.forEach(k => { o[k] = rows.reduce((t, r) => t + (Number(r[k]) || 0), 0); }); return o; }
 function cdNoColl(subj) {
-  const gs = getNplGroupsCached().filter(g => g.subject === subj && g.maxDays >= 1 && (() => { const id = cdCollOf(g); return !id || id === '9999'; })());
+  const gs = getNplGroupsCached().filter(g => g.subject === subj && g.maxDays >= 1 && !cdIsColl(cdCollOf(g)));
   const npl = gs.filter(nplIsNplClient);
   return { on: gs.length, os: gs.reduce((t, g) => t + stPf(g), 0), n: npl.length, s: npl.reduce((t, g) => t + (Number(g.nplSum) || 0), 0) };
 }
@@ -16545,7 +16553,7 @@ function cdRenderColl() {
   const rowH = r => '<div class="cd-g row"' + (r.id && r.cnt ? ' onclick="cdOpenEmp(\'' + encodeURIComponent(r.id) + '\')"' : ' style="cursor:default"') + '><div class="who">' + stAvatar(r, 30) + '<span class="st-nm">' + safe(r.name) + '</span>' + tagH(r.tag) + '</div>' + cell(r, r.sec === 'X') + '</div>';
   const sumH = (label, o, cls, staff) => '<div class="cd-g sum ' + (cls || '') + '"><div>' + label + '</div>' + cell(Object.assign({}, o, staff ? { pfCnt: 0, cnt: 0 } : {}), staff, 1) + '</div>';
   const nc = { P: cdNoColl('P'), J: cdNoColl('J') };
-  const ncH = s => nc[s].on ? '<div class="cd-g sum n"><div class="red">Без взыскателя<span class="s2" style="font-weight:600">клиенты с просрочкой, не закреплены</span></div>' + c(nc[s].on, M(nc[s].os), 1, 'red') + c('') + '<div></div>' + c(nc[s].n || dash, nc[s].n ? M(nc[s].s) : '', 1, 'red') + '<div></div><div></div><div class="vl"></div><div></div><div class="vl"></div><div></div><div></div><div></div><div class="vl"></div><div></div></div>' : '';
+  const ncH = s => nc[s].on ? '<div class="cd-g sum n"><div class="red">Без взыскателя<span class="s2" style="font-weight:600">просрочка, нет взыскателя из файла</span></div>' + c(nc[s].on, M(nc[s].os), 1, 'red') + c('') + '<div></div>' + c(nc[s].n || dash, nc[s].n ? M(nc[s].s) : '', 1, 'red') + '<div></div><div></div><div class="vl"></div><div></div><div class="vl"></div><div></div><div></div><div></div><div class="vl"></div><div></div></div>' : '';
   let body = '';
   show.forEach(function(s) {
     const rs = bySec[s]; if (!rs.length) return;
